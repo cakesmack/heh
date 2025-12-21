@@ -39,7 +39,7 @@ class VenueCreate(BaseModel):
     address: str = Field(min_length=1, max_length=500)
     latitude: float = Field(ge=-90.0, le=90.0)
     longitude: float = Field(ge=-180.0, le=180.0)
-    category_id: str
+    category_id: Optional[str] = None
     description: Optional[str] = Field(None, max_length=2000)
     website: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
