@@ -19,13 +19,31 @@ async def lifespan(app: FastAPI):
     Application lifespan manager.
     Handles startup and shutdown events.
     """
+    from sqlmodel import Session, select
+    from app.models.user import User
+    
     # Startup: Create database tables
     SQLModel.metadata.create_all(engine)
+    
+    # One-time admin setup (remove after first successful run)
+    ADMIN_EMAIL = "highlandeventshub@gmail.com"
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.email == ADMIN_EMAIL)).first()
+        if user and not user.is_admin:
+            user.is_admin = True
+            session.add(user)
+            session.commit()
+            print(f"[STARTUP] Promoted {ADMIN_EMAIL} to admin")
+        elif user and user.is_admin:
+            print(f"[STARTUP] {ADMIN_EMAIL} is already admin")
+        else:
+            print(f"[STARTUP] User {ADMIN_EMAIL} not found yet - login with Google first")
 
     yield
 
     # Shutdown: cleanup if needed
     pass
+
 
 
 app = FastAPI(
