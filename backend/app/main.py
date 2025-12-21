@@ -25,19 +25,39 @@ async def lifespan(app: FastAPI):
     # Startup: Create database tables
     SQLModel.metadata.create_all(engine)
     
-    # One-time admin setup (remove after first successful run)
-    ADMIN_EMAIL = "highlandeventshub@gmail.com"
+    # One-time admin setup - CREATE admin user if not exists
+    # Remove this code after first successful run!
+    ADMIN_EMAIL = "cmack6189@gmail.com"
+    ADMIN_PASSWORD = "AdminPass123!"  # Change this after first login!
+    ADMIN_USERNAME = "cmack_admin"
+    
     with Session(engine) as session:
+        from app.core.security import hash_password
+        
+        # Check if admin user exists
         user = session.exec(select(User).where(User.email == ADMIN_EMAIL)).first()
-        if user and not user.is_admin:
+        
+        if not user:
+            # Create new admin user
+            user = User(
+                email=ADMIN_EMAIL,
+                username=ADMIN_USERNAME,
+                display_name="Admin",
+                password_hash=hash_password(ADMIN_PASSWORD),
+                is_admin=True
+            )
+            session.add(user)
+            session.commit()
+            print(f"[STARTUP] Created admin user: {ADMIN_EMAIL}")
+            print(f"[STARTUP] Password: {ADMIN_PASSWORD}")
+            print(f"[STARTUP] IMPORTANT: Change password after first login!")
+        elif not user.is_admin:
             user.is_admin = True
             session.add(user)
             session.commit()
             print(f"[STARTUP] Promoted {ADMIN_EMAIL} to admin")
-        elif user and user.is_admin:
-            print(f"[STARTUP] {ADMIN_EMAIL} is already admin")
         else:
-            print(f"[STARTUP] User {ADMIN_EMAIL} not found yet - login with Google first")
+            print(f"[STARTUP] Admin user {ADMIN_EMAIL} already exists")
 
     yield
 
