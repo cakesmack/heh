@@ -384,6 +384,14 @@ def update_venue(
                 detail=url_error
             )
 
+    # Apply updates to venue
+    for key, value in update_data.items():
+        setattr(venue, key, value)
+    
+    # Recalculate geohash if coordinates changed
+    if "latitude" in update_data or "longitude" in update_data:
+        venue.geohash = calculate_geohash(venue.latitude, venue.longitude)
+
     session.add(venue)
     session.commit()
     session.refresh(venue)
