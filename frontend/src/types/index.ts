@@ -178,7 +178,7 @@ export interface VenueCreate {
   postcode: string;
   latitude: number;
   longitude: number;
-  category_id?: string;
+  category_id: string;
   description?: string;
   website?: string;
   phone?: string;

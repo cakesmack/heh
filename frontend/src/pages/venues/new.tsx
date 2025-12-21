@@ -91,6 +91,12 @@ export default function NewVenuePage() {
             return;
         }
 
+        if (!formData.category_id) {
+            setError('Please select a venue category');
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
             const newVenue = await venuesAPI.create({
                 name: formData.name,
@@ -193,7 +199,7 @@ export default function NewVenuePage() {
 
                         <div>
                             <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-2">
-                                Category
+                                Category *
                             </label>
                             <select
                                 id="category_id"
@@ -227,20 +233,7 @@ export default function NewVenuePage() {
                             )}
                         </div>
 
-                        <div>
-                            <label htmlFor="postcode" className="block text-sm font-medium text-gray-700 mb-2">
-                                Postcode
-                            </label>
-                            <Input
-                                id="postcode"
-                                name="postcode"
-                                type="text"
-                                value={formData.postcode}
-                                onChange={handleChange}
-                                placeholder="e.g., IV1 1AB"
-                                disabled={isSubmitting}
-                            />
-                        </div>
+
 
                         <div>
                             <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-2">
