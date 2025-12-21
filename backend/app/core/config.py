@@ -3,7 +3,9 @@ Application configuration settings.
 Loads environment variables and provides application-wide configuration.
 """
 import os
-from typing import Optional
+import json
+from typing import Optional, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -29,6 +31,18 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:3001",
     ]
+
+    @field_validator('ALLOWED_ORIGINS', mode='before')
+    @classmethod
+    def parse_allowed_origins(cls, v: Union[str, list]) -> list:
+        """Parse ALLOWED_ORIGINS from JSON string or list."""
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                # If not valid JSON, treat as comma-separated
+                return [origin.strip() for origin in v.split(',')]
+        return v
 
     # External Services
     MAPBOX_API_KEY: Optional[str] = None
