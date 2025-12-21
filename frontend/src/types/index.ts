@@ -175,6 +175,7 @@ export interface VenueResponse extends Venue {
 export interface VenueCreate {
   name: string;
   address: string;
+  postcode: string;
   latitude: number;
   longitude: number;
   category_id: string;
@@ -192,6 +193,7 @@ export interface VenueCreate {
 export interface VenueUpdate {
   name?: string;
   address?: string;
+  postcode?: string;
   latitude?: number;
   longitude?: number;
   category_id?: string;
