@@ -247,7 +247,7 @@ export function MapView({
           latitude: venue.latitude,
           title: venue.name,
           description: venue.description,
-          category: venue.category,
+          category: (venue.category as unknown) as string,
         };
         const marker = createMarker(markerData);
         if (marker) {
