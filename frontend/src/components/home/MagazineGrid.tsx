@@ -1,0 +1,197 @@
+import Link from 'next/link';
+import { EventResponse } from '@/types';
+import { Button } from '@/components/common/Button';
+import { BookmarkButton } from '@/components/events/BookmarkButton';
+
+interface MagazineGridProps {
+    events: EventResponse[];
+    title?: string;
+    subtitle?: string;
+    hideHeader?: boolean;
+    hideFooter?: boolean;
+}
+
+const TileOverlay = ({ title, category, date, description, venue, checkins, categoryColor }: {
+    title: string,
+    category?: string,
+    date: string,
+    description?: string,
+    venue?: string,
+    checkins?: number,
+    categoryColor?: string
+}) => (
+    <>
+        {/* Category Ribbon */}
+        {category && (
+            <div className="absolute top-4 right-[-2px] z-20">
+                <div
+                    className="relative px-3 py-1 text-white text-xs font-bold uppercase tracking-wider shadow-md"
+                    style={{ backgroundColor: categoryColor || '#10b981' }}
+                >
+                    {category}
+                    {/* Ribbon Fold */}
+                    <div
+                        className="absolute top-full right-0 w-[4px] h-[4px] brightness-75"
+                        style={{
+                            backgroundColor: categoryColor || '#10b981',
+                            clipPath: 'polygon(0 0, 100% 0, 0 100%)'
+                        }}
+                    />
+                </div>
+            </div>
+        )}
+
+        <div className="absolute inset-0 flex flex-col justify-end">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60 transition-opacity duration-700 ease-in-out group-hover:opacity-40" />
+
+            {/* Glass Content Box - Compact */}
+            <div className="relative z-10 backdrop-blur-md bg-stone-dark/60 p-4 border-t border-white/10 shadow-[0_-4px_30px_rgba(0,0,0,0.1)] transition-all duration-700 ease-in-out transform translate-y-0">
+                <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider block mb-1">{date}</span>
+
+                <h3 className="text-lg md:text-xl font-bold text-white leading-tight text-shadow-sm line-clamp-2">
+                    {title}
+                </h3>
+
+                {/* Hover: Venue & Checkins */}
+                <div className="h-0 overflow-hidden group-hover:h-auto group-hover:mt-2 transition-all duration-300">
+                    <div className="flex items-center text-gray-200 text-sm">
+                        <svg className="w-4 h-4 mr-1 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                        <span className="truncate">{venue || 'TBA'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </>
+);
+
+export default function MagazineGrid({
+    events,
+    title = "Latest Events",
+    subtitle = "Discover what's happening now",
+    hideHeader = false,
+    hideFooter = false
+}: MagazineGridProps) {
+    if (!events || events.length === 0) {
+        return null;
+    }
+
+    // First event is the "Feature" (large)
+    const mainFeature = events[0];
+    // Rest are standard grid items
+    const gridItems = events.slice(1);
+
+    return (
+        <section className="w-full bg-stone-dark">
+            {/* Header */}
+            {!hideHeader && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{title}</h2>
+                    <p className="text-gray-400 text-lg">{subtitle}</p>
+                </div>
+            )}
+
+            {/* Full Width Grid */}
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0">
+                {/* Main Feature - Spans 2 cols and 2 rows on large screens */}
+                <div className="lg:col-span-2 lg:row-span-2 relative group h-[500px] lg:h-[600px] overflow-hidden">
+                    <Link href={`/events/${mainFeature.id}`} className="block w-full h-full relative z-10">
+                        <img
+                            src={mainFeature.image_url || '/images/event-placeholder.jpg'}
+                            alt={mainFeature.title}
+                            className="w-full h-full object-cover transition-transform duration-1000 ease-in-out group-hover:scale-105"
+                        />
+
+                        {/* Category Ribbon for Feature */}
+                        {mainFeature.category && (
+                            <div className="absolute top-6 right-[-2px] z-20">
+                                <div
+                                    className="relative px-4 py-1.5 text-white text-sm font-bold uppercase tracking-wider shadow-md"
+                                    style={{ backgroundColor: mainFeature.category.gradient_color || '#059669' }}
+                                >
+                                    {mainFeature.category.name}
+                                    <div
+                                        className="absolute top-full right-0 w-[4px] h-[4px] brightness-75"
+                                        style={{
+                                            backgroundColor: mainFeature.category.gradient_color || '#059669',
+                                            clipPath: 'polygon(0 0, 100% 0, 0 100%)'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="absolute top-6 left-6 z-20">
+                            <BookmarkButton eventId={mainFeature.id} size="lg" className="bg-white/90 hover:bg-white shadow-lg" />
+                        </div>
+
+                        <div className="absolute inset-0 flex flex-col justify-end">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                            {/* Large Tile Content - Tighter Spacing */}
+                            <div className="relative z-10 backdrop-blur-md bg-stone-dark/60 p-6 md:p-8 border-t border-white/10 shadow-[0_-4px_30px_rgba(0,0,0,0.1)]">
+                                <div className="max-w-4xl">
+                                    <h3 className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
+                                        {mainFeature.title}
+                                    </h3>
+                                    <div className="flex items-center text-gray-300 text-base mb-2">
+                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        {new Date(mainFeature.date_start).toLocaleDateString(undefined, {
+                                            weekday: 'long',
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })}
+                                    </div>
+                                    <p className="text-gray-200 text-base line-clamp-2">
+                                        {mainFeature.description}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </Link>
+                </div>
+
+                {/* Grid Items */}
+                {gridItems.map((event) => (
+                    <div key={event.id} className="relative group h-[300px] overflow-hidden col-span-1">
+                        <Link href={`/events/${event.id}`} className="block w-full h-full relative z-10">
+                            <img
+                                src={event.image_url || '/images/event-placeholder.jpg'}
+                                alt={event.title}
+                                className="w-full h-full object-cover transition-transform duration-1000 ease-in-out group-hover:scale-110"
+                            />
+                            <div className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <BookmarkButton eventId={event.id} size="sm" className="bg-white/90 hover:bg-white shadow-sm" />
+                            </div>
+                            <TileOverlay
+                                title={event.title}
+                                category={event.category?.name}
+                                categoryColor={event.category?.gradient_color}
+                                date={new Date(event.date_start).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                description={event.description}
+                                venue={event.venue_name}
+                                checkins={event.checkin_count}
+                            />
+                        </Link>
+                    </div>
+                ))}
+            </div>
+
+            {/* View All Button */}
+            {!hideFooter && (
+                <div className="flex justify-center items-center py-12 bg-stone-dark">
+                    <Link
+                        href="/events"
+                        className="inline-flex items-center px-8 py-3 border-2 border-white/20 rounded-lg text-white font-semibold hover:bg-white hover:text-stone-900 transition-all duration-300 uppercase tracking-wider"
+                    >
+                        View All Events
+                    </Link>
+                </div>
+            )}
+        </section>
+    );
+}

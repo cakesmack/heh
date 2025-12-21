@@ -1,0 +1,120 @@
+/**
+ * Global Styles
+ * Tailwind CSS and custom global styles
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-mist-grey;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-stone-medium rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-stone-dark;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Base body styles */
+body {
+  @apply text-stone-dark bg-warm-white;
+}
+
+/* Focus ring customization */
+*:focus-visible {
+  @apply outline-none ring-2 ring-moss-green ring-offset-2;
+}
+
+/* Link styles */
+a {
+  @apply transition-colors duration-200;
+}
+
+/* Custom utility classes */
+@layer utilities {
+
+  /* Custom text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Safe area insets for mobile devices */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Animation utilities */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* Glass effect */
+.glass {
+  @apply bg-warm-white/70 backdrop-blur-lg border border-white/20;
+}
+
+.glass-dark {
+  @apply bg-stone-dark/70 backdrop-blur-lg border border-white/10;
+}
+
+/* Text Gradients */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-highland-green to-loch-blue;
+}
+
+.text-gradient-dark {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-moss-green to-soft-sky;
+}
+
+/* Card Hover Effects */
+.hover-card {
+  @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
+}

@@ -1,0 +1,171 @@
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlmodel import Session, select, func
+
+from app.core.database import get_session
+from app.core.security import get_current_user
+from app.core.utils import normalize_uuid, simple_slugify
+from app.models.user import User
+from app.models.organizer import Organizer
+from app.schemas.organizer import (
+    OrganizerCreate,
+    OrganizerUpdate,
+    OrganizerResponse,
+    OrganizerListResponse
+)
+
+router = APIRouter(tags=["Organizers"])
+
+@router.get("", response_model=OrganizerListResponse)
+def list_organizers(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+    user_id: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    """
+    List organizers with optional filtering.
+    """
+    query = select(Organizer)
+    
+    if user_id:
+        query = query.where(Organizer.user_id == normalize_uuid(user_id))
+        
+    # Count total
+    count_query = select(func.count()).select_from(query.subquery())
+    total = session.exec(count_query).one()
+    
+    # Pagination
+    query = query.offset(skip).limit(limit)
+    organizers = session.exec(query).all()
+    
+    return OrganizerListResponse(
+        organizers=organizers,
+        total=total
+    )
+
+@router.post("", response_model=OrganizerResponse, status_code=status.HTTP_201_CREATED)
+def create_organizer(
+    organizer_data: OrganizerCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Create a new organizer profile.
+    """
+    # Generate slug
+    slug = simple_slugify(organizer_data.name)
+    
+    # Check uniqueness
+    existing = session.exec(select(Organizer).where(Organizer.slug == slug)).first()
+    if existing:
+        # Append random 4 chars
+        import random
+        import string
+        suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+        slug = f"{slug}-{suffix}"
+    
+    new_organizer = Organizer(
+        **organizer_data.model_dump(),
+        slug=slug,
+        user_id=current_user.id
+    )
+    
+    session.add(new_organizer)
+    session.commit()
+    session.refresh(new_organizer)
+    
+    return new_organizer
+
+@router.get("/slug/{slug}", response_model=OrganizerResponse)
+def get_organizer_by_slug(
+    slug: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Get a specific organizer by slug.
+    """
+    organizer = session.exec(select(Organizer).where(Organizer.slug == slug)).first()
+    if not organizer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organizer not found"
+        )
+    return organizer
+
+@router.get("/{organizer_id}", response_model=OrganizerResponse)
+def get_organizer(
+    organizer_id: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Get a specific organizer by ID.
+    """
+    organizer = session.get(Organizer, normalize_uuid(organizer_id))
+    if not organizer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organizer not found"
+        )
+    return organizer
+
+@router.put("/{organizer_id}", response_model=OrganizerResponse)
+def update_organizer(
+    organizer_id: str,
+    organizer_data: OrganizerUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Update an organizer profile.
+    """
+    organizer = session.get(Organizer, normalize_uuid(organizer_id))
+    if not organizer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organizer not found"
+        )
+        
+    # Check permissions
+    if organizer.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this organizer"
+        )
+        
+    update_data = organizer_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(organizer, key, value)
+        
+    session.add(organizer)
+    session.commit()
+    session.refresh(organizer)
+    
+    return organizer
+
+@router.delete("/{organizer_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_organizer(
+    organizer_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Delete an organizer profile.
+    """
+    organizer = session.get(Organizer, normalize_uuid(organizer_id))
+    if not organizer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organizer not found"
+        )
+        
+    # Check permissions
+    if organizer.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this organizer"
+        )
+        
+    session.delete(organizer)
+    session.commit()
+    return None

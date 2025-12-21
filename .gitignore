@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# Archive folders (cleanup scripts)
+scripts/_archive/
+backend/scripts/_archive/
+
+# Documentation (local only)
+docs/
+
+# Node
+node_modules/
+.next/
+out/
+.npm
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build
+*.map
+
+# Uploads (local dev)
+backend/static/uploads/*
+!backend/static/uploads/.gitkeep
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
