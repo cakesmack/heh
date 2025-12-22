@@ -37,8 +37,11 @@ export default function MapPage() {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | undefined>(undefined);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
 
-  // Mobile view toggle: 'list' or 'map'
-  const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
+  // Mobile view toggle: 'list' or 'map' - Default to 'map' for mobile
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('map');
+
+  // Selected event for mobile modal
+  const [selectedEvent, setSelectedEvent] = useState<EventResponse | null>(null);
 
   // Fetch events and categories
   useEffect(() => {
@@ -74,19 +77,31 @@ export default function MapPage() {
   // Handle marker click
   const handleMarkerClick = (marker: MapMarker) => {
     setSelectedMarkerId(marker.id);
-    // On mobile, switch to list view and scroll to card
-    setMobileView('list');
-    setTimeout(() => {
+
+    // Find event details
+    const event = events.find(e => e.id === marker.id);
+    if (event) {
+      setSelectedEvent(event);
+    }
+
+    // On desktop, scroll to list item
+    if (window.innerWidth >= 768) {
       const card = document.getElementById(`event-card-${marker.id}`);
       if (card) {
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    }, 100);
+    }
   };
 
   // Handle event card click
   const handleEventClick = (event: EventResponse) => {
     router.push(`/events/${event.id}`);
+  };
+
+  // Close mobile modal
+  const closeMobileModal = () => {
+    setSelectedEvent(null);
+    setSelectedMarkerId(undefined);
   };
 
   return (
@@ -208,6 +223,70 @@ export default function MapPage() {
             hoveredEventId={hoveredEventId}
             className="w-full h-full"
           />
+
+          {/* Mobile Event Preview Modal */}
+          {selectedEvent && mobileView === 'map' && (
+            <div className="absolute bottom-20 left-4 right-4 bg-white rounded-xl shadow-xl z-20 md:hidden animate-in slide-in-from-bottom-10 fade-in duration-200">
+              <div className="p-4">
+                <div className="flex gap-4">
+                  {/* Image */}
+                  <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
+                    {selectedEvent.image_url ? (
+                      <img
+                        src={selectedEvent.image_url}
+                        alt={selectedEvent.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-gray-900 truncate pr-6">{selectedEvent.title}</h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeMobileModal();
+                        }}
+                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <p className="text-sm text-emerald-600 font-medium mt-1">
+                      {selectedEvent.date_start ? format(new Date(selectedEvent.date_start), 'EEE, MMM d • h:mm a') : 'Date TBD'}
+                    </p>
+
+                    {selectedEvent.venue_name && (
+                      <p className="text-sm text-gray-500 truncate mt-0.5">{selectedEvent.venue_name}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <button
+                    onClick={() => router.push(`/events/${selectedEvent.id}`)}
+                    className="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    Go to Event
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Mobile Toggle Button */}
