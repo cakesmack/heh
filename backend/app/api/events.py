@@ -46,6 +46,7 @@ def get_or_create_tags(session: Session, tag_names: List[str]) -> List[Tag]:
         if not tag:
             tag = Tag(id=normalize_uuid(uuid4()), name=normalized)
             session.add(tag)
+            session.flush()  # Ensure tag is persisted before use
         tags.append(tag)
 
     return tags
@@ -294,37 +295,45 @@ def list_events(
     # Order by: featured first, then by date
     query = query.order_by(Event.featured.desc(), Event.date_start)
 
-    # Deduplication Logic (SQLite Compatible)
+    # Deduplication Logic
     # We want to show only the next upcoming instance for each recurring series.
-    
-    # 1. Get IDs of the "primary" instance for each group
-    # Group by parent_event_id (or id) and pick the one with the earliest date_start
     group_key = func.coalesce(Event.parent_event_id, Event.id)
     
-    # Subquery to find the ID of the earliest event in each group
-    # Note: We need to apply the same filters to this subquery
-    # For simplicity/performance in this specific context, we can apply the group by to the main query 
-    # if we are careful, but a subquery is safer to avoid messing up the main select.
+    # Check dialect to determine strategy
+    # SQLite allows GROUP BY with non-aggregated columns (picking arbitrary row), Postgres does not.
+    # Postgres supports DISTINCT ON, which is perfect for this.
+    is_postgres = session.bind.dialect.name == "postgresql"
     
-    # However, re-applying filters is hard.
-    # Let's try a simpler approach: Group By in the main query.
-    # SQLite allows selecting * with GROUP BY, returning one row per group.
-    # Postgres requires all columns in GROUP BY.
-    # Since we are in dev with SQLite, let's use the Group By approach.
-    
-    query = query.group_by(group_key)
-    
-    # Count total (groups)
-    count_query = select(func.count()).select_from(query.subquery())
-    total = session.exec(count_query).one()
-    
-    # Order by featured, then date
-    # We use min(date_start) to order the groups
-    query = query.order_by(Event.featured.desc(), func.min(Event.date_start))
-    
-    # Pagination
-    query = query.offset(skip).limit(limit)
-    events = session.exec(query).all()
+    if is_postgres:
+        # Postgres: Use DISTINCT ON
+        # We must order by the distinct key first
+        query = query.distinct(group_key).order_by(group_key, Event.date_start)
+        
+        # Count total (groups)
+        count_query = select(func.count()).select_from(query.subquery())
+        total = session.exec(count_query).one()
+        
+        # Wrap in subquery to apply final sort (Featured DESC, Date ASC) and pagination
+        sub = query.subquery()
+        outer_query = select(Event).from_statement(
+            select(sub).order_by(sub.c.featured.desc(), sub.c.date_start).offset(skip).limit(limit)
+        )
+        events = session.exec(outer_query).all()
+        
+    else:
+        # SQLite: Use GROUP BY (legacy behavior)
+        query = query.group_by(group_key)
+        
+        # Count total (groups)
+        count_query = select(func.count()).select_from(query.subquery())
+        total = session.exec(count_query).one()
+        
+        # Order by featured, then date
+        query = query.order_by(Event.featured.desc(), func.min(Event.date_start))
+        
+        # Pagination
+        query = query.offset(skip).limit(limit)
+        events = session.exec(query).all()
 
     # Build responses
     event_responses = [
