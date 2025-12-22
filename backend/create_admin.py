@@ -4,6 +4,7 @@ Run from Render Shell: cd backend && python create_admin.py
 Delete this file after use!
 """
 import uuid
+from datetime import datetime
 from sqlalchemy import text
 from app.core.database import engine
 from app.core.security import hash_password
@@ -18,6 +19,7 @@ ADMIN_DISPLAY_NAME = "Admin"
 def create_admin():
     hashed = hash_password(ADMIN_PASSWORD)
     user_id = str(uuid.uuid4()).replace('-', '')
+    created_at = datetime.utcnow().isoformat()
     
     with engine.connect() as conn:
         # Check if user exists
@@ -36,16 +38,17 @@ def create_admin():
             print(f"Promoted {ADMIN_EMAIL} to admin!")
             return
         
-        # Create new user
+        # Create new user (compatible with SQLite and PostgreSQL)
         conn.execute(text('''
             INSERT INTO users (id, email, username, display_name, password_hash, is_admin, created_at, trust_level)
-            VALUES (:id, :email, :username, :display_name, :password, true, NOW(), 'standard')
+            VALUES (:id, :email, :username, :display_name, :password, 1, :created_at, 'standard')
         '''), {
             'id': user_id,
             'email': ADMIN_EMAIL,
             'username': ADMIN_USERNAME,
             'display_name': ADMIN_DISPLAY_NAME,
-            'password': hashed
+            'password': hashed,
+            'created_at': created_at
         })
         conn.commit()
         print(f"Created admin user: {ADMIN_EMAIL}")
@@ -54,3 +57,4 @@ def create_admin():
 
 if __name__ == "__main__":
     create_admin()
+
