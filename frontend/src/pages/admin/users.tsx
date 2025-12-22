@@ -73,6 +73,33 @@ export default function AdminUsers() {
     }
   };
 
+  const handleDeleteUser = async (userId: string, email: string) => {
+    if (!confirm(`Are you sure you want to delete user "${email}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await adminAPI.deleteUser(userId);
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setTotal((prev) => prev - 1);
+      setDetailModalOpen(false);
+      setSelectedUser(null);
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete user');
+    }
+  };
+
+  const handleSendPasswordReset = async (userId: string, email: string) => {
+    if (!confirm(`Send password reset email to "${email}"?`)) {
+      return;
+    }
+    try {
+      const result = await adminAPI.sendPasswordReset(userId);
+      alert(result.message || 'Password reset email sent!');
+    } catch (err: any) {
+      alert(err.message || 'Failed to send password reset email');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -302,22 +329,38 @@ export default function AdminUsers() {
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  onClick={() => handleToggleAdmin(selectedUser.id)}
-                  className={`px-4 py-2 rounded text-sm font-medium ${selectedUser.is_admin
-                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                    }`}
-                >
-                  {selectedUser.is_admin ? 'Remove Admin' : 'Make Admin'}
-                </button>
-                <button
-                  onClick={() => setDetailModalOpen(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200"
-                >
-                  Close
-                </button>
+              <div className="flex flex-wrap justify-between gap-3 pt-4 border-t">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSendPasswordReset(selectedUser.id, selectedUser.email)}
+                    className="px-4 py-2 bg-blue-100 text-blue-700 rounded text-sm font-medium hover:bg-blue-200"
+                  >
+                    Send Password Reset
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUser(selectedUser.id, selectedUser.email)}
+                    className="px-4 py-2 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200"
+                  >
+                    Delete User
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleToggleAdmin(selectedUser.id)}
+                    className={`px-4 py-2 rounded text-sm font-medium ${selectedUser.is_admin
+                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                      }`}
+                  >
+                    {selectedUser.is_admin ? 'Remove Admin' : 'Make Admin'}
+                  </button>
+                  <button
+                    onClick={() => setDetailModalOpen(false)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -34,7 +34,7 @@ class User(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
     email: str = Field(unique=True, index=True, max_length=255)
-    password_hash: str = Field(max_length=255)
+    password_hash: Optional[str] = Field(default=None, max_length=255)
 
     # Identity
     username: Optional[str] = Field(default=None, unique=True, index=True, max_length=50)

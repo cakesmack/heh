@@ -123,6 +123,13 @@ def login(
             detail="Incorrect email or password"
         )
 
+    # Check if user has a password (Google-only users don't)
+    if user.password_hash is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This account uses Google login. Please sign in with Google."
+        )
+
     # Verify password
     if not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
@@ -184,10 +191,7 @@ async def google_login(
     ).first()
     
     if not user:
-        # Create new user with random password (they'll use Google login)
-        random_password = secrets.token_urlsafe(32)
-        hashed_password = hash_password(random_password)
-        
+        # Create new user with no password (Google-only user)
         # Generate username from email (before @)
         base_username = email.split("@")[0]
         username = base_username
@@ -205,7 +209,7 @@ async def google_login(
             email=email,
             username=username,
             display_name=display_name,
-            password_hash=hashed_password
+            password_hash=None  # Google users don't have a password
         )
         session.add(user)
         session.commit()

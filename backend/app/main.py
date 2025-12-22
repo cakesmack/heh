@@ -36,10 +36,25 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware - Uses ALLOWED_ORIGINS from environment
+# CORS middleware - Allow all origins in debug mode, otherwise use ALLOWED_ORIGINS
+# This prevents CORS issues when accessing from local network IPs during development
+if settings.DEBUG:
+    # In debug mode, allow common local development origins
+    cors_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://192.168.1.111:3000",  # Local network IP
+    ]
+    # Also include any configured origins
+    cors_origins.extend([o for o in settings.ALLOWED_ORIGINS if o not in cors_origins])
+else:
+    cors_origins = settings.ALLOWED_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

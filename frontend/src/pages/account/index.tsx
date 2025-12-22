@@ -304,6 +304,14 @@ export default function AccountPage() {
                       </p>
                     </div>
                   </div>
+                  <div className="mt-4 pt-4 border-t">
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      Change Password
+                    </Link>
+                  </div>
                 </Card>
               </div>
 

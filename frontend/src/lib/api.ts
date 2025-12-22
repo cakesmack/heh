@@ -1027,6 +1027,34 @@ export const adminAPI = {
       method: 'POST',
     });
   },
+
+  /**
+   * Update user details
+   */
+  updateUser: async (userId: string, data: { email?: string; username?: string; display_name?: string; is_admin?: boolean }): Promise<AdminUser> => {
+    return apiFetch<AdminUser>(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete a user
+   */
+  deleteUser: async (userId: string): Promise<{ ok: boolean; message: string }> => {
+    return apiFetch<{ ok: boolean; message: string }>(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
+   * Send password reset email to user (admin-triggered)
+   */
+  sendPasswordReset: async (userId: string): Promise<{ ok: boolean; message: string }> => {
+    return apiFetch<{ ok: boolean; message: string }>(`/api/admin/users/${userId}/send-password-reset`, {
+      method: 'POST',
+    });
+  },
 };
 
 // ============================================================

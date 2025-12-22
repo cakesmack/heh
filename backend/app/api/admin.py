@@ -270,6 +270,194 @@ def toggle_user_admin(
     )
 
 
+class AdminUserUpdate(BaseModel):
+    """Schema for updating user fields."""
+    email: Optional[str] = None
+    username: Optional[str] = None
+    display_name: Optional[str] = None
+    is_admin: Optional[bool] = None
+
+
+@router.put("/users/{user_id}", response_model=AdminUserResponse)
+def update_user(
+    user_id: str,
+    user_update: AdminUserUpdate,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Update user details."""
+    normalized_id = user_id.replace("-", "") if "-" in user_id else user_id
+    
+    user = session.get(User, normalized_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Prevent changing own admin status
+    if user_update.is_admin is not None and user.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change your own admin status"
+        )
+    
+    # Update fields
+    update_data = user_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user, field, value)
+    
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    
+    # Count events and check-ins
+    event_count = session.exec(
+        select(func.count(Event.id)).where(Event.organizer_id == user.id)
+    ).one() or 0
+    checkin_count = session.exec(
+        select(func.count(CheckIn.id)).where(CheckIn.user_id == user.id)
+    ).one() or 0
+    
+    return AdminUserResponse(
+        id=str(user.id),
+        email=user.email,
+        is_admin=user.is_admin,
+        created_at=user.created_at,
+        event_count=event_count,
+        checkin_count=checkin_count,
+    )
+
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Delete a user account and all related data."""
+    from app.models.bookmark import Bookmark
+    from app.models.follow import Follow
+    from app.models.group_member import GroupMember
+    from app.models.checkin import CheckIn
+    from app.models.venue_staff import VenueStaff
+    from app.models.venue_claim import VenueClaim
+    from app.models.password_reset import PasswordResetToken
+    
+    normalized_id = user_id.replace("-", "") if "-" in user_id else user_id
+    
+    user = session.get(User, normalized_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Prevent self-deletion
+    if user.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account"
+        )
+    
+    # Delete related data first (cascade)
+    # Bookmarks
+    bookmarks = session.exec(select(Bookmark).where(Bookmark.user_id == normalized_id)).all()
+    for b in bookmarks:
+        session.delete(b)
+    
+    # Follows
+    follows = session.exec(select(Follow).where(Follow.follower_id == normalized_id)).all()
+    for f in follows:
+        session.delete(f)
+    
+    # Group memberships
+    memberships = session.exec(select(GroupMember).where(GroupMember.user_id == normalized_id)).all()
+    for m in memberships:
+        session.delete(m)
+    
+    # Check-ins
+    checkins = session.exec(select(CheckIn).where(CheckIn.user_id == normalized_id)).all()
+    for c in checkins:
+        session.delete(c)
+    
+    # Venue staff
+    staff = session.exec(select(VenueStaff).where(VenueStaff.user_id == normalized_id)).all()
+    for s in staff:
+        session.delete(s)
+    
+    # Venue claims
+    claims = session.exec(select(VenueClaim).where(VenueClaim.user_id == normalized_id)).all()
+    for cl in claims:
+        session.delete(cl)
+    
+    # Password reset tokens
+    tokens = session.exec(select(PasswordResetToken).where(PasswordResetToken.email == user.email)).all()
+    for t in tokens:
+        session.delete(t)
+    
+    # Now delete the user
+    session.delete(user)
+    session.commit()
+    
+    return {"ok": True, "message": f"User {user.email} deleted"}
+
+
+@router.post("/users/{user_id}/send-password-reset")
+def send_user_password_reset(
+    user_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Send password reset email to a user (admin-triggered)."""
+    from app.models.password_reset import PasswordResetToken
+    from app.core.security import hash_password
+    from app.services.email_service import send_password_reset_email
+    import secrets
+    from datetime import timedelta
+    from app.core.config import settings
+    
+    normalized_id = user_id.replace("-", "") if "-" in user_id else user_id
+    
+    user = session.get(User, normalized_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Delete existing tokens for this user
+    existing_tokens = session.exec(
+        select(PasswordResetToken).where(PasswordResetToken.email == user.email)
+    ).all()
+    for token in existing_tokens:
+        session.delete(token)
+    
+    # Generate new token
+    raw_token = secrets.token_urlsafe(32)
+    hashed_token = hash_password(raw_token)
+    expires_at = datetime.utcnow() + timedelta(minutes=settings.PASSWORD_RESET_EXPIRE_MINUTES)
+    
+    reset_token = PasswordResetToken(
+        email=user.email,
+        token=hashed_token,
+        expires_at=expires_at
+    )
+    session.add(reset_token)
+    session.commit()
+    
+    # Send email
+    email_sent = send_password_reset_email(user.email, raw_token)
+    
+    if not email_sent:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send password reset email"
+        )
+    
+    return {"ok": True, "message": f"Password reset email sent to {user.email}"}
+
+
 # ============================================================
 # VENUE CLAIMS
 # ============================================================
