@@ -127,7 +127,7 @@ def login(
     if user.password_hash is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="This account uses Google login. Please sign in with Google."
+            detail="This account was created with Google login and has no password set. Please sign in with Google, or use 'Forgot Password' to set a password."
         )
 
     # Verify password
