@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/hooks/useEvents';
 import { EventList } from '@/components/events/EventList';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
@@ -48,6 +49,46 @@ export default function CategoryPage() {
 
         fetchCategory();
     }, [slug]);
+
+    // Follow logic
+    const { user } = useAuth();
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [isFollowLoading, setIsFollowLoading] = useState(false);
+
+    useEffect(() => {
+        if (user && category) {
+            api.categories.checkFollowing(category.id)
+                .then(res => setIsFollowing(res.following))
+                .catch(console.error);
+        }
+    }, [user, category]);
+
+    const handleFollowToggle = async () => {
+        if (!user) {
+            router.push(`/login?redirect=/category/${slug}`);
+            return;
+        }
+        if (!category) return;
+
+        setIsFollowLoading(true);
+        // Optimistic update
+        const newState = !isFollowing;
+        setIsFollowing(newState);
+
+        try {
+            if (newState) {
+                await api.categories.follow(category.id);
+            } else {
+                await api.categories.unfollow(category.id);
+            }
+        } catch (err) {
+            console.error('Failed to toggle follow:', err);
+            // Revert on error
+            setIsFollowing(!newState);
+        } finally {
+            setIsFollowLoading(false);
+        }
+    };
 
     const handleSearch = (filters: {
         q?: string;
@@ -130,14 +171,45 @@ export default function CategoryPage() {
 
                 {/* Content */}
                 <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                        {category.name}
-                    </h1>
-                    {category.description && (
-                        <p className="text-xl text-gray-200 max-w-2xl">
-                            {category.description}
-                        </p>
-                    )}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                                {category.name}
+                            </h1>
+                            {category.description && (
+                                <p className="text-xl text-gray-200 max-w-2xl">
+                                    {category.description}
+                                </p>
+                            )}
+                        </div>
+                        <button
+                            onClick={handleFollowToggle}
+                            disabled={isFollowLoading}
+                            className={`
+                                flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all transform hover:scale-105
+                                ${isFollowing
+                                    ? 'bg-white text-emerald-700 hover:bg-gray-100'
+                                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg'
+                                }
+                            `}
+                        >
+                            {isFollowing ? (
+                                <>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Following
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Follow
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
 

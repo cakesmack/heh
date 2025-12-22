@@ -21,6 +21,10 @@ from .group_invite import GroupInvite
 from .analytics import AnalyticsEvent
 from .password_reset import PasswordResetToken
 from .venue_staff import VenueStaff, VenueRole
+from .user_category_follow import UserCategoryFollow
+from .bookmark import Bookmark
+from .report import Report
+
 __all__ = [
     # User
     "User",
@@ -29,6 +33,7 @@ __all__ = [
     "VenueCategory",
     # Category
     "Category",
+    "UserCategoryFollow",
     # Tag
     "Tag",
     "EventTag",
@@ -61,4 +66,8 @@ __all__ = [
     # Venue Staff
     "VenueStaff",
     "VenueRole",
+    # Bookmarks
+    "Bookmark",
+    # Reports
+    "Report",
 ]

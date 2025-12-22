@@ -217,3 +217,123 @@ def delete_category(
     session.commit()
 
     return None
+
+
+# ============================================================
+# CATEGORY FOLLOW ENDPOINTS
+# ============================================================
+
+from app.models.user_category_follow import UserCategoryFollow
+
+
+@router.post("/{category_id}/follow", status_code=status.HTTP_201_CREATED)
+def follow_category(
+    category_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Follow a category for personalized feed."""
+    normalized_id = normalize_uuid(category_id)
+    
+    # Check category exists
+    category = session.get(Category, normalized_id)
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+    
+    # Check if already following
+    existing = session.exec(
+        select(UserCategoryFollow).where(
+            UserCategoryFollow.user_id == current_user.id,
+            UserCategoryFollow.category_id == normalized_id
+        )
+    ).first()
+    
+    if existing:
+        return {"message": "Already following this category"}
+    
+    # Create follow
+    follow = UserCategoryFollow(
+        user_id=current_user.id,
+        category_id=normalized_id
+    )
+    session.add(follow)
+    session.commit()
+    
+    return {"message": f"Now following {category.name}"}
+
+
+@router.delete("/{category_id}/follow", status_code=status.HTTP_200_OK)
+def unfollow_category(
+    category_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Unfollow a category."""
+    normalized_id = normalize_uuid(category_id)
+    
+    follow = session.exec(
+        select(UserCategoryFollow).where(
+            UserCategoryFollow.user_id == current_user.id,
+            UserCategoryFollow.category_id == normalized_id
+        )
+    ).first()
+    
+    if not follow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not following this category"
+        )
+    
+    session.delete(follow)
+    session.commit()
+    
+    return {"message": "Unfollowed category"}
+
+
+@router.get("/{category_id}/following")
+def check_following(
+    category_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Check if the current user follows a category."""
+    normalized_id = normalize_uuid(category_id)
+    
+    follow = session.exec(
+        select(UserCategoryFollow).where(
+            UserCategoryFollow.user_id == current_user.id,
+            UserCategoryFollow.category_id == normalized_id
+        )
+    ).first()
+    
+    return {"following": follow is not None}
+
+
+@router.get("/user/following")
+def get_followed_categories(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Get all categories the current user follows."""
+    follows = session.exec(
+        select(UserCategoryFollow).where(
+            UserCategoryFollow.user_id == current_user.id
+        )
+    ).all()
+    
+    category_ids = [f.category_id for f in follows]
+    
+    if not category_ids:
+        return {"categories": [], "total": 0}
+    
+    categories = session.exec(
+        select(Category).where(Category.id.in_(category_ids))
+    ).all()
+    
+    return {
+        "categories": [CategoryResponse.model_validate(c) for c in categories],
+        "total": len(categories)
+    }

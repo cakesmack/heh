@@ -2,6 +2,7 @@
  * Map Page
  * Interactive map showing events across the Scottish Highlands
  * Features: Side panel with event list, hover interaction, events-only view
+ * Mobile: Toggle between list and map views
  */
 'use client';
 
@@ -35,6 +36,9 @@ export default function MapPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | undefined>(undefined);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+
+  // Mobile view toggle: 'list' or 'map'
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
 
   // Fetch events and categories
   useEffect(() => {
@@ -70,11 +74,14 @@ export default function MapPage() {
   // Handle marker click
   const handleMarkerClick = (marker: MapMarker) => {
     setSelectedMarkerId(marker.id);
-    // Scroll to the event card in the list
-    const card = document.getElementById(`event-card-${marker.id}`);
-    if (card) {
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    // On mobile, switch to list view and scroll to card
+    setMobileView('list');
+    setTimeout(() => {
+      const card = document.getElementById(`event-card-${marker.id}`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   };
 
   // Handle event card click
@@ -94,7 +101,7 @@ export default function MapPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Filter:</span>
+            <span className="text-sm text-gray-500 hidden sm:inline">Filter:</span>
             <select
               value={selectedCategory || ''}
               onChange={(e) => setSelectedCategory(e.target.value || null)}
@@ -111,10 +118,13 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Main Content - Split View */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Event List */}
-        <div className="w-[380px] lg:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200">
+      {/* Main Content - Split View (Desktop) / Toggle View (Mobile) */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Panel - Event List (hidden on mobile when viewing map) */}
+        <div className={`
+          w-full md:w-[380px] lg:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200
+          ${mobileView === 'map' ? 'hidden md:block' : 'block'}
+        `}>
           {loading ? (
             <div className="p-8 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mx-auto mb-4" />
@@ -183,8 +193,11 @@ export default function MapPage() {
           )}
         </div>
 
-        {/* Right Panel - Map */}
-        <div className="flex-1 relative">
+        {/* Right Panel - Map (hidden on mobile when viewing list) */}
+        <div className={`
+          flex-1 relative
+          ${mobileView === 'list' ? 'hidden md:block' : 'block'}
+        `}>
           <MapView
             events={filteredEvents}
             venues={[]}
@@ -196,6 +209,28 @@ export default function MapPage() {
             className="w-full h-full"
           />
         </div>
+
+        {/* Mobile Toggle Button */}
+        <button
+          onClick={() => setMobileView(mobileView === 'list' ? 'map' : 'list')}
+          className="md:hidden fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-colors"
+        >
+          {mobileView === 'list' ? (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              Show Map
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              Show List
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
