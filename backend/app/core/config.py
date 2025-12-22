@@ -44,6 +44,14 @@ class Settings(BaseSettings):
                 return [origin.strip() for origin in v.split(',')]
         return v
 
+    @field_validator('DATABASE_URL', 'DATABASE_URL_POOLER', mode='before')
+    @classmethod
+    def fix_postgres_scheme(cls, v: Optional[str]) -> Optional[str]:
+        """Fix postgres:// scheme for SQLAlchemy compatibility."""
+        if v and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
+
     # External Services
     MAPBOX_API_KEY: Optional[str] = None
     STRIPE_SECRET_KEY: Optional[str] = None
