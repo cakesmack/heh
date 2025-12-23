@@ -26,15 +26,18 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
 
-    # CORS - controlled via environment variable (comma-separated string)
-    ALLOWED_ORIGINS: str = ""
+    # CORS - controlled via environment variable
+    ALLOWED_ORIGINS: list[str] = []
 
-    @property
-    def cors_origins(self) -> list[str]:
-        """Parse ALLOWED_ORIGINS into a list."""
-        if not self.ALLOWED_ORIGINS:
-            return []
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+    @field_validator('ALLOWED_ORIGINS', mode='before')
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, list]) -> list:
+        """Parse ALLOWED_ORIGINS from string or list."""
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        raise ValueError(v)
 
     @field_validator('DATABASE_URL', 'DATABASE_URL_POOLER', mode='before')
     @classmethod
