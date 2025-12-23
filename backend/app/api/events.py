@@ -288,37 +288,52 @@ def list_events(
     if organizer_id:
         query = query.where(Event.organizer_id == normalize_uuid(organizer_id))
 
+
     # Filter by organizer profile (group)
     if organizer_profile_id:
         query = query.where(Event.organizer_profile_id == normalize_uuid(organizer_profile_id))
 
-    # Order by: featured first, then by date
-    query = query.order_by(Event.featured.desc(), Event.date_start)
-
-    # Deduplication Logic
-    # We want to show only the next upcoming instance for each recurring series.
-    group_key = func.coalesce(Event.parent_event_id, Event.id)
-    
     # Check dialect to determine strategy
-    # SQLite allows GROUP BY with non-aggregated columns (picking arbitrary row), Postgres does not.
-    # Postgres supports DISTINCT ON, which is perfect for this.
+    # SQLite allows GROUP BY with non-aggregated columns, Postgres does not.
     is_postgres = session.bind.dialect.name == "postgresql"
     
+    # Deduplication Logic - show only one instance per recurring series
+    group_key = func.coalesce(Event.parent_event_id, Event.id)
+    
     if is_postgres:
-        # Postgres: Use DISTINCT ON
-        # We must order by the distinct key first
-        query = query.distinct(group_key).order_by(group_key, Event.date_start)
+        # PostgreSQL approach: Use a subquery with ROW_NUMBER to pick earliest event per group
+        # First, get IDs of the earliest event in each group
+        from sqlalchemy import text
+        from sqlalchemy.sql import literal_column
         
-        # Count total (groups)
-        count_query = select(func.count()).select_from(query.subquery())
-        total = session.exec(count_query).one()
+        # Build filtered base query as CTE
+        base_subquery = query.subquery()
         
-        # Wrap in subquery to apply final sort (Featured DESC, Date ASC) and pagination
-        sub = query.subquery()
-        outer_query = select(Event).from_statement(
-            select(sub).order_by(sub.c.featured.desc(), sub.c.date_start).offset(skip).limit(limit)
+        # Use raw SQL for the deduplication since SQLAlchemy's DISTINCT ON is tricky
+        # Get one event per group (the one with earliest date_start)
+        dedup_query = (
+            select(Event)
+            .where(Event.id.in_(
+                select(base_subquery.c.id)
+                .distinct(func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id))
+                .order_by(
+                    func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id),
+                    base_subquery.c.date_start
+                )
+            ))
         )
-        events = session.exec(outer_query).all()
+        
+        # Count total unique groups
+        count_subquery = (
+            select(func.count(func.distinct(group_key)))
+            .select_from(query.subquery())
+        )
+        total = session.exec(count_subquery).one() or 0
+        
+        # Order by featured, then date, then paginate
+        dedup_query = dedup_query.order_by(Event.featured.desc(), Event.date_start)
+        dedup_query = dedup_query.offset(skip).limit(limit)
+        events = session.exec(dedup_query).all()
         
     else:
         # SQLite: Use GROUP BY (legacy behavior)
