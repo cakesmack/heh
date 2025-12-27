@@ -306,7 +306,7 @@ def create_venue(
     # Calculate geohash
     geohash = calculate_geohash(venue_data.latitude, venue_data.longitude)
 
-    # Create venue
+    # Create venue with ALL fields from schema
     new_venue = Venue(
         name=venue_data.name,
         address=venue_data.address,
@@ -317,6 +317,17 @@ def create_venue(
         description=venue_data.description,
         website=venue_data.website,
         phone=venue_data.phone,
+        image_url=venue_data.image_url,
+        formatted_address=venue_data.formatted_address,
+        postcode=venue_data.postcode,
+        address_full=venue_data.address_full,
+        # Amenities
+        is_dog_friendly=venue_data.is_dog_friendly,
+        has_wheelchair_access=venue_data.has_wheelchair_access,
+        has_parking=venue_data.has_parking,
+        serves_food=venue_data.serves_food,
+        amenities_notes=venue_data.amenities_notes,
+        # Ownership
         owner_id=current_user.id
     )
 
