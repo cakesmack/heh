@@ -102,7 +102,8 @@ export default function MapPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-white overflow-hidden">
+    // Height: 100vh minus header (64px) minus bottom nav on mobile (64px)
+    <div className="flex flex-col h-[calc(100vh-128px)] md:h-[calc(100vh-64px)] bg-white overflow-hidden">
       {/* Header with Category Filter */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
         <div className="flex items-center justify-between">
@@ -131,9 +132,9 @@ export default function MapPage() {
       </div>
 
       {/* Main Content - Split View (Desktop) / Map Only (Mobile) */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Panel - Event List: Hidden on mobile, visible on desktop */}
-        <div className="hidden md:block md:w-[380px] lg:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        {/* Left Panel - Event List: Hidden on mobile/tablet, visible on desktop (lg+) */}
+        <aside className="hidden lg:flex lg:flex-col lg:w-[380px] xl:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200">
           {loading ? (
             <div className="p-8 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mx-auto mb-4" />
@@ -200,7 +201,7 @@ export default function MapPage() {
               ))}
             </div>
           )}
-        </div>
+        </aside>
 
         {/* Right Panel - Map: Full width on mobile, shares space on desktop */}
         <div className="flex-1 relative">
