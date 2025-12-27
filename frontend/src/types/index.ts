@@ -182,6 +182,7 @@ export interface VenueCreate {
   description?: string;
   website?: string;
   phone?: string;
+  image_url?: string;
   // Amenities
   is_dog_friendly?: boolean;
   has_wheelchair_access?: boolean;
