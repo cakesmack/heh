@@ -365,9 +365,9 @@ export function MapView({
         </div>
       )}
 
-      {/* Legend */}
+      {/* Legend - Hidden on mobile to avoid control conflicts */}
       {isLoaded && (showEvents || showVenues) && (
-        <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-md p-3 text-sm">
+        <div className="hidden md:block absolute bottom-4 right-4 bg-white rounded-lg shadow-md p-3 text-sm">
           <p className="font-semibold text-gray-700 mb-2">Legend</p>
           {showEvents && (
             <div className="flex items-center gap-2 mb-1">

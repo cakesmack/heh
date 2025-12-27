@@ -2,15 +2,20 @@
 Highland Events Hub API
 Main application entry point.
 """
+import logging
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import SQLModel
 
 from app.core.config import settings
-from app.core.database import engine
+from app.core.database import engine, check_db_connection
 from app.api import auth, events, venues, checkins, promotions, categories, tags, media, geocode, users, admin, hero, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -19,7 +24,16 @@ async def lifespan(app: FastAPI):
     Application lifespan manager.
     Handles startup and shutdown events.
     """
-    # Startup: Create database tables
+    # Startup: Verify database connection with retry
+    try:
+        logger.info("Checking database connection...")
+        check_db_connection()
+        logger.info("Database connection successful")
+    except Exception as e:
+        logger.error(f"Database connection failed after retries: {e}")
+        # Continue startup - individual requests will fail gracefully
+
+    # Create database tables
     SQLModel.metadata.create_all(engine)
 
     yield
@@ -36,7 +50,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
+# CORS middleware - MUST be added first to handle preflight requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -46,8 +60,32 @@ app.add_middleware(
 )
 
 
-# Mount static files for uploads
-app.mount("/static", StaticFiles(directory="static"), name="static")
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception handler to catch unhandled errors.
+    Ensures proper JSON response with CORS headers (via middleware).
+    Prevents 500 errors from appearing as CORS errors in the browser.
+    """
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+
+    # Don't expose internal errors in production
+    detail = str(exc) if settings.DEBUG else "Internal server error"
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": detail,
+            "type": "internal_error",
+        }
+    )
+
+
+# Mount static files for uploads (create directory if it doesn't exist)
+static_dir = "static"
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 # Root endpoint

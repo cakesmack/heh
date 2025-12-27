@@ -133,6 +133,38 @@ export default function MapPage() {
         </div>
       </div>
 
+      {/* Mobile Tab Bar - Only visible on mobile */}
+      <div className="md:hidden flex-shrink-0 bg-white border-b border-gray-200">
+        <div className="flex">
+          <button
+            onClick={() => setMobileView('map')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+              mobileView === 'map'
+                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            Map
+          </button>
+          <button
+            onClick={() => setMobileView('list')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+              mobileView === 'list'
+                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            List ({filteredEvents.length})
+          </button>
+        </div>
+      </div>
+
       {/* Main Content - Split View (Desktop) / Toggle View (Mobile) */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Panel - Event List (hidden on mobile when viewing map) */}
@@ -224,9 +256,9 @@ export default function MapPage() {
             className="w-full h-full"
           />
 
-          {/* Mobile Event Preview Modal */}
+          {/* Mobile Event Preview Modal - positioned above safe area */}
           {selectedEvent && mobileView === 'map' && (
-            <div className="absolute bottom-20 left-4 right-4 bg-white rounded-xl shadow-xl z-20 md:hidden animate-in slide-in-from-bottom-10 fade-in duration-200">
+            <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl z-20 md:hidden animate-in slide-in-from-bottom-10 fade-in duration-200 pb-safe">
               <div className="p-4">
                 <div className="flex gap-4">
                   {/* Image */}
@@ -289,27 +321,6 @@ export default function MapPage() {
           )}
         </div>
 
-        {/* Mobile Toggle Button */}
-        <button
-          onClick={() => setMobileView(mobileView === 'list' ? 'map' : 'list')}
-          className="md:hidden fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-colors"
-        >
-          {mobileView === 'list' ? (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              Show Map
-            </>
-          ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-              Show List
-            </>
-          )}
-        </button>
       </div>
     </div>
   );

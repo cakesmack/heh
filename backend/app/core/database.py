@@ -2,10 +2,15 @@
 Database connection and session management.
 Handles SQLModel engine creation and session lifecycle.
 """
+import logging
+import os
 from typing import Generator
-from sqlmodel import SQLModel, create_engine, Session
+from sqlalchemy.exc import OperationalError
+from sqlmodel import SQLModel, create_engine, Session, text
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from .config import settings
 
+logger = logging.getLogger(__name__)
 
 # Determine which database URL to use
 # Prefer pooler URL for production (Render), fallback to direct URL
@@ -13,6 +18,14 @@ database_url = settings.DATABASE_URL_POOLER or settings.DATABASE_URL
 
 # SQLite doesn't support pooling options
 is_sqlite = database_url.startswith("sqlite")
+
+# Warn if SQLite is used in production-like environment
+if is_sqlite and os.getenv("RENDER", ""):
+    logger.warning(
+        "⚠️  SQLite detected in production environment! "
+        "This will cause data loss on container restart. "
+        "Set DATABASE_URL to a PostgreSQL connection string."
+    )
 
 # Create database engine with appropriate options
 if is_sqlite:
@@ -34,6 +47,24 @@ else:
 def create_db_and_tables():
     """Create all database tables defined in SQLModel models."""
     SQLModel.metadata.create_all(engine)
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    retry=retry_if_exception_type(OperationalError),
+    before_sleep=lambda retry_state: logger.warning(
+        f"Database connection failed, retrying in {retry_state.next_action.sleep} seconds..."
+    ),
+)
+def check_db_connection() -> bool:
+    """
+    Check database connectivity with retry logic.
+    Useful for health checks and cold-start scenarios.
+    """
+    with Session(engine) as session:
+        session.execute(text("SELECT 1"))
+    return True
 
 
 def get_session() -> Generator[Session, None, None]:

@@ -2,7 +2,6 @@
 Application configuration settings.
 Loads environment variables and provides application-wide configuration.
 """
-import os
 import json
 from typing import Optional, Union
 from pydantic import field_validator
@@ -17,8 +16,10 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
 
-    # Database
-    DATABASE_URL: str = "sqlite:///./highland_events.db"
+    # Database - No default! Must be set in environment.
+    # Local dev: sqlite:///./highland_events.db
+    # Production: postgresql://... (via Render)
+    DATABASE_URL: str
     DATABASE_URL_POOLER: Optional[str] = None  # For Render pooled connections
 
     # Security - SECRET_KEY must be set in production
@@ -32,12 +33,30 @@ class Settings(BaseSettings):
     @field_validator('ALLOWED_ORIGINS', mode='before')
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, list]) -> list:
-        """Parse ALLOWED_ORIGINS from string or list."""
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+        """Parse ALLOWED_ORIGINS from string or list.
+
+        Accepts:
+        - JSON array: '["https://example.com", "https://app.example.com"]'
+        - Comma-separated: 'https://example.com, https://app.example.com'
+        - Python list: ['https://example.com']
+        """
+        if isinstance(v, list):
             return v
-        raise ValueError(v)
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return []
+            # Try JSON array first
+            if v.startswith("["):
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(origin).strip() for origin in parsed]
+                except json.JSONDecodeError:
+                    pass  # Fall through to comma-separated
+            # Comma-separated format
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        raise ValueError(f"Invalid ALLOWED_ORIGINS format: {v}")
 
     @field_validator('DATABASE_URL', 'DATABASE_URL_POOLER', mode='before')
     @classmethod
