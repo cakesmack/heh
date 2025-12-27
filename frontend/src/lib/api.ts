@@ -1295,7 +1295,23 @@ export const api = {
   collections: collectionsAPI,
   social: socialAPI,
   groups: groupsAPI,
-  bookmarks: bookmarksAPI,
+  bookmarks: {
+    toggle: async (eventId: string): Promise<{ bookmarked: boolean; message: string }> => {
+      return apiFetch<{ bookmarked: boolean; message: string }>(
+        `/api/bookmarks/${eventId}`,
+        { method: 'POST' }
+      );
+    },
+    check: async (eventId: string): Promise<{ bookmarked: boolean }> => {
+      return apiFetch<{ bookmarked: boolean }>(`/api/bookmarks/check/${eventId}`);
+    },
+    list: async (skip = 0, limit = 50): Promise<EventListResponse> => {
+      return apiFetch<EventListResponse>(`/api/bookmarks/my?skip=${skip}&limit=${limit}`);
+    },
+    getCount: async (eventId: string): Promise<{ count: number }> => {
+      return apiFetch<{ count: number }>(`/api/bookmarks/count/${eventId}`, {}, false);
+    },
+  },
   organizers: {
     list: async (userId?: string) => {
       const query = userId ? `?user_id=${userId}` : '';
