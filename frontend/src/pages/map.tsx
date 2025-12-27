@@ -2,7 +2,7 @@
  * Map Page
  * Interactive map showing events across the Scottish Highlands
  * Features: Side panel with event list, hover interaction, events-only view
- * Mobile: Toggle between list and map views
+ * Responsive: Mobile shows map only, Desktop shows split view (list + map)
  */
 'use client';
 
@@ -37,10 +37,7 @@ export default function MapPage() {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | undefined>(undefined);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
 
-  // Mobile view toggle: 'list' or 'map' - Default to 'map' for mobile
-  const [mobileView, setMobileView] = useState<'list' | 'map'>('map');
-
-  // Selected event for mobile modal
+  // Selected event for mobile modal (when tapping a marker)
   const [selectedEvent, setSelectedEvent] = useState<EventResponse | null>(null);
 
   // Fetch events and categories
@@ -133,45 +130,10 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Mobile Tab Bar - Only visible on mobile */}
-      <div className="md:hidden flex-shrink-0 bg-white border-b border-gray-200">
-        <div className="flex">
-          <button
-            onClick={() => setMobileView('map')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-              mobileView === 'map'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-            Map
-          </button>
-          <button
-            onClick={() => setMobileView('list')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-              mobileView === 'list'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            List ({filteredEvents.length})
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content - Split View (Desktop) / Toggle View (Mobile) */}
+      {/* Main Content - Split View (Desktop) / Map Only (Mobile) */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Panel - Event List (hidden on mobile when viewing map) */}
-        <div className={`
-          w-full md:w-[380px] lg:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200
-          ${mobileView === 'map' ? 'hidden md:block' : 'block'}
-        `}>
+        {/* Left Panel - Event List: Hidden on mobile, visible on desktop */}
+        <div className="hidden md:block md:w-[380px] lg:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200">
           {loading ? (
             <div className="p-8 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mx-auto mb-4" />
@@ -240,11 +202,8 @@ export default function MapPage() {
           )}
         </div>
 
-        {/* Right Panel - Map (hidden on mobile when viewing list) */}
-        <div className={`
-          flex-1 relative
-          ${mobileView === 'list' ? 'hidden md:block' : 'block'}
-        `}>
+        {/* Right Panel - Map: Full width on mobile, shares space on desktop */}
+        <div className="flex-1 relative">
           <MapView
             events={filteredEvents}
             venues={[]}
@@ -256,8 +215,8 @@ export default function MapPage() {
             className="w-full h-full"
           />
 
-          {/* Mobile Event Preview Modal - positioned above safe area */}
-          {selectedEvent && mobileView === 'map' && (
+          {/* Mobile Event Preview Modal - shows when marker is tapped on mobile */}
+          {selectedEvent && (
             <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl z-20 md:hidden animate-in slide-in-from-bottom-10 fade-in duration-200 pb-safe">
               <div className="p-4">
                 <div className="flex gap-4">
