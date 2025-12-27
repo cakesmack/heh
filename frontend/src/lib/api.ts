@@ -635,6 +635,38 @@ export const categoriesAPI = {
       method: 'DELETE',
     });
   },
+
+  /**
+   * Follow a category
+   */
+  follow: async (id: string): Promise<{ message: string }> => {
+    return apiFetch<{ message: string }>(`/api/categories/${id}/follow`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Unfollow a category
+   */
+  unfollow: async (id: string): Promise<{ message: string }> => {
+    return apiFetch<{ message: string }>(`/api/categories/${id}/follow`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
+   * Check if following a category
+   */
+  checkFollowing: async (id: string): Promise<{ following: boolean }> => {
+    return apiFetch<{ following: boolean }>(`/api/categories/${id}/following`);
+  },
+
+  /**
+   * Get all followed categories
+   */
+  getFollowed: async (): Promise<CategoryListResponse> => {
+    return apiFetch<CategoryListResponse>('/api/categories/user/following');
+  },
 };
 
 // ============================================================
@@ -803,58 +835,6 @@ export const geocodeAPI = {
       {},
       false
     );
-  },
-};
-
-// ============================================================
-// CATEGORIES API
-// ============================================================
-
-export const categoriesAPI = {
-  /**
-   * List all categories
-   */
-  list: async (activeOnly = true): Promise<CategoryListResponse> => {
-    return apiFetch<CategoryListResponse>(`/api/categories?active_only=${activeOnly}`);
-  },
-
-  /**
-   * Get category by ID or slug
-   */
-  get: async (idOrSlug: string): Promise<Category> => {
-    return apiFetch<Category>(`/api/categories/${idOrSlug}`);
-  },
-
-  /**
-   * Follow a category
-   */
-  follow: async (id: string): Promise<{ message: string }> => {
-    return apiFetch<{ message: string }>(`/api/categories/${id}/follow`, {
-      method: 'POST',
-    });
-  },
-
-  /**
-   * Unfollow a category
-   */
-  unfollow: async (id: string): Promise<{ message: string }> => {
-    return apiFetch<{ message: string }>(`/api/categories/${id}/follow`, {
-      method: 'DELETE',
-    });
-  },
-
-  /**
-   * Check if following a category
-   */
-  checkFollowing: async (id: string): Promise<{ following: boolean }> => {
-    return apiFetch<{ following: boolean }>(`/api/categories/${id}/following`);
-  },
-
-  /**
-   * Get all followed categories
-   */
-  getFollowed: async (): Promise<CategoryListResponse> => {
-    return apiFetch<CategoryListResponse>('/api/categories/user/following');
   },
 };
 
