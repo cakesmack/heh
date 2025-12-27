@@ -4,7 +4,7 @@
  * Matches the admin venue form for consistency
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -15,6 +15,52 @@ import { Button } from '@/components/common/Button';
 import ImageUpload from '@/components/common/ImageUpload';
 import PostcodeLookup from '@/components/admin/PostcodeLookup';
 import { isHIERegion } from '@/utils/validation/hie-check';
+
+/**
+ * Parse backend validation errors into human-readable messages
+ */
+function parseBackendError(error: any): string {
+    // Handle Pydantic validation errors (array format)
+    if (error?.detail && Array.isArray(error.detail)) {
+        const messages = error.detail.map((err: any) => {
+            const field = err.loc?.slice(-1)[0] || 'field';
+            const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+            // Map common error types to friendly messages
+            if (err.type === 'string_too_long') {
+                return `${fieldName} is too long (max ${err.ctx?.max_length || 'limit'} characters)`;
+            }
+            if (err.type === 'string_too_short') {
+                return `${fieldName} is too short (min ${err.ctx?.min_length || 'required'} characters)`;
+            }
+            if (err.type === 'missing') {
+                return `${fieldName} is required`;
+            }
+            if (err.type === 'value_error') {
+                return `${fieldName} has an invalid value`;
+            }
+            if (err.type === 'url_parsing') {
+                return `${fieldName} must be a valid URL (e.g., https://example.com)`;
+            }
+
+            return err.msg || `Invalid ${fieldName}`;
+        });
+        return messages.join('. ');
+    }
+
+    // Handle string detail
+    if (typeof error?.detail === 'string') {
+        return error.detail;
+    }
+
+    // Handle message property
+    if (error?.message) {
+        return error.message;
+    }
+
+    // Fallback
+    return 'Failed to create venue. Please check your input and try again.';
+}
 
 // Dynamic import for MiniMap to avoid SSR issues
 const MiniMap = dynamic(() => import('@/components/maps/MiniMap'), { ssr: false });
@@ -61,9 +107,13 @@ export default function NewVenuePage() {
     });
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isImageUploading, setIsImageUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [isPostcodeValid, setIsPostcodeValid] = useState(true);
+
+    // Ref to hold the latest image URL (avoids stale closure issues)
+    const imageUrlRef = useRef<string>('');
 
     // Fetch venue categories
     useEffect(() => {
@@ -82,11 +132,21 @@ export default function NewVenuePage() {
         }
     }, [authLoading, isAuthenticated, router]);
 
+    const handleImageUploadStart = () => {
+        setIsImageUploading(true);
+    };
+
+    const handleImageUploadEnd = () => {
+        setIsImageUploading(false);
+    };
+
     const handleImageUpload = (urls: { url: string }) => {
+        imageUrlRef.current = urls.url;
         setFormData(prev => ({ ...prev, image_url: urls.url }));
     };
 
     const handleImageRemove = () => {
+        imageUrlRef.current = '';
         setFormData(prev => ({ ...prev, image_url: '' }));
     };
 
@@ -137,6 +197,9 @@ export default function NewVenuePage() {
         }
 
         try {
+            // Use ref for image_url to avoid stale closure issues
+            const finalImageUrl = imageUrlRef.current || formData.image_url;
+
             const newVenue = await venuesAPI.create({
                 name: formData.name,
                 description: formData.description || undefined,
@@ -147,7 +210,7 @@ export default function NewVenuePage() {
                 category_id: formData.category_id,
                 website: formData.website || undefined,
                 phone: formData.phone || undefined,
-                image_url: formData.image_url || undefined,
+                image_url: finalImageUrl || undefined,
                 is_dog_friendly: formData.is_dog_friendly,
                 has_wheelchair_access: formData.has_wheelchair_access,
                 has_parking: formData.has_parking,
@@ -160,7 +223,9 @@ export default function NewVenuePage() {
                 router.push(`/venues/${newVenue.id}`);
             }, 1500);
         } catch (err: any) {
-            setError(err.message || 'Failed to create venue. Please try again.');
+            // Parse backend errors into human-readable messages
+            const errorMessage = parseBackendError(err);
+            setError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -220,8 +285,15 @@ export default function NewVenuePage() {
                                 currentImageUrl={formData.image_url}
                                 onUpload={handleImageUpload}
                                 onRemove={handleImageRemove}
+                                onUploadStart={handleImageUploadStart}
+                                onUploadEnd={handleImageUploadEnd}
                                 aspectRatio="16/9"
                             />
+                            {isImageUploading && (
+                                <p className="text-sm text-amber-600 mt-1">
+                                    Uploading image... Please wait before submitting.
+                                </p>
+                            )}
                         </div>
 
                         {/* Name */}
@@ -265,100 +337,48 @@ export default function NewVenuePage() {
                             </select>
                         </div>
 
-                        {/* Postcode Lookup */}
+                        {/* Address Lookup - User-facing search */}
                         <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Find Address *
+                            </label>
                             <PostcodeLookup onResult={handlePostcodeLookup} />
+                            {formData.address && (
+                                <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <p className="text-sm text-gray-700">
+                                        <span className="font-medium">Selected:</span> {formData.address}
+                                        {formData.postcode && `, ${formData.postcode}`}
+                                    </p>
+                                </div>
+                            )}
+                            {!isPostcodeValid && (
+                                <p className="text-sm text-red-600 mt-2">
+                                    Venue must be located in the Highlands & Islands region
+                                </p>
+                            )}
                         </div>
 
-                        {/* Address */}
+                        {/* Hidden fields - populated by PostcodeLookup */}
+                        <input type="hidden" name="address" value={formData.address} />
+                        <input type="hidden" name="postcode" value={formData.postcode} />
+                        <input type="hidden" name="latitude" value={formData.latitude} />
+                        <input type="hidden" name="longitude" value={formData.longitude} />
+
+                        {/* Phone */}
                         <div>
-                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                                Address *
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                                Phone
                             </label>
                             <input
-                                id="address"
-                                name="address"
-                                type="text"
-                                required
-                                value={formData.address}
-                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                placeholder="Full address"
+                                id="phone"
+                                name="phone"
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                placeholder="01234 567890"
                                 disabled={isSubmitting}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                             />
-                        </div>
-
-                        {/* Postcode */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="postcode" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Postcode
-                                </label>
-                                <input
-                                    id="postcode"
-                                    name="postcode"
-                                    type="text"
-                                    value={formData.postcode}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        setFormData({ ...formData, postcode: val });
-                                        setIsPostcodeValid(val ? isHIERegion(val) : true);
-                                    }}
-                                    placeholder="e.g., IV1 1AA"
-                                    disabled={isSubmitting}
-                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${!isPostcodeValid ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-emerald-500'}`}
-                                />
-                                {!isPostcodeValid && (
-                                    <p className="text-xs text-red-600 mt-1">
-                                        Venue must be in the Highlands & Islands region
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Phone
-                                </label>
-                                <input
-                                    id="phone"
-                                    name="phone"
-                                    type="tel"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    placeholder="01234 567890"
-                                    disabled={isSubmitting}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Coordinates */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Latitude *
-                                </label>
-                                <input
-                                    type="number"
-                                    step="any"
-                                    value={formData.latitude}
-                                    onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Longitude *
-                                </label>
-                                <input
-                                    type="number"
-                                    step="any"
-                                    value={formData.longitude}
-                                    onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                                    required
-                                />
-                            </div>
                         </div>
 
                         {/* Map Preview */}
@@ -469,10 +489,14 @@ export default function NewVenuePage() {
                                 type="submit"
                                 variant="primary"
                                 size="lg"
-                                disabled={isSubmitting || success || !isPostcodeValid}
+                                disabled={isSubmitting || success || !isPostcodeValid || isImageUploading}
                                 className="flex-1"
                             >
-                                {isSubmitting ? 'Creating Venue...' : 'Create Venue'}
+                                {isImageUploading
+                                    ? 'Uploading Image...'
+                                    : isSubmitting
+                                    ? 'Creating Venue...'
+                                    : 'Create Venue'}
                             </Button>
                             <Link
                                 href="/venues"
