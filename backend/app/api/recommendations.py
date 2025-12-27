@@ -5,6 +5,7 @@ from sqlmodel import Session, select, func, col, desc
 
 from app.core.database import get_session
 from app.core.security import get_current_user, get_current_user_optional
+from app.core.query_utils import deduplicate_recurring_events_simple
 from app.models.user import User
 from app.models.event import Event
 from app.models.analytics import AnalyticsEvent
@@ -91,12 +92,14 @@ def get_recommendations(
             .where(Event.status == "published")
             .where(Event.date_start >= now)
             .where(col(EventTag.tag_id).in_(preferred_tag_ids))
-            .where(group_key.notin_(existing_series_ids) if existing_series_ids else True)
-            .group_by(group_key)
-            .order_by(Event.featured.desc(), func.min(Event.date_start))
-            .limit(limit - len(recommendations))
         )
-        tag_events = list(session.exec(tag_events_query).all())
+        tag_events = deduplicate_recurring_events_simple(
+            session=session,
+            base_query=tag_events_query,
+            limit=limit - len(recommendations),
+            excluded_series_ids=existing_series_ids if existing_series_ids else None,
+            order_by_featured=True
+        )
         recommendations.extend(tag_events)
         existing_series_ids.extend([str(e.parent_event_id or e.id) for e in tag_events])
     
@@ -117,19 +120,21 @@ def get_recommendations(
                 conditions.append(col(Event.venue_id).in_(followed_venue_ids))
             if followed_organizer_ids:
                 conditions.append(col(Event.organizer_profile_id).in_(followed_organizer_ids))
-            
+
             from sqlalchemy import or_
             follow_events_query = (
                 select(Event)
                 .where(Event.status == "published")
                 .where(Event.date_start >= now)
                 .where(or_(*conditions) if conditions else True)
-                .where(group_key.notin_(existing_series_ids) if existing_series_ids else True)
-                .group_by(group_key)
-                .order_by(Event.featured.desc(), func.min(Event.date_start))
-                .limit(limit - len(recommendations))
             )
-            follow_events = list(session.exec(follow_events_query).all())
+            follow_events = deduplicate_recurring_events_simple(
+                session=session,
+                base_query=follow_events_query,
+                limit=limit - len(recommendations),
+                excluded_series_ids=existing_series_ids if existing_series_ids else None,
+                order_by_featured=True
+            )
             recommendations.extend(follow_events)
             existing_series_ids.extend([str(e.parent_event_id or e.id) for e in follow_events])
     
@@ -160,12 +165,14 @@ def get_recommendations(
                 .where(Event.status == "published")
                 .where(Event.date_start >= now)
                 .where(col(Event.category_id).in_(preferred_categories))
-                .where(group_key.notin_(existing_series_ids) if existing_series_ids else True)
-                .group_by(group_key)
-                .order_by(Event.featured.desc(), func.min(Event.date_start))
-                .limit(limit - len(recommendations))
             )
-            cat_events = list(session.exec(cat_events_query).all())
+            cat_events = deduplicate_recurring_events_simple(
+                session=session,
+                base_query=cat_events_query,
+                limit=limit - len(recommendations),
+                excluded_series_ids=existing_series_ids if existing_series_ids else None,
+                order_by_featured=True
+            )
             recommendations.extend(cat_events)
             existing_series_ids.extend([str(e.parent_event_id or e.id) for e in cat_events])
     
@@ -175,12 +182,14 @@ def get_recommendations(
             select(Event)
             .where(Event.status == "published")
             .where(Event.date_start >= now)
-            .where(group_key.notin_(existing_series_ids) if existing_series_ids else True)
-            .group_by(group_key)
-            .order_by(Event.featured.desc(), func.random())
-            .limit(limit - len(recommendations))
         )
-        fallback_events = list(session.exec(fallback_query).all())
+        fallback_events = deduplicate_recurring_events_simple(
+            session=session,
+            base_query=fallback_query,
+            limit=limit - len(recommendations),
+            excluded_series_ids=existing_series_ids if existing_series_ids else None,
+            order_by_featured=True
+        )
         recommendations.extend(fallback_events)
     
     return recommendations[:limit]
@@ -210,14 +219,11 @@ def get_similar_events(
         
     now = datetime.utcnow()
     similar_events: List[Event] = []
-    
+
     # Track series IDs to avoid duplicates from the same recurring series
     # A series ID is parent_event_id if it exists, otherwise the event id itself
     existing_series_ids: List[str] = []
-    
-    # Group key for deduplication
-    group_key = func.coalesce(Event.parent_event_id, Event.id)
-    
+
     # Exclude the source event's series from recommendations
     source_series_id = str(event.parent_event_id or event.id)
     existing_series_ids.append(source_series_id)
@@ -229,12 +235,14 @@ def get_similar_events(
             .where(Event.status == "published")
             .where(Event.date_start >= now)
             .where(Event.category_id == event.category_id)
-            .where(group_key.notin_(existing_series_ids))
-            .group_by(group_key)
-            .order_by(func.min(Event.date_start))
-            .limit(limit)
         )
-        cat_events = list(session.exec(category_query).all())
+        cat_events = deduplicate_recurring_events_simple(
+            session=session,
+            base_query=category_query,
+            limit=limit,
+            excluded_series_ids=existing_series_ids,
+            order_by_featured=False
+        )
         similar_events.extend(cat_events)
         existing_series_ids.extend([str(e.parent_event_id or e.id) for e in cat_events])
     
@@ -255,12 +263,14 @@ def get_similar_events(
                 .where(Event.status == "published")
                 .where(Event.date_start >= now)
                 .where(col(EventTag.tag_id).in_(source_tag_ids))
-                .where(group_key.notin_(existing_series_ids))
-                .group_by(group_key)
-                .order_by(func.min(Event.date_start))
-                .limit(remaining)
             )
-            tag_events = list(session.exec(tag_events_query).all())
+            tag_events = deduplicate_recurring_events_simple(
+                session=session,
+                base_query=tag_events_query,
+                limit=remaining,
+                excluded_series_ids=existing_series_ids,
+                order_by_featured=False
+            )
             similar_events.extend(tag_events)
             existing_series_ids.extend([str(e.parent_event_id or e.id) for e in tag_events])
     
@@ -272,12 +282,14 @@ def get_similar_events(
             .where(Event.status == "published")
             .where(Event.date_start >= now)
             .where(Event.venue_id == event.venue_id)
-            .where(group_key.notin_(existing_series_ids))
-            .group_by(group_key)
-            .order_by(func.min(Event.date_start))
-            .limit(remaining)
         )
-        venue_events = list(session.exec(venue_query).all())
+        venue_events = deduplicate_recurring_events_simple(
+            session=session,
+            base_query=venue_query,
+            limit=remaining,
+            excluded_series_ids=existing_series_ids,
+            order_by_featured=False
+        )
         similar_events.extend(venue_events)
         existing_series_ids.extend([str(e.parent_event_id or e.id) for e in venue_events])
         
@@ -288,12 +300,14 @@ def get_similar_events(
             select(Event)
             .where(Event.status == "published")
             .where(Event.date_start >= now)
-            .where(group_key.notin_(existing_series_ids))
-            .group_by(group_key)
-            .order_by(Event.featured.desc(), func.min(Event.date_start))
-            .limit(remaining)
         )
-        fallback_events = list(session.exec(fallback_query).all())
+        fallback_events = deduplicate_recurring_events_simple(
+            session=session,
+            base_query=fallback_query,
+            limit=remaining,
+            excluded_series_ids=existing_series_ids,
+            order_by_featured=True
+        )
         similar_events.extend(fallback_events)
-        
+
     return similar_events[:limit]

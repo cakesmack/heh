@@ -30,6 +30,7 @@ from app.services.geolocation import calculate_geohash, haversine_distance, get_
 from app.services.notifications import notification_service
 from app.services.recurrence import generate_recurring_instances
 from app.models.organizer import Organizer
+from app.core.query_utils import deduplicate_recurring_events
 
 router = APIRouter(tags=["Events"])
 
@@ -293,62 +294,15 @@ def list_events(
     if organizer_profile_id:
         query = query.where(Event.organizer_profile_id == normalize_uuid(organizer_profile_id))
 
-    # Check dialect to determine strategy
-    # SQLite allows GROUP BY with non-aggregated columns, Postgres does not.
-    is_postgres = session.bind.dialect.name == "postgresql"
-    
-    # Deduplication Logic - show only one instance per recurring series
-    group_key = func.coalesce(Event.parent_event_id, Event.id)
-    
-    if is_postgres:
-        # PostgreSQL approach: Use a subquery with ROW_NUMBER to pick earliest event per group
-        # First, get IDs of the earliest event in each group
-        from sqlalchemy import text
-        from sqlalchemy.sql import literal_column
-        
-        # Build filtered base query as CTE
-        base_subquery = query.subquery()
-        
-        # Use raw SQL for the deduplication since SQLAlchemy's DISTINCT ON is tricky
-        # Get one event per group (the one with earliest date_start)
-        dedup_query = (
-            select(Event)
-            .where(Event.id.in_(
-                select(base_subquery.c.id)
-                .distinct(func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id))
-                .order_by(
-                    func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id),
-                    base_subquery.c.date_start
-                )
-            ))
-        )
-        
-        # Count total unique groups
-        count_subquery = (
-            select(func.count(func.distinct(group_key)))
-            .select_from(query.subquery())
-        )
-        total = session.exec(count_subquery).one() or 0
-        
-        # Order by featured, then date, then paginate
-        dedup_query = dedup_query.order_by(Event.featured.desc(), Event.date_start)
-        dedup_query = dedup_query.offset(skip).limit(limit)
-        events = session.exec(dedup_query).all()
-        
-    else:
-        # SQLite: Use GROUP BY (legacy behavior)
-        query = query.group_by(group_key)
-        
-        # Count total (groups)
-        count_query = select(func.count()).select_from(query.subquery())
-        total = session.exec(count_query).one()
-        
-        # Order by featured, then date
-        query = query.order_by(Event.featured.desc(), func.min(Event.date_start))
-        
-        # Pagination
-        query = query.offset(skip).limit(limit)
-        events = session.exec(query).all()
+    # Deduplicate recurring events (PostgreSQL-safe)
+    # Shows only one instance per recurring series (earliest upcoming)
+    events, total = deduplicate_recurring_events(
+        session=session,
+        base_query=query,
+        limit=limit,
+        offset=skip,
+        order_by_featured=True
+    )
 
     # Build responses
     event_responses = [
