@@ -1295,6 +1295,7 @@ export const api = {
   collections: collectionsAPI,
   social: socialAPI,
   groups: groupsAPI,
+  bookmarks: bookmarksAPI,
   organizers: {
     list: async (userId?: string) => {
       const query = userId ? `?user_id=${userId}` : '';

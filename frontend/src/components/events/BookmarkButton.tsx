@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { bookmarksAPI } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'react-hot-toast';
 
@@ -32,7 +32,7 @@ export function BookmarkButton({
 
     const checkStatus = async () => {
         try {
-            const { bookmarked } = await bookmarksAPI.check(eventId);
+            const { bookmarked } = await api.bookmarks.check(eventId);
             setIsBookmarked(bookmarked);
             setHasChecked(true);
         } catch (error) {
@@ -54,7 +54,7 @@ export function BookmarkButton({
             // Optimistic update
             setIsBookmarked(!isBookmarked);
 
-            const response = await bookmarksAPI.toggle(eventId);
+            const response = await api.bookmarks.toggle(eventId);
 
             // Verify state matches server
             if (response.bookmarked !== !isBookmarked) {
