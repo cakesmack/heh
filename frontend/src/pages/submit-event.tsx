@@ -17,6 +17,7 @@ import { Button } from '@/components/common/Button';
 import TagInput from '@/components/tags/TagInput';
 import ImageUpload from '@/components/common/ImageUpload';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
+import DateTimePicker from '@/components/common/DateTimePicker';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 
 export default function SubmitEventPage() {
@@ -377,13 +378,12 @@ export default function SubmitEventPage() {
                 >
                   Start Date & Time *
                 </label>
-                <Input
+                <DateTimePicker
                   id="date_start"
                   name="date_start"
-                  type="datetime-local"
                   required
                   value={formData.date_start}
-                  onChange={handleChange}
+                  onChange={(value) => setFormData({ ...formData, date_start: value })}
                   disabled={isLoading}
                 />
               </div>
@@ -393,13 +393,12 @@ export default function SubmitEventPage() {
                 <label htmlFor="date_end" className="block text-sm font-medium text-gray-700 mb-2">
                   End Date & Time *
                 </label>
-                <Input
+                <DateTimePicker
                   id="date_end"
                   name="date_end"
-                  type="datetime-local"
                   required
                   value={formData.date_end}
-                  onChange={handleChange}
+                  onChange={(value) => setFormData({ ...formData, date_end: value })}
                   min={formData.date_start}
                   disabled={isLoading}
                 />

@@ -9,6 +9,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import Modal from '@/components/admin/Modal';
 import ImageUpload from '@/components/common/ImageUpload';
+import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import { eventsAPI, categoriesAPI } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
@@ -416,23 +417,23 @@ export default function AdminEvents() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Start Date/Time *</label>
-                <input
-                  type="datetime-local"
+                <DateTimePicker
+                  id="date_start"
+                  name="date_start"
                   value={formData.date_start}
-                  onChange={(e) => handleDateChange('date_start', e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  onChange={(value) => handleDateChange('date_start', value)}
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">End Date/Time *</label>
-                <input
-                  type="datetime-local"
+                <DateTimePicker
+                  id="date_end"
+                  name="date_end"
                   value={formData.date_end}
-                  onChange={(e) => handleDateChange('date_end', e.target.value)}
+                  onChange={(value) => handleDateChange('date_end', value)}
                   min={formData.date_start}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 ${dateError ? 'border-red-500' : ''}`}
                   required
                 />
                 {dateError && (

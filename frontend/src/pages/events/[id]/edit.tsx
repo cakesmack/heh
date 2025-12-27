@@ -9,6 +9,7 @@ import { Input } from '@/components/common/Input';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
 import ImageUpload from '@/components/common/ImageUpload';
+import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import TagInput from '@/components/tags/TagInput';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
@@ -382,13 +383,12 @@ export default function EditEventPage() {
                                 <label htmlFor="date_start" className="block text-sm font-medium text-gray-700 mb-2">
                                     Start Date & Time *
                                 </label>
-                                <Input
+                                <DateTimePicker
                                     id="date_start"
                                     name="date_start"
-                                    type="datetime-local"
                                     required
                                     value={formData.date_start}
-                                    onChange={handleChange}
+                                    onChange={(value) => setFormData({ ...formData, date_start: value })}
                                     disabled={isLoading}
                                 />
                             </div>
@@ -396,13 +396,12 @@ export default function EditEventPage() {
                                 <label htmlFor="date_end" className="block text-sm font-medium text-gray-700 mb-2">
                                     End Date & Time *
                                 </label>
-                                <Input
+                                <DateTimePicker
                                     id="date_end"
                                     name="date_end"
-                                    type="datetime-local"
                                     required
                                     value={formData.date_end}
-                                    onChange={handleChange}
+                                    onChange={(value) => setFormData({ ...formData, date_end: value })}
                                     min={formData.date_start}
                                     disabled={isLoading}
                                 />
