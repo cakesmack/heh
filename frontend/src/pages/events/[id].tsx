@@ -21,7 +21,7 @@ import ReportModal from '@/components/common/ReportModal';
 import SimilarEvents from '@/components/events/SimilarEvents';
 import AgeRestrictionBadge from '@/components/events/AgeRestrictionBadge';
 import AddToCalendar from '@/components/events/AddToCalendar';
-import { api, bookmarksAPI } from '@/lib/api';
+import { api } from '@/lib/api';
 import type { EventResponse } from '@/types';
 
 // Dynamic import for MiniMap to avoid SSR issues with mapbox-gl
@@ -46,7 +46,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
   // Fetch bookmark count for social proof
   useEffect(() => {
     if (event?.id) {
-      bookmarksAPI.getCount(event.id)
+      api.bookmarks.getCount(event.id)
         .then(res => setBookmarkCount(res.count))
         .catch(() => setBookmarkCount(0));
     }

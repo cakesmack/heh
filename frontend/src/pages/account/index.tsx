@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { api, bookmarksAPI, analyticsAPI } from '@/lib/api';
+import { api, analyticsAPI } from '@/lib/api';
 import { CheckInHistory, EventResponse, UserDashboardStats, VenueClaim, OrganizerSummary } from '@/types';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
@@ -77,7 +77,7 @@ export default function AccountPage() {
 
         // Fetch bookmarks
         try {
-          const bookmarksData = await bookmarksAPI.list();
+          const bookmarksData = await api.bookmarks.list();
           setBookmarks(bookmarksData.events || []);
         } catch (err) {
           console.error('Error fetching bookmarks:', err);
