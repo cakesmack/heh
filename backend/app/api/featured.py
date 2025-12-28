@@ -162,8 +162,11 @@ def create_featured_checkout(
     session: Session = Depends(get_session)
 ):
     """Create Stripe checkout session for featured booking."""
+    # Normalize event ID (remove dashes if present)
+    event_id = request.event_id.replace("-", "") if "-" in request.event_id else request.event_id
+
     # Verify event exists and user owns it
-    event = session.get(Event, request.event_id)
+    event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
