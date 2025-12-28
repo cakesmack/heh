@@ -224,27 +224,42 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
     Handle successful Stripe checkout.
     Updates booking status based on organizer trust level.
     """
+    print(f"[CHECKOUT COMPLETED] Starting processing")
+    
     booking_id = stripe_session.get("metadata", {}).get("booking_id")
+    print(f"[CHECKOUT COMPLETED] Booking ID: {booking_id}")
+    
     if not booking_id:
+        print("[CHECKOUT COMPLETED] No booking_id in metadata, returning early")
         return
 
     booking = session.get(FeaturedBooking, booking_id)
     if not booking:
+        print(f"[CHECKOUT COMPLETED] Booking not found: {booking_id}")
         return
+    
+    print(f"[CHECKOUT COMPLETED] Found booking, current status: {booking.status}")
 
     # Get payment intent ID
     booking.stripe_payment_intent_id = stripe_session.get("payment_intent")
+    print(f"[CHECKOUT COMPLETED] Payment intent: {booking.stripe_payment_intent_id}")
 
     # Check if organizer is trusted
     organizer = session.get(User, booking.organizer_id)
+    print(f"[CHECKOUT COMPLETED] Organizer: {organizer.id if organizer else 'NOT FOUND'}, trusted: {organizer.is_trusted_organizer if organizer else 'N/A'}")
+    
     if organizer and organizer.is_trusted_organizer:
         booking.status = BookingStatus.ACTIVE
+        print(f"[CHECKOUT COMPLETED] Setting status to ACTIVE")
     else:
         booking.status = BookingStatus.PENDING_APPROVAL
+        print(f"[CHECKOUT COMPLETED] Setting status to PENDING_APPROVAL")
 
     booking.updated_at = datetime.utcnow()
     session.add(booking)
+    print(f"[CHECKOUT COMPLETED] Calling session.commit()")
     session.commit()
+    print(f"[CHECKOUT COMPLETED] Committed successfully, final status: {booking.status}")
 
 
 def handle_checkout_expired(session: Session, stripe_session: dict) -> None:

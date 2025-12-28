@@ -4,7 +4,8 @@ Handles availability checks, checkout, and booking management.
 """
 from datetime import date, datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
+import traceback
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Header, Query
 from sqlmodel import Session, select
 from pydantic import BaseModel
 import stripe
@@ -233,24 +234,191 @@ async def stripe_webhook(
     session: Session = Depends(get_session)
 ):
     """Handle Stripe webhook events."""
+    print("[STRIPE WEBHOOK] Received webhook request")
+    
     if not settings.STRIPE_WEBHOOK_SECRET:
+        print("[STRIPE WEBHOOK ERROR] Webhook secret not configured")
         raise HTTPException(status_code=500, detail="Webhook secret not configured")
 
     payload = await request.body()
+    print(f"[STRIPE WEBHOOK] Payload size: {len(payload)} bytes")
 
     try:
         event = stripe.Webhook.construct_event(
             payload, stripe_signature, settings.STRIPE_WEBHOOK_SECRET
         )
-    except ValueError:
+        print(f"[STRIPE WEBHOOK] Event type: {event['type']}")
+    except ValueError as e:
+        print(f"[STRIPE WEBHOOK ERROR] Invalid payload: {e}")
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
+    except stripe.error.SignatureVerificationError as e:
+        print(f"[STRIPE WEBHOOK ERROR] Invalid signature: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-    # Handle events
-    if event["type"] == "checkout.session.completed":
-        handle_checkout_completed(session, event["data"]["object"])
-    elif event["type"] == "checkout.session.expired":
-        handle_checkout_expired(session, event["data"]["object"])
+    # Handle events with safety net error handling
+    try:
+        if event["type"] == "checkout.session.completed":
+            print(f"[STRIPE WEBHOOK] Processing checkout.session.completed")
+            session_data = event["data"]["object"]
+            booking_id = session_data.get("metadata", {}).get("booking_id")
+            print(f"[STRIPE WEBHOOK] Booking ID from metadata: {booking_id}")
+            handle_checkout_completed(session, session_data)
+            print(f"[STRIPE WEBHOOK] Successfully processed checkout completion for booking: {booking_id}")
+        elif event["type"] == "checkout.session.expired":
+            print(f"[STRIPE WEBHOOK] Processing checkout.session.expired")
+            handle_checkout_expired(session, event["data"]["object"])
+            print(f"[STRIPE WEBHOOK] Successfully processed checkout expiration")
+    except Exception as e:
+        print(f"[STRIPE WEBHOOK CRITICAL ERROR] Exception during event handling: {e}")
+        traceback.print_exc()
+        # Still return 200 to Stripe to prevent retries, but log the error
+        return {"status": "error", "message": str(e)}
 
     return {"status": "ok"}
+
+
+# ============================================================
+# VERIFY SESSION ENDPOINT (Fallback for webhook delays/failures)
+# ============================================================
+
+class VerifySessionResponse(BaseModel):
+    success: bool
+    booking_id: Optional[str] = None
+    status: Optional[str] = None
+    message: str
+
+
+@router.get("/verify-session", response_model=VerifySessionResponse)
+def verify_stripe_session(
+    session_id: str = Query(None, description="Stripe checkout session ID"),
+    booking_id: str = Query(None, description="Featured booking ID"),
+    session: Session = Depends(get_session)
+):
+    """
+    Verify and finalize a Stripe checkout session.
+    
+    This endpoint serves as a fallback when webhooks are delayed or fail.
+    The frontend should call this after Stripe redirects back.
+    """
+    print(f"[VERIFY SESSION] Called with session_id={session_id}, booking_id={booking_id}")
+    
+    try:
+        # Approach 1: If we have the booking_id, check its current status
+        if booking_id:
+            booking = session.get(FeaturedBooking, booking_id)
+            if not booking:
+                print(f"[VERIFY SESSION] Booking not found: {booking_id}")
+                return VerifySessionResponse(
+                    success=False,
+                    message="Booking not found"
+                )
+            
+            # If already active or pending approval, return success
+            if booking.status in [BookingStatus.ACTIVE, BookingStatus.PENDING_APPROVAL]:
+                print(f"[VERIFY SESSION] Booking already processed: {booking.status}")
+                return VerifySessionResponse(
+                    success=True,
+                    booking_id=booking.id,
+                    status=booking.status.value,
+                    message="Payment verified successfully"
+                )
+            
+            # If still pending payment, try to verify with Stripe
+            if booking.status == BookingStatus.PENDING_PAYMENT and booking.stripe_checkout_session_id:
+                session_id = booking.stripe_checkout_session_id
+        
+        # Approach 2: Verify directly with Stripe using session_id
+        if not session_id:
+            print("[VERIFY SESSION] No session_id provided and booking has no stripe session")
+            return VerifySessionResponse(
+                success=False,
+                message="No session ID available for verification"
+            )
+        
+        # Check Stripe API key
+        if not settings.STRIPE_SECRET_KEY:
+            print("[VERIFY SESSION ERROR] Stripe API key not configured")
+            return VerifySessionResponse(
+                success=False,
+                message="Payment system not configured"
+            )
+        
+        # Retrieve the session from Stripe
+        print(f"[VERIFY SESSION] Retrieving Stripe session: {session_id}")
+        try:
+            stripe_session = stripe.checkout.Session.retrieve(session_id)
+        except stripe.error.InvalidRequestError as e:
+            print(f"[VERIFY SESSION ERROR] Invalid Stripe session: {e}")
+            return VerifySessionResponse(
+                success=False,
+                message="Invalid payment session"
+            )
+        except stripe.error.AuthenticationError as e:
+            print(f"[VERIFY SESSION ERROR] Stripe auth failed: {e}")
+            return VerifySessionResponse(
+                success=False,
+                message="Payment system authentication error"
+            )
+        
+        print(f"[VERIFY SESSION] Stripe session status: {stripe_session.payment_status}")
+        
+        # Check if payment was successful
+        if stripe_session.payment_status != "paid":
+            return VerifySessionResponse(
+                success=False,
+                message=f"Payment not completed. Status: {stripe_session.payment_status}"
+            )
+        
+        # Get booking from metadata
+        metadata_booking_id = stripe_session.metadata.get("booking_id")
+        if not metadata_booking_id:
+            print("[VERIFY SESSION ERROR] No booking_id in Stripe metadata")
+            return VerifySessionResponse(
+                success=False,
+                message="Payment session missing booking reference"
+            )
+        
+        # Find and update the booking
+        booking = session.get(FeaturedBooking, metadata_booking_id)
+        if not booking:
+            print(f"[VERIFY SESSION ERROR] Booking not found: {metadata_booking_id}")
+            return VerifySessionResponse(
+                success=False,
+                message="Booking record not found"
+            )
+        
+        # Update if still pending payment
+        if booking.status == BookingStatus.PENDING_PAYMENT:
+            print(f"[VERIFY SESSION] Updating booking {booking.id} status")
+            
+            # Get payment intent ID
+            booking.stripe_payment_intent_id = stripe_session.payment_intent
+            
+            # Check if organizer is trusted
+            organizer = session.get(User, booking.organizer_id)
+            if organizer and organizer.is_trusted_organizer:
+                booking.status = BookingStatus.ACTIVE
+                print(f"[VERIFY SESSION] Set to ACTIVE (trusted organizer)")
+            else:
+                booking.status = BookingStatus.PENDING_APPROVAL
+                print(f"[VERIFY SESSION] Set to PENDING_APPROVAL")
+            
+            booking.updated_at = datetime.utcnow()
+            session.add(booking)
+            session.commit()
+            session.refresh(booking)
+        
+        return VerifySessionResponse(
+            success=True,
+            booking_id=booking.id,
+            status=booking.status.value,
+            message="Payment verified and booking updated successfully"
+        )
+        
+    except Exception as e:
+        print(f"[VERIFY SESSION CRITICAL ERROR] {e}")
+        traceback.print_exc()
+        return VerifySessionResponse(
+            success=False,
+            message=f"Verification failed: {str(e)}"
+        )
