@@ -1,0 +1,265 @@
+"""
+Featured booking service.
+Handles availability checks, pricing, and Stripe checkout creation.
+"""
+from datetime import date, datetime, timedelta
+from typing import Optional
+import stripe
+from sqlmodel import Session, select, and_
+
+from app.core.config import settings
+from app.models.featured_booking import (
+    FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
+)
+from app.models.event import Event
+from app.models.user import User
+
+# Initialize Stripe
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+def check_availability(
+    session: Session,
+    slot_type: SlotType,
+    start_date: date,
+    end_date: date,
+    target_id: Optional[str] = None
+) -> dict:
+    """
+    Check slot availability for a date range.
+
+    Returns:
+        {
+            "available": bool,
+            "unavailable_dates": [date, ...],
+            "slots_remaining": {date_str: int, ...},
+            "price_quote": int (pence),
+            "num_days": int
+        }
+    """
+    config = SLOT_CONFIG[slot_type]
+    max_slots = config["max"]
+    price_per_day = config["price_per_day"]
+    min_days = config["min_days"]
+
+    # Calculate number of days
+    num_days = (end_date - start_date).days + 1
+    if num_days < min_days:
+        return {
+            "available": False,
+            "error": f"Minimum booking is {min_days} days",
+            "unavailable_dates": [],
+            "slots_remaining": {},
+            "price_quote": 0,
+            "num_days": num_days
+        }
+
+    # Query existing bookings that overlap
+    blocking_statuses = [
+        BookingStatus.PENDING_PAYMENT,
+        BookingStatus.PENDING_APPROVAL,
+        BookingStatus.ACTIVE
+    ]
+
+    query = select(FeaturedBooking).where(
+        and_(
+            FeaturedBooking.slot_type == slot_type,
+            FeaturedBooking.status.in_(blocking_statuses),
+            FeaturedBooking.start_date <= end_date,
+            FeaturedBooking.end_date >= start_date
+        )
+    )
+
+    if target_id:
+        query = query.where(FeaturedBooking.target_id == target_id)
+    elif slot_type == SlotType.CATEGORY_PINNED:
+        # For category pinned without target_id, return error
+        return {
+            "available": False,
+            "error": "target_id required for CATEGORY_PINNED",
+            "unavailable_dates": [],
+            "slots_remaining": {},
+            "price_quote": 0,
+            "num_days": num_days
+        }
+
+    existing_bookings = session.exec(query).all()
+
+    # Check each date in range
+    unavailable_dates = []
+    slots_remaining = {}
+    current = start_date
+
+    while current <= end_date:
+        # Count bookings active on this date
+        count = sum(
+            1 for b in existing_bookings
+            if b.start_date <= current <= b.end_date
+        )
+        remaining = max_slots - count
+        slots_remaining[current.isoformat()] = remaining
+
+        if remaining <= 0:
+            unavailable_dates.append(current.isoformat())
+
+        current += timedelta(days=1)
+
+    available = len(unavailable_dates) == 0
+    price_quote = num_days * price_per_day if available else 0
+
+    return {
+        "available": available,
+        "unavailable_dates": unavailable_dates,
+        "slots_remaining": slots_remaining,
+        "price_quote": price_quote,
+        "num_days": num_days
+    }
+
+
+def create_checkout_session(
+    session: Session,
+    user: User,
+    event: Event,
+    slot_type: SlotType,
+    start_date: date,
+    end_date: date,
+    target_id: Optional[str] = None
+) -> dict:
+    """
+    Create a Stripe Checkout session and FeaturedBooking.
+
+    Returns:
+        {"checkout_url": str, "booking_id": str}
+    """
+    # Check availability first
+    availability = check_availability(session, slot_type, start_date, end_date, target_id)
+    if not availability["available"]:
+        raise ValueError(availability.get("error", "Dates not available"))
+
+    amount = availability["price_quote"]
+    num_days = availability["num_days"]
+
+    # Create booking with PENDING_PAYMENT status
+    booking = FeaturedBooking(
+        event_id=event.id,
+        organizer_id=user.id,
+        slot_type=slot_type,
+        target_id=target_id,
+        start_date=start_date,
+        end_date=end_date,
+        status=BookingStatus.PENDING_PAYMENT,
+        amount_paid=amount
+    )
+    session.add(booking)
+    session.commit()
+    session.refresh(booking)
+
+    # Create Stripe Checkout Session
+    slot_name = slot_type.value.replace("_", " ").title()
+
+    checkout_session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "gbp",
+                "product_data": {
+                    "name": f"Featured: {slot_name}",
+                    "description": f"{event.title} - {num_days} days ({start_date} to {end_date})"
+                },
+                "unit_amount": amount,
+            },
+            "quantity": 1,
+        }],
+        mode="payment",
+        success_url=f"{settings.FRONTEND_URL}/account?featured=success&booking_id={booking.id}",
+        cancel_url=f"{settings.FRONTEND_URL}/events/{event.id}/promote?cancelled=true",
+        metadata={
+            "booking_id": booking.id,
+            "event_id": event.id,
+            "organizer_id": user.id,
+        },
+        expires_at=int((datetime.utcnow() + timedelta(minutes=30)).timestamp()),
+    )
+
+    # Update booking with Stripe session ID
+    booking.stripe_checkout_session_id = checkout_session.id
+    session.add(booking)
+    session.commit()
+
+    return {
+        "checkout_url": checkout_session.url,
+        "booking_id": booking.id
+    }
+
+
+def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
+    """
+    Handle successful Stripe checkout.
+    Updates booking status based on organizer trust level.
+    """
+    booking_id = stripe_session.get("metadata", {}).get("booking_id")
+    if not booking_id:
+        return
+
+    booking = session.get(FeaturedBooking, booking_id)
+    if not booking:
+        return
+
+    # Get payment intent ID
+    booking.stripe_payment_intent_id = stripe_session.get("payment_intent")
+
+    # Check if organizer is trusted
+    organizer = session.get(User, booking.organizer_id)
+    if organizer and organizer.is_trusted_organizer:
+        booking.status = BookingStatus.ACTIVE
+    else:
+        booking.status = BookingStatus.PENDING_APPROVAL
+
+    booking.updated_at = datetime.utcnow()
+    session.add(booking)
+    session.commit()
+
+
+def handle_checkout_expired(session: Session, stripe_session: dict) -> None:
+    """
+    Handle expired Stripe checkout.
+    Cancels the booking to release the slot.
+    """
+    booking_id = stripe_session.get("metadata", {}).get("booking_id")
+    if not booking_id:
+        return
+
+    booking = session.get(FeaturedBooking, booking_id)
+    if not booking:
+        return
+
+    if booking.status == BookingStatus.PENDING_PAYMENT:
+        booking.status = BookingStatus.CANCELLED
+        booking.updated_at = datetime.utcnow()
+        session.add(booking)
+        session.commit()
+
+
+def get_active_featured(
+    session: Session,
+    slot_type: SlotType,
+    target_id: Optional[str] = None
+) -> list[FeaturedBooking]:
+    """
+    Get currently active featured bookings for display.
+    """
+    today = date.today()
+
+    query = select(FeaturedBooking).where(
+        and_(
+            FeaturedBooking.slot_type == slot_type,
+            FeaturedBooking.status == BookingStatus.ACTIVE,
+            FeaturedBooking.start_date <= today,
+            FeaturedBooking.end_date >= today
+        )
+    )
+
+    if target_id:
+        query = query.where(FeaturedBooking.target_id == target_id)
+
+    return list(session.exec(query).all())
