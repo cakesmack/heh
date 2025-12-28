@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     GOOGLE_GEOCODE_API_KEY: Optional[str] = None
     OS_API_KEY: Optional[str] = None
 
+    # Resend (Marketing Emails)
+    RESEND_API_KEY: Optional[str] = None
+
     # Email (Gmail SMTP for password reset)
     SMTP_USER: Optional[str] = None
     SMTP_PASS: Optional[str] = None
