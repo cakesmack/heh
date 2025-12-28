@@ -1,6 +1,6 @@
 /**
  * DateTimePicker Component
- * Custom date/time picker with 15-minute time intervals
+ * Custom date/time picker with separate hour and minute dropdowns (15-minute intervals)
  */
 import { useMemo } from 'react';
 
@@ -14,29 +14,19 @@ interface DateTimePickerProps {
   required?: boolean;
 }
 
-// Generate time options in 15-minute intervals
-function generateTimeOptions(): { value: string; label: string }[] {
-  const options: { value: string; label: string }[] = [];
+// Hour options (0-23)
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
+  value: i.toString().padStart(2, '0'),
+  label: i.toString().padStart(2, '0'),
+}));
 
-  for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
-      const hourStr = hour.toString().padStart(2, '0');
-      const minuteStr = minute.toString().padStart(2, '0');
-      const value = `${hourStr}:${minuteStr}`;
-
-      // Format label as 12-hour time
-      const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      const ampm = hour < 12 ? 'AM' : 'PM';
-      const label = `${hour12}:${minuteStr} ${ampm}`;
-
-      options.push({ value, label });
-    }
-  }
-
-  return options;
-}
-
-const TIME_OPTIONS = generateTimeOptions();
+// Minute options (00, 15, 30, 45)
+const MINUTE_OPTIONS = [
+  { value: '00', label: '00' },
+  { value: '15', label: '15' },
+  { value: '30', label: '30' },
+  { value: '45', label: '45' },
+];
 
 export default function DateTimePicker({
   id,
@@ -47,26 +37,27 @@ export default function DateTimePicker({
   disabled = false,
   required = false,
 }: DateTimePickerProps) {
-  // Parse the datetime-local value into date and time parts
-  const { dateValue, timeValue } = useMemo(() => {
+  // Parse the datetime-local value into date, hour, and minute parts
+  const { dateValue, hourValue, minuteValue } = useMemo(() => {
     if (!value) {
-      return { dateValue: '', timeValue: '12:00' };
+      return { dateValue: '', hourValue: '12', minuteValue: '00' };
     }
 
     // value is in format "2024-01-15T14:30" or "2024-01-15T14:30:00"
     const [datePart, timePart] = value.split('T');
     const time = timePart ? timePart.substring(0, 5) : '12:00';
+    const [hours, mins] = time.split(':');
 
-    // Round time to nearest 15 minutes
-    const [hours, mins] = time.split(':').map(Number);
-    const roundedMins = Math.round(mins / 15) * 15;
-    const adjustedHours = roundedMins === 60 ? hours + 1 : hours;
+    // Round minutes to nearest 15
+    const minsNum = parseInt(mins, 10);
+    const roundedMins = Math.round(minsNum / 15) * 15;
+    const adjustedHours = roundedMins === 60 ? (parseInt(hours, 10) + 1) % 24 : parseInt(hours, 10);
     const finalMins = roundedMins === 60 ? 0 : roundedMins;
-    const roundedTime = `${(adjustedHours % 24).toString().padStart(2, '0')}:${finalMins.toString().padStart(2, '0')}`;
 
     return {
       dateValue: datePart || '',
-      timeValue: roundedTime
+      hourValue: adjustedHours.toString().padStart(2, '0'),
+      minuteValue: finalMins.toString().padStart(2, '0'),
     };
   }, [value]);
 
@@ -79,20 +70,26 @@ export default function DateTimePicker({
 
   const handleDateChange = (newDate: string) => {
     if (newDate) {
-      onChange(`${newDate}T${timeValue}`);
+      onChange(`${newDate}T${hourValue}:${minuteValue}`);
     } else {
       onChange('');
     }
   };
 
-  const handleTimeChange = (newTime: string) => {
+  const handleHourChange = (newHour: string) => {
     if (dateValue) {
-      onChange(`${dateValue}T${newTime}`);
+      onChange(`${dateValue}T${newHour}:${minuteValue}`);
+    }
+  };
+
+  const handleMinuteChange = (newMinute: string) => {
+    if (dateValue) {
+      onChange(`${dateValue}T${hourValue}:${newMinute}`);
     }
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 items-center">
       {/* Date Input */}
       <input
         type="date"
@@ -106,17 +103,36 @@ export default function DateTimePicker({
         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
       />
 
-      {/* Time Select with 15-minute intervals */}
+      {/* Hour Select */}
       <select
-        id={`${id}_time`}
-        name={`${name}_time`}
-        value={timeValue}
-        onChange={(e) => handleTimeChange(e.target.value)}
+        id={`${id}_hour`}
+        name={`${name}_hour`}
+        value={hourValue}
+        onChange={(e) => handleHourChange(e.target.value)}
         disabled={disabled || !dateValue}
         required={required}
-        className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="w-16 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-center"
       >
-        {TIME_OPTIONS.map((option) => (
+        {HOUR_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      <span className="text-gray-500 font-medium">:</span>
+
+      {/* Minute Select (15-minute intervals) */}
+      <select
+        id={`${id}_minute`}
+        name={`${name}_minute`}
+        value={minuteValue}
+        onChange={(e) => handleMinuteChange(e.target.value)}
+        disabled={disabled || !dateValue}
+        required={required}
+        className="w-16 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-center"
+      >
+        {MINUTE_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
