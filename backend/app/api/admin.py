@@ -698,6 +698,55 @@ def cancel_featured_booking(
     return {"status": "cancelled", "booking_id": booking_id}
 
 
+@router.patch("/featured/{booking_id}/end")
+def end_featured_booking(
+    booking_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Manually end an active featured promotion early."""
+    booking = session.get(FeaturedBooking, booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking.status != BookingStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Can only end active promotions")
+
+    # Mark booking as completed
+    booking.status = BookingStatus.COMPLETED
+    booking.updated_at = datetime.utcnow()
+    session.add(booking)
+
+    # Check if event has any OTHER active bookings remaining
+    from sqlmodel import and_
+    other_active = session.exec(
+        select(FeaturedBooking).where(
+            and_(
+                FeaturedBooking.event_id == booking.event_id,
+                FeaturedBooking.status == BookingStatus.ACTIVE,
+                FeaturedBooking.id != booking.id
+            )
+        )
+    ).first()
+
+    # Reset event featured status if no other active bookings
+    event_updated = False
+    if not other_active:
+        event = session.get(Event, booking.event_id)
+        if event:
+            event.featured = False
+            event.featured_until = None
+            session.add(event)
+            event_updated = True
+
+    session.commit()
+
+    return {
+        "status": "ended",
+        "booking_id": booking_id,
+        "event_featured_reset": event_updated
+    }
+
 # ============================================================
 # SLOT PRICING ADMIN
 # ============================================================
