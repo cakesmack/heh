@@ -55,6 +55,14 @@ import type {
   VenueStaffCreate,
   UserPreferences,
   UserPreferencesUpdate,
+  SlotType,
+  SlotConfig,
+  AvailabilityRequest,
+  AvailabilityResponse,
+  CheckoutRequest,
+  CheckoutResponse,
+  FeaturedBooking,
+  ActiveFeatured,
 } from '@/types';
 
 // ============================================================
@@ -1028,6 +1036,58 @@ const preferencesAPI = {
 };
 
 // ============================================================
+// FEATURED API
+// ============================================================
+
+const featuredAPI = {
+  async getConfig(): Promise<SlotConfig[]> {
+    const response = await fetch(`${API_BASE_URL}/api/featured/config`);
+    if (!response.ok) throw new Error('Failed to fetch config');
+    return response.json();
+  },
+
+  async checkAvailability(request: AvailabilityRequest): Promise<AvailabilityResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/featured/check-availability`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) throw new Error('Failed to check availability');
+    return response.json();
+  },
+
+  async createCheckout(request: CheckoutRequest): Promise<CheckoutResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/featured/create-checkout`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create checkout');
+    }
+    return response.json();
+  },
+
+  async getMyBookings(): Promise<FeaturedBooking[]> {
+    const response = await fetch(`${API_BASE_URL}/api/featured/my-bookings`, {
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch bookings');
+    return response.json();
+  },
+
+  async getActive(slotType: SlotType, targetId?: string): Promise<ActiveFeatured[]> {
+    const params = new URLSearchParams({ slot_type: slotType });
+    if (targetId) params.append('target_id', targetId);
+
+    const response = await fetch(`${API_BASE_URL}/api/featured/active?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch active featured');
+    return response.json();
+  },
+};
+
+// ============================================================
 // ADMIN API (Phase 2.10)
 // ============================================================
 
@@ -1322,6 +1382,7 @@ export const api = {
   social: socialAPI,
   groups: groupsAPI,
   preferences: preferencesAPI,
+  featured: featuredAPI,
   bookmarks: {
     toggle: async (eventId: string): Promise<{ bookmarked: boolean; message: string }> => {
       return apiFetch<{ bookmarked: boolean; message: string }>(

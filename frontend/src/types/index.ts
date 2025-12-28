@@ -781,3 +781,69 @@ export interface UserPreferencesUpdate {
   organizer_alerts?: boolean;
   preferred_categories?: string[];
 }
+
+// ============================================================
+// FEATURED BOOKING TYPES
+// ============================================================
+
+export type SlotType = 'hero_home' | 'global_pinned' | 'category_pinned' | 'newsletter';
+export type BookingStatus = 'pending_payment' | 'pending_approval' | 'active' | 'completed' | 'cancelled' | 'rejected';
+
+export interface SlotConfig {
+  slot_type: string;
+  max_slots: number;
+  price_per_day: number;
+  min_days: number;
+}
+
+export interface AvailabilityRequest {
+  slot_type: SlotType;
+  start_date: string;
+  end_date: string;
+  target_id?: string;
+}
+
+export interface AvailabilityResponse {
+  available: boolean;
+  unavailable_dates: string[];
+  slots_remaining: Record<string, number>;
+  price_quote: number;
+  num_days: number;
+  error?: string;
+}
+
+export interface CheckoutRequest {
+  event_id: string;
+  slot_type: SlotType;
+  start_date: string;
+  end_date: string;
+  target_id?: string;
+}
+
+export interface CheckoutResponse {
+  checkout_url: string;
+  booking_id: string;
+}
+
+export interface FeaturedBooking {
+  id: string;
+  event_id: string;
+  event_title?: string;
+  slot_type: SlotType;
+  target_id?: string;
+  start_date: string;
+  end_date: string;
+  status: BookingStatus;
+  amount_paid: number;
+  created_at: string;
+}
+
+export interface ActiveFeatured {
+  id: string;
+  event_id: string;
+  event_title: string;
+  event_image_url?: string;
+  slot_type: SlotType;
+  start_date: string;
+  end_date: string;
+}
