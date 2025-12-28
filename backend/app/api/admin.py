@@ -747,6 +747,53 @@ def end_featured_booking(
         "event_featured_reset": event_updated
     }
 
+
+@router.post("/featured/sync")
+def sync_featured_status(
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Sync event.featured status for all ACTIVE bookings.
+    Use this to fix events that were featured before the featured flag update was implemented.
+    """
+    from sqlmodel import and_
+    from datetime import date
+    
+    today = date.today()
+    
+    # Get all currently active bookings (within date range)
+    active_bookings = session.exec(
+        select(FeaturedBooking).where(
+            and_(
+                FeaturedBooking.status == BookingStatus.ACTIVE,
+                FeaturedBooking.start_date <= today,
+                FeaturedBooking.end_date >= today
+            )
+        )
+    ).all()
+    
+    updated_events = []
+    for booking in active_bookings:
+        event = session.get(Event, booking.event_id)
+        if event and not event.featured:
+            event.featured = True
+            event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
+            session.add(event)
+            updated_events.append({
+                "event_id": event.id,
+                "event_title": event.title,
+                "featured_until": str(event.featured_until)
+            })
+    
+    session.commit()
+    
+    return {
+        "synced": len(updated_events),
+        "total_active_bookings": len(active_bookings),
+        "events_updated": updated_events
+    }
+
 # ============================================================
 # SLOT PRICING ADMIN
 # ============================================================
