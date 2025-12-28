@@ -52,7 +52,9 @@ import type {
   CollectionUpdate,
   MissedOpportunitiesResponse,
   VenueStaffResponse,
-  VenueStaffCreate
+  VenueStaffCreate,
+  UserPreferences,
+  UserPreferencesUpdate,
 } from '@/types';
 
 // ============================================================
@@ -1002,6 +1004,30 @@ export const usersAPI = {
 };
 
 // ============================================================
+// PREFERENCES API
+// ============================================================
+
+const preferencesAPI = {
+  async get(): Promise<UserPreferences> {
+    const response = await fetch(`${API_BASE_URL}/api/users/me/preferences`, {
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch preferences');
+    return response.json();
+  },
+
+  async update(updates: UserPreferencesUpdate): Promise<UserPreferences> {
+    const response = await fetch(`${API_BASE_URL}/api/users/me/preferences`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update preferences');
+    return response.json();
+  },
+};
+
+// ============================================================
 // ADMIN API (Phase 2.10)
 // ============================================================
 
@@ -1295,6 +1321,7 @@ export const api = {
   collections: collectionsAPI,
   social: socialAPI,
   groups: groupsAPI,
+  preferences: preferencesAPI,
   bookmarks: {
     toggle: async (eventId: string): Promise<{ bookmarked: boolean; message: string }> => {
       return apiFetch<{ bookmarked: boolean; message: string }>(

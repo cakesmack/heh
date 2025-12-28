@@ -763,3 +763,21 @@ export interface VenueStaffCreate {
   user_email: string;
   role: string;
 }
+
+// ============================================================
+// USER PREFERENCES TYPES
+// ============================================================
+
+export interface UserPreferences {
+  marketing_emails: boolean;
+  weekly_digest: boolean;
+  organizer_alerts: boolean;
+  preferred_categories: string[];
+}
+
+export interface UserPreferencesUpdate {
+  marketing_emails?: boolean;
+  weekly_digest?: boolean;
+  organizer_alerts?: boolean;
+  preferred_categories?: string[];
+}
