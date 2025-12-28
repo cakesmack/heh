@@ -3,6 +3,7 @@ Database models for Highland Events application.
 All SQLModel table definitions are imported here for easy access.
 """
 from .user import User
+from .user_preferences import UserPreferences
 from .venue import Venue
 from .venue_category import VenueCategory
 from .category import Category
@@ -28,6 +29,7 @@ from .report import Report
 __all__ = [
     # User
     "User",
+    "UserPreferences",
     # Venue
     "Venue",
     "VenueCategory",

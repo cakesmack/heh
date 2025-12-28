@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .follow import Follow
     from .group_member import GroupMember
     from .venue_staff import VenueStaff
+    from .user_preferences import UserPreferences
 
 
 class User(SQLModel, table=True):
@@ -57,3 +58,4 @@ class User(SQLModel, table=True):
     following: list["Follow"] = Relationship(back_populates="follower")
     group_memberships: list["GroupMember"] = Relationship(back_populates="user")
     venue_staff: list["VenueStaff"] = Relationship(back_populates="user")
+    preferences: Optional["UserPreferences"] = Relationship(back_populates="user")
