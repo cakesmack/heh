@@ -1,29 +1,53 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { HeroSlot } from '@/types';
-import { heroAPI } from '@/lib/api';
+import { HeroSlot, ActiveFeatured } from '@/types';
+import { heroAPI, api } from '@/lib/api';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 
 export default function HeroSection() {
     const [slots, setSlots] = useState<HeroSlot[]>([]);
+    const [paidSlots, setPaidSlots] = useState<ActiveFeatured[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [hasPaidSlots, setHasPaidSlots] = useState(false);
 
     useEffect(() => {
         const fetchSlots = async () => {
             try {
-                const data = await heroAPI.list(true); // Get active slots only
-                // Ensure 'welcome' slot is always first
-                const sortedData = [...data].sort((a, b) => {
-                    if (a.type === 'welcome') return -1;
-                    if (b.type === 'welcome') return 1;
-                    return 0;
-                });
-                setSlots(sortedData);
+                // First check for paid hero slots
+                const paidData = await api.featured.getActive('hero_home');
+
+                if (paidData && paidData.length > 0) {
+                    // Use paid slots
+                    setPaidSlots(paidData);
+                    setHasPaidSlots(true);
+                } else {
+                    // Fall back to manual hero slots
+                    const data = await heroAPI.list(true);
+                    const sortedData = [...data].sort((a, b) => {
+                        if (a.type === 'welcome') return -1;
+                        if (b.type === 'welcome') return 1;
+                        return 0;
+                    });
+                    setSlots(sortedData);
+                    setHasPaidSlots(false);
+                }
             } catch (err) {
                 console.error('Failed to load hero slots:', err);
+                // Fall back to manual slots on error
+                try {
+                    const data = await heroAPI.list(true);
+                    const sortedData = [...data].sort((a, b) => {
+                        if (a.type === 'welcome') return -1;
+                        if (b.type === 'welcome') return 1;
+                        return 0;
+                    });
+                    setSlots(sortedData);
+                } catch (e) {
+                    console.error('Failed to load fallback hero slots:', e);
+                }
             } finally {
                 setLoading(false);
             }
@@ -31,28 +55,31 @@ export default function HeroSection() {
         fetchSlots();
     }, []);
 
+    const displaySlots = hasPaidSlots ? paidSlots : slots;
+    const displayLength = displaySlots.length;
+
     const nextSlide = useCallback(() => {
-        if (slots.length === 0) return;
-        setCurrentIndex((prev) => (prev + 1) % slots.length);
-    }, [slots.length]);
+        if (displayLength === 0) return;
+        setCurrentIndex((prev) => (prev + 1) % displayLength);
+    }, [displayLength]);
 
     const prevSlide = useCallback(() => {
-        if (slots.length === 0) return;
-        setCurrentIndex((prev) => (prev - 1 + slots.length) % slots.length);
-    }, [slots.length]);
+        if (displayLength === 0) return;
+        setCurrentIndex((prev) => (prev - 1 + displayLength) % displayLength);
+    }, [displayLength]);
 
     useEffect(() => {
-        if (slots.length <= 1 || isPaused) return;
+        if (displayLength <= 1 || isPaused) return;
 
         const timer = setInterval(nextSlide, 5000);
         return () => clearInterval(timer);
-    }, [slots.length, isPaused, nextSlide]);
+    }, [displayLength, isPaused, nextSlide]);
 
     if (loading) {
         return <div className="h-[80vh] min-h-[600px] bg-stone-dark animate-pulse" />;
     }
 
-    if (slots.length === 0) {
+    if (displayLength === 0) {
         // Fallback if no slots are configured
         return (
             <section className="relative h-[70vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-stone-dark">
@@ -78,24 +105,42 @@ export default function HeroSection() {
         );
     }
 
-    const currentSlot = slots[currentIndex];
-    const isWelcome = currentSlot.type === 'welcome';
-    const event = currentSlot.event;
+    // Get current content based on whether we're showing paid or manual slots
+    let title: string;
+    let image: string;
+    let ctaText: string;
+    let ctaLink: string;
+    let isWelcome = false;
+    let isPaidFeatured = false;
 
-    // Determine content
-    const title = isWelcome
-        ? (currentSlot.title_override || 'Discover the Highlands')
-        : (event?.title || 'Upcoming Event');
+    if (hasPaidSlots) {
+        // Paid slots - show featured events
+        const currentPaidSlot = paidSlots[currentIndex];
+        title = currentPaidSlot.event_title;
+        image = currentPaidSlot.event_image_url || '/images/hero-bg.jpg';
+        ctaText = 'View Event Details';
+        ctaLink = `/events/${currentPaidSlot.event_id}`;
+        isPaidFeatured = true;
+    } else {
+        // Manual slots
+        const currentSlot = slots[currentIndex];
+        isWelcome = currentSlot.type === 'welcome';
+        const event = currentSlot.event;
 
-    const image = isWelcome
-        ? (currentSlot.image_override || '/images/hero-bg.jpg')
-        : (event?.image_url || '/images/hero-bg.jpg');
+        title = isWelcome
+            ? (currentSlot.title_override || 'Discover the Highlands')
+            : (event?.title || 'Upcoming Event');
 
-    const ctaText = isWelcome
-        ? (currentSlot.cta_override || 'Find an Event')
-        : 'View Event Details';
+        image = isWelcome
+            ? (currentSlot.image_override || '/images/hero-bg.jpg')
+            : (event?.image_url || '/images/hero-bg.jpg');
 
-    const ctaLink = isWelcome ? '/events' : (event ? `/events/${event.id}` : '/events');
+        ctaText = isWelcome
+            ? (currentSlot.cta_override || 'Find an Event')
+            : 'View Event Details';
+
+        ctaLink = isWelcome ? '/events' : (event ? `/events/${event.id}` : '/events');
+    }
 
     return (
         <section
@@ -104,29 +149,40 @@ export default function HeroSection() {
             onMouseLeave={() => setIsPaused(false)}
         >
             {/* Background Image */}
-            {slots.map((slot, index) => {
-                const slotImage = slot.type === 'welcome'
-                    ? (slot.image_override || '/images/hero-bg.jpg')
-                    : (slot.event?.image_url || '/images/hero-bg.jpg');
-
-                return (
+            {hasPaidSlots ? (
+                paidSlots.map((slot, index) => (
                     <div
                         key={slot.id}
                         className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'
                             }`}
-                        style={{ backgroundImage: `url(${slotImage})` }}
+                        style={{ backgroundImage: `url(${slot.event_image_url || '/images/hero-bg.jpg'})` }}
                     />
-                );
-            })}
+                ))
+            ) : (
+                slots.map((slot, index) => {
+                    const slotImage = slot.type === 'welcome'
+                        ? (slot.image_override || '/images/hero-bg.jpg')
+                        : (slot.event?.image_url || '/images/hero-bg.jpg');
+
+                    return (
+                        <div
+                            key={slot.id}
+                            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'
+                                }`}
+                            style={{ backgroundImage: `url(${slotImage})` }}
+                        />
+                    );
+                })
+            )}
 
             {/* Gradient Overlay */}
-            <div className={`absolute inset-0 transition-colors duration-1000 ${currentSlot.overlay_style === 'light'
+            <div className={`absolute inset-0 transition-colors duration-1000 ${(!hasPaidSlots && slots[currentIndex]?.overlay_style === 'light')
                 ? 'bg-white/30'
                 : 'bg-gradient-to-t from-stone-dark via-stone-dark/60 to-transparent'
                 }`} />
 
             {/* Navigation Buttons */}
-            {slots.length > 1 && (
+            {displayLength > 1 && (
                 <>
                     <button
                         onClick={prevSlide}
@@ -153,23 +209,21 @@ export default function HeroSection() {
             <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-3xl animate-slide-up">
                     <div className="flex items-center gap-3 mb-4">
-                        {!isWelcome && (
+                        {(isPaidFeatured || (!isWelcome && !hasPaidSlots)) && (
                             <Badge variant="warning" className="bg-yellow-500/90 text-white border-none backdrop-blur-sm shadow-lg">
                                 Featured Event
                             </Badge>
                         )}
-                        {event?.category && !isWelcome && (
+                        {!hasPaidSlots && slots[currentIndex]?.event?.category && !isWelcome && (
                             <Badge variant="default" className="bg-white/20 text-white border-none backdrop-blur-sm shadow-lg">
-                                {event.category.name}
+                                {slots[currentIndex].event!.category!.name}
                             </Badge>
                         )}
                     </div>
 
                     <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight leading-tight drop-shadow-lg">
-                        {isWelcome ? (
-                            title === 'Discover the Highlands' ? (
-                                <>Discover the <span className="text-gradient">Highlands</span></>
-                            ) : title
+                        {isWelcome && title === 'Discover the Highlands' ? (
+                            <>Discover the <span className="text-gradient">Highlands</span></>
                         ) : (
                             title
                         )}
@@ -178,15 +232,17 @@ export default function HeroSection() {
                     <p className="text-lg md:text-xl text-gray-100 mb-8 line-clamp-2 font-light drop-shadow-md max-w-2xl">
                         {isWelcome ? (
                             "Experience the best events, culture, and adventures in the heart of Scotland."
+                        ) : isPaidFeatured ? (
+                            "Join us for this amazing featured event."
                         ) : (
                             <>
-                                {event?.date_start && (
+                                {slots[currentIndex]?.event?.date_start && (
                                     <span className="block font-medium mb-1">
-                                        {new Date(event.date_start).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                                        {event.venue_name && ` • ${event.venue_name}`}
+                                        {new Date(slots[currentIndex].event!.date_start).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                                        {slots[currentIndex].event!.venue_name && ` • ${slots[currentIndex].event!.venue_name}`}
                                     </span>
                                 )}
-                                {event?.description || "Join us for this amazing event."}
+                                {slots[currentIndex]?.event?.description || "Join us for this amazing event."}
                             </>
                         )}
                     </p>
@@ -212,9 +268,9 @@ export default function HeroSection() {
                 </div>
 
                 {/* Indicators */}
-                {slots.length > 1 && (
+                {displayLength > 1 && (
                     <div className="absolute bottom-8 right-4 sm:right-8 flex gap-2 z-20">
-                        {slots.map((_, index) => (
+                        {Array.from({ length: displayLength }).map((_, index) => (
                             <button
                                 key={index}
                                 onClick={() => setCurrentIndex(index)}
