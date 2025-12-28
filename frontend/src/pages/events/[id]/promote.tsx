@@ -96,12 +96,12 @@ export default function PromoteEventPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSlot || !startDate || !endDate || !availability?.available) return;
+    if (!selectedSlot || !startDate || !endDate || !availability?.available || !event) return;
 
     setIsSubmitting(true);
     try {
       const result = await api.featured.createCheckout({
-        event_id: id as string,
+        event_id: event.id,  // Use loaded event's ID, not URL param
         slot_type: selectedSlot,
         start_date: startDate,
         end_date: endDate,
