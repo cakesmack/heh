@@ -586,6 +586,13 @@ def approve_featured_booking(
     booking.updated_at = datetime.utcnow()
     session.add(booking)
 
+    # Update event featured status
+    event = session.get(Event, booking.event_id)
+    if event:
+        event.featured = True
+        event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
+        session.add(event)
+
     # Mark organizer as trusted for future bookings
     organizer = session.get(User, booking.organizer_id)
     if organizer and not organizer.is_trusted_organizer:

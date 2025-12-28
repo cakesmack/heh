@@ -399,6 +399,13 @@ def verify_stripe_session(
             if organizer and organizer.is_trusted_organizer:
                 booking.status = BookingStatus.ACTIVE
                 print(f"[VERIFY SESSION] Set to ACTIVE (trusted organizer)")
+                # Also update event featured status
+                event = session.get(Event, booking.event_id)
+                if event:
+                    event.featured = True
+                    event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
+                    session.add(event)
+                    print(f"[VERIFY SESSION] Set event.featured = True")
             else:
                 booking.status = BookingStatus.PENDING_APPROVAL
                 print(f"[VERIFY SESSION] Set to PENDING_APPROVAL")

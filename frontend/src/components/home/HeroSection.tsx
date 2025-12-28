@@ -16,17 +16,26 @@ export default function HeroSection() {
     useEffect(() => {
         const fetchSlots = async () => {
             try {
-                // First check for paid hero slots
-                const paidData = await api.featured.getActive('hero_home');
+                // Fetch both manual slots and paid slots in parallel
+                const [manualData, paidData] = await Promise.all([
+                    heroAPI.list(true),
+                    api.featured.getActive('hero_home').catch(() => [])
+                ]);
+
+                // Find the welcome slot from manual slots
+                const welcomeSlot = manualData.find((s: HeroSlot) => s.type === 'welcome');
 
                 if (paidData && paidData.length > 0) {
-                    // Use paid slots
+                    // Option B: Welcome first + paid slots
                     setPaidSlots(paidData);
                     setHasPaidSlots(true);
+                    // Keep welcome slot in manual slots for display
+                    if (welcomeSlot) {
+                        setSlots([welcomeSlot]);
+                    }
                 } else {
-                    // Fall back to manual hero slots
-                    const data = await heroAPI.list(true);
-                    const sortedData = [...data].sort((a, b) => {
+                    // No paid slots - use full manual hero slot system
+                    const sortedData = [...manualData].sort((a: HeroSlot, b: HeroSlot) => {
                         if (a.type === 'welcome') return -1;
                         if (b.type === 'welcome') return 1;
                         return 0;
@@ -39,7 +48,7 @@ export default function HeroSection() {
                 // Fall back to manual slots on error
                 try {
                     const data = await heroAPI.list(true);
-                    const sortedData = [...data].sort((a, b) => {
+                    const sortedData = [...data].sort((a: HeroSlot, b: HeroSlot) => {
                         if (a.type === 'welcome') return -1;
                         if (b.type === 'welcome') return 1;
                         return 0;
@@ -55,8 +64,12 @@ export default function HeroSection() {
         fetchSlots();
     }, []);
 
-    const displaySlots = hasPaidSlots ? paidSlots : slots;
-    const displayLength = displaySlots.length;
+    // Calculate total display length:
+    // - If hasPaidSlots: welcome (if exists) + paid slots
+    // - Otherwise: just manual slots
+    const displayLength = hasPaidSlots
+        ? (slots.length + paidSlots.length)  // slots contains only welcome when hasPaidSlots
+        : slots.length;
 
     const nextSlide = useCallback(() => {
         if (displayLength === 0) return;
@@ -114,18 +127,32 @@ export default function HeroSection() {
     let isPaidFeatured = false;
 
     if (hasPaidSlots) {
-        // Paid slots - show featured events
-        const currentPaidSlot = paidSlots[currentIndex];
-        title = currentPaidSlot.event_title;
-        image = currentPaidSlot.event_image_url || '/images/hero-bg.jpg';
-        ctaText = 'View Event Details';
-        ctaLink = `/events/${currentPaidSlot.event_id}`;
-        isPaidFeatured = true;
+        // Option B: Index 0 = welcome slot, Index 1+ = paid slots
+        const welcomeCount = slots.length; // Usually 1 (the welcome slot)
+
+        if (currentIndex < welcomeCount && slots[currentIndex]) {
+            // Showing welcome slot
+            const currentSlot = slots[currentIndex];
+            isWelcome = currentSlot.type === 'welcome';
+            title = currentSlot.title_override || 'Discover the Highlands';
+            image = currentSlot.image_override || '/images/hero-bg.jpg';
+            ctaText = currentSlot.cta_override || 'Find an Event';
+            ctaLink = '/events';
+        } else {
+            // Showing paid slot (adjust index to account for welcome slot)
+            const paidIndex = currentIndex - welcomeCount;
+            const currentPaidSlot = paidSlots[paidIndex];
+            title = currentPaidSlot.event_title;
+            image = currentPaidSlot.event_image_url || '/images/hero-bg.jpg';
+            ctaText = 'View Event Details';
+            ctaLink = `/events/${currentPaidSlot.event_id}`;
+            isPaidFeatured = true;
+        }
     } else {
-        // Manual slots
+        // Manual slots only (no paid slots)
         const currentSlot = slots[currentIndex];
-        isWelcome = currentSlot.type === 'welcome';
-        const event = currentSlot.event;
+        isWelcome = currentSlot?.type === 'welcome';
+        const event = currentSlot?.event;
 
         title = isWelcome
             ? (currentSlot.title_override || 'Discover the Highlands')
@@ -150,14 +177,33 @@ export default function HeroSection() {
         >
             {/* Background Image */}
             {hasPaidSlots ? (
-                paidSlots.map((slot, index) => (
-                    <div
-                        key={slot.id}
-                        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'
-                            }`}
-                        style={{ backgroundImage: `url(${slot.event_image_url || '/images/hero-bg.jpg'})` }}
-                    />
-                ))
+                // Option B: Render welcome slot(s) first, then paid slots
+                <>
+                    {/* Welcome slot background(s) */}
+                    {slots.map((slot, index) => {
+                        const slotImage = slot.type === 'welcome'
+                            ? (slot.image_override || '/images/hero-bg.jpg')
+                            : (slot.event?.image_url || '/images/hero-bg.jpg');
+                        return (
+                            <div
+                                key={`welcome-${slot.id}`}
+                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                                style={{ backgroundImage: `url(${slotImage})` }}
+                            />
+                        );
+                    })}
+                    {/* Paid slot backgrounds */}
+                    {paidSlots.map((slot, index) => {
+                        const adjustedIndex = slots.length + index;
+                        return (
+                            <div
+                                key={`paid-${slot.id}`}
+                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${adjustedIndex === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                                style={{ backgroundImage: `url(${slot.event_image_url || '/images/hero-bg.jpg'})` }}
+                            />
+                        );
+                    })}
+                </>
             ) : (
                 slots.map((slot, index) => {
                     const slotImage = slot.type === 'welcome'

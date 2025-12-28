@@ -251,6 +251,13 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
     if organizer and organizer.is_trusted_organizer:
         booking.status = BookingStatus.ACTIVE
         print(f"[CHECKOUT COMPLETED] Setting status to ACTIVE")
+        # Also update event featured status for trusted organizers (auto-approval)
+        event = session.get(Event, booking.event_id)
+        if event:
+            event.featured = True
+            event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
+            session.add(event)
+            print(f"[CHECKOUT COMPLETED] Set event.featured = True, until {event.featured_until}")
     else:
         booking.status = BookingStatus.PENDING_APPROVAL
         print(f"[CHECKOUT COMPLETED] Setting status to PENDING_APPROVAL")

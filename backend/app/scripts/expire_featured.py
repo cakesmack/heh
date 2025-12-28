@@ -53,6 +53,8 @@ def expire_pending_payments():
 
 def complete_ended_bookings():
     """Mark ACTIVE bookings as COMPLETED when their end_date has passed."""
+    from app.models.event import Event
+    
     today = date.today()
 
     with Session(engine) as session:
@@ -75,6 +77,26 @@ def complete_ended_bookings():
             booking.status = BookingStatus.COMPLETED
             booking.updated_at = datetime.utcnow()
             session.add(booking)
+            
+            # Check if event has any OTHER active bookings remaining
+            other_active = session.exec(
+                select(FeaturedBooking).where(
+                    and_(
+                        FeaturedBooking.event_id == booking.event_id,
+                        FeaturedBooking.status == BookingStatus.ACTIVE,
+                        FeaturedBooking.id != booking.id
+                    )
+                )
+            ).first()
+            
+            if not other_active:
+                # No other active bookings - reset event featured status
+                event = session.get(Event, booking.event_id)
+                if event:
+                    event.featured = False
+                    event.featured_until = None
+                    session.add(event)
+                    print(f"  Reset event {booking.event_id} featured = False")
 
         session.commit()
         print(f"Completed {len(ended_bookings)} bookings")
