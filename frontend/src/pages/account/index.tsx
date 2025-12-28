@@ -10,9 +10,10 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, analyticsAPI } from '@/lib/api';
-import { CheckInHistory, EventResponse, UserDashboardStats, VenueClaim, OrganizerSummary } from '@/types';
+import { CheckInHistory, EventResponse, UserDashboardStats, VenueClaim, OrganizerSummary, Category } from '@/types';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
+import { SettingsTab } from '@/components/account/SettingsTab';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -23,10 +24,11 @@ export default function AccountPage() {
   const [bookmarks, setBookmarks] = useState<EventResponse[]>([]);
   const [myClaims, setMyClaims] = useState<VenueClaim[]>([]);
   const [myOrganizers, setMyOrganizers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'venues'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'venues' | 'settings'>('overview');
   const [eventFilter, setEventFilter] = useState<'all' | 'upcoming' | 'pending' | 'past'>('all');
 
   useEffect(() => {
@@ -89,6 +91,14 @@ export default function AccountPage() {
           setMyOrganizers(orgData.organizers || []);
         } catch (err) {
           console.error('Error fetching organizers:', err);
+        }
+
+        // Fetch categories for settings tab
+        try {
+          const categoriesData = await api.categories.list();
+          setCategories(categoriesData.categories || []);
+        } catch (err) {
+          console.error('Error fetching categories:', err);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load user data');
@@ -215,6 +225,15 @@ export default function AccountPage() {
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
               My Venues
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`${activeTab === 'settings'
+                ? 'border-emerald-500 text-emerald-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Settings
             </button>
           </nav>
         </div>
@@ -731,6 +750,10 @@ export default function AccountPage() {
           </div>
         )}
 
+        {/* Tab Content: Settings */}
+        {activeTab === 'settings' && (
+          <SettingsTab categories={categories} />
+        )}
 
       </div>
     </div>
