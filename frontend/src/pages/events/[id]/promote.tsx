@@ -38,6 +38,7 @@ export default function PromoteEventPage() {
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customSubtitle, setCustomSubtitle] = useState<string>('');  // For hero carousel
 
   useEffect(() => {
     if (!id) return;
@@ -106,6 +107,7 @@ export default function PromoteEventPage() {
         start_date: startDate,
         end_date: endDate,
         target_id: selectedSlot === 'category_pinned' ? selectedCategory || undefined : undefined,
+        custom_subtitle: selectedSlot === 'hero_home' ? customSubtitle || undefined : undefined,
       });
 
       // Redirect to Stripe Checkout
@@ -204,11 +206,10 @@ export default function PromoteEventPage() {
                 return (
                   <label
                     key={slotType}
-                    className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      selectedSlot === slotType
+                    className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedSlot === slotType
                         ? 'border-emerald-500 bg-emerald-50'
                         : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center">
                       <input
@@ -250,6 +251,26 @@ export default function PromoteEventPage() {
                 </select>
               </div>
             )}
+
+            {/* Custom Subtitle for Hero Carousel */}
+            {selectedSlot === 'hero_home' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Custom Subtitle <span className="text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={customSubtitle}
+                  onChange={(e) => setCustomSubtitle(e.target.value)}
+                  placeholder="e.g. Don't miss this spectacular Highland experience!"
+                  maxLength={200}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This text will appear below your event title in the hero carousel. Max 200 characters.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Date Selection */}
@@ -283,9 +304,8 @@ export default function PromoteEventPage() {
               <p className="mt-4 text-gray-500 text-sm">Checking availability...</p>
             )}
             {availability && !isChecking && (
-              <div className={`mt-4 p-4 rounded-lg ${
-                availability.available ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-              }`}>
+              <div className={`mt-4 p-4 rounded-lg ${availability.available ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}>
                 {availability.available ? (
                   <p>&#10003; Dates available</p>
                 ) : (
@@ -313,11 +333,10 @@ export default function PromoteEventPage() {
           <button
             onClick={handleSubmit}
             disabled={!availability?.available || isSubmitting || (selectedSlot === 'category_pinned' && !selectedCategory)}
-            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${
-              availability?.available && !isSubmitting && !(selectedSlot === 'category_pinned' && !selectedCategory)
+            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${availability?.available && !isSubmitting && !(selectedSlot === 'category_pinned' && !selectedCategory)
                 ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+              }`}
           >
             {isSubmitting ? 'Redirecting to payment...' : 'Proceed to Payment'}
           </button>

@@ -818,6 +818,7 @@ export interface CheckoutRequest {
   start_date: string;
   end_date: string;
   target_id?: string;
+  custom_subtitle?: string;
 }
 
 export interface CheckoutResponse {
@@ -846,4 +847,5 @@ export interface ActiveFeatured {
   slot_type: SlotType;
   start_date: string;
   end_date: string;
+  custom_subtitle?: string;
 }

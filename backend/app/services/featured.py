@@ -146,7 +146,8 @@ def create_checkout_session(
     slot_type: SlotType,
     start_date: date,
     end_date: date,
-    target_id: Optional[str] = None
+    target_id: Optional[str] = None,
+    custom_subtitle: Optional[str] = None
 ) -> dict:
     """
     Create a Stripe Checkout session and FeaturedBooking.
@@ -171,7 +172,8 @@ def create_checkout_session(
         start_date=start_date,
         end_date=end_date,
         status=BookingStatus.PENDING_PAYMENT,
-        amount_paid=amount
+        amount_paid=amount,
+        custom_subtitle=custom_subtitle  # Save custom subtitle for hero carousel
     )
     session.add(booking)
     session.commit()

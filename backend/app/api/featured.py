@@ -57,6 +57,7 @@ class CheckoutRequest(BaseModel):
     start_date: date
     end_date: date
     target_id: Optional[str] = None
+    custom_subtitle: Optional[str] = None  # For hero carousel customization
 
 
 class CheckoutResponse(BaseModel):
@@ -85,6 +86,7 @@ class ActiveFeaturedResponse(BaseModel):
     slot_type: SlotType
     start_date: date
     end_date: date
+    custom_subtitle: Optional[str] = None  # For hero carousel display
 
 
 class SlotConfigResponse(BaseModel):
@@ -149,7 +151,8 @@ def get_active_slots(
                 event_image_url=event.image_url,
                 slot_type=booking.slot_type,
                 start_date=booking.start_date,
-                end_date=booking.end_date
+                end_date=booking.end_date,
+                custom_subtitle=booking.custom_subtitle
             ))
 
     return results
@@ -185,7 +188,8 @@ def create_featured_checkout(
             request.slot_type,
             request.start_date,
             request.end_date,
-            request.target_id
+            request.target_id,
+            request.custom_subtitle
         )
         return CheckoutResponse(**result)
     except ValueError as e:

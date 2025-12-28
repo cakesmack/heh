@@ -125,6 +125,7 @@ export default function HeroSection() {
     let ctaLink: string;
     let isWelcome = false;
     let isPaidFeatured = false;
+    let subtitle: string | undefined;
 
     if (hasPaidSlots) {
         // Option B: Index 0 = welcome slot, Index 1+ = paid slots
@@ -147,6 +148,7 @@ export default function HeroSection() {
             ctaText = 'View Event Details';
             ctaLink = `/events/${currentPaidSlot.event_id}`;
             isPaidFeatured = true;
+            subtitle = currentPaidSlot.custom_subtitle;  // Use custom subtitle if provided
         }
     } else {
         // Manual slots only (no paid slots)
@@ -279,7 +281,7 @@ export default function HeroSection() {
                         {isWelcome ? (
                             "Experience the best events, culture, and adventures in the heart of Scotland."
                         ) : isPaidFeatured ? (
-                            "Join us for this amazing featured event."
+                            subtitle || "Don't miss this featured event."
                         ) : (
                             <>
                                 {slots[currentIndex]?.event?.date_start && (

@@ -68,6 +68,9 @@ class FeaturedBooking(SQLModel, table=True):
 
     stripe_checkout_session_id: Optional[str] = Field(default=None, max_length=255)
     stripe_payment_intent_id: Optional[str] = Field(default=None, max_length=255)
+    
+    # Custom messaging for hero carousel
+    custom_subtitle: Optional[str] = Field(default=None, max_length=200)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
