@@ -183,6 +183,18 @@ export default function AdminFeatured() {
     }
   };
 
+  const handleSyncFeatured = async () => {
+    try {
+      const result = await apiFetch<{ synced: number; total_active_bookings: number }>(
+        '/api/admin/featured/sync',
+        { method: 'POST' }
+      );
+      alert(`Synced ${result.synced} events. Total active bookings: ${result.total_active_bookings}`);
+    } catch (err: any) {
+      alert(err.message || 'Failed to sync featured events');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -215,8 +227,8 @@ export default function AdminFeatured() {
           <button
             onClick={() => setActiveTab('bookings')}
             className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'bookings'
-                ? 'text-emerald-600 border-b-2 border-emerald-600'
-                : 'text-gray-500 hover:text-gray-700'
+              ? 'text-emerald-600 border-b-2 border-emerald-600'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
           >
             Bookings
@@ -224,8 +236,8 @@ export default function AdminFeatured() {
           <button
             onClick={() => setActiveTab('pricing')}
             className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'pricing'
-                ? 'text-emerald-600 border-b-2 border-emerald-600'
-                : 'text-gray-500 hover:text-gray-700'
+              ? 'text-emerald-600 border-b-2 border-emerald-600'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
           >
             Pricing Settings
@@ -247,6 +259,15 @@ export default function AdminFeatured() {
               <div className="bg-blue-50 rounded-xl p-4">
                 <p className="text-sm text-blue-600 font-medium">Total Revenue</p>
                 <p className="text-2xl font-bold text-blue-700">{formatPrice(totalRevenue)}</p>
+              </div>
+              <div className="bg-purple-50 rounded-xl p-4 flex flex-col justify-between">
+                <p className="text-sm text-purple-600 font-medium">Sync Featured Flags</p>
+                <button
+                  onClick={handleSyncFeatured}
+                  className="mt-2 px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Sync Now
+                </button>
               </div>
             </div>
 
