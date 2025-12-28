@@ -5,7 +5,7 @@ Handles user registration, login, profile retrieval, and password reset.
 from datetime import datetime, timedelta
 import secrets
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlmodel import Session, select
 from pydantic import BaseModel, EmailStr
 
@@ -18,8 +18,10 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.models.password_reset import PasswordResetToken
+from app.models.user_preferences import UserPreferences
 from app.core.config import settings
 from app.services.email_service import send_password_reset_email
+from app.services.resend_email import resend_email_service
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -41,6 +43,7 @@ class GoogleTokenRequest(BaseModel):
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(
     user_data: UserCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
 ):
     """
@@ -92,6 +95,18 @@ def register(
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
+
+    # Create user preferences with defaults
+    preferences = UserPreferences(user_id=new_user.id)
+    session.add(preferences)
+    session.commit()
+
+    # Send welcome email (non-blocking)
+    background_tasks.add_task(
+        resend_email_service.send_welcome,
+        new_user.email,
+        new_user.display_name
+    )
 
     # Create access token
     access_token = create_access_token(data={"sub": str(new_user.id)})
@@ -214,7 +229,15 @@ async def google_login(
         session.add(user)
         session.commit()
         session.refresh(user)
-    
+
+        # Create user preferences for new Google user
+        preferences = UserPreferences(user_id=user.id)
+        session.add(preferences)
+        session.commit()
+
+        # Send welcome email
+        resend_email_service.send_welcome(user.email, user.display_name)
+
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})
     
