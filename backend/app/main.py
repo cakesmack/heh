@@ -123,4 +123,4 @@ app.include_router(organizers.router, prefix="/api/organizers", tags=["Organizer
 app.include_router(social.router, prefix="/api/social", tags=["Social"])
 app.include_router(groups.router, prefix="/api/groups", tags=["Groups"])
 app.include_router(search.router, prefix="/api/search", tags=["Search"])
-app.include_router(preferences.router)
+app.include_router(preferences.router, prefix="/api")
