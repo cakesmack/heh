@@ -17,7 +17,8 @@ from app.models.checkin import CheckIn
 from app.models.venue_claim import VenueClaim
 from app.models.report import Report
 from app.models.organizer import Organizer
-from app.models.featured_booking import FeaturedBooking, BookingStatus
+from app.models.featured_booking import FeaturedBooking, BookingStatus, SlotType
+from app.models.slot_pricing import SlotPricing, DEFAULT_PRICING
 from app.schemas.venue_claim import VenueClaimResponse
 from app.services.notifications import notification_service
 from app.services.resend_email import resend_email_service
@@ -688,3 +689,98 @@ def cancel_featured_booking(
     session.commit()
 
     return {"status": "cancelled", "booking_id": booking_id}
+
+
+# ============================================================
+# SLOT PRICING ADMIN
+# ============================================================
+
+@router.get("/pricing")
+def get_all_pricing(
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Get all slot pricing configuration."""
+    results = []
+    for slot_type in SlotType:
+        pricing = session.get(SlotPricing, slot_type.value)
+        if pricing:
+            results.append({
+                "slot_type": pricing.slot_type,
+                "price_per_day": pricing.price_per_day,
+                "min_days": pricing.min_days,
+                "max_concurrent": pricing.max_concurrent,
+                "is_active": pricing.is_active,
+                "description": pricing.description,
+                "updated_at": pricing.updated_at.isoformat()
+            })
+        else:
+            # Return defaults for slots not yet in database
+            defaults = DEFAULT_PRICING.get(slot_type.value, {})
+            results.append({
+                "slot_type": slot_type.value,
+                "price_per_day": defaults.get("price_per_day", 1000),
+                "min_days": defaults.get("min_days", 3),
+                "max_concurrent": defaults.get("max_concurrent", 3),
+                "is_active": True,
+                "description": defaults.get("description", ""),
+                "updated_at": None
+            })
+    return {"pricing": results}
+
+
+@router.patch("/pricing/{slot_type}")
+def update_pricing(
+    slot_type: str,
+    price_per_day: Optional[int] = None,
+    min_days: Optional[int] = None,
+    max_concurrent: Optional[int] = None,
+    is_active: Optional[bool] = None,
+    description: Optional[str] = None,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Update pricing for a slot type."""
+    # Validate slot type
+    try:
+        SlotType(slot_type)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid slot type")
+
+    pricing = session.get(SlotPricing, slot_type)
+
+    if not pricing:
+        # Create new pricing record from defaults
+        defaults = DEFAULT_PRICING.get(slot_type, {})
+        pricing = SlotPricing(
+            slot_type=slot_type,
+            price_per_day=defaults.get("price_per_day", 1000),
+            min_days=defaults.get("min_days", 3),
+            max_concurrent=defaults.get("max_concurrent", 3),
+            description=defaults.get("description", "")
+        )
+
+    # Apply updates
+    if price_per_day is not None:
+        pricing.price_per_day = price_per_day
+    if min_days is not None:
+        pricing.min_days = min_days
+    if max_concurrent is not None:
+        pricing.max_concurrent = max_concurrent
+    if is_active is not None:
+        pricing.is_active = is_active
+    if description is not None:
+        pricing.description = description
+
+    pricing.updated_at = datetime.utcnow()
+    session.add(pricing)
+    session.commit()
+
+    return {
+        "slot_type": pricing.slot_type,
+        "price_per_day": pricing.price_per_day,
+        "min_days": pricing.min_days,
+        "max_concurrent": pricing.max_concurrent,
+        "is_active": pricing.is_active,
+        "description": pricing.description
+    }

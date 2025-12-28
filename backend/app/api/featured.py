@@ -15,12 +15,14 @@ from app.core.config import settings
 from app.models.user import User
 from app.models.event import Event
 from app.models.featured_booking import FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
+from app.models.slot_pricing import SlotPricing, DEFAULT_PRICING
 from app.services.featured import (
     check_availability,
     create_checkout_session,
     handle_checkout_completed,
     handle_checkout_expired,
-    get_active_featured
+    get_active_featured,
+    get_slot_pricing
 )
 
 router = APIRouter(tags=["Featured"])
@@ -96,17 +98,18 @@ class SlotConfigResponse(BaseModel):
 # ============================================================
 
 @router.get("/config", response_model=List[SlotConfigResponse])
-def get_slot_config():
+def get_slot_config(session: Session = Depends(get_session)):
     """Get pricing and limits for all slot types."""
-    return [
-        SlotConfigResponse(
+    results = []
+    for slot_type in SlotType:
+        config = get_slot_pricing(session, slot_type)
+        results.append(SlotConfigResponse(
             slot_type=slot_type.value,
             max_slots=config["max"],
             price_per_day=config["price_per_day"],
             min_days=config["min_days"]
-        )
-        for slot_type, config in SLOT_CONFIG.items()
-    ]
+        ))
+    return results
 
 
 @router.post("/check-availability", response_model=AvailabilityResponse)

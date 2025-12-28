@@ -11,11 +11,34 @@ from app.core.config import settings
 from app.models.featured_booking import (
     FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
 )
+from app.models.slot_pricing import SlotPricing, DEFAULT_PRICING
 from app.models.event import Event
 from app.models.user import User
 
 # Initialize Stripe
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+def get_slot_pricing(session: Session, slot_type: SlotType) -> dict:
+    """
+    Get pricing config for a slot type from database.
+    Falls back to SLOT_CONFIG if not in database.
+    """
+    pricing = session.get(SlotPricing, slot_type.value)
+
+    if pricing and pricing.is_active:
+        return {
+            "max": pricing.max_concurrent,
+            "price_per_day": pricing.price_per_day,
+            "min_days": pricing.min_days
+        }
+
+    # Fallback to hardcoded config
+    return SLOT_CONFIG.get(slot_type, {
+        "max": 3,
+        "price_per_day": 1000,
+        "min_days": 3
+    })
 
 
 def check_availability(
@@ -37,7 +60,7 @@ def check_availability(
             "num_days": int
         }
     """
-    config = SLOT_CONFIG[slot_type]
+    config = get_slot_pricing(session, slot_type)
     max_slots = config["max"]
     price_per_day = config["price_per_day"]
     min_days = config["min_days"]

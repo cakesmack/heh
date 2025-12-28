@@ -26,6 +26,7 @@ from .user_category_follow import UserCategoryFollow
 from .bookmark import Bookmark
 from .report import Report
 from .featured_booking import FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
+from .slot_pricing import SlotPricing, DEFAULT_PRICING
 
 __all__ = [
     # User
@@ -78,4 +79,7 @@ __all__ = [
     "SlotType",
     "BookingStatus",
     "SLOT_CONFIG",
+    # Slot Pricing
+    "SlotPricing",
+    "DEFAULT_PRICING",
 ]
