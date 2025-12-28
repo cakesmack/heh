@@ -748,7 +748,8 @@ def end_featured_booking(
     }
 
 
-@router.post("/featured/sync")
+
+@router.api_route("/featured/sync", methods=["GET", "POST"])
 def sync_featured_status(
     admin: User = Depends(require_admin),
     session: Session = Depends(get_session)
