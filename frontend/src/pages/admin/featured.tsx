@@ -97,6 +97,21 @@ export default function AdminFeatured() {
     }
   };
 
+  const handleCancel = async (bookingId: string, isPaid: boolean) => {
+    const message = isPaid
+      ? 'Cancel this booking? A refund will be issued.'
+      : 'Cancel this abandoned checkout?';
+    if (!confirm(message)) {
+      return;
+    }
+    try {
+      await apiFetch(`/api/admin/featured/${bookingId}/cancel`, { method: 'PATCH' });
+      await fetchBookings();
+    } catch (err: any) {
+      alert(err.message || 'Failed to cancel booking');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -258,6 +273,14 @@ export default function AdminFeatured() {
                             Reject
                           </button>
                         </div>
+                      )}
+                      {booking.status === 'pending_payment' && (
+                        <button
+                          onClick={() => handleCancel(booking.id, false)}
+                          className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+                        >
+                          Cancel
+                        </button>
                       )}
                     </td>
                   </tr>

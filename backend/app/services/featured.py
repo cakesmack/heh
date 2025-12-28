@@ -157,6 +157,10 @@ def create_checkout_session(
     # Create Stripe Checkout Session
     slot_name = slot_type.value.replace("_", " ").title()
 
+    # Format event ID with dashes for URL (UUID format)
+    eid = event.id
+    formatted_event_id = f"{eid[:8]}-{eid[8:12]}-{eid[12:16]}-{eid[16:20]}-{eid[20:]}" if len(eid) == 32 else eid
+
     checkout_session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         line_items=[{
@@ -172,7 +176,7 @@ def create_checkout_session(
         }],
         mode="payment",
         success_url=f"{settings.FRONTEND_URL}/account?featured=success&booking_id={booking.id}",
-        cancel_url=f"{settings.FRONTEND_URL}/events/{event.id}/promote?cancelled=true",
+        cancel_url=f"{settings.FRONTEND_URL}/events/{formatted_event_id}/promote?cancelled=true",
         metadata={
             "booking_id": booking.id,
             "event_id": event.id,

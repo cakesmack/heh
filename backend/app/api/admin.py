@@ -657,3 +657,34 @@ def toggle_trusted_organizer(
     session.commit()
 
     return {"user_id": user_id, "is_trusted_organizer": trusted}
+
+
+@router.patch("/featured/{booking_id}/cancel")
+def cancel_featured_booking(
+    booking_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Cancel a pending payment booking (for abandoned checkouts)."""
+    booking = session.get(FeaturedBooking, booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking.status not in [BookingStatus.PENDING_PAYMENT, BookingStatus.PENDING_APPROVAL]:
+        raise HTTPException(status_code=400, detail="Can only cancel pending bookings")
+
+    # If already paid (pending_approval), issue refund
+    if booking.status == BookingStatus.PENDING_APPROVAL and booking.stripe_payment_intent_id:
+        if settings.STRIPE_SECRET_KEY:
+            try:
+                stripe.api_key = settings.STRIPE_SECRET_KEY
+                stripe.Refund.create(payment_intent=booking.stripe_payment_intent_id)
+            except stripe.error.StripeError as e:
+                raise HTTPException(status_code=500, detail=f"Refund failed: {str(e)}")
+
+    booking.status = BookingStatus.CANCELLED
+    booking.updated_at = datetime.utcnow()
+    session.add(booking)
+    session.commit()
+
+    return {"status": "cancelled", "booking_id": booking_id}
