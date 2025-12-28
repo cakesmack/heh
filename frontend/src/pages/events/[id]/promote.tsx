@@ -32,7 +32,6 @@ export default function PromoteEventPage() {
 
   // Form state
   const [selectedSlot, setSelectedSlot] = useState<SlotType | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
@@ -50,7 +49,7 @@ export default function PromoteEventPage() {
     if (selectedSlot && startDate && endDate) {
       checkAvailability();
     }
-  }, [selectedSlot, selectedCategory, startDate, endDate]);
+  }, [selectedSlot, event?.category_id, startDate, endDate]);
 
   const loadData = async () => {
     try {
@@ -86,7 +85,7 @@ export default function PromoteEventPage() {
         slot_type: selectedSlot,
         start_date: startDate,
         end_date: endDate,
-        target_id: selectedSlot === 'category_pinned' ? selectedCategory || undefined : undefined,
+        target_id: selectedSlot === 'category_pinned' ? event?.category_id : undefined,
       });
       setAvailability(result);
     } catch (err) {
@@ -106,7 +105,7 @@ export default function PromoteEventPage() {
         slot_type: selectedSlot,
         start_date: startDate,
         end_date: endDate,
-        target_id: selectedSlot === 'category_pinned' ? selectedCategory || undefined : undefined,
+        target_id: selectedSlot === 'category_pinned' ? event.category_id : undefined,
         custom_subtitle: selectedSlot === 'hero_home' ? customSubtitle || undefined : undefined,
       });
 
@@ -207,8 +206,8 @@ export default function PromoteEventPage() {
                   <label
                     key={slotType}
                     className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedSlot === slotType
-                        ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-emerald-500 bg-emerald-50'
+                      : 'border-gray-200 hover:border-gray-300'
                       }`}
                   >
                     <div className="flex items-center">
@@ -233,22 +232,16 @@ export default function PromoteEventPage() {
               })}
             </div>
 
-            {/* Category Selection for Category Pinned */}
+            {/* Category Info for Category Pinned */}
             {selectedSlot === 'category_pinned' && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Category
-                </label>
-                <select
-                  value={selectedCategory || ''}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                >
-                  <option value="">Choose a category...</option>
-                  {categories.filter(c => c.is_active).map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Category:</span>{' '}
+                  {event?.category?.name || 'Unknown'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Your event will be pinned to the top of this category page.
+                </p>
               </div>
             )}
 
@@ -332,10 +325,10 @@ export default function PromoteEventPage() {
           {/* Submit Button */}
           <button
             onClick={handleSubmit}
-            disabled={!availability?.available || isSubmitting || (selectedSlot === 'category_pinned' && !selectedCategory)}
-            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${availability?.available && !isSubmitting && !(selectedSlot === 'category_pinned' && !selectedCategory)
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            disabled={!availability?.available || isSubmitting || (selectedSlot === 'category_pinned' && !event?.category_id)}
+            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${availability?.available && !isSubmitting && !(selectedSlot === 'category_pinned' && !event?.category_id)
+              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             {isSubmitting ? 'Redirecting to payment...' : 'Proceed to Payment'}
