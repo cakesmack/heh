@@ -17,8 +17,12 @@ from app.models.checkin import CheckIn
 from app.models.venue_claim import VenueClaim
 from app.models.report import Report
 from app.models.organizer import Organizer
+from app.models.featured_booking import FeaturedBooking, BookingStatus
 from app.schemas.venue_claim import VenueClaimResponse
 from app.services.notifications import notification_service
+from app.services.resend_email import resend_email_service
+from app.core.config import settings
+import stripe
 
 router = APIRouter(tags=["Admin"])
 
@@ -515,5 +519,141 @@ def process_venue_claim(
     if claim.user and claim.user.email:
         venue_name = claim.venue.name if claim.venue else "Unknown Venue"
         notification_service.notify_venue_claim_update(claim.user.email, venue_name, claim.status)
-        
+
     return claim
+
+
+# ============================================================
+# FEATURED BOOKINGS ADMIN
+# ============================================================
+
+@router.get("/featured")
+def get_all_featured_bookings(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    slot_type: Optional[str] = None,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Get all featured bookings with optional filters."""
+    query = select(FeaturedBooking).order_by(FeaturedBooking.created_at.desc())
+
+    if status_filter:
+        query = query.where(FeaturedBooking.status == status_filter)
+    if slot_type:
+        query = query.where(FeaturedBooking.slot_type == slot_type)
+
+    bookings = session.exec(query).all()
+
+    results = []
+    for booking in bookings:
+        event = session.get(Event, booking.event_id)
+        organizer = session.get(User, booking.organizer_id)
+        results.append({
+            "id": booking.id,
+            "event_id": booking.event_id,
+            "event_title": event.title if event else "Deleted Event",
+            "organizer_id": booking.organizer_id,
+            "organizer_email": organizer.email if organizer else None,
+            "is_trusted": organizer.is_trusted_organizer if organizer else False,
+            "slot_type": booking.slot_type.value,
+            "target_id": booking.target_id,
+            "start_date": booking.start_date.isoformat(),
+            "end_date": booking.end_date.isoformat(),
+            "status": booking.status.value,
+            "amount_paid": booking.amount_paid,
+            "created_at": booking.created_at.isoformat()
+        })
+
+    return {"bookings": results}
+
+
+@router.patch("/featured/{booking_id}/approve")
+def approve_featured_booking(
+    booking_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Approve a pending featured booking."""
+    booking = session.get(FeaturedBooking, booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking.status != BookingStatus.PENDING_APPROVAL:
+        raise HTTPException(status_code=400, detail="Booking is not pending approval")
+
+    booking.status = BookingStatus.ACTIVE
+    booking.updated_at = datetime.utcnow()
+    session.add(booking)
+
+    # Mark organizer as trusted for future bookings
+    organizer = session.get(User, booking.organizer_id)
+    if organizer and not organizer.is_trusted_organizer:
+        organizer.is_trusted_organizer = True
+        session.add(organizer)
+
+    session.commit()
+
+    # Send notification email
+    if organizer:
+        event = session.get(Event, booking.event_id)
+        event_title = event.title if event else "your event"
+        resend_email_service.send_organizer_alert(
+            organizer.email,
+            organizer.display_name or organizer.email,
+            event_title,
+            "approved",
+            ""
+        )
+
+    return {"status": "approved", "booking_id": booking_id}
+
+
+@router.patch("/featured/{booking_id}/reject")
+def reject_featured_booking(
+    booking_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Reject a pending featured booking and issue refund."""
+    booking = session.get(FeaturedBooking, booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking.status != BookingStatus.PENDING_APPROVAL:
+        raise HTTPException(status_code=400, detail="Booking is not pending approval")
+
+    # Issue refund via Stripe
+    if booking.stripe_payment_intent_id and settings.STRIPE_SECRET_KEY:
+        try:
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+            stripe.Refund.create(payment_intent=booking.stripe_payment_intent_id)
+        except stripe.error.StripeError as e:
+            raise HTTPException(status_code=500, detail=f"Refund failed: {str(e)}")
+
+    booking.status = BookingStatus.REJECTED
+    booking.updated_at = datetime.utcnow()
+    session.add(booking)
+    session.commit()
+
+    return {"status": "rejected", "booking_id": booking_id, "refunded": True}
+
+
+@router.patch("/users/{user_id}/trust")
+def toggle_trusted_organizer(
+    user_id: str,
+    trusted: bool,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Toggle trusted organizer status for a user."""
+    normalized_id = user_id.replace("-", "") if "-" in user_id else user_id
+
+    user = session.get(User, normalized_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.is_trusted_organizer = trusted
+    session.add(user)
+    session.commit()
+
+    return {"user_id": user_id, "is_trusted_organizer": trusted}
