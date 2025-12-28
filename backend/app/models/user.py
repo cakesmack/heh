@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .group_member import GroupMember
     from .venue_staff import VenueStaff
     from .user_preferences import UserPreferences
+    from .featured_booking import FeaturedBooking
 
 
 class User(SQLModel, table=True):
@@ -45,6 +46,9 @@ class User(SQLModel, table=True):
     # Admin flag
     is_admin: bool = Field(default=False)
 
+    # Trusted organizer (auto-approve featured bookings)
+    is_trusted_organizer: bool = Field(default=False)
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -59,3 +63,4 @@ class User(SQLModel, table=True):
     group_memberships: list["GroupMember"] = Relationship(back_populates="user")
     venue_staff: list["VenueStaff"] = Relationship(back_populates="user")
     preferences: Optional["UserPreferences"] = Relationship(back_populates="user")
+    featured_bookings: list["FeaturedBooking"] = Relationship(back_populates="organizer")

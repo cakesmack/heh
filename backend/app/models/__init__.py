@@ -25,6 +25,7 @@ from .venue_staff import VenueStaff, VenueRole
 from .user_category_follow import UserCategoryFollow
 from .bookmark import Bookmark
 from .report import Report
+from .featured_booking import FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
 
 __all__ = [
     # User
@@ -72,4 +73,9 @@ __all__ = [
     "Bookmark",
     # Reports
     "Report",
+    # Featured Bookings
+    "FeaturedBooking",
+    "SlotType",
+    "BookingStatus",
+    "SLOT_CONFIG",
 ]
