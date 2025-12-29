@@ -79,7 +79,8 @@ export default function PlacesAutocomplete({
       {
         input: query,
         componentRestrictions: { country: 'gb' },
-        types: ['address', 'establishment'],
+        // Note: 'address' cannot be mixed with other types, using 'establishment' for venues
+        types: ['establishment'],
       },
       (predictions, status) => {
         setIsLoading(false);

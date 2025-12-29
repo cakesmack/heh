@@ -104,13 +104,13 @@ export function GoogleMapView({
   const selectedMarker = allMarkers.find((m) => m.id === infoWindowMarkerId);
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} style={{ minHeight: '400px' }}>
       <Map
         defaultCenter={HIGHLANDS_CENTER}
         defaultZoom={DEFAULT_ZOOM}
         gestureHandling="greedy"
         disableDefaultUI={false}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
         className="rounded-lg"
       >
         {/* Event and Venue Markers */}
