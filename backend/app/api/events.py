@@ -303,15 +303,14 @@ def list_events(
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)
             venue_joined = True
         
-        # Filter: Event has own coords in bbox OR Event's venue has coords in bbox
+        # Filter: Event in bbox OR Venue in bbox
+        # This handles cases where Event coords are NULL, or invalid (e.g. 0.0), 
+        # allowing the Venue's location to be used as a fallback.
         query = query.where(
             (
-                (Event.latitude.isnot(None)) &
                 (Event.latitude.between(min_lat, max_lat)) &
                 (Event.longitude.between(min_lon, max_lon))
             ) | (
-                (Event.latitude.is_(None)) &
-                (Venue.latitude.isnot(None)) &
                 (Venue.latitude.between(min_lat, max_lat)) &
                 (Venue.longitude.between(min_lon, max_lon))
             )
@@ -344,7 +343,14 @@ def list_events(
             # Get effective coordinates (event coords or fallback to venue coords)
             event_lat = event.latitude
             event_lon = event.longitude
-            if event_lat is None or event_lon is None:
+            
+            # Treat 0.0 as invalid/missing coordinates
+            has_event_coords = (
+                event_lat is not None and event_lon is not None and 
+                (abs(event_lat) > 0.0001 or abs(event_lon) > 0.0001)
+            )
+
+            if not has_event_coords:
                 if event.venue_id:
                     venue = session.get(Venue, event.venue_id)
                     if venue:
