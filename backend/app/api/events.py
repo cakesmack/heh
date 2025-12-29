@@ -307,13 +307,18 @@ def list_events(
         # Filter: Event in bbox OR Venue in bbox
         # This handles cases where Event coords are NULL, or invalid (e.g. 0.0), 
         # allowing the Venue's location to be used as a fallback.
+        # Filter: Event in bbox OR Venue in bbox
+        # This handles cases where Event coords are NULL, or invalid (e.g. 0.0), 
+        # allowing the Venue's location to be used as a fallback.
+        # We cast to Float to ensure type compatibility (e.g. if stored as Decimal/String)
+        from sqlalchemy import cast, Float
         query = query.where(
             (
-                (Event.latitude.between(min_lat, max_lat)) &
-                (Event.longitude.between(min_lon, max_lon))
+                (cast(Event.latitude, Float).between(min_lat, max_lat)) &
+                (cast(Event.longitude, Float).between(min_lon, max_lon))
             ) | (
-                (Venue.latitude.between(min_lat, max_lat)) &
-                (Venue.longitude.between(min_lon, max_lon))
+                (cast(Venue.latitude, Float).between(min_lat, max_lat)) &
+                (cast(Venue.longitude, Float).between(min_lon, max_lon))
             )
         )
         
