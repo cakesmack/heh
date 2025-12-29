@@ -299,65 +299,61 @@ export default function DiscoveryBar({
                             </div>
                         </div>
 
-                        {/* Near Me / GPS Mode Toggle */}
+                        {/* Distance Select - Static Dropdown */}
                         <div className="w-auto flex-shrink-0">
-                            {gpsMode ? (
-                                /* GPS Mode: Show Radius Dropdown + Exit */
-                                <div className="flex items-center gap-2">
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <circle cx="12" cy="12" r="3" strokeWidth={2} />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
-                                            </svg>
-                                        </div>
-                                        <select
-                                            value={selectedRadius}
-                                            onChange={(e) => handleRadiusChange(e.target.value)}
-                                            className="block w-full pl-10 pr-8 py-3 text-base border-emerald-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-emerald-50 text-emerald-700 font-medium cursor-pointer appearance-none"
-                                        >
-                                            {radiusOptions.map((opt) => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                            <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    {/* Exit GPS Mode */}
-                                    <button
-                                        type="button"
-                                        onClick={exitGpsMode}
-                                        className="p-3 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Exit GPS mode"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            ) : (
-                                /* Default: Near Me Button */
-                                <button
-                                    type="button"
-                                    onClick={handleNearMeClick}
-                                    disabled={isGettingLocation}
-                                    className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                                    title="Find events near my current location"
-                                >
+                            <div className="relative">
+                                {/* Left Icon: Map Pin */}
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     {isGettingLocation ? (
-                                        <svg className="w-5 h-5 animate-spin text-gray-500" fill="none" viewBox="0 0 24 24">
+                                        <svg className="h-5 w-5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                         </svg>
                                     ) : (
-                                        <span>📍</span>
+                                        <svg className={`h-5 w-5 ${gpsMode ? 'text-emerald-600' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
                                     )}
-                                    <span>Near Me</span>
-                                </button>
-                            )}
+                                </div>
+                                {/* Select Element */}
+                                <select
+                                    value={gpsMode ? selectedRadius : ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (value === '') {
+                                            // "Distance: Any" selected - clear GPS mode
+                                            exitGpsMode();
+                                        } else {
+                                            // Distance selected - get location and search
+                                            setSelectedRadius(value);
+                                            if (userCoords) {
+                                                // Already have coords, just update radius
+                                                handleRadiusChange(value);
+                                            } else {
+                                                // Need to get GPS location first
+                                                handleNearMeClick();
+                                            }
+                                        }
+                                    }}
+                                    disabled={isGettingLocation}
+                                    className={`block w-full pl-10 pr-8 py-3 text-base sm:text-sm rounded-lg cursor-pointer appearance-none transition-colors ${gpsMode
+                                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700 font-medium focus:ring-emerald-500 focus:border-emerald-500'
+                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-emerald-500 focus:border-emerald-500'
+                                        } ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                >
+                                    <option value="">Distance: Any</option>
+                                    {radiusOptions.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                                {/* Right Icon: Chevron Down */}
+                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <svg className={`h-4 w-4 ${gpsMode ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Date Select & Custom Range */}
@@ -521,81 +517,59 @@ export default function DiscoveryBar({
                             </div>
                         </div>
 
-                        {/* Location Search */}
+                        {/* Distance Select - Static Dropdown (Mobile) */}
                         <div>
-                            <label htmlFor="mobile-location" className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-
-                            {gpsMode ? (
-                                /* GPS Mode: Show Radius Dropdown */
-                                <div className="flex items-center gap-2">
-                                    <div className="relative flex-1">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <circle cx="12" cy="12" r="3" strokeWidth={2} />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
-                                            </svg>
-                                        </div>
-                                        <select
-                                            value={selectedRadius}
-                                            onChange={(e) => handleRadiusChange(e.target.value)}
-                                            className="block w-full pl-10 pr-8 py-3 text-base border-indigo-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-lg bg-indigo-50 text-indigo-700 font-medium cursor-pointer appearance-none"
-                                        >
-                                            {radiusOptions.map((opt) => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={exitGpsMode}
-                                        className="p-3 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Switch back to manual location search"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <label htmlFor="mobile-distance" className="block text-sm font-medium text-gray-700 mb-1">Distance</label>
+                            <div className="relative">
+                                {/* Left Icon: Map Pin */}
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    {isGettingLocation ? (
+                                        <svg className="h-5 w-5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                         </svg>
-                                    </button>
+                                    ) : (
+                                        <svg className={`h-5 w-5 ${gpsMode ? 'text-emerald-600' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    )}
                                 </div>
-                            ) : (
-                                /* Manual Mode: Text Input + Near Me Button */
-                                <div className="space-y-2">
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            id="mobile-location"
-                                            value={location}
-                                            onChange={(e) => setLocation(e.target.value)}
-                                            onKeyDown={handleKeyDown}
-                                            placeholder="Town or Postcode"
-                                            className={`block w-full pl-10 pr-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50 ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''}`}
-                                        />
-                                    </div>
-                                    {/* Near Me Button - Mobile */}
-                                    <button
-                                        type="button"
-                                        onClick={handleNearMeClick}
-                                        disabled={isGettingLocation}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                        title="Find events near my current location"
-                                    >
-                                        {isGettingLocation ? (
-                                            <svg className="w-5 h-5 animate-spin text-gray-500" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                            </svg>
-                                        ) : (
-                                            <span>📍</span>
-                                        )}
-                                        <span>Near Me</span>
-                                    </button>
+                                {/* Select Element */}
+                                <select
+                                    id="mobile-distance"
+                                    value={gpsMode ? selectedRadius : ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (value === '') {
+                                            exitGpsMode();
+                                        } else {
+                                            setSelectedRadius(value);
+                                            if (userCoords) {
+                                                handleRadiusChange(value);
+                                            } else {
+                                                handleNearMeClick();
+                                            }
+                                        }
+                                    }}
+                                    disabled={isGettingLocation}
+                                    className={`block w-full pl-10 pr-8 py-3 text-base rounded-lg cursor-pointer appearance-none transition-colors ${gpsMode
+                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-700 font-medium focus:ring-emerald-500 focus:border-emerald-500'
+                                            : 'border-gray-300 bg-gray-50 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500'
+                                        } ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                >
+                                    <option value="">Distance: Any</option>
+                                    {radiusOptions.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                                {/* Right Icon: Chevron Down */}
+                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <svg className={`h-4 w-4 ${gpsMode ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
                         {/* Date Select */}
