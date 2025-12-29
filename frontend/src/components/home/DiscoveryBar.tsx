@@ -3,6 +3,7 @@
  * A responsive search filter bar for discovering events.
  */
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useCategories } from '@/hooks/useCategories';
 import { useSearch } from '@/context/SearchContext';
 import { searchAPI } from '@/lib/api';
@@ -52,7 +53,10 @@ export default function DiscoveryBar({
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [activeInput, setActiveInput] = useState<'q' | 'location' | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
+    const [locationError, setLocationError] = useState<string | null>(null);
 
+    const router = useRouter();
     const debouncedQ = useDebounce(q, 300);
     const debouncedLocation = useDebounce(location, 300);
 
@@ -135,6 +139,51 @@ export default function DiscoveryBar({
         setShowSuggestions(false);
         setSuggestions([]);
         setSelectedIndex(-1);
+    };
+
+    const handleNearMeClick = () => {
+        if (!navigator.geolocation) {
+            setLocationError('Geolocation is not supported by your browser');
+            return;
+        }
+
+        setIsGettingLocation(true);
+        setLocationError(null);
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                setIsGettingLocation(false);
+                closeMobileSearch();
+                // Navigate to events page with location params
+                router.push({
+                    pathname: '/events',
+                    query: {
+                        latitude: latitude.toFixed(6),
+                        longitude: longitude.toFixed(6),
+                        radius_km: '20',
+                        location: 'Near Me'
+                    }
+                });
+            },
+            (error) => {
+                setIsGettingLocation(false);
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        setLocationError('Location permission denied');
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        setLocationError('Location unavailable');
+                        break;
+                    case error.TIMEOUT:
+                        setLocationError('Location request timed out');
+                        break;
+                    default:
+                        setLocationError('Failed to get location');
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+        );
     };
 
     const handleClear = () => {
@@ -258,6 +307,31 @@ export default function DiscoveryBar({
                                     </div>
                                 )}
                             </div>
+
+                            {/* Near Me Button */}
+                            <button
+                                type="button"
+                                onClick={handleNearMeClick}
+                                disabled={isGettingLocation}
+                                className="flex items-center gap-2 px-4 py-3 font-medium text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Find events near me"
+                            >
+                                {isGettingLocation ? (
+                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                )}
+                                <span className="hidden sm:inline">Near Me</span>
+                            </button>
+                            {locationError && (
+                                <span className="text-xs text-red-600">{locationError}</span>
+                            )}
                         </div>
 
                         {/* Date Select & Custom Range */}
@@ -441,6 +515,30 @@ export default function DiscoveryBar({
                                     className="block w-full pl-10 pr-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50"
                                 />
                             </div>
+                            {/* Near Me Button - Mobile */}
+                            <button
+                                type="button"
+                                onClick={handleNearMeClick}
+                                disabled={isGettingLocation}
+                                className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-3 font-medium text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Find events near me"
+                            >
+                                {isGettingLocation ? (
+                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                )}
+                                <span>Use My Location</span>
+                            </button>
+                            {locationError && (
+                                <p className="text-xs text-red-600 mt-1">{locationError}</p>
+                            )}
                         </div>
 
                         {/* Date Select */}
