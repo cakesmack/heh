@@ -21,8 +21,8 @@ import { EventCard } from '@/components/events/EventCard';
 import { PromotionCard } from '@/components/promotions/PromotionCard';
 import { FollowButton } from '@/components/common/FollowButton';
 
-// Dynamic import for MiniMap to avoid SSR issues with mapbox-gl
-const MiniMap = dynamic(() => import('@/components/maps/MiniMap'), { ssr: false });
+// Dynamic import for GoogleMiniMap to avoid SSR issues
+const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
 export default function VenueDetailPage() {
   const router = useRouter();
@@ -461,7 +461,7 @@ export default function VenueDetailPage() {
                 <p className="text-sm text-gray-500">{venue.address}</p>
               </div>
               {venue.latitude && venue.longitude && (
-                <MiniMap
+                <GoogleMiniMap
                   latitude={venue.latitude}
                   longitude={venue.longitude}
                   height="300px"

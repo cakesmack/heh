@@ -13,7 +13,7 @@ import { venuesAPI } from '@/lib/api';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import ImageUpload from '@/components/common/ImageUpload';
-import PostcodeLookup from '@/components/admin/PostcodeLookup';
+import PlacesAutocomplete from '@/components/maps/PlacesAutocomplete';
 import { isHIERegion } from '@/utils/validation/hie-check';
 
 /**
@@ -62,8 +62,8 @@ function parseBackendError(error: any): string {
     return 'Failed to create venue. Please check your input and try again.';
 }
 
-// Dynamic import for MiniMap to avoid SSR issues
-const MiniMap = dynamic(() => import('@/components/maps/MiniMap'), { ssr: false });
+// Dynamic import for GoogleMiniMap to avoid SSR issues
+const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
 interface VenueFormData {
     name: string;
@@ -150,20 +150,27 @@ export default function NewVenuePage() {
         setFormData(prev => ({ ...prev, image_url: '' }));
     };
 
-    const handlePostcodeLookup = (result: {
+    const handlePlaceSelect = (place: {
         postcode: string;
         address: string;
         latitude: number;
         longitude: number;
+        placeId: string;
     }) => {
         setFormData(prev => ({
             ...prev,
-            postcode: result.postcode,
-            address: result.address,
-            latitude: result.latitude,
-            longitude: result.longitude,
+            postcode: place.postcode,
+            address: place.address,
+            latitude: place.latitude,
+            longitude: place.longitude,
         }));
-        setIsPostcodeValid(isHIERegion(result.postcode));
+        // Validate HIE region using postcode if available, otherwise check coordinates
+        if (place.postcode) {
+            setIsPostcodeValid(isHIERegion(place.postcode));
+        } else {
+            // If no postcode, assume valid (coordinates will be used)
+            setIsPostcodeValid(true);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -337,12 +344,16 @@ export default function NewVenuePage() {
                             </select>
                         </div>
 
-                        {/* Address Lookup - User-facing search */}
+                        {/* Address Lookup - Google Places Autocomplete */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Find Address *
                             </label>
-                            <PostcodeLookup onResult={handlePostcodeLookup} />
+                            <PlacesAutocomplete
+                                onSelect={handlePlaceSelect}
+                                placeholder="Search for venue address..."
+                                disabled={isSubmitting}
+                            />
                             {formData.address && (
                                 <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                     <p className="text-sm text-gray-700">
@@ -358,7 +369,7 @@ export default function NewVenuePage() {
                             )}
                         </div>
 
-                        {/* Hidden fields - populated by PostcodeLookup */}
+                        {/* Hidden fields - populated by PlacesAutocomplete */}
                         <input type="hidden" name="address" value={formData.address} />
                         <input type="hidden" name="postcode" value={formData.postcode} />
                         <input type="hidden" name="latitude" value={formData.latitude} />
@@ -387,7 +398,7 @@ export default function NewVenuePage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Location Preview
                                 </label>
-                                <MiniMap
+                                <GoogleMiniMap
                                     latitude={formData.latitude}
                                     longitude={formData.longitude}
                                     height="150px"

@@ -24,8 +24,8 @@ import AddToCalendar from '@/components/events/AddToCalendar';
 import { api } from '@/lib/api';
 import type { EventResponse } from '@/types';
 
-// Dynamic import for MiniMap to avoid SSR issues with mapbox-gl
-const MiniMap = dynamic(() => import('@/components/maps/MiniMap'), { ssr: false });
+// Dynamic import for GoogleMiniMap to avoid SSR issues
+const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
 interface EventDetailPageProps {
   initialEvent: EventResponse | null;
@@ -343,7 +343,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
 
                 {event.latitude && event.longitude && (
                   <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
-                    <MiniMap
+                    <GoogleMiniMap
                       latitude={event.latitude}
                       longitude={event.longitude}
                       height="250px"

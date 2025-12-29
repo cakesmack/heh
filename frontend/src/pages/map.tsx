@@ -12,10 +12,10 @@ import dynamic from 'next/dynamic';
 import { format } from 'date-fns';
 import { eventsAPI, categoriesAPI } from '@/lib/api';
 import type { EventResponse, Category } from '@/types';
-import type { MapMarker } from '@/components/events/MapView';
+import type { MapMarker } from '@/components/events/GoogleMapView';
 
-// Dynamically import MapView to avoid SSR issues with Mapbox
-const MapView = dynamic(() => import('@/components/events/MapView'), {
+// Dynamically import GoogleMapView to avoid SSR issues
+const GoogleMapView = dynamic(() => import('@/components/events/GoogleMapView'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -205,7 +205,7 @@ export default function MapPage() {
 
         {/* Right Panel - Map: Full width on mobile, shares space on desktop */}
         <div className="flex-1 relative">
-          <MapView
+          <GoogleMapView
             events={filteredEvents}
             venues={[]}
             showEvents={true}

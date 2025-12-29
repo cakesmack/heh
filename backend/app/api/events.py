@@ -304,6 +304,32 @@ def list_events(
         order_by_featured=True
     )
 
+    # Apply true Haversine distance filtering (bounding box is square, this refines to circle)
+    # Also sort by distance when radius filtering is active
+    if latitude is not None and longitude is not None and radius_km is not None:
+        events_with_distance = []
+        for event in events:
+            # Get effective coordinates (event coords or fallback to venue coords)
+            event_lat = event.latitude
+            event_lon = event.longitude
+            if event_lat is None or event_lon is None:
+                if event.venue_id:
+                    venue = session.get(Venue, event.venue_id)
+                    if venue:
+                        event_lat = venue.latitude
+                        event_lon = venue.longitude
+
+            # Calculate true distance and filter
+            if event_lat is not None and event_lon is not None:
+                dist = haversine_distance(latitude, longitude, event_lat, event_lon)
+                if dist <= radius_km:
+                    events_with_distance.append((event, dist))
+
+        # Sort by distance (nearest first)
+        events_with_distance.sort(key=lambda x: x[1])
+        events = [e[0] for e in events_with_distance]
+        total = len(events)  # Update total after filtering
+
     # Build responses
     event_responses = [
         build_event_response(event, session, latitude, longitude)

@@ -6,6 +6,7 @@
 import type { AppProps } from 'next/app';
 import { Inter } from 'next/font/google';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { APIProvider } from '@vis.gl/react-google-maps';
 import { AuthProvider } from '@/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -20,6 +21,7 @@ import AnalyticsProvider from '@/components/common/AnalyticsProvider';
 import { SearchProvider } from '@/context/SearchContext';
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
 
 export default function App({ Component, pageProps }: AppProps) {
   const content = (
@@ -53,14 +55,26 @@ export default function App({ Component, pageProps }: AppProps) {
     </AuthProvider>
   );
 
-  // Only wrap with GoogleOAuthProvider if client ID is available
+  // Wrap with providers
+  let wrappedContent = content;
+
+  // Wrap with Google Maps APIProvider if key is available
+  if (GOOGLE_MAPS_KEY) {
+    wrappedContent = (
+      <APIProvider apiKey={GOOGLE_MAPS_KEY}>
+        {wrappedContent}
+      </APIProvider>
+    );
+  }
+
+  // Wrap with GoogleOAuthProvider if client ID is available
   if (GOOGLE_CLIENT_ID) {
-    return (
+    wrappedContent = (
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        {content}
+        {wrappedContent}
       </GoogleOAuthProvider>
     );
   }
 
-  return content;
+  return wrappedContent;
 }

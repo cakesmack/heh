@@ -10,14 +10,14 @@ import AdminGuard from '@/components/admin/AdminGuard';
 import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
 import ImageUpload from '@/components/common/ImageUpload';
-import PostcodeLookup from '@/components/admin/PostcodeLookup';
+import PlacesAutocomplete from '@/components/maps/PlacesAutocomplete';
 import { venuesAPI, analyticsAPI } from '@/lib/api';
 import { isHIERegion } from '@/utils/validation/hie-check';
 import { VenueCategory, VenueAnalyticsSummary } from '@/types';
 import type { VenueResponse } from '@/types';
 
-// Dynamic import for MiniMap to avoid SSR issues
-const MiniMap = dynamic(() => import('@/components/maps/MiniMap'), { ssr: false });
+// Dynamic import for GoogleMiniMap to avoid SSR issues
+const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
 export default function AdminVenues() {
   const [venues, setVenues] = useState<VenueResponse[]>([]);
@@ -183,21 +183,27 @@ export default function AdminVenues() {
     setFormData(prev => ({ ...prev, image_url: '' }));
   };
 
-  const handlePostcodeLookup = (result: {
+  const handlePlaceSelect = (place: {
     postcode: string;
     address: string;
     latitude: number;
     longitude: number;
+    placeId: string;
   }) => {
     setFormData(prev => ({
       ...prev,
-      postcode: result.postcode,
-      address: result.address,
-      address_full: result.address,
-      latitude: result.latitude,
-      longitude: result.longitude,
+      postcode: place.postcode,
+      address: place.address,
+      address_full: place.address,
+      latitude: place.latitude,
+      longitude: place.longitude,
     }));
-    setIsPostcodeValid(isHIERegion(result.postcode));
+    // Validate HIE region using postcode if available
+    if (place.postcode) {
+      setIsPostcodeValid(isHIERegion(place.postcode));
+    } else {
+      setIsPostcodeValid(true);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -449,9 +455,10 @@ export default function AdminVenues() {
                 />
               </div>
 
-              {/* Postcode Lookup */}
+              {/* Google Places Autocomplete */}
               <div className="col-span-2">
-                <PostcodeLookup onResult={handlePostcodeLookup} />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Find Address</label>
+                <PlacesAutocomplete onSelect={handlePlaceSelect} placeholder="Search for venue address..." />
               </div>
 
               <div className="col-span-2">
@@ -516,7 +523,7 @@ export default function AdminVenues() {
               {formData.latitude && formData.longitude && (
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location Preview</label>
-                  <MiniMap
+                  <GoogleMiniMap
                     latitude={formData.latitude}
                     longitude={formData.longitude}
                     height="150px"
