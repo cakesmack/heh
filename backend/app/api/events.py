@@ -228,7 +228,7 @@ def list_events(
             Tag, EventTag.tag_id == Tag.id
         ).where(Tag.name.in_(tag_list))
 
-    # Search query (title, description, venue name, venue city, venue postcode) - OMNIBAR
+    # Search query (title, description, venue name, venue address, venue postcode) - OMNIBAR
     if q:
         search_term = f"%{q}%"
         # Join with Venue if not already joined
@@ -239,7 +239,8 @@ def list_events(
             (Event.title.ilike(search_term)) | 
             (Event.description.ilike(search_term)) |
             (Venue.name.ilike(search_term)) |
-            (Venue.city.ilike(search_term)) |
+            (Venue.address.ilike(search_term)) |
+            (Venue.formatted_address.ilike(search_term)) |
             (Venue.postcode.ilike(search_term))
         )
 
