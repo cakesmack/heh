@@ -75,17 +75,22 @@ export default function PlacesAutocomplete({
     setIsLoading(true);
     setError(null);
 
-    // Scottish Highlands & Islands bounds for location bias
+    // Scottish Highlands & Islands strict bounds for location restriction
+    // North: 59.5, South: 55.6, West: -8.0, East: -2.0
     const highlandsBounds = new google.maps.LatLngBounds(
       new google.maps.LatLng(55.6, -8.0),  // SW corner
       new google.maps.LatLng(59.5, -2.0)   // NE corner
     );
 
+    // List of terms that indicate non-Highland locations to filter out
+    const excludedTerms = ['london', 'england', 'birmingham', 'manchester', 'liverpool', 'leeds', 'sheffield', 'bristol', 'newcastle upon tyne', 'nottingham', 'southampton', 'cardiff', 'belfast'];
+
     autocompleteServiceRef.current.getPlacePredictions(
       {
         input: query,
         componentRestrictions: { country: 'gb' },
-        locationBias: highlandsBounds,
+        // Use locationRestriction for strict bounds (not just bias)
+        locationRestriction: highlandsBounds,
         // Note: 'address' cannot be mixed with other types, using 'establishment' for venues
         types: ['establishment'],
       },
@@ -93,8 +98,14 @@ export default function PlacesAutocomplete({
         setIsLoading(false);
 
         if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-          setSuggestions(predictions);
-          setIsOpen(predictions.length > 0);
+          // Fallback filter: Remove any suggestions containing excluded terms
+          // This handles cases where Google ignores the locationRestriction
+          const filteredPredictions = predictions.filter((prediction) => {
+            const description = prediction.description.toLowerCase();
+            return !excludedTerms.some((term) => description.includes(term));
+          });
+          setSuggestions(filteredPredictions);
+          setIsOpen(filteredPredictions.length > 0);
         } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
           setSuggestions([]);
           setIsOpen(false);
