@@ -59,6 +59,9 @@ export function EventFilters({ onFilterChange, userLocation, initialFilters }: E
     longitude: number;
     placeName: string;
   } | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [selectedRadius, setSelectedRadius] = useState<number>(20); // Default 20km
 
   // Date range state
   const [dateFrom, setDateFrom] = useState<string>(initialFilters?.date_from || '');
@@ -157,6 +160,45 @@ export function EventFilters({ onFilterChange, userLocation, initialFilters }: E
     setSelectedTags(prev => prev.filter(t => t !== tagName));
   };
 
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setIsGettingLocation(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setSelectedLocation({
+          latitude,
+          longitude,
+          placeName: 'My Location',
+        });
+        setIsGettingLocation(false);
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationError('Location permission denied');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationError('Location unavailable');
+            break;
+          case error.TIMEOUT:
+            setLocationError('Location request timed out');
+            break;
+          default:
+            setLocationError('Failed to get location');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
+  };
+
   const handleApplyFilters = () => {
     const filters: any = {};
 
@@ -185,7 +227,7 @@ export function EventFilters({ onFilterChange, userLocation, initialFilters }: E
     if (selectedLocation) {
       filters.latitude = selectedLocation.latitude;
       filters.longitude = selectedLocation.longitude;
-      filters.radius_km = 32; // Fixed 20 miles (approx 32km)
+      filters.radius_km = selectedRadius;
       filters.location = selectedLocation.placeName;
     }
 
@@ -330,15 +372,75 @@ export function EventFilters({ onFilterChange, userLocation, initialFilters }: E
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Location
         </label>
-        <LocationInput
-          onSelect={setSelectedLocation}
-          initialValue={initialFilters?.location || ''}
-          placeholder="Town or Postcode"
-        />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <LocationInput
+              onSelect={setSelectedLocation}
+              initialValue={initialFilters?.location || ''}
+              placeholder="Town or Postcode"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleUseMyLocation}
+            disabled={isGettingLocation}
+            className="flex items-center justify-center px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Use my location"
+          >
+            {isGettingLocation ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {locationError && (
+          <p className="text-xs text-red-600 mt-1">{locationError}</p>
+        )}
+
         {selectedLocation && (
-          <p className="text-xs text-gray-500 mt-1">
-            Searching within 20 miles of {selectedLocation.placeName}
-          </p>
+          <div className="mt-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Searching near {selectedLocation.placeName}
+              </p>
+              <button
+                type="button"
+                onClick={() => setSelectedLocation(null)}
+                className="text-xs text-red-600 hover:text-red-700"
+              >
+                Clear
+              </button>
+            </div>
+
+            {/* Radius Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600">Radius:</span>
+              <div className="flex gap-1">
+                {[10, 20, 50].map((radius) => (
+                  <button
+                    key={radius}
+                    type="button"
+                    onClick={() => setSelectedRadius(radius)}
+                    className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                      selectedRadius === radius
+                        ? 'bg-emerald-100 border-emerald-500 text-emerald-800'
+                        : 'bg-white border-gray-300 text-gray-600 hover:border-emerald-400'
+                    }`}
+                  >
+                    {radius}km
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

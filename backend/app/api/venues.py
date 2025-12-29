@@ -36,6 +36,22 @@ from app.utils.validators import validate_url, validate_phone
 
 router = APIRouter(tags=["Venues"])
 
+# Scottish Highlands & Islands bounding box
+HIGHLANDS_BOUNDS = {
+    "south": 55.6,   # North of Glasgow
+    "north": 59.5,   # Including Orkney/Shetland
+    "west": -8.0,    # Outer Hebrides
+    "east": -2.0,    # East Coast
+}
+
+
+def is_within_highlands(latitude: float, longitude: float) -> bool:
+    """Check if coordinates fall within the Highlands & Islands region."""
+    return (
+        HIGHLANDS_BOUNDS["south"] <= latitude <= HIGHLANDS_BOUNDS["north"] and
+        HIGHLANDS_BOUNDS["west"] <= longitude <= HIGHLANDS_BOUNDS["east"]
+    )
+
 
 def build_venue_response(venue: Venue, session: Session, latitude: float = None, longitude: float = None) -> VenueResponse:
     """Build VenueResponse with computed fields."""
@@ -303,6 +319,13 @@ def create_venue(
                 detail=phone_error
             )
 
+    # Validate venue is within Highlands & Islands region
+    if not is_within_highlands(venue_data.latitude, venue_data.longitude):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Venues must be located within the Highlands & Islands region."
+        )
+
     # Calculate geohash
     geohash = calculate_geohash(venue_data.latitude, venue_data.longitude)
 
@@ -395,10 +418,20 @@ def update_venue(
                 detail=url_error
             )
 
+    # Validate coordinates if being updated
+    if "latitude" in update_data or "longitude" in update_data:
+        new_lat = update_data.get("latitude", venue.latitude)
+        new_lng = update_data.get("longitude", venue.longitude)
+        if not is_within_highlands(new_lat, new_lng):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Venues must be located within the Highlands & Islands region."
+            )
+
     # Apply updates to venue
     for key, value in update_data.items():
         setattr(venue, key, value)
-    
+
     # Recalculate geohash if coordinates changed
     if "latitude" in update_data or "longitude" in update_data:
         venue.geohash = calculate_geohash(venue.latitude, venue.longitude)

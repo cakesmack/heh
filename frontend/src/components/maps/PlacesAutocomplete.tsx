@@ -75,10 +75,17 @@ export default function PlacesAutocomplete({
     setIsLoading(true);
     setError(null);
 
+    // Scottish Highlands & Islands bounds for location bias
+    const highlandsBounds = new google.maps.LatLngBounds(
+      new google.maps.LatLng(55.6, -8.0),  // SW corner
+      new google.maps.LatLng(59.5, -2.0)   // NE corner
+    );
+
     autocompleteServiceRef.current.getPlacePredictions(
       {
         input: query,
         componentRestrictions: { country: 'gb' },
+        locationBias: highlandsBounds,
         // Note: 'address' cannot be mixed with other types, using 'establishment' for venues
         types: ['establishment'],
       },

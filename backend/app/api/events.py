@@ -155,9 +155,9 @@ def list_events(
     age_restriction: Optional[str] = Query(None, description="Filter by age restriction"),
     price_min: Optional[float] = None,
     price_max: Optional[float] = None,
-    latitude: Optional[float] = None,
-    longitude: Optional[float] = None,
-    radius_km: Optional[float] = None,
+    latitude: Optional[float] = Query(None, alias="lat", description="User latitude for proximity search"),
+    longitude: Optional[float] = Query(None, alias="lng", description="User longitude for proximity search"),
+    radius_km: Optional[float] = Query(None, alias="radius", description="Search radius in km (default 20 if lat/lng provided)"),
     featured_only: bool = False,
     organizer_id: Optional[str] = Query(None, description="Filter by organizer ID"),
     organizer_profile_id: Optional[str] = Query(None, description="Filter by organizer profile (group) ID"),
@@ -276,6 +276,10 @@ def list_events(
     if featured_only:
         query = query.where(Event.featured == True)
         query = query.where((Event.featured_until == None) | (Event.featured_until > datetime.utcnow()))
+
+    # Default radius to 20km when lat/lng provided but no radius specified
+    if latitude is not None and longitude is not None and radius_km is None:
+        radius_km = 20.0
 
     # Filter by geographic proximity
     if latitude is not None and longitude is not None and radius_km is not None:
