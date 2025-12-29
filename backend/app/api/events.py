@@ -157,7 +157,7 @@ def list_events(
     price_max: Optional[float] = None,
     latitude: Optional[float] = Query(None, alias="lat", description="User latitude for proximity search"),
     longitude: Optional[float] = Query(None, alias="lng", description="User longitude for proximity search"),
-    radius_km: Optional[float] = Query(None, alias="radius", description="Search radius in km (default 20 if lat/lng provided)"),
+    radius_miles: Optional[float] = Query(None, alias="radius", description="Search radius in miles (default 20 if lat/lng provided)"),
     featured_only: bool = False,
     organizer_id: Optional[str] = Query(None, description="Filter by organizer ID"),
     organizer_profile_id: Optional[str] = Query(None, description="Filter by organizer profile (group) ID"),
@@ -277,13 +277,16 @@ def list_events(
         query = query.where(Event.featured == True)
         query = query.where((Event.featured_until == None) | (Event.featured_until > datetime.utcnow()))
 
-    # Default radius to 20km when lat/lng provided but no radius specified
-    if latitude is not None and longitude is not None and radius_km is None:
-        radius_km = 20.0
+    # Default radius to 20 miles when lat/lng provided but no radius specified
+    if latitude is not None and longitude is not None and radius_miles is None:
+        radius_miles = 20.0
+
+    # Convert miles to km for internal calculations (1 mile = 1.60934 km)
+    radius_km = radius_miles * 1.60934 if radius_miles is not None else None
 
     # Filter by geographic proximity
     if latitude is not None and longitude is not None and radius_km is not None:
-        print(f"[NEAR_ME_DEBUG] User location: lat={latitude}, lng={longitude}, radius_km={radius_km}")
+        print(f"[NEAR_ME_DEBUG] User location: lat={latitude}, lng={longitude}, radius={radius_miles} miles ({radius_km:.2f} km)")
         min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius_km)
         print(f"[NEAR_ME_DEBUG] Bounding box: lat=[{min_lat:.4f}, {max_lat:.4f}], lon=[{min_lon:.4f}, {max_lon:.4f}]")
         query = query.where(
@@ -335,7 +338,7 @@ def list_events(
         events_with_distance.sort(key=lambda x: x[1])
         events = [e[0] for e in events_with_distance]
         total = len(events)  # Update total after filtering
-        print(f"[NEAR_ME_DEBUG] After haversine filter: {total} events within {radius_km}km")
+        print(f"[NEAR_ME_DEBUG] After haversine filter: {total} events within {radius_miles} miles ({radius_km:.2f} km)")
 
     # Build responses
     event_responses = [

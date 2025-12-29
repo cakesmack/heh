@@ -59,7 +59,7 @@ export default function DiscoveryBar({
     // GPS Mode State
     const [gpsMode, setGpsMode] = useState(false);
     const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-    const [selectedRadius, setSelectedRadius] = useState<string>('16'); // Default ~10 miles in km
+    const [selectedRadius, setSelectedRadius] = useState<string>('10'); // Default 10 miles
 
     const router = useRouter();
     const debouncedQ = useDebounce(q, 300);
@@ -165,14 +165,13 @@ export default function DiscoveryBar({
                 setGpsMode(true);
                 setLocation('');
                 closeMobileSearch();
-
-                // Navigate to events page with location params and default radius
+                // Navigate to events page with location params and default radius (in miles)
                 router.push({
                     pathname: '/events',
                     query: {
                         latitude: latitude.toFixed(6),
                         longitude: longitude.toFixed(6),
-                        radius_km: selectedRadius,
+                        radius: selectedRadius,
                         location: 'Near Me'
                     }
                 });
@@ -200,7 +199,7 @@ export default function DiscoveryBar({
                 query: {
                     latitude: userCoords.lat.toFixed(6),
                     longitude: userCoords.lng.toFixed(6),
-                    radius_km: newRadius,
+                    radius: newRadius,
                     location: 'Near Me'
                 }
             });
@@ -212,7 +211,7 @@ export default function DiscoveryBar({
         setUserCoords(null);
         setLocation('');
         // Remove geo params from URL
-        const { latitude, longitude, radius_km, ...rest } = router.query;
+        const { latitude, longitude, radius, ...rest } = router.query;
         router.push({ pathname: '/events', query: rest }, undefined, { shallow: true });
     };
 
@@ -227,13 +226,13 @@ export default function DiscoveryBar({
         setUserCoords(null);
     };
 
-    // Radius options in km (with mile equivalents)
+    // Radius options in miles
     const radiusOptions = [
-        { value: '3', label: 'Within 2 miles' },
-        { value: '8', label: 'Within 5 miles' },
-        { value: '16', label: 'Within 10 miles' },
-        { value: '32', label: 'Within 20 miles' },
-        { value: '80', label: 'Within 50 miles' },
+        { value: '2', label: 'Within 2 miles' },
+        { value: '5', label: 'Within 5 miles' },
+        { value: '10', label: 'Within 10 miles' },
+        { value: '20', label: 'Within 20 miles' },
+        { value: '50', label: 'Within 50 miles' },
     ];
 
     // Dynamic classes based on mode
