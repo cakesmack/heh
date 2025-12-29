@@ -228,12 +228,19 @@ def list_events(
             Tag, EventTag.tag_id == Tag.id
         ).where(Tag.name.in_(tag_list))
 
-    # Search query (title, description)
+    # Search query (title, description, venue name, venue city, venue postcode) - OMNIBAR
     if q:
         search_term = f"%{q}%"
+        # Join with Venue if not already joined
+        if not venue_joined:
+            query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+            venue_joined = True
         query = query.where(
             (Event.title.ilike(search_term)) | 
-            (Event.description.ilike(search_term))
+            (Event.description.ilike(search_term)) |
+            (Venue.name.ilike(search_term)) |
+            (Venue.city.ilike(search_term)) |
+            (Venue.postcode.ilike(search_term))
         )
 
     # Location Search (venue name, address, postcode, event location fields)
@@ -330,9 +337,11 @@ def list_events(
 
             # Calculate true distance and filter
             if event_lat is not None and event_lon is not None:
-                dist = haversine_distance(latitude, longitude, event_lat, event_lon)
-                if dist <= radius_km:
-                    events_with_distance.append((event, dist))
+                dist_km = haversine_distance(latitude, longitude, event_lat, event_lon)
+                dist_miles = dist_km / 1.60934  # Convert km to miles for logging
+                print(f"DEBUG: Event '{event.title}' is {dist_miles:.2f} miles away. (Limit: {radius_miles} miles)")
+                if dist_km <= radius_km:
+                    events_with_distance.append((event, dist_km))
 
         # Sort by distance (nearest first)
         events_with_distance.sort(key=lambda x: x[1])
