@@ -245,7 +245,8 @@ def list_events(
         )
 
     # Location Search (venue name, address, postcode, event location fields)
-    if location:
+    # Only apply text-based location search if GPS coordinates are NOT provided
+    if location and (latitude is None or longitude is None):
         loc_term = f"%{location}%"
         if not venue_joined:
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)
