@@ -19,7 +19,7 @@ export default function EventsPage() {
   useEffect(() => {
     if (!router.isReady) return;
 
-    const { category, q, age_restriction, date_from, date_to, location, latitude, longitude, radius_km, date } = router.query;
+    const { category, q, age_restriction, date_from, date_to, location, latitude, longitude, radius, date } = router.query;
 
     const filters: Partial<EventFilter> & { location?: string; latitude?: number; longitude?: number } = {};
     // Pass category as category (slug) for API filtering
@@ -42,7 +42,7 @@ export default function EventsPage() {
     if (location) filters.location = location as string;
     if (latitude) filters.latitude = parseFloat(latitude as string);
     if (longitude) filters.longitude = parseFloat(longitude as string);
-    if (radius_km) filters.radius_km = parseFloat(radius_km as string);
+    if (radius) filters.radius_km = parseFloat(radius as string);
 
     // Set initial filters for DiscoveryBar
     setInitialFilters({

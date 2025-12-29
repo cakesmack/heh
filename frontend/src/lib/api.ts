@@ -291,7 +291,7 @@ export const eventsAPI = {
       if (filters.price_max !== undefined) params.price_max = filters.price_max;
       if (filters.latitude !== undefined) params.latitude = filters.latitude;
       if (filters.longitude !== undefined) params.longitude = filters.longitude;
-      if (filters.radius_km !== undefined) params.radius_km = filters.radius_km;
+      if (filters.radius_km !== undefined) params.radius = filters.radius_km;
       if (filters.featured_only) params.featured_only = 'true';
       if (filters.organizer_id) params.organizer_id = filters.organizer_id;
       if (filters.organizer_profile_id) params.organizer_profile_id = filters.organizer_profile_id;
