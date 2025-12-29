@@ -132,7 +132,7 @@ export default function MapPage() {
       </div>
 
       {/* Main Content - Split View (Desktop) / Map Only (Mobile) */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative h-full">
         {/* Left Panel - Event List: Hidden on mobile/tablet, visible on desktop (lg+) */}
         <aside className="hidden lg:flex lg:flex-col lg:w-[380px] xl:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200">
           {loading ? (
@@ -204,7 +204,7 @@ export default function MapPage() {
         </aside>
 
         {/* Right Panel - Map: Full width on mobile, shares space on desktop */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative h-full">
           <GoogleMapView
             events={filteredEvents}
             venues={[]}
@@ -213,7 +213,8 @@ export default function MapPage() {
             onMarkerClick={handleMarkerClick}
             selectedMarkerId={selectedMarkerId}
             hoveredEventId={hoveredEventId}
-            className="w-full h-full"
+            className="w-full"
+            height="100%"
           />
 
           {/* Mobile Event Preview Modal - shows when marker is tapped on mobile */}
