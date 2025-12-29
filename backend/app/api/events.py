@@ -297,9 +297,24 @@ def list_events(
         print(f"[NEAR_ME_DEBUG] User location: lat={latitude}, lng={longitude}, radius={radius_miles} miles ({radius_km:.2f} km)")
         min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius_km)
         print(f"[NEAR_ME_DEBUG] Bounding box: lat=[{min_lat:.4f}, {max_lat:.4f}], lon=[{min_lon:.4f}, {max_lon:.4f}]")
+        
+        # Join with Venue if not already joined (needed for venue-based coords)
+        if not venue_joined:
+            query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+            venue_joined = True
+        
+        # Filter: Event has own coords in bbox OR Event's venue has coords in bbox
         query = query.where(
-            Event.latitude.between(min_lat, max_lat),
-            Event.longitude.between(min_lon, max_lon)
+            (
+                (Event.latitude.isnot(None)) &
+                (Event.latitude.between(min_lat, max_lat)) &
+                (Event.longitude.between(min_lon, max_lon))
+            ) | (
+                (Event.latitude.is_(None)) &
+                (Venue.latitude.isnot(None)) &
+                (Venue.latitude.between(min_lat, max_lat)) &
+                (Venue.longitude.between(min_lon, max_lon))
+            )
         )
 
     # Filter by organizer
