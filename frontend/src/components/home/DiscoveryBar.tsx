@@ -54,7 +54,8 @@ export default function DiscoveryBar({
     const [activeInput, setActiveInput] = useState<'q' | 'location' | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const [isGettingLocation, setIsGettingLocation] = useState(false);
-    const [locationError, setLocationError] = useState<string | null>(null);
+    const [locationInputError, setLocationInputError] = useState(false);
+    const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
 
     const router = useRouter();
     const debouncedQ = useDebounce(q, 300);
@@ -143,17 +144,21 @@ export default function DiscoveryBar({
 
     const handleNearMeClick = () => {
         if (!navigator.geolocation) {
-            setLocationError('Geolocation is not supported by your browser');
+            // Flash the input border red
+            setLocationInputError(true);
+            setTimeout(() => setLocationInputError(false), 2000);
             return;
         }
 
         setIsGettingLocation(true);
-        setLocationError(null);
+        setLocationInputError(false);
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
                 setIsGettingLocation(false);
+                setUsingCurrentLocation(true);
+                setLocation('Current Location');
                 closeMobileSearch();
                 // Navigate to events page with location params
                 router.push({
@@ -161,28 +166,23 @@ export default function DiscoveryBar({
                     query: {
                         latitude: latitude.toFixed(6),
                         longitude: longitude.toFixed(6),
-                        radius_km: '20',
-                        location: 'Near Me'
+                        radius_km: '32', // ~20 miles
+                        location: 'Current Location'
                     }
                 });
             },
             (error) => {
                 setIsGettingLocation(false);
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        setLocationError('Location permission denied');
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        setLocationError('Location unavailable');
-                        break;
-                    case error.TIMEOUT:
-                        setLocationError('Location request timed out');
-                        break;
-                    default:
-                        setLocationError('Failed to get location');
-                }
+                // Flash the input border red for graceful error indication
+                setLocationInputError(true);
+                setTimeout(() => setLocationInputError(false), 2000);
+                console.warn('Geolocation error:', error.message);
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+            {
+                enableHighAccuracy: false, // WiFi/Cell is sufficient and faster
+                timeout: 15000, // 15 seconds
+                maximumAge: 600000 // Allow cached position up to 10 minutes
+            }
         );
     };
 
@@ -193,6 +193,7 @@ export default function DiscoveryBar({
         setDateFrom('');
         setDateTo('');
         setCategory('');
+        setUsingCurrentLocation(false);
     };
 
     // Dynamic classes based on mode
@@ -273,14 +274,37 @@ export default function DiscoveryBar({
                                     type="text"
                                     id="location"
                                     value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
+                                    onChange={(e) => {
+                                        setLocation(e.target.value);
+                                        if (usingCurrentLocation) setUsingCurrentLocation(false);
+                                    }}
                                     onFocus={() => setActiveInput('location')}
                                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                     onKeyDown={handleKeyDown}
-                                    placeholder="Town or Postcode"
-                                    className="block w-full pl-10 pr-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-gray-50 hover:bg-white transition-colors"
+                                    placeholder={usingCurrentLocation ? 'Using Current Location' : 'Town or Postcode'}
+                                    className={`block w-full pl-10 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-gray-50 hover:bg-white transition-colors ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''} ${usingCurrentLocation ? 'text-indigo-600 font-medium' : ''}`}
                                     autoComplete="off"
                                 />
+                                {/* GPS Icon Button (inside input on right) */}
+                                <button
+                                    type="button"
+                                    onClick={handleNearMeClick}
+                                    disabled={isGettingLocation}
+                                    className={`absolute inset-y-0 right-0 pr-3 flex items-center transition-colors ${isGettingLocation ? 'cursor-wait' : 'cursor-pointer'} ${usingCurrentLocation ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600'}`}
+                                    title="Use my current location"
+                                >
+                                    {isGettingLocation ? (
+                                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <circle cx="12" cy="12" r="3" strokeWidth={2} />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+                                        </svg>
+                                    )}
+                                </button>
 
                                 {/* Location Suggestions Dropdown */}
                                 {showSuggestions && activeInput === 'location' && suggestions.length > 0 && (
@@ -307,31 +331,6 @@ export default function DiscoveryBar({
                                     </div>
                                 )}
                             </div>
-
-                            {/* Near Me Button */}
-                            <button
-                                type="button"
-                                onClick={handleNearMeClick}
-                                disabled={isGettingLocation}
-                                className="flex items-center gap-2 px-4 py-3 font-medium text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Find events near me"
-                            >
-                                {isGettingLocation ? (
-                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                    </svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                )}
-                                <span className="hidden sm:inline">Near Me</span>
-                            </button>
-                            {locationError && (
-                                <span className="text-xs text-red-600">{locationError}</span>
-                            )}
                         </div>
 
                         {/* Date Select & Custom Range */}
@@ -509,36 +508,35 @@ export default function DiscoveryBar({
                                     type="text"
                                     id="mobile-location"
                                     value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
+                                    onChange={(e) => {
+                                        setLocation(e.target.value);
+                                        if (usingCurrentLocation) setUsingCurrentLocation(false);
+                                    }}
                                     onKeyDown={handleKeyDown}
-                                    placeholder="Town or Postcode"
-                                    className="block w-full pl-10 pr-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50"
+                                    placeholder={usingCurrentLocation ? 'Using Current Location' : 'Town or Postcode'}
+                                    className={`block w-full pl-10 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50 ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''} ${usingCurrentLocation ? 'text-indigo-600 font-medium' : ''}`}
                                 />
+                                {/* GPS Icon Button (inside input on right) */}
+                                <button
+                                    type="button"
+                                    onClick={handleNearMeClick}
+                                    disabled={isGettingLocation}
+                                    className={`absolute inset-y-0 right-0 pr-3 flex items-center transition-colors ${isGettingLocation ? 'cursor-wait' : 'cursor-pointer'} ${usingCurrentLocation ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600'}`}
+                                    title="Use my current location"
+                                >
+                                    {isGettingLocation ? (
+                                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <circle cx="12" cy="12" r="3" strokeWidth={2} />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+                                        </svg>
+                                    )}
+                                </button>
                             </div>
-                            {/* Near Me Button - Mobile */}
-                            <button
-                                type="button"
-                                onClick={handleNearMeClick}
-                                disabled={isGettingLocation}
-                                className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-3 font-medium text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Find events near me"
-                            >
-                                {isGettingLocation ? (
-                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                    </svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                )}
-                                <span>Use My Location</span>
-                            </button>
-                            {locationError && (
-                                <p className="text-xs text-red-600 mt-1">{locationError}</p>
-                            )}
                         </div>
 
                         {/* Date Select */}
