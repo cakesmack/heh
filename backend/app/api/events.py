@@ -283,7 +283,9 @@ def list_events(
 
     # Filter by geographic proximity
     if latitude is not None and longitude is not None and radius_km is not None:
+        print(f"[NEAR_ME_DEBUG] User location: lat={latitude}, lng={longitude}, radius_km={radius_km}")
         min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius_km)
+        print(f"[NEAR_ME_DEBUG] Bounding box: lat=[{min_lat:.4f}, {max_lat:.4f}], lon=[{min_lon:.4f}, {max_lon:.4f}]")
         query = query.where(
             Event.latitude.between(min_lat, max_lat),
             Event.longitude.between(min_lon, max_lon)
@@ -333,6 +335,7 @@ def list_events(
         events_with_distance.sort(key=lambda x: x[1])
         events = [e[0] for e in events_with_distance]
         total = len(events)  # Update total after filtering
+        print(f"[NEAR_ME_DEBUG] After haversine filter: {total} events within {radius_km}km")
 
     # Build responses
     event_responses = [

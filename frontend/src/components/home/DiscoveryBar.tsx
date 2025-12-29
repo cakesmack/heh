@@ -55,7 +55,11 @@ export default function DiscoveryBar({
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const [isGettingLocation, setIsGettingLocation] = useState(false);
     const [locationInputError, setLocationInputError] = useState(false);
-    const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
+
+    // GPS Mode State
+    const [gpsMode, setGpsMode] = useState(false);
+    const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [selectedRadius, setSelectedRadius] = useState<string>('16'); // Default ~10 miles in km
 
     const router = useRouter();
     const debouncedQ = useDebounce(q, 300);
@@ -144,9 +148,9 @@ export default function DiscoveryBar({
 
     const handleNearMeClick = () => {
         if (!navigator.geolocation) {
-            // Flash the input border red
             setLocationInputError(true);
             setTimeout(() => setLocationInputError(false), 2000);
+            alert('Geolocation is not supported by your browser');
             return;
         }
 
@@ -157,33 +161,59 @@ export default function DiscoveryBar({
             (position) => {
                 const { latitude, longitude } = position.coords;
                 setIsGettingLocation(false);
-                setUsingCurrentLocation(true);
-                setLocation('Current Location');
+                setUserCoords({ lat: latitude, lng: longitude });
+                setGpsMode(true);
+                setLocation('');
                 closeMobileSearch();
-                // Navigate to events page with location params
+
+                // Navigate to events page with location params and default radius
                 router.push({
                     pathname: '/events',
                     query: {
                         latitude: latitude.toFixed(6),
                         longitude: longitude.toFixed(6),
-                        radius_km: '32', // ~20 miles
-                        location: 'Current Location'
+                        radius_km: selectedRadius,
+                        location: 'Near Me'
                     }
                 });
             },
             (error) => {
                 setIsGettingLocation(false);
-                // Flash the input border red for graceful error indication
                 setLocationInputError(true);
                 setTimeout(() => setLocationInputError(false), 2000);
+                alert('Unable to get your location. Please check your browser permissions.');
                 console.warn('Geolocation error:', error.message);
             },
             {
-                enableHighAccuracy: false, // WiFi/Cell is sufficient and faster
-                timeout: 15000, // 15 seconds
-                maximumAge: 600000 // Allow cached position up to 10 minutes
+                enableHighAccuracy: false,
+                timeout: 15000,
+                maximumAge: 600000
             }
         );
+    };
+
+    const handleRadiusChange = (newRadius: string) => {
+        setSelectedRadius(newRadius);
+        if (userCoords) {
+            router.push({
+                pathname: '/events',
+                query: {
+                    latitude: userCoords.lat.toFixed(6),
+                    longitude: userCoords.lng.toFixed(6),
+                    radius_km: newRadius,
+                    location: 'Near Me'
+                }
+            });
+        }
+    };
+
+    const exitGpsMode = () => {
+        setGpsMode(false);
+        setUserCoords(null);
+        setLocation('');
+        // Remove geo params from URL
+        const { latitude, longitude, radius_km, ...rest } = router.query;
+        router.push({ pathname: '/events', query: rest }, undefined, { shallow: true });
     };
 
     const handleClear = () => {
@@ -193,8 +223,18 @@ export default function DiscoveryBar({
         setDateFrom('');
         setDateTo('');
         setCategory('');
-        setUsingCurrentLocation(false);
+        setGpsMode(false);
+        setUserCoords(null);
     };
+
+    // Radius options in km (with mile equivalents)
+    const radiusOptions = [
+        { value: '3', label: 'Within 2 miles' },
+        { value: '8', label: 'Within 5 miles' },
+        { value: '16', label: 'Within 10 miles' },
+        { value: '32', label: 'Within 20 miles' },
+        { value: '80', label: 'Within 50 miles' },
+    ];
 
     // Dynamic classes based on mode
     const containerClasses = mode === 'floating'
@@ -260,77 +300,119 @@ export default function DiscoveryBar({
                             </div>
                         </div>
 
-                        {/* Location Search */}
+                        {/* Location Search - Dual Mode (Text Input OR GPS Radius) */}
                         <div className="w-full md:flex-1">
                             <label htmlFor="location" className="sr-only">Location</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </div>
-                                <input
-                                    type="text"
-                                    id="location"
-                                    value={location}
-                                    onChange={(e) => {
-                                        setLocation(e.target.value);
-                                        if (usingCurrentLocation) setUsingCurrentLocation(false);
-                                    }}
-                                    onFocus={() => setActiveInput('location')}
-                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder={usingCurrentLocation ? 'Using Current Location' : 'Town or Postcode'}
-                                    className={`block w-full pl-10 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-gray-50 hover:bg-white transition-colors ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''} ${usingCurrentLocation ? 'text-indigo-600 font-medium' : ''}`}
-                                    autoComplete="off"
-                                />
-                                {/* GPS Icon Button (inside input on right) */}
-                                <button
-                                    type="button"
-                                    onClick={handleNearMeClick}
-                                    disabled={isGettingLocation}
-                                    className={`absolute inset-y-0 right-0 pr-3 flex items-center transition-colors ${isGettingLocation ? 'cursor-wait' : 'cursor-pointer'} ${usingCurrentLocation ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600'}`}
-                                    title="Use my current location"
-                                >
-                                    {isGettingLocation ? (
-                                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                        </svg>
-                                    ) : (
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <circle cx="12" cy="12" r="3" strokeWidth={2} />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
-                                        </svg>
-                                    )}
-                                </button>
 
-                                {/* Location Suggestions Dropdown */}
-                                {showSuggestions && activeInput === 'location' && suggestions.length > 0 && (
-                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Suggested Locations</span>
+                            {gpsMode ? (
+                                /* GPS Mode: Show Radius Dropdown */
+                                <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <circle cx="12" cy="12" r="3" strokeWidth={2} />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+                                            </svg>
                                         </div>
-                                        <div className="max-h-60 overflow-y-auto">
-                                            {suggestions.map((s, i) => (
-                                                <button
-                                                    key={`${s.term}-${i}`}
-                                                    onClick={() => handleSuggestionClick(s)}
-                                                    onMouseEnter={() => setSelectedIndex(i)}
-                                                    className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${i === selectedIndex ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-700'}`}
-                                                >
-                                                    <svg className={`w-4 h-4 ${i === selectedIndex ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    </svg>
-                                                    <span className="text-sm font-medium">{s.term}</span>
-                                                </button>
+                                        <select
+                                            value={selectedRadius}
+                                            onChange={(e) => handleRadiusChange(e.target.value)}
+                                            className="block w-full pl-10 pr-8 py-3 text-base border-indigo-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg bg-indigo-50 text-indigo-700 font-medium cursor-pointer appearance-none"
+                                        >
+                                            {radiusOptions.map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
                                     </div>
-                                )}
-                            </div>
+                                    {/* Exit GPS Mode Button */}
+                                    <button
+                                        type="button"
+                                        onClick={exitGpsMode}
+                                        className="p-3 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Switch back to manual location search"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                /* Manual Mode: Text Input + Near Me Button */
+                                <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            id="location"
+                                            value={location}
+                                            onChange={(e) => setLocation(e.target.value)}
+                                            onFocus={() => setActiveInput('location')}
+                                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="Town or Postcode"
+                                            className={`block w-full pl-10 pr-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-gray-50 hover:bg-white transition-colors ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''}`}
+                                            autoComplete="off"
+                                        />
+
+                                        {/* Location Suggestions Dropdown */}
+                                        {showSuggestions && activeInput === 'location' && suggestions.length > 0 && (
+                                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Suggested Locations</span>
+                                                </div>
+                                                <div className="max-h-60 overflow-y-auto">
+                                                    {suggestions.map((s, i) => (
+                                                        <button
+                                                            key={`${s.term}-${i}`}
+                                                            onClick={() => handleSuggestionClick(s)}
+                                                            onMouseEnter={() => setSelectedIndex(i)}
+                                                            className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${i === selectedIndex ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                                                        >
+                                                            <svg className={`w-4 h-4 ${i === selectedIndex ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            </svg>
+                                                            <span className="text-sm font-medium">{s.term}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Near Me Button - Highly Visible */}
+                                    <button
+                                        type="button"
+                                        onClick={handleNearMeClick}
+                                        disabled={isGettingLocation}
+                                        className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                        title="Find events near my current location"
+                                    >
+                                        {isGettingLocation ? (
+                                            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <circle cx="12" cy="12" r="3" strokeWidth={2} />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+                                            </svg>
+                                        )}
+                                        <span className="hidden sm:inline">Near Me</span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Date Select & Custom Range */}
@@ -497,46 +579,81 @@ export default function DiscoveryBar({
                         {/* Location Search */}
                         <div>
                             <label htmlFor="mobile-location" className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </div>
-                                <input
-                                    type="text"
-                                    id="mobile-location"
-                                    value={location}
-                                    onChange={(e) => {
-                                        setLocation(e.target.value);
-                                        if (usingCurrentLocation) setUsingCurrentLocation(false);
-                                    }}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder={usingCurrentLocation ? 'Using Current Location' : 'Town or Postcode'}
-                                    className={`block w-full pl-10 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50 ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''} ${usingCurrentLocation ? 'text-indigo-600 font-medium' : ''}`}
-                                />
-                                {/* GPS Icon Button (inside input on right) */}
-                                <button
-                                    type="button"
-                                    onClick={handleNearMeClick}
-                                    disabled={isGettingLocation}
-                                    className={`absolute inset-y-0 right-0 pr-3 flex items-center transition-colors ${isGettingLocation ? 'cursor-wait' : 'cursor-pointer'} ${usingCurrentLocation ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600'}`}
-                                    title="Use my current location"
-                                >
-                                    {isGettingLocation ? (
-                                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                        </svg>
-                                    ) : (
+
+                            {gpsMode ? (
+                                /* GPS Mode: Show Radius Dropdown */
+                                <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <circle cx="12" cy="12" r="3" strokeWidth={2} />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+                                            </svg>
+                                        </div>
+                                        <select
+                                            value={selectedRadius}
+                                            onChange={(e) => handleRadiusChange(e.target.value)}
+                                            className="block w-full pl-10 pr-8 py-3 text-base border-indigo-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-lg bg-indigo-50 text-indigo-700 font-medium cursor-pointer appearance-none"
+                                        >
+                                            {radiusOptions.map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={exitGpsMode}
+                                        className="p-3 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Switch back to manual location search"
+                                    >
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <circle cx="12" cy="12" r="3" strokeWidth={2} />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                         </svg>
-                                    )}
-                                </button>
-                            </div>
+                                    </button>
+                                </div>
+                            ) : (
+                                /* Manual Mode: Text Input + Near Me Button */
+                                <>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            id="mobile-location"
+                                            value={location}
+                                            onChange={(e) => setLocation(e.target.value)}
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="Town or Postcode"
+                                            className={`block w-full pl-10 pr-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50 ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''}`}
+                                        />
+                                    </div>
+                                    {/* Near Me Button - Mobile */}
+                                    <button
+                                        type="button"
+                                        onClick={handleNearMeClick}
+                                        disabled={isGettingLocation}
+                                        className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Find events near my current location"
+                                    >
+                                        {isGettingLocation ? (
+                                            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <circle cx="12" cy="12" r="3" strokeWidth={2} />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+                                            </svg>
+                                        )}
+                                        <span>📍 Near Me</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
 
                         {/* Date Select */}
