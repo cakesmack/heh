@@ -341,61 +341,33 @@ export default function DiscoveryBar({
                                     </button>
                                 </div>
                             ) : (
-                                /* Manual Mode: Text Input + Near Me Button */
-                                <div className="flex items-center gap-2">
-                                    <div className="relative flex-1">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            id="location"
-                                            value={location}
-                                            onChange={(e) => setLocation(e.target.value)}
-                                            onFocus={() => setActiveInput('location')}
-                                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                                            onKeyDown={handleKeyDown}
-                                            placeholder="Town or Postcode"
-                                            className={`block w-full pl-10 pr-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-gray-50 hover:bg-white transition-colors ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''}`}
-                                            autoComplete="off"
-                                        />
-
-                                        {/* Location Suggestions Dropdown */}
-                                        {showSuggestions && activeInput === 'location' && suggestions.length > 0 && (
-                                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                                                <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Suggested Locations</span>
-                                                </div>
-                                                <div className="max-h-60 overflow-y-auto">
-                                                    {suggestions.map((s, i) => (
-                                                        <button
-                                                            key={`${s.term}-${i}`}
-                                                            onClick={() => handleSuggestionClick(s)}
-                                                            onMouseEnter={() => setSelectedIndex(i)}
-                                                            className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${i === selectedIndex ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-700'}`}
-                                                        >
-                                                            <svg className={`w-4 h-4 ${i === selectedIndex ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                            </svg>
-                                                            <span className="text-sm font-medium">{s.term}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                /* Manual Mode: Text Input with GPS Icon Inside */
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
                                     </div>
-
-                                    {/* Near Me Button - Highly Visible */}
+                                    <input
+                                        type="text"
+                                        id="location"
+                                        value={location}
+                                        onChange={(e) => setLocation(e.target.value)}
+                                        onFocus={() => setActiveInput('location')}
+                                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="Town or Postcode"
+                                        className={`block w-full pl-10 pr-12 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-gray-50 hover:bg-white transition-colors ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''}`}
+                                        autoComplete="off"
+                                    />
+                                    {/* GPS Icon Button (inside input on right) */}
                                     <button
                                         type="button"
                                         onClick={handleNearMeClick}
                                         disabled={isGettingLocation}
-                                        className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                                        title="Find events near my current location"
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                                        title="Use my current location"
                                     >
                                         {isGettingLocation ? (
                                             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -408,8 +380,32 @@ export default function DiscoveryBar({
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
                                             </svg>
                                         )}
-                                        <span className="hidden sm:inline">Near Me</span>
                                     </button>
+
+                                    {/* Location Suggestions Dropdown */}
+                                    {showSuggestions && activeInput === 'location' && suggestions.length > 0 && (
+                                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Suggested Locations</span>
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto">
+                                                {suggestions.map((s, i) => (
+                                                    <button
+                                                        key={`${s.term}-${i}`}
+                                                        onClick={() => handleSuggestionClick(s)}
+                                                        onMouseEnter={() => setSelectedIndex(i)}
+                                                        className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${i === selectedIndex ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                                                    >
+                                                        <svg className={`w-4 h-4 ${i === selectedIndex ? 'text-emerald-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                        <span className="text-sm font-medium">{s.term}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -611,32 +607,30 @@ export default function DiscoveryBar({
                                     </button>
                                 </div>
                             ) : (
-                                /* Manual Mode: Text Input + Near Me Button */
-                                <>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            id="mobile-location"
-                                            value={location}
-                                            onChange={(e) => setLocation(e.target.value)}
-                                            onKeyDown={handleKeyDown}
-                                            placeholder="Town or Postcode"
-                                            className={`block w-full pl-10 pr-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50 ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''}`}
-                                        />
+                                /* Manual Mode: Text Input with GPS Icon Inside */
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
                                     </div>
-                                    {/* Near Me Button - Mobile */}
+                                    <input
+                                        type="text"
+                                        id="mobile-location"
+                                        value={location}
+                                        onChange={(e) => setLocation(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="Town or Postcode"
+                                        className={`block w-full pl-10 pr-12 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50 ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''}`}
+                                    />
+                                    {/* GPS Icon Button (inside input on right) */}
                                     <button
                                         type="button"
                                         onClick={handleNearMeClick}
                                         disabled={isGettingLocation}
-                                        className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                        title="Find events near my current location"
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                                        title="Use my current location"
                                     >
                                         {isGettingLocation ? (
                                             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -649,9 +643,8 @@ export default function DiscoveryBar({
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
                                             </svg>
                                         )}
-                                        <span>📍 Near Me</span>
                                     </button>
-                                </>
+                                </div>
                             )}
                         </div>
 
