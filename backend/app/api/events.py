@@ -294,12 +294,13 @@ def list_events(
 
     # Filter by geographic proximity
     if latitude is not None and longitude is not None and radius_km is not None:
-        print(f"[NEAR_ME_DEBUG] User location: lat={latitude}, lng={longitude}, radius={radius_miles} miles ({radius_km:.2f} km)")
+        print(f"[NEAR_ME_DEBUG] START: User location: lat={latitude}, lng={longitude}, radius={radius_miles} miles ({radius_km:.2f} km)")
         min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius_km)
         print(f"[NEAR_ME_DEBUG] Bounding box: lat=[{min_lat:.4f}, {max_lat:.4f}], lon=[{min_lon:.4f}, {max_lon:.4f}]")
         
         # Join with Venue if not already joined (needed for venue-based coords)
         if not venue_joined:
+            print("[NEAR_ME_DEBUG] Joining Venue table...")
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)
             venue_joined = True
         
@@ -315,6 +316,13 @@ def list_events(
                 (Venue.longitude.between(min_lon, max_lon))
             )
         )
+        
+        # DEBUG: Print the generated SQL query
+        try:
+            compiled_query = query.compile(compile_kwargs={"literal_binds": True})
+            print(f"[NEAR_ME_DEBUG] SQL Query: {compiled_query}")
+        except Exception as e:
+            print(f"[NEAR_ME_DEBUG] Could not compile query: {e}")
 
     # Filter by organizer
     if organizer_id:
@@ -334,6 +342,8 @@ def list_events(
         offset=skip,
         order_by_featured=True
     )
+    
+    print(f"[NEAR_ME_DEBUG] Events found after DB query: {len(events)} (Total: {total})")
 
     # Apply true Haversine distance filtering (bounding box is square, this refines to circle)
     # Also sort by distance when radius filtering is active
@@ -349,6 +359,8 @@ def list_events(
                 event_lat is not None and event_lon is not None and 
                 (abs(event_lat) > 0.0001 or abs(event_lon) > 0.0001)
             )
+            
+            print(f"[NEAR_ME_DEBUG] Event '{event.title}' (ID: {event.id}) - Has Event Coords: {has_event_coords} ({event_lat}, {event_lon})")
 
             if not has_event_coords:
                 if event.venue_id:
@@ -356,20 +368,27 @@ def list_events(
                     if venue:
                         event_lat = venue.latitude
                         event_lon = venue.longitude
+                        print(f"[NEAR_ME_DEBUG]   -> Using Venue Coords: ({event_lat}, {event_lon})")
+                    else:
+                        print(f"[NEAR_ME_DEBUG]   -> Venue ID {event.venue_id} not found!")
+                else:
+                    print(f"[NEAR_ME_DEBUG]   -> No Venue ID!")
 
             # Calculate true distance and filter
             if event_lat is not None and event_lon is not None:
                 dist_km = haversine_distance(latitude, longitude, event_lat, event_lon)
                 dist_miles = dist_km / 1.60934  # Convert km to miles for logging
-                print(f"DEBUG: Event '{event.title}' is {dist_miles:.2f} miles away. (Limit: {radius_miles} miles)")
+                print(f"[NEAR_ME_DEBUG]   -> Distance: {dist_miles:.2f} miles (Limit: {radius_miles})")
                 if dist_km <= radius_km:
                     events_with_distance.append((event, dist_km))
+            else:
+                print(f"[NEAR_ME_DEBUG]   -> Skipping (No valid coords)")
 
         # Sort by distance (nearest first)
         events_with_distance.sort(key=lambda x: x[1])
         events = [e[0] for e in events_with_distance]
         total = len(events)  # Update total after filtering
-        print(f"[NEAR_ME_DEBUG] After haversine filter: {total} events within {radius_miles} miles ({radius_km:.2f} km)")
+        print(f"[NEAR_ME_DEBUG] Final count after Haversine: {total}")
 
     # Build responses
     event_responses = [
