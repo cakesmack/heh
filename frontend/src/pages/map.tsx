@@ -204,7 +204,7 @@ export default function MapPage() {
         </aside>
 
         {/* Right Panel - Map: Full width on mobile, shares space on desktop */}
-        <div className="flex-1 relative h-full">
+        <div className="flex-1 relative">
           <GoogleMapView
             events={filteredEvents}
             venues={[]}
@@ -213,8 +213,7 @@ export default function MapPage() {
             onMarkerClick={handleMarkerClick}
             selectedMarkerId={selectedMarkerId}
             hoveredEventId={hoveredEventId}
-            className="w-full"
-            height="100%"
+            className="absolute inset-0"
           />
 
           {/* Mobile Event Preview Modal - shows when marker is tapped on mobile */}
