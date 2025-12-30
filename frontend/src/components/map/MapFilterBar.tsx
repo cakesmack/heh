@@ -1,56 +1,42 @@
-import React from 'react';
-import { format } from 'date-fns';
+import React, { useRef, useEffect } from 'react';
 
 interface Category {
     id: string;
     name: string;
     color?: string; // Optional color override
-    gradient_color?: string; // Color from database
 }
 
 interface MapFilterBarProps {
     categories: Category[];
     selectedCategory: string | null;
     onSelect: (categoryId: string | null) => void;
-    selectedDate: Date;
-    onDateChange: (date: Date) => void;
 }
+
+// Map categories to colors (matching the map logic)
+const CATEGORY_COLORS: Record<string, string> = {
+    'Music': '#a855f7', // purple-500
+    'Outdoors': '#10b981', // emerald-500
+    'Food & Drink': '#f59e0b', // amber-500
+    'Arts': '#ec4899', // pink-500
+    'Sports': '#3b82f6', // blue-500
+    'Community': '#6366f1', // indigo-500
+    'default': '#6b7280' // gray-500
+};
 
 export default function MapFilterBar({
     categories,
     selectedCategory,
-    onSelect,
-    selectedDate,
-    onDateChange
+    onSelect
 }: MapFilterBarProps) {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     return (
         <div className="w-full bg-white border-b border-gray-200 shadow-sm z-20">
             <div
+                ref={scrollContainerRef}
                 className="flex items-center gap-2 px-4 py-3 overflow-x-auto no-scrollbar"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-                {/* Date Picker */}
-                <div className="flex-shrink-0 relative">
-                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                    <input
-                        type="date"
-                        value={format(selectedDate, 'yyyy-MM-dd')}
-                        onChange={(e) => {
-                            const newDate = e.target.value ? new Date(e.target.value + 'T00:00:00') : new Date();
-                            onDateChange(newDate);
-                        }}
-                        className="pl-8 pr-3 py-1.5 rounded-full text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer transition-colors"
-                    />
-                </div>
-
-                {/* Divider */}
-                <div className="h-6 w-px bg-gray-200 flex-shrink-0" />
-
                 {/* "All" Pill */}
                 <button
                     onClick={() => onSelect(null)}
@@ -64,8 +50,7 @@ export default function MapFilterBar({
 
                 {/* Category Pills */}
                 {categories.map((category) => {
-                    // Use gradient_color from DB, fallback to color prop, then default
-                    const color = category.gradient_color || category.color || '#6b7280';
+                    const color = CATEGORY_COLORS[category.name] || CATEGORY_COLORS['default'];
                     const isSelected = selectedCategory === category.id;
 
                     return (

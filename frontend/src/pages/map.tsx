@@ -1,19 +1,18 @@
 /**
  * Map Page
  * Interactive map showing events across the Scottish Highlands
- * Features: Side panel with event list, hover interaction, date filtering, viewport sync
+ * Features: Side panel with event list, hover interaction, events-only view
  * Responsive: Mobile shows map only, Desktop shows split view (list + map)
  */
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
-import { format, isSameDay, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { eventsAPI, categoriesAPI } from '@/lib/api';
 import type { EventResponse, Category } from '@/types';
-import type { MapMarker, MapBounds } from '@/components/events/GoogleMapView';
-import MapFilterBar from '@/components/map/MapFilterBar';
+import type { MapMarker } from '@/components/events/GoogleMapView';
 
 // Dynamically import GoogleMapView to avoid SSR issues
 const GoogleMapView = dynamic(() => import('@/components/events/GoogleMapView'), {
@@ -38,23 +37,8 @@ export default function MapPage() {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | undefined>(undefined);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
 
-  // Date filter state - default to today
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
-
-  // Viewport bounds state for list sync
-  const [viewportBounds, setViewportBounds] = useState<MapBounds | null>(null);
-
   // Selected event for mobile modal (when tapping a marker)
   const [selectedEvent, setSelectedEvent] = useState<EventResponse | null>(null);
-
-  // Detect mobile
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Fetch events and categories
   useEffect(() => {
@@ -81,45 +65,14 @@ export default function MapPage() {
     fetchData();
   }, []);
 
-  // Filter events by category AND date
+  // Filter events by category
   const filteredEvents = useMemo(() => {
-    let result = events;
-
-    // Filter by category
-    if (selectedCategory) {
-      result = result.filter(event => event.category?.id === selectedCategory);
-    }
-
-    // Filter by date (same calendar day)
-    result = result.filter(event => {
-      if (!event.date_start) return false;
-      return isSameDay(new Date(event.date_start), selectedDate);
-    });
-
-    return result;
-  }, [events, selectedCategory, selectedDate]);
-
-  // Further filter by viewport bounds for the sidebar list
-  const visibleEvents = useMemo(() => {
-    if (!viewportBounds) return filteredEvents;
-
-    return filteredEvents.filter(event => {
-      if (!event.latitude || !event.longitude) return false;
-
-      const inLatBounds = event.latitude >= viewportBounds.south && event.latitude <= viewportBounds.north;
-      const inLngBounds = event.longitude >= viewportBounds.west && event.longitude <= viewportBounds.east;
-
-      return inLatBounds && inLngBounds;
-    });
-  }, [filteredEvents, viewportBounds]);
-
-  // Handle bounds change from map
-  const handleBoundsChanged = useCallback((bounds: MapBounds) => {
-    setViewportBounds(bounds);
-  }, []);
+    if (!selectedCategory) return events;
+    return events.filter(event => event.category?.id === selectedCategory);
+  }, [events, selectedCategory]);
 
   // Handle marker click
-  const handleMarkerClick = useCallback((marker: MapMarker) => {
+  const handleMarkerClick = (marker: MapMarker) => {
     setSelectedMarkerId(marker.id);
 
     // Find event details
@@ -129,30 +82,16 @@ export default function MapPage() {
     }
 
     // On desktop, scroll to list item
-    if (window.innerWidth >= 1024) {
+    if (window.innerWidth >= 768) {
       const card = document.getElementById(`event-card-${marker.id}`);
       if (card) {
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, [events]);
-
-  // Handle event click directly from marker
-  const handleEventClick = useCallback((event: EventResponse) => {
-    setSelectedMarkerId(event.id);
-    setSelectedEvent(event);
-
-    // On desktop, scroll to list item
-    if (window.innerWidth >= 1024) {
-      const card = document.getElementById(`event-card-${event.id}`);
-      if (card) {
-        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }, []);
+  };
 
   // Handle event card click
-  const handleEventCardClick = (event: EventResponse) => {
+  const handleEventClick = (event: EventResponse) => {
     router.push(`/events/${event.id}`);
   };
 
@@ -165,30 +104,31 @@ export default function MapPage() {
   return (
     // Height: 100vh minus header (64px) minus bottom nav on mobile (64px)
     <div className="flex flex-col h-[calc(100vh-128px)] md:h-[calc(100vh-64px)] bg-white overflow-hidden">
-      {/* Filter Bar with Date Picker and Categories */}
-      <MapFilterBar
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onSelect={setSelectedCategory}
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
-      />
-
-      {/* Header - Event Count */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2">
-        <p className="text-sm text-gray-500">
-          {loading ? 'Loading...' : (
-            <>
-              <span className="font-medium text-gray-900">{filteredEvents.length}</span> events on{' '}
-              <span className="font-medium text-gray-900">{format(selectedDate, 'EEEE, MMM d')}</span>
-              {viewportBounds && visibleEvents.length !== filteredEvents.length && (
-                <span className="text-gray-400">
-                  {' '}• {visibleEvents.length} in view
-                </span>
-              )}
-            </>
-          )}
-        </p>
+      {/* Header with Category Filter */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Event Map</h1>
+            <p className="text-sm text-gray-500">
+              {filteredEvents.length} events across the Scottish Highlands
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 hidden sm:inline">Filter:</span>
+            <select
+              value={selectedCategory || ''}
+              onChange={(e) => setSelectedCategory(e.target.value || null)}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+              <option value="">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Main Content - Split View (Desktop) / Map Only (Mobile) */}
@@ -202,14 +142,14 @@ export default function MapPage() {
             </div>
           ) : error ? (
             <div className="p-8 text-center text-red-500">{error}</div>
-          ) : visibleEvents.length === 0 ? (
+          ) : filteredEvents.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              <p className="text-lg font-medium mb-2">No events in this area</p>
-              <p className="text-sm">Try zooming out or selecting a different date.</p>
+              <p className="text-lg font-medium mb-2">No events found</p>
+              <p className="text-sm">Try selecting a different category.</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {visibleEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <div
                   key={event.id}
                   id={`event-card-${event.id}`}
@@ -219,7 +159,7 @@ export default function MapPage() {
                       ? 'bg-gray-100'
                       : 'bg-white hover:bg-gray-50'
                     }`}
-                  onClick={() => handleEventCardClick(event)}
+                  onClick={() => handleEventClick(event)}
                   onMouseEnter={() => setHoveredEventId(event.id)}
                   onMouseLeave={() => setHoveredEventId(null)}
                 >
@@ -245,18 +185,12 @@ export default function MapPage() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">{event.title}</h3>
                       {event.category && (
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: event.category.gradient_color || '#6b7280' }}
-                          />
-                          <span className="text-xs font-medium text-gray-600">
-                            {event.category.name}
-                          </span>
-                        </div>
+                        <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 mt-1">
+                          {event.category.name}
+                        </span>
                       )}
                       <p className="text-sm text-gray-500 mt-1">
-                        {event.date_start ? format(new Date(event.date_start), 'h:mm a') : 'Time TBD'}
+                        {event.date_start ? format(new Date(event.date_start), 'EEE, MMM d') : 'Date TBD'}
                       </p>
                       {event.venue_name && (
                         <p className="text-sm text-gray-500 truncate">{event.venue_name}</p>
@@ -277,11 +211,8 @@ export default function MapPage() {
             showEvents={true}
             showVenues={false}
             onMarkerClick={handleMarkerClick}
-            onEventClick={handleEventClick}
             selectedMarkerId={selectedMarkerId}
             hoveredEventId={hoveredEventId}
-            onBoundsChanged={handleBoundsChanged}
-            isMobile={isMobile}
             className="absolute inset-0"
           />
 
