@@ -42,6 +42,9 @@ export function MapPage() {
   const [selectedEvents, setSelectedEvents] = useState<EventResponse[]>([]);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Focus event ID for "View on Map" feature
+  const [focusEventId, setFocusEventId] = useState<string | null>(null);
+
   // Detect mobile
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -245,6 +248,23 @@ export function MapPage() {
                         <p className="text-sm text-gray-500 truncate">{event.venue_name}</p>
                       )}
                     </div>
+
+                    {/* View on Map Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFocusEventId(event.id);
+                        setSelectedMarkerId(event.id);
+                      }}
+                      className="flex-shrink-0 p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="View on map"
+                      aria-label="View on map"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -283,6 +303,8 @@ export function MapPage() {
             selectedMarkerId={selectedMarkerId}
             hoveredEventId={hoveredEventId}
             isMobile={isMobile}
+            focusEventId={focusEventId}
+            onFocusComplete={() => setFocusEventId(null)}
             className="absolute inset-0"
           />
 
