@@ -211,6 +211,17 @@ export default function MapPage() {
             showEvents={true}
             showVenues={false}
             onMarkerClick={handleMarkerClick}
+            onEventClick={(event) => {
+              setSelectedMarkerId(event.id);
+              setSelectedEvent(event);
+              // On desktop, scroll to list item
+              if (window.innerWidth >= 1024) {
+                const card = document.getElementById(`event-card-${event.id}`);
+                if (card) {
+                  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }
+            }}
             selectedMarkerId={selectedMarkerId}
             hoveredEventId={hoveredEventId}
             className="absolute inset-0"
