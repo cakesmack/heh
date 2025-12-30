@@ -41,9 +41,9 @@ export default function EventMarker({
         >
             <div
                 className={`
-          w-3 h-3 rounded-full border-2 border-white shadow-md cursor-pointer
+          w-5 h-5 rounded-full border-2 border-white shadow-lg cursor-pointer
           transition-transform duration-150 ease-out
-          ${isSelected ? 'scale-150' : isHovered ? 'scale-125' : 'scale-100'}
+          ${isSelected ? 'scale-125' : isHovered ? 'scale-110' : 'scale-100'}
         `}
                 style={{ backgroundColor: markerColor }}
             />
