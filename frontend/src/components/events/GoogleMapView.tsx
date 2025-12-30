@@ -3,7 +3,8 @@
  * Interactive Google Map displaying events and venues across the Scottish Highlands.
  * Uses @vis.gl/react-google-maps library with custom EventMarker components.
  * 
- * REQUIRES: NEXT_PUBLIC_GOOGLE_MAP_ID in .env.local for AdvancedMarker to work
+ * For AdvancedMarker (colored dots): Add NEXT_PUBLIC_GOOGLE_MAP_ID to .env.local
+ * Falls back to regular Marker if Map ID is not set.
  */
 'use client';
 
@@ -16,6 +17,10 @@ import EventMarker from './EventMarker';
 // Scottish Highlands center coordinates (approximately Inverness)
 const HIGHLANDS_CENTER = { lat: 57.3, lng: -4.4 };
 const DEFAULT_ZOOM = 7;
+
+// Check if Map ID is available for AdvancedMarker support
+const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID;
+const HAS_MAP_ID = !!MAP_ID;
 
 export interface MapMarker {
   id: string;
@@ -63,7 +68,7 @@ export function GoogleMapView({
     return events.filter((e) => e.latitude && e.longitude);
   }, [events, showEvents]);
 
-  // Venue markers (still using default Marker for venues)
+  // Venue markers (always uses default Marker)
   const venueMarkers = useMemo<MapMarker[]>(() => {
     if (!showVenues) return [];
     return venues
@@ -112,18 +117,31 @@ export function GoogleMapView({
         gestureHandling="greedy"
         disableDefaultUI={false}
         style={{ width: '100%', height: '100%' }}
-        mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
+        mapId={MAP_ID}
       >
-        {/* Event Markers - Using custom EventMarker component with colored dots */}
-        {validEvents.map((event) => (
-          <EventMarker
-            key={event.id}
-            event={event}
-            isSelected={selectedMarkerId === event.id}
-            isHovered={hoveredEventId === event.id}
-            onClick={() => handleEventMarkerClick(event)}
-          />
-        ))}
+        {/* Event Markers - Use AdvancedMarker (colored dots) if Map ID exists, otherwise regular Marker */}
+        {HAS_MAP_ID ? (
+          // AdvancedMarker with colored dots
+          validEvents.map((event) => (
+            <EventMarker
+              key={event.id}
+              event={event}
+              isSelected={selectedMarkerId === event.id}
+              isHovered={hoveredEventId === event.id}
+              onClick={() => handleEventMarkerClick(event)}
+            />
+          ))
+        ) : (
+          // Fallback to regular Marker when no Map ID
+          validEvents.map((event) => (
+            <Marker
+              key={event.id}
+              position={{ lat: event.latitude, lng: event.longitude }}
+              onClick={() => handleEventMarkerClick(event)}
+              title={event.title}
+            />
+          ))
+        )}
 
         {/* Venue Markers - Keep default Google marker style */}
         {venueMarkers.map((marker) => (
@@ -169,6 +187,13 @@ export function GoogleMapView({
           </InfoWindow>
         )}
       </Map>
+
+      {/* Debug indicator - remove in production */}
+      {!HAS_MAP_ID && (
+        <div className="absolute top-2 left-2 bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded shadow z-10">
+          ⚠️ Map ID not set - using default markers
+        </div>
+      )}
     </div>
   );
 }
