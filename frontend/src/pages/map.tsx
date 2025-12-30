@@ -9,7 +9,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
-import { format } from 'date-fns';
+import { format, isSameDay, startOfDay } from 'date-fns';
 import { eventsAPI, categoriesAPI } from '@/lib/api';
 import type { EventResponse, Category } from '@/types';
 import type { MapMarker } from '@/components/events/GoogleMapView';
@@ -27,7 +27,7 @@ const GoogleMapView = dynamic(() => import('@/components/events/GoogleMapView'),
   ),
 });
 
-export default function MapPage() {
+export function MapPage() {
   const router = useRouter();
   const [events, setEvents] = useState<EventResponse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -36,9 +36,19 @@ export default function MapPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | undefined>(undefined);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
 
-  // Selected event for mobile modal (when tapping a marker)
-  const [selectedEvent, setSelectedEvent] = useState<EventResponse | null>(null);
+  // Selected events for mobile modal (when tapping a marker)
+  const [selectedEvents, setSelectedEvents] = useState<EventResponse[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Fetch events and categories
   useEffect(() => {
@@ -65,11 +75,20 @@ export default function MapPage() {
     fetchData();
   }, []);
 
-  // Filter events by category
+  // Filter events by category and date
   const filteredEvents = useMemo(() => {
-    if (!selectedCategory) return events;
-    return events.filter(event => event.category?.id === selectedCategory);
-  }, [events, selectedCategory]);
+    return events.filter(event => {
+      // Category filter
+      if (selectedCategory && event.category?.id !== selectedCategory) return false;
+
+      // Date filter (Single Day)
+      if (selectedDate && event.date_start) {
+        return isSameDay(new Date(event.date_start), selectedDate);
+      }
+
+      return true;
+    });
+  }, [events, selectedCategory, selectedDate]);
 
   // Handle marker click
   const handleMarkerClick = (marker: MapMarker) => {
@@ -78,7 +97,18 @@ export default function MapPage() {
     // Find event details
     const event = events.find(e => e.id === marker.id);
     if (event) {
-      setSelectedEvent(event);
+      if (isMobile) {
+        // On mobile, find all events at this location (with coordinate safety check)
+        const eventsAtLocation = filteredEvents.filter(e =>
+          e.latitude != null && e.longitude != null &&
+          event.latitude != null && event.longitude != null &&
+          Math.abs(e.latitude - event.latitude) < 0.0001 &&
+          Math.abs(e.longitude - event.longitude) < 0.0001
+        );
+        setSelectedEvents(eventsAtLocation);
+      } else {
+        setSelectedEvents([event]);
+      }
     }
 
     // On desktop, scroll to list item
@@ -97,7 +127,7 @@ export default function MapPage() {
 
   // Close mobile modal
   const closeMobileModal = () => {
-    setSelectedEvent(null);
+    setSelectedEvents([]);
     setSelectedMarkerId(undefined);
   };
 
@@ -113,20 +143,39 @@ export default function MapPage() {
               {filteredEvents.length} events across the Scottish Highlands
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 hidden sm:inline">Filter:</span>
-            <select
-              value={selectedCategory || ''}
-              onChange={(e) => setSelectedCategory(e.target.value || null)}
-              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Date Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 hidden sm:inline text-nowrap">Date:</span>
+              <input
+                type="date"
+                value={format(selectedDate, 'yyyy-MM-dd')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    setSelectedDate(startOfDay(new Date(val)));
+                  }
+                }}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 hidden sm:inline text-nowrap">Filter:</span>
+              <select
+                value={selectedCategory || ''}
+                onChange={(e) => setSelectedCategory(e.target.value || null)}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+              >
+                <option value="">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -213,86 +262,107 @@ export default function MapPage() {
             onMarkerClick={handleMarkerClick}
             onEventClick={(event) => {
               setSelectedMarkerId(event.id);
-              setSelectedEvent(event);
+
               // On desktop, scroll to list item
-              if (window.innerWidth >= 1024) {
+              if (!isMobile) {
                 const card = document.getElementById(`event-card-${event.id}`);
                 if (card) {
                   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
+              } else {
+                // On mobile, find all events at this location/day (with coordinate safety check)
+                const eventsAtLocation = filteredEvents.filter(e =>
+                  e.latitude != null && e.longitude != null &&
+                  event.latitude != null && event.longitude != null &&
+                  Math.abs(e.latitude - event.latitude) < 0.0001 &&
+                  Math.abs(e.longitude - event.longitude) < 0.0001
+                );
+                setSelectedEvents(eventsAtLocation);
               }
             }}
             selectedMarkerId={selectedMarkerId}
             hoveredEventId={hoveredEventId}
+            isMobile={isMobile}
             className="absolute inset-0"
           />
 
-          {/* Mobile Event Preview Modal - shows when marker is tapped on mobile */}
-          {selectedEvent && (
-            <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl z-20 md:hidden animate-in slide-in-from-bottom-10 fade-in duration-200 pb-safe">
-              <div className="p-4">
-                <div className="flex gap-4">
-                  {/* Image */}
-                  <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
-                    {selectedEvent.image_url ? (
-                      <img
-                        src={selectedEvent.image_url}
-                        alt={selectedEvent.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+          {/* Mobile Event Preview Card - shows when marker is tapped on mobile */}
+          {selectedEvents.length > 0 && isMobile && (
+            <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-2xl z-30 md:hidden animate-in slide-in-from-bottom-10 fade-in duration-300 pb-safe max-h-[70vh] flex flex-col">
+              {/* Header */}
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-xl">
+                <h3 className="font-bold text-gray-900">
+                  {selectedEvents.length} {selectedEvents.length === 1 ? 'Event' : 'Events'} at this location
+                </h3>
+                <button
+                  onClick={closeMobileModal}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-gray-900 truncate pr-6">{selectedEvent.title}</h3>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          closeMobileModal();
-                        }}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+              {/* Scrollable Event List */}
+              <div className="overflow-y-auto flex-1 p-2 space-y-2">
+                {selectedEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    onClick={() => router.push(`/events/${event.id}`)}
+                    className="flex gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-gray-100"
+                  >
+                    {/* Thumbnail */}
+                    <div className="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                      {event.image_url ? (
+                        <img src={event.image_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
 
-                    <p className="text-sm text-emerald-600 font-medium mt-1">
-                      {selectedEvent.date_start ? format(new Date(selectedEvent.date_start), 'EEE, MMM d • h:mm a') : 'Date TBD'}
-                    </p>
+                    {/* Basic Details */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h4 className="font-semibold text-gray-900 text-sm truncate leading-snug">{event.title}</h4>
+                      <p className="text-xs text-emerald-600 font-medium mt-0.5">
+                        {event.date_start ? format(new Date(event.date_start), 'h:mm a') : 'Time TBD'}
+                      </p>
+                      {event.venue_name && (
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{event.venue_name}</p>
+                      )}
+                    </div>
 
-                    {selectedEvent.venue_name && (
-                      <p className="text-sm text-gray-500 truncate mt-0.5">{selectedEvent.venue_name}</p>
-                    )}
+                    <div className="flex items-center pr-1">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
+                ))}
+              </div>
 
-                <div className="mt-4">
+              {/* Footer action if single event */}
+              {selectedEvents.length === 1 && (
+                <div className="p-4 pt-2 border-t border-gray-50 bg-gray-50/50 rounded-b-xl">
                   <button
-                    onClick={() => router.push(`/events/${selectedEvent.id}`)}
-                    className="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                    onClick={() => router.push(`/events/${selectedEvents[0].id}`)}
+                    className="w-full bg-emerald-600 text-white py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors text-sm"
                   >
-                    Go to Event
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
+                    View Details
                   </button>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
-
       </div>
+
     </div>
   );
 }
+
+export default MapPage;
