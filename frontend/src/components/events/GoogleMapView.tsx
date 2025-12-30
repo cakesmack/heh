@@ -259,6 +259,7 @@ export function GoogleMapView({
         gestureHandling="greedy"
         disableDefaultUI={false}
         style={{ width: '100%', height: '100%' }}
+        mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
       >
         <MapContent
           events={events}
