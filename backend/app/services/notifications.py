@@ -20,9 +20,25 @@ class NotificationService:
 
     @staticmethod
     def notify_event_submission(to_email: str, event_title: str):
-        subject = "Event Submitted Successfully"
+        """Notify user that their event is pending review."""
+        subject = "Event Submitted - Under Review"
         body = f"Your event '{event_title}' has been submitted and is pending approval. We will notify you once it is reviewed."
         NotificationService.send_email(to_email, subject, body)
+
+    @staticmethod
+    def notify_event_auto_approved(to_email: str, event_title: str, event_id: str):
+        """Notify trusted user that their event was auto-approved."""
+        subject = "Your Event is Live!"
+        body = f"Success! Your event '{event_title}' is now live. (Auto-approved based on your trust score.) View it here: /events/{event_id}"
+        NotificationService.send_email(to_email, subject, body)
+
+    @staticmethod
+    def notify_admin_new_pending_event(admin_emails: List[str], event_title: str, organizer_email: str):
+        """Alert admins about a new pending event requiring moderation."""
+        subject = "[Admin] New Event Pending Review"
+        body = f"A new event '{event_title}' has been submitted by {organizer_email} and requires review. Please check the admin dashboard."
+        for email in admin_emails:
+            NotificationService.send_email(email, subject, body)
 
     @staticmethod
     def notify_event_approval(to_email: str, event_title: str, event_id: str):

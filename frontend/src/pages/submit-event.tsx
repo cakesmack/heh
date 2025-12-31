@@ -49,6 +49,7 @@ export default function SubmitEventPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<{ type: 'published' | 'pending'; eventId: string } | null>(null);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -174,8 +175,20 @@ export default function SubmitEventPage() {
 
       const newEvent = await api.events.create(eventData);
 
-      // Redirect to the new event page
-      router.push(`/events/${newEvent.id}`);
+      // Show success message based on event status
+      if (newEvent.status === 'published') {
+        // Auto-approved - show success and redirect after delay
+        setSuccessMessage({ type: 'published', eventId: newEvent.id });
+        setTimeout(() => {
+          router.push(`/events/${newEvent.id}`);
+        }, 2000);
+      } else {
+        // Pending moderation - show message and redirect to events list
+        setSuccessMessage({ type: 'pending', eventId: newEvent.id });
+        setTimeout(() => {
+          router.push('/events');
+        }, 3000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit event. Please try again.');
     } finally {
@@ -197,6 +210,60 @@ export default function SubmitEventPage() {
         {/* Form */}
         <Card>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Success Message - Auto-Approved */}
+            {successMessage?.type === 'published' && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <div className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-emerald-600 mr-2 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-emerald-800">Your event is live!</p>
+                    <p className="text-sm text-emerald-700 mt-1">
+                      Auto-approved based on your trust score. Redirecting to your event...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Success Message - Pending Moderation */}
+            {successMessage?.type === 'pending' && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-amber-600 mr-2 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">Event submitted for review</p>
+                    <p className="text-sm text-amber-700 mt-1">
+                      Your event is pending moderation and will be reviewed shortly. We'll notify you once it's approved.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -569,9 +636,9 @@ export default function SubmitEventPage() {
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-sm font-medium text-blue-900 mb-2">Event Submission Guidelines</h3>
           <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-            <li>Events are reviewed before being published</li>
+            <li>Events may be reviewed before being published</li>
+            <li>Trusted organizers get automatic approval</li>
             <li>Ensure all information is accurate and up-to-date</li>
-            <li>Free events help attract more attendees</li>
             <li>High-quality images improve event visibility</li>
             <li>Add relevant tags to help people discover your event</li>
           </ul>

@@ -517,8 +517,29 @@ def create_event(
         organizer_profile_id=normalize_uuid(event_data.organizer_profile_id) if event_data.organizer_profile_id else None,
         recurrence_rule=recurrence_rule,
         is_recurring=event_data.is_recurring if event_data.is_recurring is not None else False,
-        status="published" if current_user.is_admin or current_user.trust_level >= 3 else "pending"
+        # Status will be set below based on trust evaluation
+        status="pending"
     )
+
+    # Auto-Approval Logic
+    # A user qualifies for auto-approval if:
+    # - They are an admin, OR
+    # - They are marked as a trusted organizer (is_trusted_organizer=True), OR
+    # - They have a trust_level >= 5 (meaning 5+ events previously approved)
+    is_auto_approved = (
+        current_user.is_admin or
+        current_user.is_trusted_organizer or
+        current_user.trust_level >= 5
+    )
+
+    if is_auto_approved:
+        new_event.status = "published"
+        print(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved for user {current_user.email} "
+              f"(admin={current_user.is_admin}, trusted={current_user.is_trusted_organizer}, trust_level={current_user.trust_level})")
+    else:
+        new_event.status = "pending"
+        print(f"[MODERATION] Event '{new_event.title}' pending for user {current_user.email} "
+              f"(trust_level={current_user.trust_level})")
 
     session.add(new_event)
     session.flush()  # Get the event ID
@@ -540,12 +561,32 @@ def create_event(
             generate_recurring_instances(session, new_event, window_days=90)
         except Exception as e:
             print(f"Error generating instances for {new_event.id}: {e}")
-            # Don't fail the request, just log it. 
+            # Don't fail the request, just log it.
             # The cron job can pick it up later or user can retry.
 
-    # Send Notification
+    # Send appropriate notifications based on approval status
     if current_user.email:
-        notification_service.notify_event_submission(current_user.email, new_event.title)
+        if is_auto_approved:
+            # Notify user their event is live (auto-approved)
+            notification_service.notify_event_auto_approved(
+                current_user.email,
+                new_event.title,
+                str(new_event.id)
+            )
+            # No admin notification needed for auto-approved events
+        else:
+            # Notify user their event is under review
+            notification_service.notify_event_submission(current_user.email, new_event.title)
+
+            # Notify admins about new pending event
+            admin_users = session.exec(select(User).where(User.is_admin == True)).all()
+            admin_emails = [u.email for u in admin_users if u.email]
+            if admin_emails:
+                notification_service.notify_admin_new_pending_event(
+                    admin_emails,
+                    new_event.title,
+                    current_user.email
+                )
 
     return build_event_response(new_event, session)
 
