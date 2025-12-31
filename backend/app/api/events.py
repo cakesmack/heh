@@ -339,16 +339,40 @@ def list_events(
     if organizer_profile_id:
         query = query.where(Event.organizer_profile_id == normalize_uuid(organizer_profile_id))
 
-    # Deduplicate recurring events (PostgreSQL-safe)
-    # Shows only one instance per recurring series (earliest upcoming)
-    events, total = deduplicate_recurring_events(
-        session=session,
-        base_query=query,
-        limit=limit,
-        offset=skip,
-        order_by_featured=True
-    )
-    
+    # Conditional Deduplication for Recurring Events
+    # - Scenario A (Browsing/No Date Filter): Deduplicate to show only one instance per series
+    # - Scenario B (Date Filter Active): Show ALL instances matching the date filter
+    has_date_filter = date_from is not None or date_to is not None
+
+    if has_date_filter:
+        # Scenario B: User is filtering by date - show all matching instances
+        # No deduplication, so they can find specific recurring event instances
+        print(f"[EVENTS_DEBUG] Date filter active (date_from={date_from}, date_to={date_to}) - skipping deduplication")
+
+        # Get total count
+        from sqlalchemy import func as sa_func
+        count_query = select(sa_func.count()).select_from(query.subquery())
+        total = session.exec(count_query).one() or 0
+
+        # Apply ordering and pagination
+        query = query.order_by(Event.featured.desc(), Event.date_start.asc())
+        if skip:
+            query = query.offset(skip)
+        if limit:
+            query = query.limit(limit)
+
+        events = list(session.exec(query).all())
+    else:
+        # Scenario A: No date filter - deduplicate recurring events (PostgreSQL-safe)
+        # Shows only one instance per recurring series (earliest upcoming)
+        events, total = deduplicate_recurring_events(
+            session=session,
+            base_query=query,
+            limit=limit,
+            offset=skip,
+            order_by_featured=True
+        )
+
     print(f"[NEAR_ME_DEBUG] Events found after DB query: {len(events)} (Total: {total})")
 
     # Apply true Haversine distance filtering (bounding box is square, this refines to circle)

@@ -9,7 +9,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
-import { format, isSameDay, startOfDay } from 'date-fns';
+import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import { eventsAPI, categoriesAPI } from '@/lib/api';
 import type { EventResponse, Category } from '@/types';
 import type { MapMarker } from '@/components/events/GoogleMapView';
@@ -54,14 +54,28 @@ export function MapPage() {
   }, []);
 
   // Fetch events and categories
+  // Re-fetches when selectedDate changes to get correct recurring instances from backend
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       setError(null);
 
       try {
+        // Build filter params - pass date to backend for proper recurring event handling
+        const eventFilters: { limit: number; date_from?: string; date_to?: string } = {
+          limit: 500,
+        };
+
+        // When a date is selected, pass it to the API so backend can:
+        // - Skip deduplication of recurring events
+        // - Return all instances matching that date
+        if (selectedDate) {
+          eventFilters.date_from = startOfDay(selectedDate).toISOString();
+          eventFilters.date_to = endOfDay(selectedDate).toISOString();
+        }
+
         const [eventsResponse, categoriesResponse] = await Promise.all([
-          eventsAPI.list({ limit: 500 }),
+          eventsAPI.list(eventFilters),
           categoriesAPI.list(),
         ]);
 
@@ -76,7 +90,7 @@ export function MapPage() {
     }
 
     fetchData();
-  }, []);
+  }, [selectedDate]);
 
   // Filter events by category and date
   const filteredEvents = useMemo(() => {
