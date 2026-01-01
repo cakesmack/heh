@@ -964,9 +964,13 @@ export const moderationAPI = {
     });
   },
 
-  moderateEvent: async (eventId: string, action: 'approve' | 'reject') => {
-    return apiFetch(`/api/moderation/events/${eventId}/moderate?action=${action}`, {
+  moderateEvent: async (eventId: string, action: 'approve' | 'reject', rejectionReason?: string) => {
+    return apiFetch(`/api/moderation/events/${eventId}/moderate`, {
       method: 'POST',
+      body: JSON.stringify({
+        action,
+        rejection_reason: rejectionReason,
+      }),
     });
   },
 };
