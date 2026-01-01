@@ -28,7 +28,11 @@ from app.schemas.tag import TagResponse
 from app.schemas.tag import TagResponse
 from app.services.geolocation import calculate_geohash, haversine_distance, get_bounding_box
 from app.services.notifications import notification_service
+from app.services.resend_email import resend_email_service
 from app.services.recurrence import generate_recurring_instances
+import logging
+
+logger = logging.getLogger(__name__)
 from app.models.organizer import Organizer
 from app.core.query_utils import deduplicate_recurring_events
 
@@ -566,27 +570,34 @@ def create_event(
 
     # Send appropriate notifications based on approval status
     if current_user.email:
-        if is_auto_approved:
-            # Notify user their event is live (auto-approved)
-            notification_service.notify_event_auto_approved(
-                current_user.email,
-                new_event.title,
-                str(new_event.id)
-            )
-            # No admin notification needed for auto-approved events
-        else:
-            # Notify user their event is under review
-            notification_service.notify_event_submission(current_user.email, new_event.title)
-
-            # Notify admins about new pending event
-            admin_users = session.exec(select(User).where(User.is_admin == True)).all()
-            admin_emails = [u.email for u in admin_users if u.email]
-            if admin_emails:
-                notification_service.notify_admin_new_pending_event(
-                    admin_emails,
-                    new_event.title,
-                    current_user.email
+        try:
+            if is_auto_approved:
+                # Send auto-approval email via Resend
+                resend_email_service.send_event_approved(
+                    to_email=current_user.email,
+                    event_title=new_event.title,
+                    event_id=str(new_event.id),
+                    display_name=current_user.display_name,
+                    is_auto_approved=True
                 )
+                logger.info(f"Auto-approval email sent to {current_user.email} for event {new_event.id}")
+                # No admin notification needed for auto-approved events
+            else:
+                # Notify user their event is under review (fallback to notification_service)
+                notification_service.notify_event_submission(current_user.email, new_event.title)
+
+                # Notify admins about new pending event
+                admin_users = session.exec(select(User).where(User.is_admin == True)).all()
+                admin_emails = [u.email for u in admin_users if u.email]
+                if admin_emails:
+                    notification_service.notify_admin_new_pending_event(
+                        admin_emails,
+                        new_event.title,
+                        current_user.email
+                    )
+        except Exception as e:
+            # Log error but don't fail the request - event creation succeeded
+            logger.error(f"Failed to send notification email for event {new_event.id}: {e}")
 
     return build_event_response(new_event, session)
 

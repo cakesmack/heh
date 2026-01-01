@@ -298,5 +298,187 @@ class ResendEmailService:
             return False
 
 
+    def send_event_approved(
+        self,
+        to_email: str,
+        event_title: str,
+        event_id: str,
+        display_name: Optional[str] = None,
+        is_auto_approved: bool = False
+    ) -> bool:
+        """
+        Send notification when an event is approved.
+
+        Args:
+            to_email: Organizer's email
+            event_title: Name of the event
+            event_id: Event ID for linking
+            display_name: Organizer's name (optional)
+            is_auto_approved: Whether this was auto-approved based on trust
+
+        Returns:
+            True if sent successfully
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send event approved email to {to_email}")
+            return True
+
+        name = display_name or "there"
+        event_url = f"{settings.FRONTEND_URL}/events/{event_id}"
+
+        if is_auto_approved:
+            subject = "Your event is live!"
+            subtitle = "Auto-approved based on your trust score"
+            message = f"Great news! Your event <strong>'{event_title}'</strong> has been automatically approved and is now live on the Highland Events Hub."
+        else:
+            subject = "Your event is live!"
+            subtitle = "Your event has been approved"
+            message = f"Great news! Your event <strong>'{event_title}'</strong> has been approved by our moderation team and is now published on the Highland Events Hub."
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 28px; }}
+                .header p {{ color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; }}
+                .content {{ padding: 40px 30px; background: #ffffff; }}
+                .success-icon {{ width: 60px; height: 60px; background: #d1fae5; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 30px; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{subject}</h1>
+                    <p>{subtitle}</p>
+                </div>
+                <div class="content">
+                    <div class="success-icon">&#x2705;</div>
+                    <p>Hey {name}!</p>
+                    <p>{message}</p>
+                    <p>People can now discover your event on the Hub. Share it with your community to boost attendance!</p>
+                    <p style="text-align: center;">
+                        <a href="{event_url}" class="button">View Your Event</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            response = resend.Emails.send({
+                "from": self.from_address,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+            })
+            logger.info(f"Event approved email sent to {to_email} for event {event_id}, id: {response.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send event approved email to {to_email}: {e}")
+            return False
+
+    def send_event_rejected(
+        self,
+        to_email: str,
+        event_title: str,
+        event_id: str,
+        rejection_reason: Optional[str] = None,
+        display_name: Optional[str] = None
+    ) -> bool:
+        """
+        Send notification when an event is rejected.
+
+        Args:
+            to_email: Organizer's email
+            event_title: Name of the event
+            event_id: Event ID for editing
+            rejection_reason: Reason for rejection (optional)
+            display_name: Organizer's name (optional)
+
+        Returns:
+            True if sent successfully
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send event rejected email to {to_email}")
+            return True
+
+        name = display_name or "there"
+        edit_url = f"{settings.FRONTEND_URL}/events/{event_id}/edit"
+
+        reason_html = ""
+        if rejection_reason:
+            reason_html = f"""
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                <strong style="color: #92400e;">Reason:</strong>
+                <p style="color: #92400e; margin: 5px 0 0 0;">{rejection_reason}</p>
+            </div>
+            """
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #f59e0b, #d97706); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .header p {{ color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; }}
+                .content {{ padding: 40px 30px; background: #ffffff; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .button-secondary {{ display: inline-block; background: #6b7280; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 10px; }}
+                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Update regarding your event</h1>
+                    <p>Action required</p>
+                </div>
+                <div class="content">
+                    <p>Hey {name},</p>
+                    <p>Unfortunately, your event <strong>'{event_title}'</strong> was not approved for publication on the Highland Events Hub.</p>
+                    {reason_html}
+                    <p>Don't worry - you can edit your event and resubmit it for review. Please address the feedback above and try again.</p>
+                    <p style="text-align: center;">
+                        <a href="{edit_url}" class="button">Edit & Resubmit</a>
+                    </p>
+                    <p style="text-align: center; color: #6b7280; font-size: 14px;">
+                        Need help? Reply to this email and we'll assist you.
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            response = resend.Emails.send({
+                "from": self.from_address,
+                "to": [to_email],
+                "subject": f"Update regarding your event: {event_title}",
+                "html": html_content,
+            })
+            logger.info(f"Event rejected email sent to {to_email} for event {event_id}, id: {response.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send event rejected email to {to_email}: {e}")
+            return False
+
+
 # Global instance
 resend_email_service = ResendEmailService()

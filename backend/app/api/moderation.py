@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from pydantic import BaseModel
@@ -10,6 +11,9 @@ from app.models.report import Report
 from app.models.user import User
 from app.models.event import Event
 from app.services.notifications import notification_service
+from app.services.resend_email import resend_email_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -109,39 +113,71 @@ def resolve_report(
     session.commit()
     return {"status": "success", "report_status": report.status}
 
+class EventModerationRequest(BaseModel):
+    """Schema for event moderation action."""
+    action: str  # approve, reject
+    rejection_reason: Optional[str] = None
+
+
 @router.post("/events/{event_id}/moderate")
 def moderate_event(
     event_id: str,
-    action: str, # approve, reject
+    moderation: EventModerationRequest,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
     """
     Approve or reject a pending event. Admin only.
+
+    For rejection, include a rejection_reason to help the organizer understand
+    what needs to be changed.
     """
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
+
     event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    
+
+    action = moderation.action
     if action == "approve":
         event.status = "published"
+        # Increment organizer's trust level for successful approval
+        if event.organizer:
+            event.organizer.trust_level = (event.organizer.trust_level or 0) + 1
+            session.add(event.organizer)
     elif action == "reject":
         event.status = "rejected"
     else:
         raise HTTPException(status_code=400, detail="Invalid action")
-    
+
     session.add(event)
     session.commit()
     session.refresh(event)
 
-    # Send Notification
+    # Send email notification via Resend
     if event.organizer and event.organizer.email:
-        if action == "approve":
-            notification_service.notify_event_approval(event.organizer.email, event.title, event.id)
-        elif action == "reject":
-            notification_service.notify_event_rejection(event.organizer.email, event.title, "Does not meet guidelines.")
+        try:
+            if action == "approve":
+                resend_email_service.send_event_approved(
+                    to_email=event.organizer.email,
+                    event_title=event.title,
+                    event_id=str(event.id),
+                    display_name=event.organizer.display_name,
+                    is_auto_approved=False
+                )
+                logger.info(f"Approval email sent to {event.organizer.email} for event {event.id}")
+            elif action == "reject":
+                resend_email_service.send_event_rejected(
+                    to_email=event.organizer.email,
+                    event_title=event.title,
+                    event_id=str(event.id),
+                    rejection_reason=moderation.rejection_reason,
+                    display_name=event.organizer.display_name
+                )
+                logger.info(f"Rejection email sent to {event.organizer.email} for event {event.id}")
+        except Exception as e:
+            # Log error but don't fail the request - moderation action succeeded
+            logger.error(f"Failed to send moderation email for event {event.id}: {e}")
 
     return {"status": "success", "event_status": event.status}
