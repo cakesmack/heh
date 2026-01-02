@@ -100,6 +100,20 @@ export default function AdminUsers() {
     }
   };
 
+  const handleToggleTrusted = async (userId: string, currentStatus: boolean) => {
+    try {
+      const result = await adminAPI.toggleTrustedOrganizer(userId, !currentStatus);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, is_trusted_organizer: result.is_trusted_organizer } : u))
+      );
+      if (selectedUser?.id === userId) {
+        setSelectedUser({ ...selectedUser, is_trusted_organizer: result.is_trusted_organizer });
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update trusted status');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -327,6 +341,11 @@ export default function AdminUsers() {
                     Admin
                   </span>
                 )}
+                {selectedUser.is_trusted_organizer && (
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                    Trusted Organizer
+                  </span>
+                )}
                 {(selectedUser as any).is_blocked && (
                   <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                     Blocked
@@ -364,6 +383,15 @@ export default function AdminUsers() {
                       }`}
                   >
                     {selectedUser.is_admin ? 'Remove Admin' : 'Make Admin'}
+                  </button>
+                  <button
+                    onClick={() => handleToggleTrusted(selectedUser.id, selectedUser.is_trusted_organizer)}
+                    className={`px-4 py-2 rounded text-sm font-medium ${selectedUser.is_trusted_organizer
+                      ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                  >
+                    {selectedUser.is_trusted_organizer ? 'Remove Trusted' : 'Make Trusted'}
                   </button>
                   <button
                     onClick={() => setDetailModalOpen(false)}

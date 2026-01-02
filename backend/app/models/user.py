@@ -1,6 +1,6 @@
 """
 User model for authentication and user profiles.
-Tracks XP, level, and relationships with events, check-ins, and badges.
+Tracks trust levels and relationships with events, check-ins, and venues.
 """
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .venue_staff import VenueStaff
     from .user_preferences import UserPreferences
     from .featured_booking import FeaturedBooking
+    from .notification import Notification
 
 
 class User(SQLModel, table=True):
@@ -64,3 +65,4 @@ class User(SQLModel, table=True):
     venue_staff: list["VenueStaff"] = Relationship(back_populates="user")
     preferences: Optional["UserPreferences"] = Relationship(back_populates="user")
     featured_bookings: list["FeaturedBooking"] = Relationship(back_populates="organizer")
+    notifications: list["Notification"] = Relationship(back_populates="user")

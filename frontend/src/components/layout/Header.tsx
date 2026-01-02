@@ -10,6 +10,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { NotificationCenter } from './NotificationCenter';
 
 export function Header() {
   const pathname = usePathname();
@@ -105,8 +106,10 @@ export function Header() {
             </Link>
 
             {isAuthenticated ? (
-              <div className="relative group">
-                <button className="flex items-center space-x-2 bg-moss-green/20 px-3 py-1.5 rounded-full border border-moss-green/30 hover:bg-moss-green/30 transition-colors">
+              <>
+                <NotificationCenter />
+                <div className="relative group">
+                  <button className="flex items-center space-x-2 bg-moss-green/20 px-3 py-1.5 rounded-full border border-moss-green/30 hover:bg-moss-green/30 transition-colors">
                   <span className="text-sm font-medium text-soft-sky">
                     {user?.username || user?.display_name || user?.email?.split('@')[0]}
                   </span>
@@ -150,6 +153,7 @@ export function Header() {
                   </button>
                 </div>
               </div>
+              </>
             ) : (
               <>
                 <Link

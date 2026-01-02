@@ -1,6 +1,6 @@
 """
 Check-ins API routes.
-Handles event check-ins with location/time validation and XP awards.
+Handles event check-ins with location/time validation.
 """
 # Force reload
 from datetime import datetime
@@ -47,7 +47,7 @@ def checkin_to_event(
     - Current time is within event window (±15 minutes)
     - User hasn't already checked in
 
-    Awards XP and potentially unlocks promotions.
+    Potentially unlocks promotions.
     """
     # Get event (normalize UUID for SQLite)
     event_id_normalized = normalize_uuid(event_id)

@@ -25,6 +25,7 @@ from .venue_staff import VenueStaff, VenueRole
 from .user_category_follow import UserCategoryFollow
 from .bookmark import Bookmark
 from .report import Report
+from .notification import Notification, NotificationType
 from .featured_booking import FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
 from .slot_pricing import SlotPricing, DEFAULT_PRICING
 
@@ -74,6 +75,9 @@ __all__ = [
     "Bookmark",
     # Reports
     "Report",
+    # Notifications
+    "Notification",
+    "NotificationType",
     # Featured Bookings
     "FeaturedBooking",
     "SlotType",

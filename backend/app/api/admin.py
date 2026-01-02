@@ -59,6 +59,7 @@ class AdminUserResponse(BaseModel):
     id: str
     email: str
     is_admin: bool
+    is_trusted_organizer: bool
     has_password: bool  # True = Email login, False = Google login
     created_at: datetime
     event_count: int
@@ -177,6 +178,7 @@ def list_users(
             id=str(user.id),
             email=user.email,
             is_admin=user.is_admin,
+            is_trusted_organizer=user.is_trusted_organizer,
             has_password=user.password_hash is not None,
             created_at=user.created_at,
             event_count=event_count,
@@ -222,6 +224,7 @@ def get_user(
         id=str(user.id),
         email=user.email,
         is_admin=user.is_admin,
+        is_trusted_organizer=user.is_trusted_organizer,
         has_password=user.password_hash is not None,
         created_at=user.created_at,
         event_count=event_count,
@@ -272,6 +275,7 @@ def toggle_user_admin(
         id=str(user.id),
         email=user.email,
         is_admin=user.is_admin,
+        is_trusted_organizer=user.is_trusted_organizer,
         has_password=user.password_hash is not None,
         created_at=user.created_at,
         event_count=event_count,

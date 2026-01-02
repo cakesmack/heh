@@ -13,7 +13,7 @@ from sqlmodel import SQLModel
 
 from app.core.config import settings
 from app.core.database import engine, check_db_connection
-from app.api import auth, events, venues, checkins, promotions, categories, tags, media, geocode, users, admin, hero, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured
+from app.api import auth, events, venues, checkins, promotions, categories, tags, media, geocode, users, admin, hero, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Highland Events Hub API",
-    description="Event discovery platform for the Scottish Highlands with gamification and location-based features",
+    description="Event discovery platform for the Scottish Highlands with location-based features",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -125,3 +125,4 @@ app.include_router(groups.router, prefix="/api/groups", tags=["Groups"])
 app.include_router(search.router, prefix="/api/search", tags=["Search"])
 app.include_router(preferences.router, prefix="/api")
 app.include_router(featured.router, prefix="/api/featured", tags=["Featured"])
+app.include_router(notifications.router)

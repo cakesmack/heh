@@ -1,6 +1,6 @@
 """
 Check-in model for tracking user attendance at events.
-Validates location and time, awards XP.
+Validates location and time for verified attendance.
 """
 from datetime import datetime
 from typing import TYPE_CHECKING

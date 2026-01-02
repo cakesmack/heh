@@ -1101,6 +1101,7 @@ export interface AdminUser {
   id: string;
   email: string;
   is_admin: boolean;
+  is_trusted_organizer: boolean;
   has_password: boolean;  // true = Email login, false = Google login
   created_at: string;
   event_count: number;
@@ -1175,6 +1176,15 @@ export const adminAPI = {
   sendPasswordReset: async (userId: string): Promise<{ ok: boolean; message: string }> => {
     return apiFetch<{ ok: boolean; message: string }>(`/api/admin/users/${userId}/send-password-reset`, {
       method: 'POST',
+    });
+  },
+
+  /**
+   * Toggle trusted organizer status for a user
+   */
+  toggleTrustedOrganizer: async (userId: string, trusted: boolean): Promise<{ user_id: string; is_trusted_organizer: boolean }> => {
+    return apiFetch<{ user_id: string; is_trusted_organizer: boolean }>(`/api/admin/users/${userId}/trust?trusted=${trusted}`, {
+      method: 'PATCH',
     });
   },
 };
@@ -1341,6 +1351,44 @@ export const socialAPI = {
 // GROUPS API (Phase 2.4 Sprint 2)
 // ============================================================
 
+// ============================================================
+// NOTIFICATIONS API
+// ============================================================
+
+export const notificationsAPI = {
+  list: async (limit = 20, skip = 0, unreadOnly = false) => {
+    const params = new URLSearchParams();
+    params.append('limit', String(limit));
+    params.append('skip', String(skip));
+    if (unreadOnly) params.append('unread_only', 'true');
+    return apiFetch<{
+      notifications: Array<{
+        id: string;
+        type: string;
+        title: string;
+        message: string;
+        link: string | null;
+        is_read: boolean;
+        created_at: string;
+      }>;
+      total: number;
+      unread_count: number;
+    }>(\);
+  },
+
+  markAsRead: async (notificationId: string) => {
+    return apiFetch<{ success: boolean }>(\, {
+      method: 'POST',
+    });
+  },
+
+  markAllAsRead: async () => {
+    return apiFetch<{ success: boolean; marked_count: number }>('/api/notifications/read-all', {
+      method: 'POST',
+    });
+  },
+};
+
 export const groupsAPI = {
   createInvite: async (groupId: string) => {
     return apiFetch<any>(`/api/groups/${groupId}/invite`, {
@@ -1385,6 +1433,7 @@ export const api = {
   collections: collectionsAPI,
   social: socialAPI,
   groups: groupsAPI,
+  notifications: notificationsAPI,
   preferences: preferencesAPI,
   featured: featuredAPI,
   bookmarks: {
