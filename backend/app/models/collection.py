@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import date
 from sqlmodel import Field, SQLModel
 
 class Collection(SQLModel, table=True):
@@ -11,3 +12,6 @@ class Collection(SQLModel, table=True):
     target_link: str
     is_active: bool = Field(default=True)
     sort_order: int = Field(default=0)
+    # Custom date range fields - when set, these override dynamic date filters
+    fixed_start_date: Optional[date] = Field(default=None)
+    fixed_end_date: Optional[date] = Field(default=None)

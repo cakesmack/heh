@@ -25,6 +25,8 @@ export default function AdminCollections() {
         target_link: '',
         is_active: true,
         sort_order: 0,
+        fixed_start_date: '',
+        fixed_end_date: '',
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,16 @@ export default function AdminCollections() {
             target_link: '',
             is_active: true,
             sort_order: collections.length + 1,
+            fixed_start_date: '',
+            fixed_end_date: '',
         });
+        setQbState({
+            category: '',
+            tag: '',
+            age: '',
+            price: 'any',
+        });
+        setQueryBuilderMode(true);
         setError(null);
         setModalOpen(true);
     };
@@ -81,6 +92,8 @@ export default function AdminCollections() {
             target_link: collection.target_link,
             is_active: collection.is_active,
             sort_order: collection.sort_order,
+            fixed_start_date: collection.fixed_start_date || '',
+            fixed_end_date: collection.fixed_end_date || '',
         });
 
         // Parse target_link to populate builder state
@@ -122,14 +135,16 @@ export default function AdminCollections() {
         if (qbState.tag) params.append('q', qbState.tag);
         if (qbState.age) params.append('age_restriction', qbState.age);
         if (qbState.price === 'free') params.append('price', 'free');
-        // Note: 'paid' isn't a standard filter yet in backend, but we can add it or just use it for UI logic
-        // For now let's assume price=free is the main one supported, or we need to support 'paid' in backend
+
+        // Add fixed date range to URL params if set
+        if (formData.fixed_start_date) params.append('date_from', formData.fixed_start_date);
+        if (formData.fixed_end_date) params.append('date_to', formData.fixed_end_date);
 
         const queryString = params.toString();
         const newLink = queryString ? `/events?${queryString}` : '/events';
 
         setFormData(prev => ({ ...prev, target_link: newLink }));
-    }, [qbState, queryBuilderMode, modalOpen]);
+    }, [qbState, queryBuilderMode, modalOpen, formData.fixed_start_date, formData.fixed_end_date]);
 
     const handleImageUpload = (urls: { url: string }) => {
         setFormData(prev => ({ ...prev, image_url: urls.url }));
@@ -378,8 +393,41 @@ export default function AdminCollections() {
                                                 />
                                                 Free
                                             </label>
-                                            {/* 'paid' option commented out until backend supports it explicitly if needed */}
                                         </div>
+                                    </div>
+
+                                    {/* Custom Date Range */}
+                                    <div className="pt-3 border-t border-gray-200">
+                                        <label className="block text-xs font-medium text-gray-500 mb-2">
+                                            📅 Custom Date Range (Optional)
+                                        </label>
+                                        <p className="text-xs text-gray-400 mb-2">
+                                            Set specific dates for themed collections like "Easter Weekend" or "Festival Week"
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={formData.fixed_start_date}
+                                                    onChange={(e) => setFormData({ ...formData, fixed_start_date: e.target.value })}
+                                                    className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={formData.fixed_end_date}
+                                                    onChange={(e) => setFormData({ ...formData, fixed_end_date: e.target.value })}
+                                                    min={formData.fixed_start_date}
+                                                    className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
+                                                />
+                                            </div>
+                                        </div>
+                                        {formData.fixed_start_date && formData.fixed_end_date && formData.fixed_end_date < formData.fixed_start_date && (
+                                            <p className="text-xs text-red-500 mt-1">End date must be after start date</p>
+                                        )}
                                     </div>
 
                                     <div className="pt-2 border-t border-gray-200">

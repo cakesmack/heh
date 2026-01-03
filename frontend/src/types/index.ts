@@ -680,6 +680,8 @@ export interface Collection {
   target_link: string;
   is_active: boolean;
   sort_order: number;
+  fixed_start_date?: string;
+  fixed_end_date?: string;
 }
 
 export interface CollectionCreate {
@@ -689,6 +691,8 @@ export interface CollectionCreate {
   target_link: string;
   is_active?: boolean;
   sort_order?: number;
+  fixed_start_date?: string;
+  fixed_end_date?: string;
 }
 
 export interface CollectionUpdate {
@@ -698,6 +702,8 @@ export interface CollectionUpdate {
   target_link?: string;
   is_active?: boolean;
   sort_order?: number;
+  fixed_start_date?: string;
+  fixed_end_date?: string;
 }
 
 // ============================================================
