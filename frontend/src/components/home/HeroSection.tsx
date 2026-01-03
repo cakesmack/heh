@@ -315,17 +315,31 @@ export default function HeroSection() {
                     </div>
                 </div>
 
-                {/* Indicators */}
+                {/* Progress Bar Indicators */}
                 {displayLength > 1 && (
-                    <div className="absolute bottom-8 right-4 sm:right-8 flex gap-2 z-20">
+                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 sm:gap-3 z-20">
                         {Array.from({ length: displayLength }).map((_, index) => (
                             <button
                                 key={index}
                                 onClick={() => setCurrentIndex(index)}
-                                className={`h-1.5 rounded-full transition-all duration-300 ${index === currentIndex ? 'w-8 bg-white' : 'w-4 bg-white/40 hover:bg-white/60'
-                                    }`}
+                                className="relative h-1 w-8 sm:w-12 md:w-16 rounded-full bg-white/30 overflow-hidden cursor-pointer hover:bg-white/40 transition-colors"
                                 aria-label={`Go to slide ${index + 1}`}
-                            />
+                            >
+                                {/* Progress fill - animates when this slide is active */}
+                                <div
+                                    key={`progress-${index}-${currentIndex}`}
+                                    className={`absolute inset-0 rounded-full ${index === currentIndex
+                                            ? 'bg-emerald-500 animate-progress-fill'
+                                            : index < currentIndex
+                                                ? 'bg-white/80'
+                                                : 'bg-transparent'
+                                        }`}
+                                    style={{
+                                        width: index === currentIndex ? '100%' : index < currentIndex ? '100%' : '0%',
+                                        animation: index === currentIndex && !isPaused ? 'progressFill 5s linear forwards' : 'none',
+                                    }}
+                                />
+                            </button>
                         ))}
                     </div>
                 )}

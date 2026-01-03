@@ -94,6 +94,20 @@ a {
       opacity: 1;
     }
   }
+
+  /* Hero carousel progress bar fill animation */
+  @keyframes progressFill {
+    from {
+      width: 0%;
+    }
+    to {
+      width: 100%;
+    }
+  }
+
+  .animate-progress-fill {
+    animation: progressFill 5s linear forwards;
+  }
 }
 
 /* Glass effect */
