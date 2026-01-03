@@ -8,6 +8,7 @@ from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
 
 from .tag import EventTag
+from .event_participating_venue import EventParticipatingVenue
 
 if TYPE_CHECKING:
     from .user import User
@@ -95,7 +96,11 @@ class Event(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    venue: "Venue" = Relationship(back_populates="events")
+    venue: Optional["Venue"] = Relationship(back_populates="events")
+    participating_venues: List["Venue"] = Relationship(
+        back_populates="participating_in_events",
+        link_model=EventParticipatingVenue
+    )
     organizer: "User" = Relationship(back_populates="submitted_events")
     organizer_profile: Optional["Organizer"] = Relationship(back_populates="events")
     check_ins: List["CheckIn"] = Relationship(back_populates="event")

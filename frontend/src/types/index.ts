@@ -271,6 +271,7 @@ export interface EventResponse extends Event {
   tags?: Tag[];
   organizer_email?: string;
   organizer_profile_name?: string;
+  participating_venues?: VenueResponse[];
 }
 
 export interface EventCreate {
@@ -293,6 +294,9 @@ export interface EventCreate {
   is_recurring?: boolean;
   frequency?: string;
   recurrence_end_date?: string;
+  participating_venue_ids?: string[];
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface EventUpdate {
@@ -315,6 +319,7 @@ export interface EventUpdate {
   organizer_profile_id?: string;
   recurrence_rule?: string;
   is_recurring?: boolean;
+  participating_venue_ids?: string[];
 }
 
 export interface EventFilter {

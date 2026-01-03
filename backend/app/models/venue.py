@@ -8,6 +8,8 @@ from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
 
+from .event_participating_venue import EventParticipatingVenue
+
 if TYPE_CHECKING:
     from .user import User
     from .event import Event
@@ -77,5 +79,9 @@ class Venue(SQLModel, table=True):
     owner: Optional["User"] = Relationship(back_populates="owned_venues")
     category_rel: Optional["VenueCategory"] = Relationship(back_populates="venues")
     events: list["Event"] = Relationship(back_populates="venue")
+    participating_in_events: list["Event"] = Relationship(
+        back_populates="participating_venues",
+        link_model=EventParticipatingVenue
+    )
     promotions: list["Promotion"] = Relationship(back_populates="venue")
     staff: list["VenueStaff"] = Relationship(back_populates="venue")

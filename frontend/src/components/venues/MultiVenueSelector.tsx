@@ -1,0 +1,75 @@
+'use client';
+
+import { useState } from 'react';
+import { VenueResponse } from '@/types';
+import { VenueTypeahead } from '../venues/VenueTypeahead';
+
+interface MultiVenueSelectorProps {
+    selectedVenues: VenueResponse[];
+    onChange: (venues: VenueResponse[]) => void;
+    disabled?: boolean;
+}
+
+export default function MultiVenueSelector({
+    selectedVenues,
+    onChange,
+    disabled = false
+}: MultiVenueSelectorProps) {
+    // Temporary state for the typeahead input
+    const [currentValue, setCurrentValue] = useState<string | null>(null);
+
+    const handleAddVenue = (venueId: string, venue: VenueResponse | null) => {
+        if (venue && !selectedVenues.find(v => v.id === venue.id)) {
+            onChange([...selectedVenues, venue]);
+        }
+        // Reset typeahead
+        setCurrentValue(null);
+    };
+
+    const handleRemoveVenue = (venueId: string) => {
+        onChange(selectedVenues.filter(v => v.id !== venueId));
+    };
+
+    return (
+        <div className="space-y-3">
+            {/* Search Input */}
+            <div>
+                <VenueTypeahead
+                    value={null} // Always reset after selection by component logic
+                    onChange={handleAddVenue}
+                    placeholder="Search and add venues..."
+                    disabled={disabled}
+                />
+            </div>
+
+            {/* Selected List */}
+            {selectedVenues.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+                    {selectedVenues.map((venue) => (
+                        <div key={venue.id} className="flex items-center justify-between p-3">
+                            <div className="flex-1 min-w-0 mr-4">
+                                <p className="text-sm font-medium text-gray-900 truncate">{venue.name}</p>
+                                <p className="text-xs text-gray-500 truncate">{venue.address}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleRemoveVenue(venue.id)}
+                                disabled={disabled}
+                                className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
+                                aria-label="Remove venue"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {selectedVenues.length === 0 && (
+                <p className="text-xs text-gray-500 italic">No additional venues selected.</p>
+            )}
+        </div>
+    );
+}

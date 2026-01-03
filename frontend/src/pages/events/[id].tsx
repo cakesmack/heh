@@ -355,6 +355,20 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                   </div>
                 )}
 
+                {/* Participating Venues */}
+                {event.participating_venues && event.participating_venues.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Participating Venues</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {event.participating_venues.map(pv => (
+                        <Link key={pv.id} href={`/venues/${pv.id}`} className="flex items-center p-2 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-colors group">
+                          <span className="text-sm text-gray-700 group-hover:text-emerald-700 font-medium truncate">{pv.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {event.latitude && event.longitude && (
                   <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
                     <GoogleMiniMap

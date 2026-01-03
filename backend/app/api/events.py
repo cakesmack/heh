@@ -13,17 +13,20 @@ from app.core.security import get_current_user
 from app.core.utils import normalize_uuid
 from app.models.user import User
 from app.models.event import Event
-from app.models.venue import Venue
+from app.models.venue import Venue, VenueCategory
 from app.models.category import Category
 from app.models.tag import Tag, EventTag, normalize_tag_name
+from app.models.event_participating_venue import EventParticipatingVenue
 from app.schemas.event import (
     EventCreate,
     EventUpdate,
     EventResponse,
-    EventListResponse
+    EventListResponse,
+    EventFilter
 )
 from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
+from app.schemas.venue import VenueResponse
 from app.schemas.tag import TagResponse
 from app.schemas.tag import TagResponse
 from app.services.geolocation import calculate_geohash, haversine_distance, get_bounding_box
@@ -93,6 +96,13 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
 
     # Get tags
     tag_responses = [TagResponse.model_validate(t) for t in event.tags] if event.tags else []
+    
+    # Get participating venues
+    participating_venue_responses = []
+    if event.participating_venues:
+        participating_venue_responses = [
+            VenueResponse.model_validate(v) for v in event.participating_venues
+        ]
 
     response = EventResponse.model_validate(event)
     
@@ -106,6 +116,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
     response.distance_km = distance_km
     response.checkin_count = checkin_count
     response.category = category_response
+    response.participating_venues = participating_venue_responses
     # Fetch analytics counts
     from app.models.analytics import AnalyticsEvent
     
@@ -215,11 +226,14 @@ def list_events(
     # Filter by multiple categories
     if category_ids and not category and not category_id:
         cat_id_list = [normalize_uuid(cid.strip()) for cid in category_ids.split(",")]
-        query = query.where(Event.category_id.in_(cat_id_list))
-
-    # Filter by venue ID
+    # Filter by venue ID (Host OR Participating)
     if venue_id:
-        query = query.where(Event.venue_id == normalize_uuid(venue_id))
+        v_id = normalize_uuid(venue_id)
+        query = query.outerjoin(EventParticipatingVenue, Event.id == EventParticipatingVenue.event_id)
+        query = query.where(
+            (Event.venue_id == v_id) | 
+            (EventParticipatingVenue.venue_id == v_id)
+        )
 
     # Filter by single tag
     if tag and not tag_names:
@@ -479,11 +493,18 @@ def create_event(
         latitude = venue.latitude
         longitude = venue.longitude
         geohash = calculate_geohash(latitude, longitude)
-    elif not event_data.location_name:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either venue_id or location_name must be provided"
-        )
+    else:
+        # Use custom location if provided
+        if event_data.latitude is not None and event_data.longitude is not None:
+            latitude = event_data.latitude
+            longitude = event_data.longitude
+            geohash = calculate_geohash(latitude, longitude)
+        
+        if not event_data.location_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either venue_id or location_name must be provided"
+            )
 
     # Validate category
     category_id_normalized = None
@@ -580,6 +601,18 @@ def create_event(
             event_tag = EventTag(event_id=new_event.id, tag_id=tag.id)
             session.add(event_tag)
             tag.usage_count += 1
+            
+    # Handle participating venues
+    if event_data.participating_venue_ids:
+        for p_venue_id in event_data.participating_venue_ids:
+            # Verify venue exists
+            p_venue_exists = session.get(Venue, normalize_uuid(p_venue_id))
+            if p_venue_exists:
+                p_venue_link = EventParticipatingVenue(
+                    event_id=new_event.id, 
+                    venue_id=normalize_uuid(p_venue_id)
+                )
+                session.add(p_venue_link)
 
     session.commit()
     session.refresh(new_event)

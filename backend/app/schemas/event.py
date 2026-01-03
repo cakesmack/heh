@@ -8,7 +8,9 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.schemas.category import CategoryResponse
+from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
+from app.schemas.venue import VenueResponse
 
 
 class EventCreate(BaseModel):
@@ -35,6 +37,11 @@ class EventCreate(BaseModel):
     # though the user request implies the backend handles the translation. 
     # Let's keep it optional but prioritize frequency.
     recurrence_rule: Optional[str] = Field(None, max_length=500)
+    # Custom Location (Phase 3)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    # Participating Venues (Phase 3)
+    participating_venue_ids: Optional[List[UUID]] = Field(None, description="List of IDs for other participating venues")
 
 class EventUpdate(BaseModel):
     """Schema for updating an existing event."""
@@ -94,6 +101,7 @@ class EventResponse(BaseModel):
     # Nested related data
     category: Optional[CategoryResponse] = None
     tags: Optional[List[TagResponse]] = None
+    participating_venues: List[VenueResponse] = []
 
     # Computed fields (populated by endpoint logic)
     venue_name: Optional[str] = None
