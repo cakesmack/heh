@@ -310,6 +310,20 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 </p>
               )}
 
+              {/* Tags */}
+              {event.tags && event.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-4">
+                  {event.tags.map((tag: any) => (
+                    <span
+                      key={tag.id}
+                      className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full"
+                    >
+                      #{tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               {/* Share Buttons */}
               <div className="pt-4 border-t border-gray-100 mt-4">
                 <ShareButtons

@@ -99,7 +99,7 @@ export default function EditEventPage() {
                 }
 
                 if (eventData.tags) {
-                    setSelectedTags(eventData.tags.map((t: any) => t.id));
+                    setSelectedTags(eventData.tags.map((t: any) => t.name));
                 }
 
             } catch (err) {
