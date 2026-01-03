@@ -13,7 +13,8 @@ from app.core.security import get_current_user
 from app.core.utils import normalize_uuid
 from app.models.user import User
 from app.models.event import Event
-from app.models.venue import Venue, VenueCategory
+from app.models.venue import Venue
+from app.models.venue_category import VenueCategory
 from app.models.category import Category
 from app.models.tag import Tag, EventTag, normalize_tag_name
 from app.models.event_participating_venue import EventParticipatingVenue
