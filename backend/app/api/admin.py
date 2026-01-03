@@ -892,3 +892,50 @@ def update_pricing(
         "is_active": pricing.is_active,
         "description": pricing.description
     }
+
+
+# ============================================================
+# DATABASE MIGRATIONS (Temporary Admin Endpoints)
+# ============================================================
+
+@router.post("/migrate-collections")
+def migrate_collections_table(
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Add fixed_start_date and fixed_end_date columns to collections table.
+    This is a one-time migration endpoint.
+    """
+    from sqlalchemy import text
+    
+    results = []
+    
+    try:
+        # Check if columns exist
+        check_query = text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'collections' 
+            AND column_name IN ('fixed_start_date', 'fixed_end_date')
+        """)
+        existing = [row[0] for row in session.exec(check_query).fetchall()]
+        
+        if 'fixed_start_date' not in existing:
+            session.exec(text("ALTER TABLE collections ADD COLUMN fixed_start_date DATE DEFAULT NULL"))
+            results.append("Added fixed_start_date column")
+        else:
+            results.append("fixed_start_date already exists")
+        
+        if 'fixed_end_date' not in existing:
+            session.exec(text("ALTER TABLE collections ADD COLUMN fixed_end_date DATE DEFAULT NULL"))
+            results.append("Added fixed_end_date column")
+        else:
+            results.append("fixed_end_date already exists")
+        
+        session.commit()
+        
+        return {"success": True, "results": results}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
