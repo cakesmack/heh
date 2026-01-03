@@ -188,17 +188,10 @@ export function Header() {
             )}
           </nav>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Notification Bell */}
           <div className="md:hidden">
             {isAuthenticated && (
-              <Link
-                href="/account"
-                className="flex items-center space-x-2 bg-moss-green/20 px-3 py-1 rounded-full"
-              >
-                <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-bold">
-                  {user?.email?.[0].toUpperCase()}
-                </div>
-              </Link>
+              <NotificationCenter />
             )}
           </div>
         </div>
