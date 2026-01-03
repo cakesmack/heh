@@ -30,6 +30,7 @@ from app.services.geolocation import calculate_geohash, haversine_distance, get_
 from app.services.notifications import notification_service
 from app.services.resend_email import resend_email_service
 from app.services.recurrence import generate_recurring_instances
+from app.services.moderation import check_is_offensive
 import logging
 
 logger = logging.getLogger(__name__)
@@ -525,6 +526,14 @@ def create_event(
         status="pending"
     )
 
+    # Content Moderation: Check for offensive language
+    # Combine title, description, and tags for profanity check
+    content_to_check = f"{event_data.title or ''} {event_data.description or ''}"
+    if event_data.tags:
+        content_to_check += " " + " ".join(event_data.tags)
+    
+    is_offensive = check_is_offensive(content_to_check)
+    
     # Auto-Approval Logic
     # A user qualifies for auto-approval if:
     # - They are an admin, OR
@@ -536,7 +545,11 @@ def create_event(
         current_user.trust_level >= 5
     )
 
-    if is_auto_approved:
+    # OVERRIDE: Offensive content must go to moderation regardless of trust
+    if is_offensive:
+        new_event.status = "pending"
+        print(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged for moderation due to offensive content")
+    elif is_auto_approved:
         new_event.status = "published"
         print(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved for user {current_user.email} "
               f"(admin={current_user.is_admin}, trusted={current_user.is_trusted_organizer}, trust_level={current_user.trust_level})")
@@ -544,7 +557,6 @@ def create_event(
         new_event.status = "pending"
         print(f"[MODERATION] Event '{new_event.title}' pending for user {current_user.email} "
               f"(trust_level={current_user.trust_level})")
-
     session.add(new_event)
     session.flush()  # Get the event ID
 
