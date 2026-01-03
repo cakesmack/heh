@@ -10,8 +10,10 @@ from app.core.security import get_current_user, get_current_user_optional
 from app.models.report import Report
 from app.models.user import User
 from app.models.event import Event
+from app.models.notification import NotificationType
 from app.services.notifications import notification_service
 from app.services.resend_email import resend_email_service
+from app.api.notifications import create_notification
 
 logger = logging.getLogger(__name__)
 
@@ -179,5 +181,32 @@ def moderate_event(
         except Exception as e:
             # Log error but don't fail the request - moderation action succeeded
             logger.error(f"Failed to send moderation email for event {event.id}: {e}")
+
+    # Create in-app notification for the organizer
+    if event.organizer_id:
+        try:
+            if action == "approve":
+                create_notification(
+                    session=session,
+                    user_id=event.organizer_id,
+                    notification_type=NotificationType.EVENT_APPROVED,
+                    title="Event Approved! 🎉",
+                    message=f"Your event '{event.title}' has been approved and is now live.",
+                    link=f"/events/{event.id}"
+                )
+                logger.info(f"Approval notification created for user {event.organizer_id}")
+            elif action == "reject":
+                reason_text = f" Reason: {moderation.rejection_reason}" if moderation.rejection_reason else ""
+                create_notification(
+                    session=session,
+                    user_id=event.organizer_id,
+                    notification_type=NotificationType.EVENT_REJECTED,
+                    title="Event Not Approved",
+                    message=f"Your event '{event.title}' was not approved.{reason_text}",
+                    link=f"/events/{event.id}/edit"
+                )
+                logger.info(f"Rejection notification created for user {event.organizer_id}")
+        except Exception as e:
+            logger.error(f"Failed to create in-app notification for event {event.id}: {e}")
 
     return {"status": "success", "event_status": event.status}

@@ -12,6 +12,11 @@ export default function AdminModeration() {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'reports' | 'events'>('reports');
 
+    // Rejection modal state
+    const [rejectModalOpen, setRejectModalOpen] = useState(false);
+    const [rejectingEvent, setRejectingEvent] = useState<EventResponse | null>(null);
+    const [rejectionReason, setRejectionReason] = useState('');
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -42,13 +47,33 @@ export default function AdminModeration() {
         }
     };
 
-    const handleModerateEvent = async (eventId: string, action: 'approve' | 'reject') => {
+    const handleModerateEvent = async (eventId: string, action: 'approve' | 'reject', reason?: string) => {
         try {
-            await moderationAPI.moderateEvent(eventId, action);
+            await moderationAPI.moderateEvent(eventId, action, reason);
             setPendingEvents(pendingEvents.filter(e => e.id !== eventId));
         } catch (err) {
             alert('Failed to update event');
         }
+    };
+
+    // Open rejection modal
+    const openRejectModal = (event: EventResponse) => {
+        setRejectingEvent(event);
+        setRejectionReason('');
+        setRejectModalOpen(true);
+    };
+
+    // Confirm rejection with reason
+    const confirmRejection = async () => {
+        if (!rejectingEvent) return;
+        if (!rejectionReason.trim()) {
+            alert('Please provide a rejection reason');
+            return;
+        }
+        await handleModerateEvent(rejectingEvent.id, 'reject', rejectionReason.trim());
+        setRejectModalOpen(false);
+        setRejectingEvent(null);
+        setRejectionReason('');
     };
 
     return (
@@ -58,8 +83,8 @@ export default function AdminModeration() {
                     <div className="flex space-x-4 border-b border-gray-200">
                         <button
                             className={`py-2 px-4 font-medium text-sm ${activeTab === 'reports'
-                                    ? 'text-emerald-600 border-b-2 border-emerald-600'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                ? 'text-emerald-600 border-b-2 border-emerald-600'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             onClick={() => setActiveTab('reports')}
                         >
@@ -67,8 +92,8 @@ export default function AdminModeration() {
                         </button>
                         <button
                             className={`py-2 px-4 font-medium text-sm ${activeTab === 'events'
-                                    ? 'text-emerald-600 border-b-2 border-emerald-600'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                ? 'text-emerald-600 border-b-2 border-emerald-600'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             onClick={() => setActiveTab('events')}
                         >
@@ -166,7 +191,7 @@ export default function AdminModeration() {
                                                         Approve
                                                     </button>
                                                     <button
-                                                        onClick={() => handleModerateEvent(event.id, 'reject')}
+                                                        onClick={() => openRejectModal(event)}
                                                         className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700"
                                                     >
                                                         Reject
@@ -178,6 +203,56 @@ export default function AdminModeration() {
                                 )}
                             </>
                         )}
+                    </div>
+                )}
+
+                {/* Rejection Reason Modal */}
+                {rejectModalOpen && rejectingEvent && (
+                    <div className="fixed inset-0 z-50 overflow-y-auto">
+                        <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20">
+                            {/* Backdrop */}
+                            <div
+                                className="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity"
+                                onClick={() => setRejectModalOpen(false)}
+                            />
+
+                            {/* Modal */}
+                            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 z-10">
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                                    Reject Event
+                                </h3>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Rejecting: <strong>{rejectingEvent.title}</strong>
+                                </p>
+
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Rejection Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    placeholder="Explain why this event is being rejected..."
+                                    rows={4}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    required
+                                />
+
+                                <div className="flex justify-end gap-3 mt-6">
+                                    <button
+                                        onClick={() => setRejectModalOpen(false)}
+                                        className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmRejection}
+                                        className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700"
+                                    >
+                                        Confirm Reject
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
             </AdminLayout>
