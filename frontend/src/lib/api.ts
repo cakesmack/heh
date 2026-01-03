@@ -1373,11 +1373,11 @@ export const notificationsAPI = {
       }>;
       total: number;
       unread_count: number;
-    }>(\);
+    }>(`/api/notifications?${params}`);
   },
 
   markAsRead: async (notificationId: string) => {
-    return apiFetch<{ success: boolean }>(\, {
+    return apiFetch<{ success: boolean }>(`/api/notifications/${notificationId}/read`, {
       method: 'POST',
     });
   },
