@@ -192,11 +192,14 @@ def list_events(
     # Track joins to avoid duplicates
     venue_joined = False
 
-    # Filter by category slug (resolve to ID first)
+    # Filter by category slug (resolve to ID first) - case-insensitive
     if category:
+        category_lower = category.lower()
         cat = session.exec(
             select(Category).where(
-                (Category.slug == category) | (Category.id == normalize_uuid(category))
+                (Category.slug == category_lower) | 
+                (Category.id == normalize_uuid(category)) |
+                (func.lower(Category.name) == category_lower)
             )
         ).first()
         if cat:
@@ -233,20 +236,30 @@ def list_events(
             Tag, EventTag.tag_id == Tag.id
         ).where(Tag.name.in_(tag_list))
 
-    # Search query (title, description, venue name, venue address, venue postcode) - OMNIBAR
+    # Search query (title, description, venue name, venue address, venue postcode, tags) - OMNIBAR
     if q:
         search_term = f"%{q}%"
+        # Generate slugified version for tag matching (e.g., "Live Music" -> "live-music")
+        search_slug = normalize_tag_name(q)
+        
         # Join with Venue if not already joined
         if not venue_joined:
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)
             venue_joined = True
+        
+        # Join with EventTag and Tag for tag search
+        query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
+        query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
+        
         query = query.where(
             (Event.title.ilike(search_term)) | 
             (Event.description.ilike(search_term)) |
             (Venue.name.ilike(search_term)) |
             (Venue.address.ilike(search_term)) |
             (Venue.formatted_address.ilike(search_term)) |
-            (Venue.postcode.ilike(search_term))
+            (Venue.postcode.ilike(search_term)) |
+            (Tag.name == search_slug) |  # Exact match on slugified tag
+            (Tag.name.ilike(f"%{search_slug}%"))  # Partial match on tag
         )
 
     # Location Search (venue name, address, postcode, event location fields)
