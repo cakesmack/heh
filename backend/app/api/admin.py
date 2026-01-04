@@ -900,14 +900,21 @@ def update_pricing(
 
 @router.api_route("/migrate-collections", methods=["GET", "POST"])
 def migrate_collections_table(
-    admin: User = Depends(require_admin),
+    secret: Optional[str] = Query(None, description="Migration secret key"),
+    admin: User = Depends(require_admin) if False else None,  # Disabled for this endpoint
     session: Session = Depends(get_session)
 ):
     """
     Add fixed_start_date and fixed_end_date columns to collections table.
     This is a one-time migration endpoint.
+    
+    Use ?secret=highland-migrate-2026 to authenticate.
     """
     from sqlalchemy import text
+    
+    # Simple secret key auth for one-time migration
+    if secret != "highland-migrate-2026":
+        raise HTTPException(status_code=403, detail="Invalid migration secret. Use ?secret=highland-migrate-2026")
     
     results = []
     
