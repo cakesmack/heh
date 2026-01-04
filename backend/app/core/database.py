@@ -60,6 +60,17 @@ def run_migrations():
         except Exception as e:
             session.rollback()
             logger.warning(f"Migration note: {e}")
+        
+        # Set banned@test.com to is_active=FALSE
+        try:
+            session.execute(text("""
+                UPDATE users SET is_active = FALSE WHERE email = 'banned@test.com'
+            """))
+            session.commit()
+            logger.info("✅ Database migration: banned@test.com set to inactive")
+        except Exception as e:
+            session.rollback()
+            logger.warning(f"Migration note: {e}")
 
 
 # Run migrations IMMEDIATELY at import time (before any requests)

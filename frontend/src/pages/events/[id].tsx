@@ -42,6 +42,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
   const [imageLightboxOpen, setImageLightboxOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // Only for client-side refetches
   const [bookmarkCount, setBookmarkCount] = useState<number>(0);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   // Fetch bookmark count for social proof
   useEffect(() => {
@@ -230,7 +231,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-white truncate mb-2">{event.title}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-white break-words mb-2">{event.title}</h1>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-stone-400 text-sm">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,9 +306,21 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
               <h2 className="text-2xl font-bold text-gray-900 mb-4">About this event</h2>
 
               {event.description && (
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {event.description}
-                </p>
+                <div className="space-y-2">
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {showFullDescription || event.description.length <= 400
+                      ? event.description
+                      : `${event.description.slice(0, 400)}...`}
+                  </p>
+                  {event.description.length > 400 && (
+                    <button
+                      onClick={() => setShowFullDescription(!showFullDescription)}
+                      className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+                    >
+                      {showFullDescription ? 'Show Less' : 'Show More'}
+                    </button>
+                  )}
+                </div>
               )}
 
               {/* Tags */}

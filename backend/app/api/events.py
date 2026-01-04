@@ -199,8 +199,15 @@ def list_events(
     """
     query = select(Event)
 
-    # Only show published/approved events in public listing
-    query = query.where(Event.status == "published")
+    # Status filter:
+    # - For public listing: only show published events
+    # - For organizer's own events: show published AND pending (so they can see their pending events)
+    if organizer_id:
+        # Organizer can see their own pending + published events
+        query = query.where(Event.status.in_(["published", "pending"]))
+    else:
+        # Public listing - only published
+        query = query.where(Event.status == "published")
 
     # Track joins to avoid duplicates
     venue_joined = False
