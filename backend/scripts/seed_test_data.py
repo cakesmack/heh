@@ -90,7 +90,7 @@ TEST_VENUES = [
     },
     {
         "name": f"{TEST_PREFIX} The Secret Field",
-        "address": None,  # No address, just coords
+        "address": "Outdoor Location, Inverness",  # DB requires address
         "latitude": 57.4650,
         "longitude": -4.2100,
         "postcode": None,
