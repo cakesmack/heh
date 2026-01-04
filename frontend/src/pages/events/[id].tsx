@@ -408,15 +408,37 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                     .filter(v => v.latitude && v.longitude)
                     .map(v => ({ lat: v.latitude!, lng: v.longitude!, title: v.name }));
 
+                  // Get coordinates for directions link
+                  const dirLat = markers.length > 0 ? markers[0].lat : event.latitude;
+                  const dirLng = markers.length > 0 ? markers[0].lng : event.longitude;
+                  const directionUrl = dirLat && dirLng
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${dirLat},${dirLng}`
+                    : null;
+
                   // If we have participating venues with coordinates, show multi-marker map
                   if (markers.length > 0) {
                     return (
-                      <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
-                        <GoogleMiniMap
-                          markers={markers}
-                          height="280px"
-                          interactive={true}
-                        />
+                      <div className="mt-4 space-y-3">
+                        <div className="rounded-xl overflow-hidden border border-gray-100">
+                          <GoogleMiniMap
+                            markers={markers}
+                            height="280px"
+                            interactive={true}
+                          />
+                        </div>
+                        {directionUrl && (
+                          <a
+                            href={directionUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-medium transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            Get Directions
+                          </a>
+                        )}
                       </div>
                     );
                   }
@@ -424,13 +446,29 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                   // Fallback: single location from event coords
                   if (event.latitude && event.longitude) {
                     return (
-                      <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
-                        <GoogleMiniMap
-                          latitude={event.latitude}
-                          longitude={event.longitude}
-                          height="250px"
-                          zoom={14}
-                        />
+                      <div className="mt-4 space-y-3">
+                        <div className="rounded-xl overflow-hidden border border-gray-100">
+                          <GoogleMiniMap
+                            latitude={event.latitude}
+                            longitude={event.longitude}
+                            height="250px"
+                            zoom={14}
+                            interactive={true}
+                          />
+                        </div>
+                        {directionUrl && (
+                          <a
+                            href={directionUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-medium transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            Get Directions
+                          </a>
+                        )}
                       </div>
                     );
                   }
