@@ -18,6 +18,7 @@ from app.models.venue_category import VenueCategory
 from app.models.category import Category
 from app.models.tag import Tag, EventTag, normalize_tag_name
 from app.models.event_participating_venue import EventParticipatingVenue
+from app.models.featured_booking import FeaturedBooking
 from app.schemas.event import (
     EventCreate,
     EventUpdate,
@@ -936,6 +937,15 @@ def delete_event(
         ).all()
         children_deleted = len(children)
         for child in children:
+            # Cleanup dependencies for child
+            child_featured = session.exec(select(FeaturedBooking).where(FeaturedBooking.event_id == child.id)).all()
+            for fb in child_featured:
+                session.delete(fb)
+            
+            child_venues = session.exec(select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == child.id)).all()
+            for pv in child_venues:
+                session.delete(pv)
+
             # Decrement tag usage counts for child
             child_event_tags = session.exec(
                 select(EventTag).where(EventTag.event_id == child.id)
@@ -946,6 +956,15 @@ def delete_event(
                     tag.usage_count -= 1
                 session.delete(et)
             session.delete(child)
+
+    # Cleanup dependencies for main event
+    featured_bookings = session.exec(select(FeaturedBooking).where(FeaturedBooking.event_id == event.id)).all()
+    for fb in featured_bookings:
+        session.delete(fb)
+
+    participating_venues = session.exec(select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == event.id)).all()
+    for pv in participating_venues:
+        session.delete(pv)
 
     # Decrement tag usage counts for main event
     event_tags = session.exec(
