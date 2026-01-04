@@ -13,6 +13,7 @@ import HeroSection from '@/components/home/HeroSection';
 import MagazineGrid from '@/components/home/MagazineGrid';
 import CategoryGrid from '@/components/categories/CategoryGrid';
 import HomeFeedTabs from '@/components/home/HomeFeedTabs';
+import FeaturedVenues from '@/components/home/FeaturedVenues';
 
 
 import DiscoveryBar from '@/components/home/DiscoveryBar';
@@ -222,6 +223,9 @@ export default function HomePage() {
 
       {/* Popular Events Section */}
       <PopularEvents />
+
+      {/* Featured Venues Carousel */}
+      <FeaturedVenues />
 
       {/* Categories Section */}
       <div id="categories">

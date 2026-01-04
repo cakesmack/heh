@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { EventResponse, User } from '@/types';
-import { api } from '@/lib/api';
+import { api, eventsAPI } from '@/lib/api';
 import MagazineGrid from '@/components/home/MagazineGrid';
 import { Spinner } from '@/components/common/Spinner';
 
@@ -11,11 +11,42 @@ interface HomeFeedTabsProps {
 }
 
 export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) {
-    const [activeTab, setActiveTab] = useState<'latest' | 'feed'>('latest');
+    const [activeTab, setActiveTab] = useState<'latest' | 'tonight' | 'feed'>('latest');
     const [feedEvents, setFeedEvents] = useState<EventResponse[]>([]);
+    const [tonightEvents, setTonightEvents] = useState<EventResponse[]>([]);
     const [isLoadingFeed, setIsLoadingFeed] = useState(false);
+    const [isLoadingTonight, setIsLoadingTonight] = useState(false);
     const [hasFetchedFeed, setHasFetchedFeed] = useState(false);
+    const [hasFetchedTonight, setHasFetchedTonight] = useState(false);
 
+    // Fetch Tonight events when tab is clicked
+    useEffect(() => {
+        if (activeTab === 'tonight' && !hasFetchedTonight) {
+            const fetchTonight = async () => {
+                setIsLoadingTonight(true);
+                try {
+                    const today = new Date();
+                    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+                    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
+
+                    const data = await eventsAPI.list({
+                        date_from: startOfDay,
+                        date_to: endOfDay,
+                        limit: 20
+                    });
+                    setTonightEvents(data.events || []);
+                    setHasFetchedTonight(true);
+                } catch (error) {
+                    console.error('Error fetching tonight events:', error);
+                } finally {
+                    setIsLoadingTonight(false);
+                }
+            };
+            fetchTonight();
+        }
+    }, [activeTab, hasFetchedTonight]);
+
+    // Fetch My Feed events when tab is clicked
     useEffect(() => {
         if (activeTab === 'feed' && user && !hasFetchedFeed) {
             const fetchFeed = async () => {
@@ -47,6 +78,15 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                             }`}
                     >
                         Latest Events
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('tonight')}
+                        className={`pb-4 text-lg font-bold transition-colors relative flex items-center ${activeTab === 'tonight'
+                            ? 'text-emerald-900 border-b-2 border-emerald-600'
+                            : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                    >
+                        🌙 Tonight
                     </button>
                     <button
                         onClick={() => setActiveTab('feed')}
@@ -82,6 +122,50 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                             </Link>
                         </div>
                     </>
+                ) : activeTab === 'tonight' ? (
+                    // Tonight Tab Content
+                    <div className="animate-fade-in">
+                        {isLoadingTonight ? (
+                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                                <div className="flex justify-center py-20">
+                                    <Spinner size="lg" />
+                                </div>
+                            </div>
+                        ) : tonightEvents.length === 0 ? (
+                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                                <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <span className="text-3xl">🌙</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Events Tonight</h3>
+                                    <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                                        Check back later or browse our full events list to find something happening soon.
+                                    </p>
+                                    <Link
+                                        href="/events"
+                                        className="inline-block px-6 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                                    >
+                                        Browse Events
+                                    </Link>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <MagazineGrid events={tonightEvents} hideHeader={true} hideFooter={true} />
+                                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 text-center">
+                                    <Link
+                                        href="/events?date=today"
+                                        className="inline-flex items-center text-emerald-600 font-semibold hover:text-emerald-700"
+                                    >
+                                        View All Tonight's Events
+                                        <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                        </svg>
+                                    </Link>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 ) : (
                     // Feed Tab Content
                     <div className="animate-fade-in">

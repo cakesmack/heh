@@ -378,21 +378,31 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                     <h3 className="text-sm font-semibold text-gray-900 mb-3">
                       {event.participating_venues.length} Participating Venue{event.participating_venues.length !== 1 ? 's' : ''}
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {event.participating_venues.map(pv => (
                         <Link
                           key={pv.id}
                           href={`/venues/${pv.id}`}
-                          className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 hover:bg-emerald-50 border border-gray-100 hover:border-emerald-200 transition-colors group"
+                          className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-emerald-50 border border-gray-100 hover:border-emerald-200 transition-all group hover:shadow-md"
                         >
-                          {pv.image_url && (
-                            <img
-                              src={pv.image_url}
-                              alt={pv.name}
-                              className="w-8 h-8 rounded-md object-cover flex-shrink-0"
-                            />
-                          )}
-                          <span className="text-sm text-gray-700 group-hover:text-emerald-700 font-medium truncate">
+                          {/* Venue Thumbnail */}
+                          <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-200 mb-2 group-hover:scale-105 transition-transform">
+                            {pv.image_url ? (
+                              <img
+                                src={pv.image_url}
+                                alt={pv.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+                                <span className="text-white font-bold text-lg">
+                                  {pv.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Venue Name */}
+                          <span className="text-xs text-center text-gray-700 group-hover:text-emerald-700 font-medium line-clamp-2">
                             {pv.name}
                           </span>
                         </Link>

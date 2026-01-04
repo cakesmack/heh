@@ -21,8 +21,8 @@ export default function CategoryCard({ category }: CategoryCardProps) {
                 }}
             />
 
-            {/* Gradient Overlay (Scrim) */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
+            {/* Gradient Overlay (Scrim) - Strong black at bottom for text legibility */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
 
             {/* Content */}
             <div className="absolute bottom-0 left-0 p-6 md:p-8 w-full">

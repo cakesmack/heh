@@ -125,10 +125,10 @@ export default function PopularEvents() {
                                 </div>
                             )}
 
-                            {/* Ranking Number - Large and Overlapping */}
+                            {/* Ranking Number - Subtle Top-Left */}
                             <div
-                                className="absolute -bottom-4 -left-4 text-[12rem] font-black text-white/30 leading-none select-none pointer-events-none italic tracking-tighter drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]"
-                                style={{ WebkitTextStroke: '3px rgba(255,255,255,0.4)' }}
+                                className="absolute top-2 left-2 text-[4rem] font-black text-white/20 leading-none select-none pointer-events-none italic tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.3)]"
+                                style={{ WebkitTextStroke: '2px rgba(255,255,255,0.3)' }}
                             >
                                 {index + 1}
                             </div>
