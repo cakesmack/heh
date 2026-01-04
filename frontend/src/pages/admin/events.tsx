@@ -3,7 +3,7 @@
  * CRUD interface for managing events with search, clickable rows, and full columns
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
@@ -45,11 +45,24 @@ export default function AdminEvents() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
+  const [includePast, setIncludePast] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
+      const filters: any = {
+        limit: 200,
+        q: searchQuery || undefined
+      };
+
+      if (!includePast) {
+        filters.date_from = new Date().toISOString();
+      } else {
+        filters.include_past = true;
+      }
+
       const [eventsRes, categoriesRes] = await Promise.all([
-        eventsAPI.list({ limit: 200, q: searchQuery || undefined }),
+        eventsAPI.list(filters),
         categoriesAPI.list(true),
       ]);
       setEvents(eventsRes.events);
@@ -60,19 +73,15 @@ export default function AdminEvents() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, includePast]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // Debounced search
+  // Debounced fetch
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchData();
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [fetchData]);
 
   // Filter events based on status (client-side for now, search is server-side)
   useEffect(() => {
@@ -80,7 +89,7 @@ export default function AdminEvents() {
 
     // Status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(e => e.status === statusFilter);
+      filtered = filtered.filter(e => e.status?.toUpperCase() === statusFilter);
     }
 
     setFilteredEvents(filtered);
@@ -226,15 +235,22 @@ export default function AdminEvents() {
   };
 
   const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'approved':
-        return <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">Approved</span>;
-      case 'pending':
-        return <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800">Pending</span>;
-      case 'rejected':
-        return <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800">Rejected</span>;
+    if (!status) return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">—</span>;
+
+    const normalizedStatus = status.toUpperCase();
+    switch (normalizedStatus) {
+      case 'PUBLISHED':
+      case 'APPROVED':
+        return <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Published</span>;
+      case 'PENDING':
+      case 'PENDING_REVIEW':
+        return <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 border border-amber-200">Pending</span>;
+      case 'REJECTED':
+        return <span className="px-2 py-0.5 text-xs rounded-full bg-rose-100 text-rose-800 border border-rose-200">Rejected</span>;
+      case 'DRAFT':
+        return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 border border-gray-200">Draft</span>;
       default:
-        return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">—</span>;
+        return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 border border-gray-200">{status}</span>;
     }
   };
 
@@ -262,10 +278,23 @@ export default function AdminEvents() {
               className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">All Status</option>
-              <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
-              <option value="rejected">Rejected</option>
+              <option value="PUBLISHED">Published</option>
+              <option value="PENDING">Pending</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="DRAFT">Draft</option>
             </select>
+            <div className="flex items-center gap-2">
+              <input
+                id="include-past"
+                type="checkbox"
+                checked={includePast}
+                onChange={(e) => setIncludePast(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+              />
+              <label htmlFor="include-past" className="text-sm text-gray-700 select-none cursor-pointer">
+                Include Past Events
+              </label>
+            </div>
             <span className="text-sm text-gray-500">{filteredEvents.length} events</span>
           </div>
           <button
@@ -292,7 +321,6 @@ export default function AdminEvents() {
                 <tr>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Title</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Creator</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Organizer</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Status</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Recurring</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Date</th>
@@ -325,9 +353,6 @@ export default function AdminEvents() {
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {event.organizer_email?.split('@')[0] || '—'}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
-                      {event.organizer_profile_name || '—'}
                     </td>
                     <td className="py-3 px-4">
                       {getStatusBadge(event.status)}

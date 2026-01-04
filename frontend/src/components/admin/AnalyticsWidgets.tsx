@@ -115,10 +115,9 @@ export const ConversionFunnelWidget: React.FC<{ analytics: AdminAnalyticsSummary
 export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesResponse }> = ({ missed }) => {
     const [showAll, setShowAll] = React.useState(false);
 
-    const allGaps = [
-        ...missed.missing_topics.map(t => ({ ...t, type: 'Topic' })),
-        ...missed.missing_locations.map(l => ({ ...l, type: 'Location' }))
-    ].sort((a, b) => b.count - a.count);
+    // Only show Topic gaps, ignore Location gaps as requested
+    const allGaps = missed.missing_topics.map(t => ({ ...t, type: 'Topic' }))
+        .sort((a, b) => b.count - a.count);
 
     const topGaps = allGaps.slice(0, 5);
 
@@ -132,7 +131,7 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
                                 <span className="text-[10px] font-bold text-gray-400 w-4">{i + 1}.</span>
                                 <div className="flex flex-col min-w-0">
                                     <span className="text-xs text-gray-700 truncate font-medium">"{gap.term}"</span>
-                                    <span className="text-[9px] text-gray-400 uppercase tracking-tighter">{gap.type}</span>
+                                    {/* <span className="text-[9px] text-gray-400 uppercase tracking-tighter">{gap.type}</span> */}
                                 </div>
                             </div>
                             <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded">
@@ -173,7 +172,7 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
                             </button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 gap-8">
                                 {/* Topics Section */}
                                 <div>
                                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -193,30 +192,6 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
                                         ))}
                                         {missed.missing_topics.length === 0 && (
                                             <p className="text-sm text-gray-400 italic">No failed topic searches</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Locations Section */}
-                                <div>
-                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        Location Searches ({missed.missing_locations.length})
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {missed.missing_locations.map((gap, i) => (
-                                            <div key={gap.term} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100/50">
-                                                <span className="text-sm text-gray-700 font-medium">"{gap.term}"</span>
-                                                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">
-                                                    {gap.count}×
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {missed.missing_locations.length === 0 && (
-                                            <p className="text-sm text-gray-400 italic">No failed location searches</p>
                                         )}
                                     </div>
                                 </div>
@@ -240,19 +215,23 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
 export const TopContentWidget: React.FC<{ analytics: AdminAnalyticsSummary }> = ({ analytics }) => (
     <StatCard title="Top Content" value={analytics.top_events.length} subtitle="Trending Events">
         <div className="mt-4 space-y-3">
-            {analytics.top_events.slice(0, 5).map((event, i) => (
-                <div key={event.id} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-[10px] font-bold text-gray-400 w-4">{i + 1}.</span>
-                        <span className="text-xs text-gray-700 truncate group-hover:text-emerald-600 transition-colors">
-                            {event.title}
+            {analytics.top_events.length > 0 ? (
+                analytics.top_events.slice(0, 5).map((event, i) => (
+                    <div key={event.id} className="flex items-center justify-between group">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[10px] font-bold text-gray-400 w-4">{i + 1}.</span>
+                            <span className="text-xs text-gray-700 truncate group-hover:text-emerald-600 transition-colors">
+                                {event.title}
+                            </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-400">
+                            {event.views.toLocaleString()}
                         </span>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-400">
-                        {event.views.toLocaleString()}
-                    </span>
-                </div>
-            ))}
+                ))
+            ) : (
+                <p className="text-xs text-gray-400 italic text-center py-4">No data yet</p>
+            )}
         </div>
     </StatCard>
 );

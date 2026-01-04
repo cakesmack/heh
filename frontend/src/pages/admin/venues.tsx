@@ -373,7 +373,11 @@ export default function AdminVenues() {
                         )}
                         <div>
                           <span className="font-medium text-gray-900 block">{venue.name}</span>
-                          <span className="text-xs text-gray-500">{venue.category?.name || 'Unknown'}</span>
+                          {(venue.category?.name || venue.address) && (
+                            <span className="text-xs text-gray-500">
+                              {venue.category?.name || venue.address}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -668,8 +672,17 @@ export default function AdminVenues() {
                   <p className="text-xs text-gray-500">Total Views (30d)</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-gray-900">{viewingStatsVenue?.upcoming_events_count || 0}</p>
+                  <p className="text-xs text-gray-500">Upcoming Events</p>
+                </div>
+                {/* Using top_events length as proxy for now since total_events isn't in summary */}
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
                   <p className="text-2xl font-bold text-gray-900">{venueStats.top_events.length}</p>
                   <p className="text-xs text-gray-500">Active Events</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-gray-900">-</p>
+                  <p className="text-xs text-gray-500">Total Bookmarks</p>
                 </div>
               </div>
 

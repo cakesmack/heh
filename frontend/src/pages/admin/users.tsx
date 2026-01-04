@@ -73,6 +73,23 @@ export default function AdminUsers() {
     }
   };
 
+  const handleToggleBan = async (userId: string, currentStatus: boolean, email: string) => {
+    const action = currentStatus ? 'Ban' : 'Unban';
+    if (!confirm(`Are you sure you want to ${action} user "${email}"?`)) return;
+
+    try {
+      const updated = await adminAPI.updateUser(userId, { is_active: !currentStatus });
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, is_active: updated.is_active } : u))
+      );
+      if (selectedUser?.id === userId) {
+        setSelectedUser({ ...selectedUser, is_active: updated.is_active });
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update user status');
+    }
+  };
+
   const handleDeleteUser = async (userId: string, email: string) => {
     if (!confirm(`Are you sure you want to delete user "${email}"? This action cannot be undone.`)) {
       return;
@@ -217,8 +234,8 @@ export default function AdminUsers() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.has_password
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-orange-100 text-orange-800'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-orange-100 text-orange-800'
                           }`}>
                           {user.has_password ? 'Email' : 'Google'}
                         </span>
@@ -227,9 +244,9 @@ export default function AdminUsers() {
                         {formatDate(user.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {(user as any).is_blocked ? (
+                        {!user.is_active ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            Blocked
+                            Banned
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -346,12 +363,12 @@ export default function AdminUsers() {
                     Trusted Organizer
                   </span>
                 )}
-                {(selectedUser as any).is_blocked && (
+                {!selectedUser.is_active && (
                   <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                    Blocked
+                    Banned
                   </span>
                 )}
-                {!(selectedUser as any).is_blocked && (
+                {selectedUser.is_active && (
                   <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     Active
                   </span>
@@ -392,6 +409,15 @@ export default function AdminUsers() {
                       }`}
                   >
                     {selectedUser.is_trusted_organizer ? 'Remove Trusted' : 'Make Trusted'}
+                  </button>
+                  <button
+                    onClick={() => handleToggleBan(selectedUser.id, selectedUser.is_active, selectedUser.email)}
+                    className={`px-4 py-2 rounded text-sm font-medium ${!selectedUser.is_active
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                      : 'bg-red-100 text-red-700 hover:bg-red-200'
+                      }`}
+                  >
+                    {selectedUser.is_active ? 'Ban User' : 'Unban User'}
                   </button>
                   <button
                     onClick={() => setDetailModalOpen(false)}

@@ -1102,6 +1102,7 @@ export interface AdminUser {
   email: string;
   is_admin: boolean;
   is_trusted_organizer: boolean;
+  is_active: boolean;
   has_password: boolean;  // true = Email login, false = Google login
   created_at: string;
   event_count: number;
@@ -1154,7 +1155,7 @@ export const adminAPI = {
   /**
    * Update user details
    */
-  updateUser: async (userId: string, data: { email?: string; username?: string; display_name?: string; is_admin?: boolean }): Promise<AdminUser> => {
+  updateUser: async (userId: string, data: { email?: string; username?: string; display_name?: string; is_admin?: boolean; is_active?: boolean }): Promise<AdminUser> => {
     return apiFetch<AdminUser>(`/api/admin/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
