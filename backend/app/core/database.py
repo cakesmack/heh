@@ -44,9 +44,26 @@ else:
     )
 
 
+def run_migrations():
+    """Run any pending database migrations."""
+    with Session(engine) as session:
+        # Add is_active column to users table if it doesn't exist
+        try:
+            session.execute(text("""
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE NOT NULL
+            """))
+            session.commit()
+            logger.info("✅ Database migration: is_active column ensured on users table")
+        except Exception as e:
+            session.rollback()
+            logger.warning(f"Migration note: {e}")
+
+
 def create_db_and_tables():
     """Create all database tables defined in SQLModel models."""
     SQLModel.metadata.create_all(engine)
+    # Run pending migrations
+    run_migrations()
 
 
 @retry(
