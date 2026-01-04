@@ -46,6 +46,9 @@ else:
 
 def run_migrations():
     """Run any pending database migrations."""
+    if is_sqlite:
+        return  # Skip migrations for SQLite
+    
     with Session(engine) as session:
         # Add is_active column to users table if it doesn't exist
         try:
@@ -59,11 +62,14 @@ def run_migrations():
             logger.warning(f"Migration note: {e}")
 
 
+# Run migrations IMMEDIATELY at import time (before any requests)
+# This ensures the database schema is ready before FastAPI starts accepting requests
+run_migrations()
+
+
 def create_db_and_tables():
     """Create all database tables defined in SQLModel models."""
     SQLModel.metadata.create_all(engine)
-    # Run pending migrations
-    run_migrations()
 
 
 @retry(
