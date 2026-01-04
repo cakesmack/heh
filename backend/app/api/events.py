@@ -267,6 +267,9 @@ def list_events(
         query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
         query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
         
+        # Join with Category for category name search
+        query = query.outerjoin(Category, Event.category_id == Category.id)
+        
         query = query.where(
             (Event.title.ilike(search_term)) | 
             (Event.description.ilike(search_term)) |
@@ -275,7 +278,9 @@ def list_events(
             (Venue.formatted_address.ilike(search_term)) |
             (Venue.postcode.ilike(search_term)) |
             (Tag.name == search_slug) |  # Exact match on slugified tag
-            (Tag.name.ilike(f"%{search_slug}%"))  # Partial match on tag
+            (Tag.name.ilike(f"%{search_slug}%")) |  # Partial match on tag
+            (Category.name.ilike(search_term)) |  # Match category name
+            (Category.slug.ilike(search_term))  # Match category slug
         )
 
     # Location Search (venue name, address, postcode, event location fields)

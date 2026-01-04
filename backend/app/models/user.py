@@ -49,6 +49,9 @@ class User(SQLModel, table=True):
 
     # Trusted organizer (auto-approve featured bookings)
     is_trusted_organizer: bool = Field(default=False)
+    
+    # Account status (False = banned/inactive)
+    is_active: bool = Field(default=True)
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)

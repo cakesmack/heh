@@ -152,6 +152,13 @@ def login(
             detail="Incorrect email or password"
         )
 
+    # Check if user is active (not banned)
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has been deactivated. Please contact support."
+        )
+
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})
 
@@ -237,6 +244,13 @@ async def google_login(
 
         # Send welcome email
         resend_email_service.send_welcome(user.email, user.display_name)
+
+    # Check if user is active (not banned)
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has been deactivated. Please contact support."
+        )
 
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})

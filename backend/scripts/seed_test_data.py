@@ -65,7 +65,7 @@ TEST_USERS = [
         "is_admin": False,
         "is_trusted_organizer": False,
         "trust_level": 0,
-        # Note: No "is_active" field in User model, but we mark via display_name
+        "is_active": False,  # This user is banned
     },
 ]
 
@@ -121,6 +121,7 @@ def get_or_create_user(session: Session, user_data: dict) -> User:
         is_admin=user_data.get("is_admin", False),
         is_trusted_organizer=user_data.get("is_trusted_organizer", False),
         trust_level=user_data.get("trust_level", 0),
+        is_active=user_data.get("is_active", True),
     )
     session.add(user)
     session.flush()
