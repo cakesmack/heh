@@ -347,7 +347,7 @@ export default function AdminVenues() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Address</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Type</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Manager</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Events</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 text-sm">Actions</th>
@@ -373,12 +373,14 @@ export default function AdminVenues() {
                         )}
                         <div>
                           <span className="font-medium text-gray-900 block">{venue.name}</span>
-                          <span className="text-xs text-gray-500">{venue.category?.name || ''}</span>
+                          <span className="text-xs text-gray-500">{venue.address || ''}</span>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      {venue.address}
+                      <span className="capitalize">
+                        {venue.category?.name || categories.find(c => c.id === venue.category_id)?.name || ''}
+                      </span>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {venue.owner_email ? (

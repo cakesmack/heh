@@ -208,10 +208,11 @@ def search_venues(
     """
     search_term = f"%{q.lower()}%"
 
-    query = select(Venue).where(
+    query = select(Venue).outerjoin(VenueCategory, Venue.category_id == VenueCategory.id).where(
         (Venue.name.ilike(search_term)) |
         (Venue.address.ilike(search_term)) |
-        (Venue.formatted_address.ilike(search_term))
+        (Venue.formatted_address.ilike(search_term)) |
+        (VenueCategory.name.ilike(search_term))
     )
 
     # Additional postcode filter
