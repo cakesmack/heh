@@ -35,6 +35,7 @@ from app.services.notifications import notification_service
 from app.services.resend_email import resend_email_service
 from app.services.recurrence import generate_recurring_instances
 from app.services.moderation import check_is_offensive
+from app.utils.pii import mask_email
 import logging
 
 logger = logging.getLogger(__name__)
@@ -586,11 +587,11 @@ def create_event(
         print(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged for moderation due to offensive content")
     elif is_auto_approved:
         new_event.status = "published"
-        print(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved for user {current_user.email} "
+        logger.info(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved for user_id={current_user.id} "
               f"(admin={current_user.is_admin}, trusted={current_user.is_trusted_organizer}, trust_level={current_user.trust_level})")
     else:
         new_event.status = "pending"
-        print(f"[MODERATION] Event '{new_event.title}' pending for user {current_user.email} "
+        logger.info(f"[MODERATION] Event '{new_event.title}' pending for user_id={current_user.id} "
               f"(trust_level={current_user.trust_level})")
     session.add(new_event)
     session.flush()  # Get the event ID
@@ -639,7 +640,7 @@ def create_event(
                     display_name=current_user.display_name,
                     is_auto_approved=True
                 )
-                logger.info(f"Auto-approval email sent to {current_user.email} for event {new_event.id}")
+                logger.info(f"Auto-approval email sent to {mask_email(current_user.email)} for event {new_event.id}")
                 # No admin notification needed for auto-approved events
             else:
                 # Notify user their event is under review (fallback to notification_service)

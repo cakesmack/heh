@@ -894,55 +894,6 @@ def update_pricing(
     }
 
 
-# ============================================================
-# DATABASE MIGRATIONS (Temporary Admin Endpoints)
-# ============================================================
-
-@router.api_route("/migrate-collections", methods=["GET", "POST"])
-def migrate_collections_table(
-    secret: Optional[str] = Query(None, description="Migration secret key"),
-    admin: User = Depends(require_admin) if False else None,  # Disabled for this endpoint
-    session: Session = Depends(get_session)
-):
-    """
-    Add fixed_start_date and fixed_end_date columns to collections table.
-    This is a one-time migration endpoint.
-    
-    Use ?secret=highland-migrate-2026 to authenticate.
-    """
-    from sqlalchemy import text
-    
-    # Simple secret key auth for one-time migration
-    if secret != "highland-migrate-2026":
-        raise HTTPException(status_code=403, detail="Invalid migration secret. Use ?secret=highland-migrate-2026")
-    
-    results = []
-    
-    try:
-        # Check if columns exist
-        check_query = text("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'collections' 
-            AND column_name IN ('fixed_start_date', 'fixed_end_date')
-        """)
-        existing = [row[0] for row in session.exec(check_query).fetchall()]
-        
-        if 'fixed_start_date' not in existing:
-            session.exec(text("ALTER TABLE collections ADD COLUMN fixed_start_date DATE DEFAULT NULL"))
-            results.append("Added fixed_start_date column")
-        else:
-            results.append("fixed_start_date already exists")
-        
-        if 'fixed_end_date' not in existing:
-            session.exec(text("ALTER TABLE collections ADD COLUMN fixed_end_date DATE DEFAULT NULL"))
-            results.append("Added fixed_end_date column")
-        else:
-            results.append("fixed_end_date already exists")
-        
-        session.commit()
-        
-        return {"success": True, "results": results}
-    except Exception as e:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+# NOTE: Migration endpoints removed for security.
+# Database migrations should be run via CLI scripts in backend/scripts/
+# See: scripts/migrate_collections.py

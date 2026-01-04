@@ -40,7 +40,11 @@ class Promotion(SQLModel, table=True):
     __tablename__ = "promotions"
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
-    venue_id: str = Field(foreign_key="venues.id", index=True)
+    venue_id: str = Field(
+        foreign_key="venues.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "CASCADE"}
+    )
 
     # Promotion details
     title: str = Field(max_length=255)

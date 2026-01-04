@@ -17,8 +17,16 @@ class Bookmark(SQLModel, table=True):
     __tablename__ = "bookmarks"
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
-    user_id: str = Field(foreign_key="users.id", index=True)
-    event_id: str = Field(foreign_key="events.id", index=True)
+    user_id: str = Field(
+        foreign_key="users.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "CASCADE"}
+    )
+    event_id: str = Field(
+        foreign_key="events.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "CASCADE"}
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships

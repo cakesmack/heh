@@ -14,6 +14,7 @@ from app.models.notification import NotificationType
 from app.services.notifications import notification_service
 from app.services.resend_email import resend_email_service
 from app.api.notifications import create_notification
+from app.utils.pii import mask_email
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +169,7 @@ def moderate_event(
                     display_name=event.organizer.display_name,
                     is_auto_approved=False
                 )
-                logger.info(f"Approval email sent to {event.organizer.email} for event {event.id}")
+                logger.info(f"Approval email sent to {mask_email(event.organizer.email)} for event {event.id}")
             elif action == "reject":
                 resend_email_service.send_event_rejected(
                     to_email=event.organizer.email,
@@ -177,7 +178,7 @@ def moderate_event(
                     rejection_reason=moderation.rejection_reason,
                     display_name=event.organizer.display_name
                 )
-                logger.info(f"Rejection email sent to {event.organizer.email} for event {event.id}")
+                logger.info(f"Rejection email sent to {mask_email(event.organizer.email)} for event {event.id}")
         except Exception as e:
             # Log error but don't fail the request - moderation action succeeded
             logger.error(f"Failed to send moderation email for event {event.id}: {e}")

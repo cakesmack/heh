@@ -7,6 +7,7 @@ from typing import Optional
 import resend
 
 from app.core.config import settings
+from app.utils.pii import mask_email
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class ResendEmailService:
             True if sent successfully
         """
         if not self.enabled:
-            logger.info(f"[DRY RUN] Would send welcome email to {to_email}")
+            logger.info(f"[DRY RUN] Would send welcome email to {mask_email(to_email)}")
             return True
 
         name = display_name or "there"
@@ -114,10 +115,10 @@ class ResendEmailService:
                 "subject": "Welcome to the Hub!",
                 "html": html_content,
             })
-            logger.info(f"Welcome email sent to {to_email}, id: {response.get('id')}")
+            logger.info(f"Welcome email sent to {mask_email(to_email)}, id: {response.get('id')}")
             return True
         except Exception as e:
-            logger.error(f"Failed to send welcome email to {to_email}: {e}")
+            logger.error(f"Failed to send welcome email to {mask_email(to_email)}: {e}")
             return False
 
     def send_weekly_digest(
@@ -140,7 +141,7 @@ class ResendEmailService:
             True if sent successfully
         """
         if not self.enabled:
-            logger.info(f"[DRY RUN] Would send weekly digest to {to_email}")
+            logger.info(f"[DRY RUN] Would send weekly digest to {mask_email(to_email)}")
             return True
 
         name = display_name or "there"
@@ -206,10 +207,10 @@ class ResendEmailService:
                 "subject": "Your Weekend in the Highlands",
                 "html": html_content,
             })
-            logger.info(f"Weekly digest sent to {to_email}, id: {response.get('id')}")
+            logger.info(f"Weekly digest sent to {mask_email(to_email)}, id: {response.get('id')}")
             return True
         except Exception as e:
-            logger.error(f"Failed to send weekly digest to {to_email}: {e}")
+            logger.error(f"Failed to send weekly digest to {mask_email(to_email)}: {e}")
             return False
 
     def send_organizer_alert(
@@ -234,7 +235,7 @@ class ResendEmailService:
             True if sent successfully
         """
         if not self.enabled:
-            logger.info(f"[DRY RUN] Would send organizer alert to {to_email}")
+            logger.info(f"[DRY RUN] Would send organizer alert to {mask_email(to_email)}")
             return True
 
         name = display_name or "there"
@@ -291,10 +292,10 @@ class ResendEmailService:
                 "subject": subject,
                 "html": html_content,
             })
-            logger.info(f"Organizer alert sent to {to_email}, id: {response.get('id')}")
+            logger.info(f"Organizer alert sent to {mask_email(to_email)}, id: {response.get('id')}")
             return True
         except Exception as e:
-            logger.error(f"Failed to send organizer alert to {to_email}: {e}")
+            logger.error(f"Failed to send organizer alert to {mask_email(to_email)}: {e}")
             return False
 
 
@@ -320,7 +321,7 @@ class ResendEmailService:
             True if sent successfully
         """
         if not self.enabled:
-            logger.info(f"[DRY RUN] Would send event approved email to {to_email}")
+            logger.info(f"[DRY RUN] Would send event approved email to {mask_email(to_email)}")
             return True
 
         name = display_name or "there"
@@ -381,10 +382,10 @@ class ResendEmailService:
                 "subject": subject,
                 "html": html_content,
             })
-            logger.info(f"Event approved email sent to {to_email} for event {event_id}, id: {response.get('id')}")
+            logger.info(f"Event approved email sent to {mask_email(to_email)} for event {event_id}, id: {response.get('id')}")
             return True
         except Exception as e:
-            logger.error(f"Failed to send event approved email to {to_email}: {e}")
+            logger.error(f"Failed to send event approved email to {mask_email(to_email)}: {e}")
             return False
 
     def send_event_rejected(
@@ -409,7 +410,7 @@ class ResendEmailService:
             True if sent successfully
         """
         if not self.enabled:
-            logger.info(f"[DRY RUN] Would send event rejected email to {to_email}")
+            logger.info(f"[DRY RUN] Would send event rejected email to {mask_email(to_email)}")
             return True
 
         name = display_name or "there"
@@ -473,10 +474,10 @@ class ResendEmailService:
                 "subject": f"Update regarding your event: {event_title}",
                 "html": html_content,
             })
-            logger.info(f"Event rejected email sent to {to_email} for event {event_id}, id: {response.get('id')}")
+            logger.info(f"Event rejected email sent to {mask_email(to_email)} for event {event_id}, id: {response.get('id')}")
             return True
         except Exception as e:
-            logger.error(f"Failed to send event rejected email to {to_email}: {e}")
+            logger.error(f"Failed to send event rejected email to {mask_email(to_email)}: {e}")
             return False
 
 

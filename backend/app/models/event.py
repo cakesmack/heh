@@ -54,14 +54,24 @@ class Event(SQLModel, table=True):
     date_end: datetime = Field(index=True)
 
     # Location
-    venue_id: Optional[str] = Field(default=None, foreign_key="venues.id", index=True)
+    venue_id: Optional[str] = Field(
+        default=None, 
+        foreign_key="venues.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "SET NULL"}
+    )
     location_name: Optional[str] = Field(default=None, max_length=255)
     latitude: Optional[float] = Field(default=None, index=True)
     longitude: Optional[float] = Field(default=None, index=True)
     geohash: Optional[str] = Field(default=None, max_length=12, index=True)
 
     # Classification - Now uses Category table
-    category_id: Optional[str] = Field(default=None, foreign_key="categories.id", index=True)
+    category_id: Optional[str] = Field(
+        default=None, 
+        foreign_key="categories.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "SET NULL"}
+    )
     price: float = Field(default=0.0, ge=0.0)  # 0 = free event
 
     # Featured status (paid promotion)
@@ -71,11 +81,21 @@ class Event(SQLModel, table=True):
     # Moderation
     status: str = Field(default="published", index=True)  # published, pending, rejected, draft
 
-    # Organizer
-    organizer_id: str = Field(foreign_key="users.id", index=True)
+    # Organizer - SET NULL so events survive if user is deleted
+    organizer_id: Optional[str] = Field(
+        default=None,
+        foreign_key="users.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "SET NULL"}
+    )
 
     # Organizer Profile (Group)
-    organizer_profile_id: Optional[str] = Field(default=None, foreign_key="organizers.id", index=True)
+    organizer_profile_id: Optional[str] = Field(
+        default=None, 
+        foreign_key="organizers.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "SET NULL"}
+    )
 
     # Recurring Events
     is_recurring: bool = Field(default=False, index=True)

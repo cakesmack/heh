@@ -54,8 +54,17 @@ class FeaturedBooking(SQLModel, table=True):
     __tablename__ = "featured_bookings"
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
-    event_id: str = Field(foreign_key="events.id", index=True)
-    organizer_id: str = Field(foreign_key="users.id", index=True)
+    event_id: str = Field(
+        foreign_key="events.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "CASCADE"}
+    )
+    organizer_id: Optional[str] = Field(
+        default=None,
+        foreign_key="users.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "SET NULL"}
+    )
 
     slot_type: SlotType = Field(index=True)
     target_id: Optional[str] = Field(default=None, index=True)  # Category ID for CATEGORY_PINNED
