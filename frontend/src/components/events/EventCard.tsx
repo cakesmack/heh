@@ -84,7 +84,7 @@ export function EventCard({ event }: EventCardProps) {
           )}
 
           {/* Title */}
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 break-words">
             {event.title}
           </h3>
 

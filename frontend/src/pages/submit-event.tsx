@@ -178,6 +178,9 @@ export default function SubmitEventPage() {
 
       const newEvent = await api.events.create(eventData);
 
+      // Scroll to top so user sees success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
       if (newEvent.status === 'published') {
         setSuccessMessage({ type: 'published', eventId: newEvent.id });
         setTimeout(() => router.push(`/events/${newEvent.id}`), 2000);
@@ -187,6 +190,8 @@ export default function SubmitEventPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit event.');
+      // Also scroll to top on error so user sees the error message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsLoading(false);
     }

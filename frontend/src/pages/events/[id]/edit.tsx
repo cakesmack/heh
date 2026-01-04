@@ -114,6 +114,12 @@ export default function EditEventPage() {
                     setSelectedTags(eventData.tags.map((t: any) => t.name));
                 }
 
+                // Permission check: only organizer or admin can edit
+                if (user && eventData.organizer_id !== user.id && !user.is_admin) {
+                    router.push('/403');
+                    return;
+                }
+
             } catch (err) {
                 console.error('Failed to load data:', err);
                 setError('Failed to load event data');
@@ -125,7 +131,7 @@ export default function EditEventPage() {
         if (isAuthenticated) {
             fetchData();
         }
-    }, [isAuthenticated, authLoading, id, user]);
+    }, [isAuthenticated, authLoading, id, user, router]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;

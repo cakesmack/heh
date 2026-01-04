@@ -163,23 +163,18 @@ export function BottomNavBar() {
             <span className="text-[10px] font-medium">Map</span>
           </Link>
 
-          {/* Search - Mobile Trigger */}
-          <button
-            onClick={() => {
-              openMobileSearch();
-              if (router.pathname !== '/') {
-                router.push('/');
-              }
-            }}
+          {/* Create Event - Central Prominent Action */}
+          <Link
+            href="/submit-event"
             className="flex flex-col items-center justify-center space-y-1 text-gray-600 hover:text-emerald-600 transition-colors"
           >
-            <div className="bg-emerald-100 p-1.5 rounded-full">
-              <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <div className="bg-emerald-600 p-2 rounded-full shadow-lg -mt-4">
+              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <span className="text-[10px] font-medium">Search</span>
-          </button>
+            <span className="text-[10px] font-medium text-emerald-600">Create</span>
+          </Link>
 
           {/* Venues */}
           <Link
