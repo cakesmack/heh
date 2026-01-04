@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import Column, String, ForeignKey
 
 if TYPE_CHECKING:
     from .venue import Venue
@@ -41,9 +42,7 @@ class Promotion(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
     venue_id: str = Field(
-        foreign_key="venues.id", 
-        index=True,
-        sa_column_kwargs={"ondelete": "CASCADE"}
+        sa_column=Column(String, ForeignKey("venues.id", ondelete="CASCADE"), index=True)
     )
 
     # Promotion details

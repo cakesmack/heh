@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING, List
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import Column, String, ForeignKey
 
 from .tag import EventTag
 from .event_participating_venue import EventParticipatingVenue
@@ -53,24 +54,20 @@ class Event(SQLModel, table=True):
     date_start: datetime = Field(index=True)
     date_end: datetime = Field(index=True)
 
-    # Location
+    # Location - SET NULL so events survive if venue is deleted
     venue_id: Optional[str] = Field(
-        default=None, 
-        foreign_key="venues.id", 
-        index=True,
-        sa_column_kwargs={"ondelete": "SET NULL"}
+        default=None,
+        sa_column=Column(String, ForeignKey("venues.id", ondelete="SET NULL"), index=True, nullable=True)
     )
     location_name: Optional[str] = Field(default=None, max_length=255)
     latitude: Optional[float] = Field(default=None, index=True)
     longitude: Optional[float] = Field(default=None, index=True)
     geohash: Optional[str] = Field(default=None, max_length=12, index=True)
 
-    # Classification - Now uses Category table
+    # Classification - SET NULL so events survive if category is deleted
     category_id: Optional[str] = Field(
-        default=None, 
-        foreign_key="categories.id", 
-        index=True,
-        sa_column_kwargs={"ondelete": "SET NULL"}
+        default=None,
+        sa_column=Column(String, ForeignKey("categories.id", ondelete="SET NULL"), index=True, nullable=True)
     )
     price: float = Field(default=0.0, ge=0.0)  # 0 = free event
 
@@ -84,17 +81,13 @@ class Event(SQLModel, table=True):
     # Organizer - SET NULL so events survive if user is deleted
     organizer_id: Optional[str] = Field(
         default=None,
-        foreign_key="users.id", 
-        index=True,
-        sa_column_kwargs={"ondelete": "SET NULL"}
+        sa_column=Column(String, ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
     )
 
-    # Organizer Profile (Group)
+    # Organizer Profile (Group) - SET NULL so events survive if group is deleted
     organizer_profile_id: Optional[str] = Field(
-        default=None, 
-        foreign_key="organizers.id", 
-        index=True,
-        sa_column_kwargs={"ondelete": "SET NULL"}
+        default=None,
+        sa_column=Column(String, ForeignKey("organizers.id", ondelete="SET NULL"), index=True, nullable=True)
     )
 
     # Recurring Events
