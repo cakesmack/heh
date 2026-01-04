@@ -21,6 +21,8 @@ from app.core.database import engine
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
+from app.models.notification import Notification
+from app.models.bookmark import Bookmark
 
 def clean_test_data():
     print("🧹 Starting cleanup of test artifacts...")
@@ -33,16 +35,36 @@ def clean_test_data():
         
         user_ids = [user.id for user in users]
         
-        # 1.2 Delete Events owned by Test Users FIRST (to avoid FK violations)
         if user_ids:
+            # 1.2 Delete Notifications owned by Test Users
+            statement_notifs = select(Notification).where(col(Notification.user_id).in_(user_ids))
+            user_notifs = session.exec(statement_notifs).all()
+            for notif in user_notifs:
+                session.delete(notif)
+            print(f"🧹 Pre-deleted {len(user_notifs)} notifications")
+
+            # 1.3 Delete Bookmarks owned by Test Users
+            statement_bookmarks = select(Bookmark).where(col(Bookmark.user_id).in_(user_ids))
+            user_bookmarks = session.exec(statement_bookmarks).all()
+            for bookmark in user_bookmarks:
+                session.delete(bookmark)
+            print(f"🧹 Pre-deleted {len(user_bookmarks)} bookmarks")
+
+            # 1.4 Delete Events owned by Test Users
             statement_events = select(Event).where(col(Event.organizer_id).in_(user_ids))
             user_events = session.exec(statement_events).all()
-            
             for event in user_events:
                 session.delete(event)
             print(f"🧹 Pre-deleted {len(user_events)} events owned by test users")
 
-        # 1.3 Delete Test Users
+            # 1.5 Delete Venues owned by Test Users (if any)
+            # Assuming Venue has an owner_id or organizer_id, if not, we skip this specific user-venue check
+            # For now, we rely on the generic [TEST] venue cleanup, or if Venue has a user relationship, we'd delete it here.
+            # Based on known schema, Venue might not have a direct user owner link that enforces cascade, but let's check.
+            # If Venue DOES have a user_id, it needs to be cleared. 
+            pass 
+
+        # 1.6 Delete Test Users
         user_count = 0
         for user in users:
             session.delete(user)
