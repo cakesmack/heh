@@ -898,7 +898,7 @@ def update_pricing(
 # DATABASE MIGRATIONS (Temporary Admin Endpoints)
 # ============================================================
 
-@router.post("/migrate-collections")
+@router.api_route("/migrate-collections", methods=["GET", "POST"])
 def migrate_collections_table(
     admin: User = Depends(require_admin),
     session: Session = Depends(get_session)
