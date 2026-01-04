@@ -473,7 +473,7 @@ export default function EditEventPage() {
                         {/* Ticket URL */}
                         <div>
                             <label htmlFor="ticket_url" className="block text-sm font-medium text-gray-700 mb-2">
-                                Ticket URL
+                                Ticket Link (Skiddle, Eventbrite, etc.)
                             </label>
                             <Input
                                 id="ticket_url"
@@ -481,10 +481,10 @@ export default function EditEventPage() {
                                 type="url"
                                 value={formData.ticket_url}
                                 onChange={handleChange}
-                                placeholder="https://example.com/tickets"
+                                placeholder="https://www.skiddle.com/your-event or https://www.eventbrite.com/..."
                                 disabled={isLoading}
                             />
-                            <p className="mt-1 text-sm text-gray-500">Link where people can purchase tickets</p>
+                            <p className="mt-1 text-sm text-gray-500">Paste a link where attendees can buy tickets</p>
                         </div>
 
                         {/* Age Restriction */}

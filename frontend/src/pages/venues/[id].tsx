@@ -283,12 +283,15 @@ export default function VenueDetailPage() {
               >
                 Events ({events.length})
               </button>
-              <button
-                onClick={() => setActiveTab('promotions')}
-                className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'promotions' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
-              >
-                Promotions ({promotions.length})
-              </button>
+              {/* HIDDEN FOR ALPHA - Promotions feature not ready */}
+              {false && (
+                <button
+                  onClick={() => setActiveTab('promotions')}
+                  className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'promotions' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
+                >
+                  Promotions ({promotions.length})
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('about')}
                 className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'about' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
@@ -323,7 +326,8 @@ export default function VenueDetailPage() {
                 </div>
               )}
 
-              {activeTab === 'promotions' && (
+              {/* HIDDEN FOR ALPHA - Promotions feature not ready */}
+              {false && activeTab === 'promotions' && (
                 <div className="space-y-6">
                   {promotions.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
