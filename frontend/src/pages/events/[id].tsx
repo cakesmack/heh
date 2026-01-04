@@ -336,9 +336,15 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
 
             {/* Event Location Card */}
             <Card>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Location</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                {/* Show custom location name for headless events, otherwise "Location" */}
+                {!event.venue_id && event.location_name
+                  ? event.location_name
+                  : 'Location'}
+              </h2>
               <div className="space-y-4">
-                {event.venue_name && (
+                {/* Primary Venue (if exists) */}
+                {event.venue_name && event.venue_id && (
                   <div className="flex items-start">
                     <svg className="w-5 h-5 text-gray-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -346,39 +352,78 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                     </svg>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{event.venue_name}</p>
-                      {event.venue_id && (
-                        <Link href={`/venues/${event.venue_id}`} className="text-sm text-emerald-600 hover:underline">
-                          View venue details
-                        </Link>
-                      )}
+                      <Link href={`/venues/${event.venue_id}`} className="text-sm text-emerald-600 hover:underline">
+                        View venue details
+                      </Link>
                     </div>
                   </div>
                 )}
 
                 {/* Participating Venues */}
                 {event.participating_venues && event.participating_venues.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Participating Venues</h3>
+                  <div className={event.venue_id ? "mt-4 pt-4 border-t border-gray-100" : ""}>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                      {event.participating_venues.length} Participating Venue{event.participating_venues.length !== 1 ? 's' : ''}
+                    </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {event.participating_venues.map(pv => (
-                        <Link key={pv.id} href={`/venues/${pv.id}`} className="flex items-center p-2 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-colors group">
-                          <span className="text-sm text-gray-700 group-hover:text-emerald-700 font-medium truncate">{pv.name}</span>
+                        <Link
+                          key={pv.id}
+                          href={`/venues/${pv.id}`}
+                          className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 hover:bg-emerald-50 border border-gray-100 hover:border-emerald-200 transition-colors group"
+                        >
+                          {pv.image_url && (
+                            <img
+                              src={pv.image_url}
+                              alt={pv.name}
+                              className="w-8 h-8 rounded-md object-cover flex-shrink-0"
+                            />
+                          )}
+                          <span className="text-sm text-gray-700 group-hover:text-emerald-700 font-medium truncate">
+                            {pv.name}
+                          </span>
                         </Link>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {event.latitude && event.longitude && (
-                  <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
-                    <GoogleMiniMap
-                      latitude={event.latitude}
-                      longitude={event.longitude}
-                      height="250px"
-                      zoom={14}
-                    />
-                  </div>
-                )}
+                {/* Map: Show all venue markers */}
+                {(() => {
+                  // Build markers array from participating venues
+                  const markers = (event.participating_venues || [])
+                    .filter(v => v.latitude && v.longitude)
+                    .map(v => ({ lat: v.latitude!, lng: v.longitude!, title: v.name }));
+
+                  // If we have participating venues with coordinates, show multi-marker map
+                  if (markers.length > 0) {
+                    return (
+                      <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
+                        <GoogleMiniMap
+                          markers={markers}
+                          height="280px"
+                          interactive={true}
+                        />
+                      </div>
+                    );
+                  }
+
+                  // Fallback: single location from event coords
+                  if (event.latitude && event.longitude) {
+                    return (
+                      <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
+                        <GoogleMiniMap
+                          latitude={event.latitude}
+                          longitude={event.longitude}
+                          height="250px"
+                          zoom={14}
+                        />
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()}
               </div>
             </Card>
           </div>

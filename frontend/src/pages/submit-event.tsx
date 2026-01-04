@@ -142,8 +142,14 @@ export default function SubmitEventPage() {
       if (locationMode === 'venue' && !formData.venue_id) {
         throw new Error('Please select a venue');
       }
-      if (locationMode === 'custom' && !formData.location_name) {
-        throw new Error('Please enter a location name');
+      if (locationMode === 'custom') {
+        if (!formData.location_name) {
+          throw new Error('Please enter a location name');
+        }
+        // For headless events, require at least one participating venue
+        if (participatingVenues.length === 0) {
+          throw new Error('Please add at least one participating venue for custom location events');
+        }
       }
       if (!formData.category_id) throw new Error('Please select a category');
       if (new Date(formData.date_end) <= new Date(formData.date_start)) throw new Error('End date must be after start date');
