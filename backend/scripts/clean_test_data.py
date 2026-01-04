@@ -26,20 +26,29 @@ def clean_test_data():
     print("🧹 Starting cleanup of test artifacts...")
     
     with Session(engine) as session:
-        # 1. Delete Test Users
-        # test_emails = ['trusted@test.com', 'newbie@test.com', 'banned@test.com']
-        # Note: Using explicit list to avoid accidental mass deletion
+        # 1.1 Find Test Users
         test_emails = ['trusted@test.com', 'newbie@test.com', 'banned@test.com']
-        
         statement = select(User).where(col(User.email).in_(test_emails))
         users = session.exec(statement).all()
         
+        user_ids = [user.id for user in users]
+        
+        # 1.2 Delete Events owned by Test Users FIRST (to avoid FK violations)
+        if user_ids:
+            statement_events = select(Event).where(col(Event.organizer_id).in_(user_ids))
+            user_events = session.exec(statement_events).all()
+            
+            for event in user_events:
+                session.delete(event)
+            print(f"🧹 Pre-deleted {len(user_events)} events owned by test users")
+
+        # 1.3 Delete Test Users
         user_count = 0
         for user in users:
             session.delete(user)
             user_count += 1
             
-        # 2. Delete Test Events
+        # 2. Delete REMAINING Test Events (by title)
         statement = select(Event).where(col(Event.title).startswith("[TEST]"))
         events = session.exec(statement).all()
         
