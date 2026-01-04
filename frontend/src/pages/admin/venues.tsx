@@ -373,11 +373,7 @@ export default function AdminVenues() {
                         )}
                         <div>
                           <span className="font-medium text-gray-900 block">{venue.name}</span>
-                          {(venue.category?.name || venue.address) && (
-                            <span className="text-xs text-gray-500">
-                              {venue.category?.name || venue.address}
-                            </span>
-                          )}
+                          <span className="text-xs text-gray-500">{venue.category?.name || ''}</span>
                         </div>
                       </div>
                     </td>

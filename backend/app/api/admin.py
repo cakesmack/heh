@@ -60,6 +60,7 @@ class AdminUserResponse(BaseModel):
     email: str
     is_admin: bool
     is_trusted_organizer: bool
+    is_active: bool
     has_password: bool  # True = Email login, False = Google login
     created_at: datetime
     event_count: int
@@ -179,6 +180,7 @@ def list_users(
             email=user.email,
             is_admin=user.is_admin,
             is_trusted_organizer=user.is_trusted_organizer,
+            is_active=user.is_active,
             has_password=user.password_hash is not None,
             created_at=user.created_at,
             event_count=event_count,
@@ -225,6 +227,7 @@ def get_user(
         email=user.email,
         is_admin=user.is_admin,
         is_trusted_organizer=user.is_trusted_organizer,
+        is_active=user.is_active,
         has_password=user.password_hash is not None,
         created_at=user.created_at,
         event_count=event_count,
@@ -276,6 +279,7 @@ def toggle_user_admin(
         email=user.email,
         is_admin=user.is_admin,
         is_trusted_organizer=user.is_trusted_organizer,
+        is_active=user.is_active,
         has_password=user.password_hash is not None,
         created_at=user.created_at,
         event_count=event_count,
@@ -289,6 +293,7 @@ class AdminUserUpdate(BaseModel):
     username: Optional[str] = None
     display_name: Optional[str] = None
     is_admin: Optional[bool] = None
+    is_active: Optional[bool] = None
 
 
 @router.put("/users/{user_id}", response_model=AdminUserResponse)
@@ -336,6 +341,9 @@ def update_user(
         id=str(user.id),
         email=user.email,
         is_admin=user.is_admin,
+        is_trusted_organizer=user.is_trusted_organizer,
+        is_active=user.is_active,
+        has_password=user.password_hash is not None,
         created_at=user.created_at,
         event_count=event_count,
         checkin_count=checkin_count,

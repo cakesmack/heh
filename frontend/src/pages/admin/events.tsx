@@ -55,11 +55,11 @@ export default function AdminEvents() {
         q: searchQuery || undefined
       };
 
-      if (!includePast) {
-        filters.date_from = new Date().toISOString();
-      } else {
+      if (includePast) {
+        filters.date_from = new Date('2000-01-01').toISOString();
         filters.include_past = true;
       }
+      // If !includePast, we send nothing. Backend defaults to future events + recurrence deduplication.
 
       const [eventsRes, categoriesRes] = await Promise.all([
         eventsAPI.list(filters),
