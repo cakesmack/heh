@@ -62,6 +62,11 @@ class EventUpdate(BaseModel):
     organizer_profile_id: Optional[UUID] = None
     recurrence_rule: Optional[str] = Field(None, max_length=500)
     is_recurring: Optional[bool] = None
+    # Custom Location (Phase 3)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    # Participating Venues (Phase 3)
+    participating_venue_ids: Optional[List[UUID]] = Field(None, description="List of IDs for participating venues")
 
 
 class EventResponse(BaseModel):

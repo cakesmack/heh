@@ -800,8 +800,8 @@ def update_event(
             detail="Not authorized to update this event"
         )
 
-    # Update fields
-    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags"})
+    # Update fields (exclude tags and participating_venue_ids for special handling)
+    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids"})
 
     # Validate category if being updated
     if "category_id" in update_data:
@@ -818,18 +818,46 @@ def update_event(
             value = normalize_uuid(value)
         setattr(event, field, value)
 
-    # Update geohash if venue changed
+    # Update geohash based on location source
     if "venue_id" in update_data and update_data["venue_id"]:
-        venue = session.get(Venue, event.venue_id)
+        # Venue selected - use venue coordinates
+        venue = session.get(Venue, normalize_uuid(update_data["venue_id"]))
         if venue:
             event.latitude = venue.latitude
             event.longitude = venue.longitude
             event.geohash = calculate_geohash(venue.latitude, venue.longitude)
     elif "venue_id" in update_data and update_data["venue_id"] is None:
-        # Venue removed, clear coordinates unless we implement manual location geocoding later
-        event.latitude = None
-        event.longitude = None
-        event.geohash = None
+        # Venue removed - check if manual lat/lng provided
+        if "latitude" in update_data and "longitude" in update_data:
+            # Manual location provided - keep the coords and recalculate geohash
+            if event.latitude and event.longitude:
+                event.geohash = calculate_geohash(event.latitude, event.longitude)
+            else:
+                event.geohash = None
+        else:
+            # No manual location - clear coordinates
+            event.latitude = None
+            event.longitude = None
+            event.geohash = None
+
+    # Handle participating venues update
+    if event_data.participating_venue_ids is not None:
+        # Clear existing participating venues
+        session.exec(
+            select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == event.id)
+        )
+        existing_links = session.exec(
+            select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == event.id)
+        ).all()
+        for link in existing_links:
+            session.delete(link)
+        
+        # Add new participating venues
+        for venue_id in event_data.participating_venue_ids:
+            venue = session.get(Venue, normalize_uuid(str(venue_id)))
+            if venue:
+                link = EventParticipatingVenue(event_id=event.id, venue_id=venue.id)
+                session.add(link)
 
     # Handle tags update
     if event_data.tags is not None:

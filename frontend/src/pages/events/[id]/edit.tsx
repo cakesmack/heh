@@ -12,6 +12,7 @@ import ImageUpload from '@/components/common/ImageUpload';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import TagInput from '@/components/tags/TagInput';
+import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 
 export default function EditEventPage() {
@@ -25,6 +26,8 @@ export default function EditEventPage() {
         category_id: '',
         venue_id: '',
         location_name: '',
+        latitude: 57.4778,  // Default to Inverness
+        longitude: -4.2247,
         date_start: '',
         date_end: '',
         price: '',
@@ -41,6 +44,7 @@ export default function EditEventPage() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [organizers, setOrganizers] = useState<Organizer[]>([]);
     const [selectedVenue, setSelectedVenue] = useState<VenueResponse | null>(null);
+    const [participatingVenues, setParticipatingVenues] = useState<VenueResponse[]>([]);
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -81,6 +85,8 @@ export default function EditEventPage() {
                     category_id: eventData.category?.id || '',
                     venue_id: eventData.venue_id || '',
                     location_name: eventData.location_name || '',
+                    latitude: eventData.latitude || 57.4778,
+                    longitude: eventData.longitude || -4.2247,
                     date_start: new Date(eventData.date_start).toISOString().slice(0, 16),
                     date_end: new Date(eventData.date_end).toISOString().slice(0, 16),
                     price: eventData.price.toString(),
@@ -94,6 +100,12 @@ export default function EditEventPage() {
                     recurrence_end_date: '',
                 });
 
+                // Hydrate participating venues
+                if (eventData.participating_venues && eventData.participating_venues.length > 0) {
+                    setParticipatingVenues(eventData.participating_venues);
+                }
+
+                // Set manual location mode if event has no venue but has location_name
                 if (eventData.location_name && !eventData.venue_id) {
                     setUseManualLocation(true);
                 }
@@ -155,13 +167,11 @@ export default function EditEventPage() {
                 throw new Error('End date must be after start date');
             }
 
-            // Convert form data to API format
-            const eventData = {
+            // Build payload - CRITICAL: send null (not undefined) when clearing venue_id
+            const eventData: Record<string, any> = {
                 title: formData.title,
                 description: formData.description || undefined,
                 category_id: formData.category_id,
-                venue_id: useManualLocation ? undefined : formData.venue_id,
-                location_name: useManualLocation ? formData.location_name : undefined,
                 date_start: new Date(formData.date_start).toISOString(),
                 date_end: new Date(formData.date_end).toISOString(),
                 price: parseFloat(formData.price),
@@ -171,7 +181,23 @@ export default function EditEventPage() {
                 tags: selectedTags.length > 0 ? selectedTags : undefined,
                 organizer_profile_id: formData.organizer_profile_id || undefined,
                 is_recurring: formData.is_recurring,
+                participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined,
             };
+
+            // Handle venue/location based on mode
+            if (useManualLocation) {
+                eventData.venue_id = null; // Explicitly null to clear the venue
+                eventData.location_name = formData.location_name;
+                eventData.latitude = formData.latitude;
+                eventData.longitude = formData.longitude;
+            } else {
+                eventData.venue_id = formData.venue_id;
+                eventData.location_name = undefined;
+                eventData.latitude = undefined;
+                eventData.longitude = undefined;
+            }
+
+            console.log('Submitting event update:', eventData); // Debug log
 
             await api.events.update(id as string, eventData);
 
@@ -375,6 +401,22 @@ export default function EditEventPage() {
                                     </p>
                                 </>
                             )}
+                        </div>
+
+                        {/* Participating Venues (Multi-Venue Events) */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Participating Venues
+                                <span className="text-gray-400 font-normal ml-1">(Optional)</span>
+                            </label>
+                            <p className="text-sm text-gray-500 mb-3">
+                                For multi-venue events like festivals or bar crawls, add all participating venues here.
+                            </p>
+                            <MultiVenueSelector
+                                selectedVenues={participatingVenues}
+                                onChange={setParticipatingVenues}
+                                disabled={isLoading}
+                            />
                         </div>
 
                         {/* Date & Time */}
