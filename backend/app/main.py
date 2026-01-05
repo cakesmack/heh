@@ -35,6 +35,28 @@ async def lifespan(app: FastAPI):
 
     # Create database tables
     SQLModel.metadata.create_all(engine)
+    
+    # Run pending migrations (add missing columns to existing tables)
+    try:
+        from sqlalchemy import text
+        from app.core.database import get_session
+        with engine.connect() as conn:
+            # Add venue contact fields if they don't exist
+            conn.execute(text("""
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='email') THEN
+                        ALTER TABLE venues ADD COLUMN email VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='opening_hours') THEN
+                        ALTER TABLE venues ADD COLUMN opening_hours VARCHAR(500);
+                    END IF;
+                END $$;
+            """))
+            conn.commit()
+            logger.info("Migrations applied successfully")
+    except Exception as e:
+        logger.warning(f"Migration check failed (may be SQLite): {e}")
 
     yield
 
