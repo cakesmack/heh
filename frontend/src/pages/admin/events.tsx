@@ -46,6 +46,8 @@ export default function AdminEvents() {
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const [includePast, setIncludePast] = useState(false);
+  const [cloneSource, setCloneSource] = useState<EventResponse | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -149,6 +151,32 @@ export default function AdminEvents() {
     setModalOpen(true);
   };
 
+  const openCloneModal = (event: EventResponse, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingEvent(null);
+    setCloneSource(event);
+    setSelectedVenue(null);
+    setFormData({
+      title: event.title,
+      description: event.description || '',
+      date_start: '',  // Force user to pick new dates
+      date_end: '',
+      venue_id: event.venue_id || '',
+      location_name: event.location_name || '',
+      category_id: event.category_id || '',
+      price: event.price,
+      featured: false,
+      image_url: event.image_url || '',
+      ticket_url: event.ticket_url || '',
+      age_restriction: event.age_restriction || '',
+    });
+    setUseManualLocation(!event.venue_id && !!event.location_name);
+    setError(null);
+    setDateError(null);
+    setSuccessMessage(`Data cloned from "${event.title}". Please select a new date.`);
+    setModalOpen(true);
+  };
+
   const handleRowClick = (event: EventResponse) => {
     window.open(`/events/${event.id}`, '_blank');
   };
@@ -215,6 +243,52 @@ export default function AdminEvents() {
       }
       setModalOpen(false);
       fetchData();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save event');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAndAddAnother = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateDates()) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const payload = {
+        title: formData.title,
+        description: formData.description || undefined,
+        date_start: new Date(formData.date_start).toISOString(),
+        date_end: new Date(formData.date_end).toISOString(),
+        venue_id: useManualLocation ? undefined : formData.venue_id,
+        location_name: useManualLocation ? formData.location_name : undefined,
+        category_id: formData.category_id,
+        price: formData.price,
+        featured: formData.featured,
+        image_url: formData.image_url || undefined,
+        ticket_url: formData.ticket_url || undefined,
+        age_restriction: formData.age_restriction || undefined,
+      };
+
+      await eventsAPI.create(payload);
+
+      // Keep form state but clear dates for next entry
+      setFormData(prev => ({
+        ...prev,
+        date_start: '',
+        date_end: '',
+      }));
+      setSuccessMessage('Event saved! Pick the next date.');
+      fetchData();
+
+      // Scroll to top of form
+      document.getElementById('event-form-top')?.scrollIntoView({ behavior: 'smooth' });
     } catch (err: any) {
       setError(err.message || 'Failed to save event');
     } finally {
@@ -375,6 +449,15 @@ export default function AdminEvents() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
+                          onClick={(e) => openCloneModal(event, e)}
+                          className="text-xs text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded hover:bg-indigo-50"
+                          title="Clone event"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
                           onClick={(e) => openEditModal(event, e)}
                           className="text-xs text-gray-600 hover:text-emerald-600 px-2 py-1 rounded hover:bg-gray-100"
                         >
@@ -402,6 +485,15 @@ export default function AdminEvents() {
           size="lg"
         >
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div id="event-form-top"></div>
+            {successMessage && (
+              <div className="p-3 bg-emerald-50 text-emerald-700 rounded-lg text-sm flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {successMessage}
+              </div>
+            )}
             {error && (
               <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
                 {error}
@@ -571,11 +663,25 @@ export default function AdminEvents() {
             <div className="flex justify-end gap-3 pt-4 border-t">
               <button
                 type="button"
-                onClick={() => setModalOpen(false)}
+                onClick={() => {
+                  setModalOpen(false);
+                  setCloneSource(null);
+                  setSuccessMessage(null);
+                }}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Cancel
               </button>
+              {!editingEvent && (
+                <button
+                  type="button"
+                  onClick={handleSaveAndAddAnother}
+                  disabled={saving || uploading || !!dateError || !formData.date_start || !formData.date_end}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Saving...' : 'Save & Add Another'}
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={saving || uploading || !!dateError}
