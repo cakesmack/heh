@@ -61,7 +61,7 @@ export default function App({ Component, pageProps }: AppProps) {
   // Wrap with Google Maps APIProvider if key is available
   if (GOOGLE_MAPS_KEY) {
     wrappedContent = (
-      <APIProvider apiKey={GOOGLE_MAPS_KEY}>
+      <APIProvider apiKey={GOOGLE_MAPS_KEY} libraries={['places']}>
         {wrappedContent}
       </APIProvider>
     );

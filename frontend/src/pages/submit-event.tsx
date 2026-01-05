@@ -23,6 +23,7 @@ import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 // ... (imports will be updated separately or by context)
 import LocationPickerMap from '@/components/maps/LocationPickerMap';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
+import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
 
 export default function SubmitEventPage() {
   const router = useRouter();
@@ -98,9 +99,23 @@ export default function SubmitEventPage() {
   }, [user]);
 
   const handleVenueChange = (venueId: string, venue: VenueResponse | null) => {
-    setFormData(prev => ({ ...prev, venue_id: venueId }));
     setSelectedVenue(venue);
+    setFormData(prev => ({ ...prev, venue_id: venueId }));
   };
+
+  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
+    if (place.geometry?.location) {
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      setFormData(prev => ({
+        ...prev,
+        location_name: place.name || place.formatted_address || '',
+        latitude: lat,
+        longitude: lng,
+      }));
+    }
+  };
+
 
   const handleLocationChange = (lat: number, lng: number) => {
     setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
@@ -147,10 +162,6 @@ export default function SubmitEventPage() {
       if (locationMode === 'custom') {
         if (!formData.location_name) {
           throw new Error('Please enter a location name');
-        }
-        // For headless events, require at least one participating venue
-        if (participatingVenues.length === 0) {
-          throw new Error('Please add at least one participating venue for custom location events');
         }
       }
       if (!formData.category_id) throw new Error('Please select a category');
@@ -316,7 +327,12 @@ export default function SubmitEventPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Location Name *</label>
-                    <Input name="location_name" required value={formData.location_name} onChange={handleChange} placeholder="e.g. Belladrum Estate, High Street, etc." />
+                    <GooglePlacesAutocomplete
+                      placeholder="e.g. Belladrum Estate, High Street, etc."
+                      defaultValue={formData.location_name}
+                      onPlaceSelect={handlePlaceSelect}
+                      required
+                    />
                   </div>
 
                   <div>
