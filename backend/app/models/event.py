@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .tag import Tag
     from .bookmark import Bookmark
     from .organizer import Organizer
+    from .showtime import EventShowtime
 
 
 class Event(SQLModel, table=True):
@@ -120,3 +121,4 @@ class Event(SQLModel, table=True):
     category_rel: Optional["Category"] = Relationship(back_populates="events")
     tags: List["Tag"] = Relationship(back_populates="events", link_model=EventTag)
     bookmarks: List["Bookmark"] = Relationship(back_populates="event")
+    showtimes: List["EventShowtime"] = Relationship(back_populates="event")

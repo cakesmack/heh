@@ -19,6 +19,7 @@ from app.models.category import Category
 from app.models.tag import Tag, EventTag, normalize_tag_name
 from app.models.event_participating_venue import EventParticipatingVenue
 from app.models.featured_booking import FeaturedBooking
+from app.models.showtime import EventShowtime
 from app.schemas.event import (
     EventCreate,
     EventUpdate,
@@ -629,6 +630,18 @@ def create_event(
                 )
                 session.add(p_venue_link)
 
+    # Handle showtimes
+    if event_data.showtimes:
+        for showtime_data in event_data.showtimes:
+            showtime = EventShowtime(
+                event_id=new_event.id,
+                start_time=showtime_data.start_time,
+                end_time=showtime_data.end_time,
+                ticket_url=showtime_data.ticket_url,
+                notes=showtime_data.notes
+            )
+            session.add(showtime)
+
     session.commit()
     session.refresh(new_event)
 
@@ -892,6 +905,26 @@ def update_event(
                 event_tag = EventTag(event_id=event.id, tag_id=tag.id)
                 session.add(event_tag)
                 tag.usage_count += 1
+
+    # Handle showtimes update
+    if event_data.showtimes is not None:
+        # Delete existing showtimes
+        existing_showtimes = session.exec(
+            select(EventShowtime).where(EventShowtime.event_id == event.id)
+        ).all()
+        for st in existing_showtimes:
+            session.delete(st)
+        
+        # Add new showtimes
+        for showtime_data in event_data.showtimes:
+            showtime = EventShowtime(
+                event_id=event.id,
+                start_time=showtime_data.start_time,
+                end_time=showtime_data.end_time,
+                ticket_url=showtime_data.ticket_url,
+                notes=showtime_data.notes
+            )
+            session.add(showtime)
 
     event.updated_at = datetime.utcnow()
 

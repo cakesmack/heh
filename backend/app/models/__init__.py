@@ -28,6 +28,7 @@ from .report import Report
 from .notification import Notification, NotificationType
 from .featured_booking import FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
 from .slot_pricing import SlotPricing, DEFAULT_PRICING
+from .showtime import EventShowtime
 
 __all__ = [
     # User
@@ -86,4 +87,6 @@ __all__ = [
     # Slot Pricing
     "SlotPricing",
     "DEFAULT_PRICING",
+    # Showtimes
+    "EventShowtime",
 ]

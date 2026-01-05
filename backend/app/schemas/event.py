@@ -13,6 +13,27 @@ from app.schemas.tag import TagResponse
 from app.schemas.venue import VenueResponse
 
 
+class ShowtimeCreate(BaseModel):
+    """Schema for creating a showtime."""
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    ticket_url: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=255)
+
+
+class ShowtimeResponse(BaseModel):
+    """Schema for showtime response."""
+    id: int
+    event_id: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    ticket_url: Optional[str] = None
+    notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class EventCreate(BaseModel):
     """Schema for creating a new event."""
     title: str = Field(min_length=1, max_length=255)
@@ -42,6 +63,8 @@ class EventCreate(BaseModel):
     longitude: Optional[float] = None
     # Participating Venues (Phase 3)
     participating_venue_ids: Optional[List[UUID]] = Field(None, description="List of IDs for other participating venues")
+    # Showtimes (Theatre/Cinema workflow)
+    showtimes: Optional[List[ShowtimeCreate]] = Field(None, description="Multiple showtimes for this event")
 
 class EventUpdate(BaseModel):
     """Schema for updating an existing event."""
@@ -67,6 +90,8 @@ class EventUpdate(BaseModel):
     longitude: Optional[float] = None
     # Participating Venues (Phase 3)
     participating_venue_ids: Optional[List[UUID]] = Field(None, description="List of IDs for participating venues")
+    # Showtimes (Theatre/Cinema workflow)
+    showtimes: Optional[List[ShowtimeCreate]] = Field(None, description="Replace all showtimes for this event")
 
 
 class EventResponse(BaseModel):
@@ -107,6 +132,7 @@ class EventResponse(BaseModel):
     category: Optional[CategoryResponse] = None
     tags: Optional[List[TagResponse]] = None
     participating_venues: List[VenueResponse] = []
+    showtimes: List[ShowtimeResponse] = []
 
     # Computed fields (populated by endpoint logic)
     venue_name: Optional[str] = None

@@ -13,7 +13,7 @@ import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import { eventsAPI, categoriesAPI } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
-import type { EventResponse, VenueResponse, Category } from '@/types';
+import type { EventResponse, VenueResponse, Category, ShowtimeCreate } from '@/types';
 
 export default function AdminEvents() {
   const router = useRouter();
@@ -46,8 +46,8 @@ export default function AdminEvents() {
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const [includePast, setIncludePast] = useState(false);
-  const [cloneSource, setCloneSource] = useState<EventResponse | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
+  const [useMultipleShowtimes, setUseMultipleShowtimes] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -122,6 +122,8 @@ export default function AdminEvents() {
       age_restriction: '',
     });
     setUseManualLocation(false);
+    setShowtimes([]);
+    setUseMultipleShowtimes(false);
     setError(null);
     setDateError(null);
     setModalOpen(true);
@@ -146,34 +148,21 @@ export default function AdminEvents() {
       age_restriction: event.age_restriction || '',
     });
     setUseManualLocation(!event.venue_id && !!event.location_name);
+    // Load existing showtimes
+    if (event.showtimes && event.showtimes.length > 0) {
+      setShowtimes(event.showtimes.map(st => ({
+        start_time: st.start_time,
+        end_time: st.end_time,
+        ticket_url: st.ticket_url,
+        notes: st.notes
+      })));
+      setUseMultipleShowtimes(true);
+    } else {
+      setShowtimes([]);
+      setUseMultipleShowtimes(false);
+    }
     setError(null);
     setDateError(null);
-    setModalOpen(true);
-  };
-
-  const openCloneModal = (event: EventResponse, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingEvent(null);
-    setCloneSource(event);
-    setSelectedVenue(null);
-    setFormData({
-      title: event.title,
-      description: event.description || '',
-      date_start: '',  // Force user to pick new dates
-      date_end: '',
-      venue_id: event.venue_id || '',
-      location_name: event.location_name || '',
-      category_id: event.category_id || '',
-      price: event.price,
-      featured: false,
-      image_url: event.image_url || '',
-      ticket_url: event.ticket_url || '',
-      age_restriction: event.age_restriction || '',
-    });
-    setUseManualLocation(!event.venue_id && !!event.location_name);
-    setError(null);
-    setDateError(null);
-    setSuccessMessage(`Data cloned from "${event.title}". Please select a new date.`);
     setModalOpen(true);
   };
 
@@ -234,6 +223,7 @@ export default function AdminEvents() {
         image_url: formData.image_url || undefined,
         ticket_url: formData.ticket_url || undefined,
         age_restriction: formData.age_restriction || undefined,
+        showtimes: useMultipleShowtimes && showtimes.length > 0 ? showtimes : undefined,
       };
 
       if (editingEvent) {
@@ -243,52 +233,6 @@ export default function AdminEvents() {
       }
       setModalOpen(false);
       fetchData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to save event');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveAndAddAnother = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateDates()) {
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const payload = {
-        title: formData.title,
-        description: formData.description || undefined,
-        date_start: new Date(formData.date_start).toISOString(),
-        date_end: new Date(formData.date_end).toISOString(),
-        venue_id: useManualLocation ? undefined : formData.venue_id,
-        location_name: useManualLocation ? formData.location_name : undefined,
-        category_id: formData.category_id,
-        price: formData.price,
-        featured: formData.featured,
-        image_url: formData.image_url || undefined,
-        ticket_url: formData.ticket_url || undefined,
-        age_restriction: formData.age_restriction || undefined,
-      };
-
-      await eventsAPI.create(payload);
-
-      // Keep form state but clear dates for next entry
-      setFormData(prev => ({
-        ...prev,
-        date_start: '',
-        date_end: '',
-      }));
-      setSuccessMessage('Event saved! Pick the next date.');
-      fetchData();
-
-      // Scroll to top of form
-      document.getElementById('event-form-top')?.scrollIntoView({ behavior: 'smooth' });
     } catch (err: any) {
       setError(err.message || 'Failed to save event');
     } finally {
@@ -449,15 +393,6 @@ export default function AdminEvents() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={(e) => openCloneModal(event, e)}
-                          className="text-xs text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded hover:bg-indigo-50"
-                          title="Clone event"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
-                        <button
                           onClick={(e) => openEditModal(event, e)}
                           className="text-xs text-gray-600 hover:text-emerald-600 px-2 py-1 rounded hover:bg-gray-100"
                         >
@@ -485,15 +420,6 @@ export default function AdminEvents() {
           size="lg"
         >
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div id="event-form-top"></div>
-            {successMessage && (
-              <div className="p-3 bg-emerald-50 text-emerald-700 rounded-lg text-sm flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {successMessage}
-              </div>
-            )}
             {error && (
               <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
                 {error}
@@ -555,6 +481,110 @@ export default function AdminEvents() {
                 />
                 {dateError && (
                   <p className="text-sm text-red-600 mt-1">{dateError}</p>
+                )}
+              </div>
+
+              {/* Schedule Manager for Multiple Showtimes */}
+              <div className="col-span-2 border-t pt-4">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Multiple Performances
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!useMultipleShowtimes) {
+                        // Initialize with one showtime based on main dates
+                        setShowtimes([{
+                          start_time: new Date(formData.date_start).toISOString(),
+                          end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
+                        }]);
+                      }
+                      setUseMultipleShowtimes(!useMultipleShowtimes);
+                    }}
+                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                  >
+                    {useMultipleShowtimes ? 'Use single time' : 'Add multiple times'}
+                  </button>
+                </div>
+
+                {useMultipleShowtimes && (
+                  <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-2">
+                      Add multiple performance times for theatre, cinema, or multi-day events.
+                    </p>
+
+                    {showtimes.map((st, index) => (
+                      <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
+                        <div className="flex-1 grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-500">Start</label>
+                            <input
+                              type="datetime-local"
+                              value={st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : ''}
+                              onChange={(e) => {
+                                const updated = [...showtimes];
+                                updated[index] = { ...updated[index], start_time: new Date(e.target.value).toISOString() };
+                                setShowtimes(updated);
+                              }}
+                              className="w-full px-2 py-1 text-sm border rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">End</label>
+                            <input
+                              type="datetime-local"
+                              value={st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : ''}
+                              onChange={(e) => {
+                                const updated = [...showtimes];
+                                updated[index] = { ...updated[index], end_time: new Date(e.target.value).toISOString() };
+                                setShowtimes(updated);
+                              }}
+                              className="w-full px-2 py-1 text-sm border rounded"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-xs text-gray-500">Ticket URL (optional)</label>
+                            <input
+                              type="url"
+                              value={st.ticket_url || ''}
+                              onChange={(e) => {
+                                const updated = [...showtimes];
+                                updated[index] = { ...updated[index], ticket_url: e.target.value || undefined };
+                                setShowtimes(updated);
+                              }}
+                              className="w-full px-2 py-1 text-sm border rounded"
+                              placeholder="https://..."
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowtimes(showtimes.filter((_, i) => i !== index))}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Remove"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date();
+                        setShowtimes([...showtimes, {
+                          start_time: now.toISOString(),
+                          end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                        }]);
+                      }}
+                      className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
+                    >
+                      + Add Another Performance
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -663,25 +693,11 @@ export default function AdminEvents() {
             <div className="flex justify-end gap-3 pt-4 border-t">
               <button
                 type="button"
-                onClick={() => {
-                  setModalOpen(false);
-                  setCloneSource(null);
-                  setSuccessMessage(null);
-                }}
+                onClick={() => setModalOpen(false)}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Cancel
               </button>
-              {!editingEvent && (
-                <button
-                  type="button"
-                  onClick={handleSaveAndAddAnother}
-                  disabled={saving || uploading || !!dateError || !formData.date_start || !formData.date_end}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? 'Saving...' : 'Save & Add Another'}
-                </button>
-              )}
               <button
                 type="submit"
                 disabled={saving || uploading || !!dateError}

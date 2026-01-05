@@ -227,6 +227,26 @@ export interface VenueListResponse {
 }
 
 // ============================================================
+// SHOWTIME TYPES (Theatre/Cinema workflow)
+// ============================================================
+
+export interface Showtime {
+  id: number;
+  event_id: string;
+  start_time: string;
+  end_time?: string;
+  ticket_url?: string;
+  notes?: string;
+}
+
+export interface ShowtimeCreate {
+  start_time: string;
+  end_time?: string;
+  ticket_url?: string;
+  notes?: string;
+}
+
+// ============================================================
 // EVENT TYPES
 // ============================================================
 
@@ -273,6 +293,7 @@ export interface EventResponse extends Event {
   organizer_email?: string;
   organizer_profile_name?: string;
   participating_venues?: VenueResponse[];
+  showtimes?: Showtime[];
 }
 
 export interface EventCreate {
@@ -298,6 +319,7 @@ export interface EventCreate {
   participating_venue_ids?: string[];
   latitude?: number;
   longitude?: number;
+  showtimes?: ShowtimeCreate[];
 }
 
 export interface EventUpdate {
@@ -321,6 +343,7 @@ export interface EventUpdate {
   recurrence_rule?: string;
   is_recurring?: boolean;
   participating_venue_ids?: string[];
+  showtimes?: ShowtimeCreate[];
 }
 
 export interface EventFilter {
