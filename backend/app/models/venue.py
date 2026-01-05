@@ -55,6 +55,8 @@ class Venue(SQLModel, table=True):
     description: Optional[str] = Field(default=None, max_length=2000)
     website: Optional[str] = Field(default=None, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=20)
+    email: Optional[str] = Field(default=None, max_length=255)
+    opening_hours: Optional[str] = Field(default=None, max_length=500)
     image_url: Optional[str] = Field(default=None, max_length=500)
     formatted_address: Optional[str] = Field(default=None, max_length=500)
 

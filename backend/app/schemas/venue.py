@@ -43,6 +43,8 @@ class VenueCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     website: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
+    email: Optional[str] = Field(None, max_length=255)
+    opening_hours: Optional[str] = Field(None, max_length=500)
     image_url: Optional[str] = Field(None, max_length=500)
     formatted_address: Optional[str] = Field(None, max_length=500)
     # Phase 2.10 additions
@@ -66,6 +68,8 @@ class VenueUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     website: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
+    email: Optional[str] = Field(None, max_length=255)
+    opening_hours: Optional[str] = Field(None, max_length=500)
     image_url: Optional[str] = Field(None, max_length=500)
     formatted_address: Optional[str] = Field(None, max_length=500)
     # Phase 2.10 additions
@@ -92,6 +96,8 @@ class VenueResponse(BaseModel):
     description: Optional[str]
     website: Optional[str]
     phone: Optional[str]
+    email: Optional[str] = None
+    opening_hours: Optional[str] = None
     image_url: Optional[str]
     formatted_address: Optional[str]
     owner_id: Optional[UUID]
