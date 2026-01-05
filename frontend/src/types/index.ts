@@ -169,6 +169,7 @@ export interface VenueResponse extends Venue {
   distance_km?: number;
   upcoming_events_count?: number;
   email?: string;
+  opening_hours?: string;
   owner_email?: string;
 }
 

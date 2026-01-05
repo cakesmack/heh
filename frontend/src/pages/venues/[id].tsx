@@ -20,6 +20,7 @@ import { Spinner } from '@/components/common/Spinner';
 import { EventCard } from '@/components/events/EventCard';
 import { PromotionCard } from '@/components/promotions/PromotionCard';
 import { FollowButton } from '@/components/common/FollowButton';
+import RichText from '@/components/ui/RichText';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
@@ -348,9 +349,7 @@ export default function VenueDetailPage() {
                   <Card>
                     <h2 className="text-xl font-bold text-gray-900 mb-4">About {venue.name}</h2>
                     {venue.description ? (
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {venue.description}
-                      </p>
+                      <RichText content={venue.description} className="text-gray-700 leading-relaxed" />
                     ) : (
                       <p className="text-gray-500 italic">No description available.</p>
                     )}
@@ -360,27 +359,38 @@ export default function VenueDetailPage() {
                   <Card>
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Amenities & Features</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <AmenityItem
-                        icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c1.5-1 3.5-.5 4.5 1s.5 3.5-1 4.5c-1.5 1-2 3-2 5 0 1-.5 2.5-1.5 3.5m0-14c-1.5-1-3.5-.5-4.5 1s-.5 3.5 1 4.5c1.5 1 2 3 2 5 0 1 .5 2.5 1.5 3.5m0-14v1m0 13v-1" /></svg>}
-                        label="Dog Friendly"
-                        active={venue.is_dog_friendly}
-                      />
-                      <AmenityItem
-                        icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-4 8m4-8h4l2 8m-6-8h-4" /></svg>}
-                        label="Wheelchair Access"
-                        active={venue.has_wheelchair_access}
-                      />
-                      <AmenityItem
-                        icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h3a2 2 0 010 4H9V9z" /></svg>}
-                        label="Parking Available"
-                        active={venue.has_parking}
-                      />
-                      <AmenityItem
-                        icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
-                        label="Serves Food"
-                        active={venue.serves_food}
-                      />
+                      {venue.is_dog_friendly && (
+                        <AmenityItem
+                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c1.5-1 3.5-.5 4.5 1s.5 3.5-1 4.5c-1.5 1-2 3-2 5 0 1-.5 2.5-1.5 3.5m0-14c-1.5-1-3.5-.5-4.5 1s-.5 3.5 1 4.5c1.5 1 2 3 2 5 0 1 .5 2.5 1.5 3.5m0-14v1m0 13v-1" /></svg>}
+                          label="Dog Friendly"
+                          active={true}
+                        />
+                      )}
+                      {venue.has_wheelchair_access && (
+                        <AmenityItem
+                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-4 8m4-8h4l2 8m-6-8h-4" /></svg>}
+                          label="Wheelchair Access"
+                          active={true}
+                        />
+                      )}
+                      {venue.has_parking && (
+                        <AmenityItem
+                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h3a2 2 0 010 4H9V9z" /></svg>}
+                          label="Parking Available"
+                          active={true}
+                        />
+                      )}
+                      {venue.serves_food && (
+                        <AmenityItem
+                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
+                          label="Serves Food"
+                          active={true}
+                        />
+                      )}
                     </div>
+                    {!venue.is_dog_friendly && !venue.has_wheelchair_access && !venue.has_parking && !venue.serves_food && (
+                      <p className="text-gray-500 italic text-sm">No amenities listed for this venue.</p>
+                    )}
                     {venue.amenities_notes && (
                       <div className="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-600 italic">
                         &ldquo;{venue.amenities_notes}&rdquo;
@@ -512,6 +522,14 @@ export default function VenueDetailPage() {
                 )}
               </div>
             </Card>
+
+            {/* Opening Hours Card */}
+            {venue.opening_hours && (
+              <Card>
+                <h3 className="font-bold text-gray-900 mb-4">Opening Hours</h3>
+                <RichText content={venue.opening_hours} className="text-sm text-gray-600" />
+              </Card>
+            )}
 
             {/* Claim Card */}
             <div className="p-6 bg-stone-900 rounded-2xl text-white">

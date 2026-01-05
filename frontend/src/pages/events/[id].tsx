@@ -21,6 +21,7 @@ import ReportModal from '@/components/common/ReportModal';
 import SimilarEvents from '@/components/events/SimilarEvents';
 import AgeRestrictionBadge from '@/components/events/AgeRestrictionBadge';
 import AddToCalendar from '@/components/events/AddToCalendar';
+import RichText from '@/components/ui/RichText';
 import { api } from '@/lib/api';
 import type { EventResponse } from '@/types';
 
@@ -307,11 +308,12 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
 
               {event.description && (
                 <div className="space-y-2">
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {showFullDescription || event.description.length <= 400
+                  <RichText
+                    content={showFullDescription || event.description.length <= 400
                       ? event.description
                       : `${event.description.slice(0, 400)}...`}
-                  </p>
+                    className="text-gray-700 leading-relaxed"
+                  />
                   {event.description.length > 400 && (
                     <button
                       onClick={() => setShowFullDescription(!showFullDescription)}
