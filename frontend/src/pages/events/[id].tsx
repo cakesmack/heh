@@ -524,6 +524,9 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                                 {stDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                 {stEndDate && ` - ${stEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
                               </p>
+                              {st.notes && (
+                                <p className="text-xs text-amber-600 font-medium mt-0.5">{st.notes}</p>
+                              )}
                             </div>
                           </div>
                           <a
@@ -532,8 +535,8 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                             rel="noopener noreferrer"
                             onClick={() => trackTicketClick(event.id)}
                             className={`px-3 py-1.5 text-xs font-semibold rounded-full ${st.ticket_url || event.ticket_url
-                                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                               }`}
                           >
                             Buy Tickets

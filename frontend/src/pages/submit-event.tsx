@@ -448,19 +448,36 @@ export default function SubmitEventPage() {
                               />
                             </div>
                           </div>
-                          <div>
-                            <label className="text-xs text-gray-500">Ticket URL (optional)</label>
-                            <input
-                              type="url"
-                              value={st.ticket_url || ''}
-                              onChange={(e) => {
-                                const updated = [...showtimes];
-                                updated[index] = { ...updated[index], ticket_url: e.target.value || undefined };
-                                setShowtimes(updated);
-                              }}
-                              className="w-full px-2 py-1 text-sm border rounded"
-                              placeholder="https://..."
-                            />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">Ticket URL (optional)</label>
+                              <input
+                                type="url"
+                                value={st.ticket_url || ''}
+                                onChange={(e) => {
+                                  const updated = [...showtimes];
+                                  updated[index] = { ...updated[index], ticket_url: e.target.value || undefined };
+                                  setShowtimes(updated);
+                                }}
+                                className="w-full px-2 py-1 text-sm border rounded"
+                                placeholder="https://..."
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">Notes (optional)</label>
+                              <input
+                                type="text"
+                                maxLength={255}
+                                value={st.notes || ''}
+                                onChange={(e) => {
+                                  const updated = [...showtimes];
+                                  updated[index] = { ...updated[index], notes: e.target.value || undefined };
+                                  setShowtimes(updated);
+                                }}
+                                className="w-full px-2 py-1 text-sm border rounded"
+                                placeholder="e.g. Phone only, Sold Out"
+                              />
+                            </div>
                           </div>
                         </div>
                         <button
