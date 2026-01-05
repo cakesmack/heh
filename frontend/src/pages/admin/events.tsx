@@ -47,7 +47,7 @@ export default function AdminEvents() {
   const [dateError, setDateError] = useState<string | null>(null);
   const [includePast, setIncludePast] = useState(false);
   const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
-  const [useMultipleShowtimes, setUseMultipleShowtimes] = useState(false);
+  const [isMultiSession, setIsMultiSession] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -123,7 +123,7 @@ export default function AdminEvents() {
     });
     setUseManualLocation(false);
     setShowtimes([]);
-    setUseMultipleShowtimes(false);
+    setIsMultiSession(false);
     setError(null);
     setDateError(null);
     setModalOpen(true);
@@ -156,10 +156,10 @@ export default function AdminEvents() {
         ticket_url: st.ticket_url,
         notes: st.notes
       })));
-      setUseMultipleShowtimes(true);
+      setIsMultiSession(true);
     } else {
       setShowtimes([]);
-      setUseMultipleShowtimes(false);
+      setIsMultiSession(false);
     }
     setError(null);
     setDateError(null);
@@ -210,11 +210,34 @@ export default function AdminEvents() {
     setError(null);
 
     try {
+      // Calculate dates based on mode
+      let calculatedDateStart = formData.date_start;
+      let calculatedDateEnd = formData.date_end;
+      let showtimesPayload: ShowtimeCreate[] | undefined = undefined;
+
+      if (isMultiSession && showtimes.length > 0) {
+        // Multi-session: calculate from showtimes
+        const startTimes = showtimes.map(st => new Date(st.start_time).getTime());
+        const endTimes = showtimes.map(st => st.end_time ? new Date(st.end_time).getTime() : new Date(st.start_time).getTime());
+        calculatedDateStart = new Date(Math.min(...startTimes)).toISOString();
+        calculatedDateEnd = new Date(Math.max(...endTimes)).toISOString();
+        showtimesPayload = showtimes;
+      } else if (isMultiSession && showtimes.length === 0) {
+        setError('Please add at least one showtime');
+        setSaving(false);
+        return;
+      } else {
+        // Single session: use form dates, clear any stale showtimes
+        calculatedDateStart = new Date(formData.date_start).toISOString();
+        calculatedDateEnd = new Date(formData.date_end).toISOString();
+        showtimesPayload = []; // Clear stale showtimes
+      }
+
       const payload = {
         title: formData.title,
         description: formData.description || undefined,
-        date_start: new Date(formData.date_start).toISOString(),
-        date_end: new Date(formData.date_end).toISOString(),
+        date_start: calculatedDateStart,
+        date_end: calculatedDateEnd,
         venue_id: useManualLocation ? undefined : formData.venue_id,
         location_name: useManualLocation ? formData.location_name : undefined,
         category_id: formData.category_id,
@@ -223,7 +246,7 @@ export default function AdminEvents() {
         image_url: formData.image_url || undefined,
         ticket_url: formData.ticket_url || undefined,
         age_restriction: formData.age_restriction || undefined,
-        showtimes: useMultipleShowtimes && showtimes.length > 0 ? showtimes : undefined,
+        showtimes: showtimesPayload,
       };
 
       if (editingEvent) {
@@ -458,92 +481,132 @@ export default function AdminEvents() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date/Time *</label>
-                <DateTimePicker
-                  id="date_start"
-                  name="date_start"
-                  value={formData.date_start}
-                  onChange={(value) => handleDateChange('date_start', value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date/Time *</label>
-                <DateTimePicker
-                  id="date_end"
-                  name="date_end"
-                  value={formData.date_end}
-                  onChange={(value) => handleDateChange('date_end', value)}
-                  min={formData.date_start}
-                  required
-                />
-                {dateError && (
-                  <p className="text-sm text-red-600 mt-1">{dateError}</p>
-                )}
-              </div>
-
-              {/* Schedule Manager for Multiple Showtimes */}
+              {/* Event Type Toggle */}
               <div className="col-span-2 border-t pt-4">
-                <div className="flex justify-between items-center mb-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Multiple Performances
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Event Type
+                </label>
+                <div className="flex gap-4">
+                  <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${!isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                    <input
+                      type="radio"
+                      name="eventType"
+                      checked={!isMultiSession}
+                      onChange={() => {
+                        setIsMultiSession(false);
+                        setShowtimes([]);
+                      }}
+                      className="text-emerald-600"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">Single Event</span>
+                      <p className="text-xs text-gray-500">One start and end time</p>
+                    </div>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!useMultipleShowtimes) {
-                        // Initialize with one showtime based on main dates
-                        setShowtimes([{
-                          start_time: new Date(formData.date_start).toISOString(),
-                          end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
-                        }]);
-                      }
-                      setUseMultipleShowtimes(!useMultipleShowtimes);
-                    }}
-                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
-                  >
-                    {useMultipleShowtimes ? 'Use single time' : 'Add multiple times'}
-                  </button>
+                  <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                    <input
+                      type="radio"
+                      name="eventType"
+                      checked={isMultiSession}
+                      onChange={() => {
+                        // Push current dates to first showtime when switching
+                        if (formData.date_start) {
+                          setShowtimes([{
+                            start_time: new Date(formData.date_start).toISOString(),
+                            end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
+                          }]);
+                        }
+                        setIsMultiSession(true);
+                      }}
+                      className="text-emerald-600"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">Multiple Showings</span>
+                      <p className="text-xs text-gray-500">Theatre, cinema-style</p>
+                    </div>
+                  </label>
                 </div>
+              </div>
 
-                {useMultipleShowtimes && (
-                  <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-2">
-                      Add multiple performance times for theatre, cinema, or multi-day events.
-                    </p>
+              {/* Single Event Date/Time Pickers - shown only when NOT multi-session */}
+              {!isMultiSession && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date/Time *</label>
+                    <DateTimePicker
+                      id="date_start"
+                      name="date_start"
+                      value={formData.date_start}
+                      onChange={(value) => handleDateChange('date_start', value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date/Time *</label>
+                    <DateTimePicker
+                      id="date_end"
+                      name="date_end"
+                      value={formData.date_end}
+                      onChange={(value) => handleDateChange('date_end', value)}
+                      min={formData.date_start}
+                      required
+                    />
+                    {dateError && (
+                      <p className="text-sm text-red-600 mt-1">{dateError}</p>
+                    )}
+                  </div>
+                </>
+              )}
 
-                    {showtimes.map((st, index) => (
+              {/* Multiple Showtimes Manager - shown only when multi-session */}
+              {isMultiSession && (
+                <div className="col-span-2 space-y-3 bg-gray-50 p-4 rounded-lg">
+                  <p className="text-xs text-gray-500">
+                    Add performance times. The event's main dates will be calculated automatically.
+                  </p>
+
+                  {showtimes.map((st, index) => {
+                    // Convert ISO to datetime-local format for DateTimePicker
+                    const startValue = st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : '';
+                    const endValue = st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : '';
+
+                    return (
                       <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
-                        <div className="flex-1 grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs text-gray-500">Start</label>
-                            <input
-                              type="datetime-local"
-                              value={st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : ''}
-                              onChange={(e) => {
-                                const updated = [...showtimes];
-                                updated[index] = { ...updated[index], start_time: new Date(e.target.value).toISOString() };
-                                setShowtimes(updated);
-                              }}
-                              className="w-full px-2 py-1 text-sm border rounded"
-                            />
+                        <div className="flex-1 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">Start *</label>
+                              <DateTimePicker
+                                id={`showtime_start_${index}`}
+                                name={`showtime_start_${index}`}
+                                value={startValue}
+                                onChange={(value) => {
+                                  const updated = [...showtimes];
+                                  updated[index] = { ...updated[index], start_time: new Date(value).toISOString() };
+                                  setShowtimes(updated);
+                                }}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">End *</label>
+                              <DateTimePicker
+                                id={`showtime_end_${index}`}
+                                name={`showtime_end_${index}`}
+                                value={endValue}
+                                onChange={(value) => {
+                                  const updated = [...showtimes];
+                                  updated[index] = { ...updated[index], end_time: new Date(value).toISOString() };
+                                  setShowtimes(updated);
+                                }}
+                                min={startValue}
+                                required
+                              />
+                            </div>
                           </div>
                           <div>
-                            <label className="text-xs text-gray-500">End</label>
-                            <input
-                              type="datetime-local"
-                              value={st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : ''}
-                              onChange={(e) => {
-                                const updated = [...showtimes];
-                                updated[index] = { ...updated[index], end_time: new Date(e.target.value).toISOString() };
-                                setShowtimes(updated);
-                              }}
-                              className="w-full px-2 py-1 text-sm border rounded"
-                            />
-                          </div>
-                          <div className="col-span-2">
                             <label className="text-xs text-gray-500">Ticket URL (optional)</label>
                             <input
                               type="url"
@@ -569,24 +632,24 @@ export default function AdminEvents() {
                           </svg>
                         </button>
                       </div>
-                    ))}
+                    );
+                  })}
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const now = new Date();
-                        setShowtimes([...showtimes, {
-                          start_time: now.toISOString(),
-                          end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-                        }]);
-                      }}
-                      className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
-                    >
-                      + Add Another Performance
-                    </button>
-                  </div>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      setShowtimes([...showtimes, {
+                        start_time: now.toISOString(),
+                        end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                      }]);
+                    }}
+                    className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
+                  >
+                    + Add Another Performance
+                  </button>
+                </div>
+              )}
 
               <div className="col-span-2">
                 <div className="flex justify-between items-center mb-1">
@@ -709,6 +772,6 @@ export default function AdminEvents() {
           </form>
         </Modal>
       </AdminLayout>
-    </AdminGuard>
+    </AdminGuard >
   );
 }

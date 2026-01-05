@@ -10,7 +10,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, apiFetch } from '@/lib/api';
-import { VenueResponse, Category, Organizer } from '@/types';
+import { VenueResponse, Category, Organizer, ShowtimeCreate } from '@/types';
 import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -58,6 +58,8 @@ export default function SubmitEventPage() {
   });
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
+  const [isMultiSession, setIsMultiSession] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,6 +156,27 @@ export default function SubmitEventPage() {
       if (!formData.category_id) throw new Error('Please select a category');
       if (new Date(formData.date_end) <= new Date(formData.date_start)) throw new Error('End date must be after start date');
 
+      // Calculate dates based on mode
+      let calculatedDateStart = formData.date_start;
+      let calculatedDateEnd = formData.date_end;
+      let showtimesPayload: ShowtimeCreate[] | undefined = undefined;
+
+      if (isMultiSession && showtimes.length > 0) {
+        // Multi-session: calculate from showtimes
+        const startTimes = showtimes.map(st => new Date(st.start_time).getTime());
+        const endTimes = showtimes.map(st => st.end_time ? new Date(st.end_time).getTime() : new Date(st.start_time).getTime());
+        calculatedDateStart = new Date(Math.min(...startTimes)).toISOString();
+        calculatedDateEnd = new Date(Math.max(...endTimes)).toISOString();
+        showtimesPayload = showtimes;
+      } else if (isMultiSession && showtimes.length === 0) {
+        throw new Error('Please add at least one showtime');
+      } else {
+        // Single session: use form dates, clear any stale showtimes
+        showtimesPayload = undefined; // Public API might expect explicit [] or undefined, sticking to undefined if not used
+        calculatedDateStart = new Date(formData.date_start).toISOString();
+        calculatedDateEnd = new Date(formData.date_end).toISOString();
+      }
+
       const eventData = {
         title: formData.title,
         description: formData.description || undefined,
@@ -162,8 +185,8 @@ export default function SubmitEventPage() {
         location_name: locationMode === 'custom' ? formData.location_name : undefined,
         latitude: locationMode === 'custom' ? formData.latitude : undefined,
         longitude: locationMode === 'custom' ? formData.longitude : undefined,
-        date_start: new Date(formData.date_start).toISOString(),
-        date_end: new Date(formData.date_end).toISOString(),
+        date_start: calculatedDateStart,
+        date_end: calculatedDateEnd,
         price: parseFloat(formData.price),
         image_url: formData.image_url || undefined,
         ticket_url: formData.ticket_url || undefined,
@@ -173,7 +196,8 @@ export default function SubmitEventPage() {
         is_recurring: formData.is_recurring,
         frequency: formData.is_recurring ? formData.frequency : undefined,
         recurrence_end_date: (formData.is_recurring && formData.ends_on === 'date') ? new Date(formData.recurrence_end_date).toISOString() : undefined,
-        participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined
+        participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined,
+        showtimes: showtimesPayload,
       };
 
       const newEvent = await api.events.create(eventData);
@@ -317,15 +341,157 @@ export default function SubmitEventPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
-                <DateTimePicker id="date_start" name="date_start" required value={formData.date_start} onChange={(val) => setFormData({ ...formData, date_start: val })} />
+            {/* Event Type Toggle */}
+            <div className="border border-gray-200 rounded-lg p-4">
+              <label className="block text-sm font-medium text-gray-900 mb-3">
+                Event Type
+              </label>
+              <div className="flex gap-4">
+                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${!isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  <input
+                    type="radio"
+                    name="eventType"
+                    checked={!isMultiSession}
+                    onChange={() => {
+                      setIsMultiSession(false);
+                      setShowtimes([]);
+                    }}
+                    className="text-emerald-600"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">Single Event</span>
+                    <p className="text-xs text-gray-500">One start and end time</p>
+                  </div>
+                </label>
+                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  <input
+                    type="radio"
+                    name="eventType"
+                    checked={isMultiSession}
+                    onChange={() => {
+                      // Push current dates to first showtime when switching
+                      if (formData.date_start) {
+                        setShowtimes([{
+                          start_time: new Date(formData.date_start).toISOString(),
+                          end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
+                        }]);
+                      }
+                      setIsMultiSession(true);
+                    }}
+                    className="text-emerald-600"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">Multiple Showings</span>
+                    <p className="text-xs text-gray-500">Theatre, cinema-style</p>
+                  </div>
+                </label>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
-                <DateTimePicker id="date_end" name="date_end" required value={formData.date_end} onChange={(val) => setFormData({ ...formData, date_end: val })} min={formData.date_start} />
-              </div>
+
+              {/* Single Event Date Inputs */}
+              {!isMultiSession && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
+                    <DateTimePicker id="date_start" name="date_start" required value={formData.date_start} onChange={(val) => setFormData({ ...formData, date_start: val })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
+                    <DateTimePicker id="date_end" name="date_end" required value={formData.date_end} onChange={(val) => setFormData({ ...formData, date_end: val })} min={formData.date_start} />
+                  </div>
+                </div>
+              )}
+
+              {/* Multiple Showtimes Manager */}
+              {isMultiSession && (
+                <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-500">
+                    Add performance times. The event's main dates will be calculated automatically.
+                  </p>
+
+                  {showtimes.map((st, index) => {
+                    const startValue = st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : '';
+                    const endValue = st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : '';
+
+                    return (
+                      <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
+                        <div className="flex-1 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">Start *</label>
+                              <DateTimePicker
+                                id={`showtime_start_${index}`}
+                                name={`showtime_start_${index}`}
+                                value={startValue}
+                                onChange={(value) => {
+                                  const updated = [...showtimes];
+                                  updated[index] = { ...updated[index], start_time: new Date(value).toISOString() };
+                                  setShowtimes(updated);
+                                }}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">End *</label>
+                              <DateTimePicker
+                                id={`showtime_end_${index}`}
+                                name={`showtime_end_${index}`}
+                                value={endValue}
+                                onChange={(value) => {
+                                  const updated = [...showtimes];
+                                  updated[index] = { ...updated[index], end_time: new Date(value).toISOString() };
+                                  setShowtimes(updated);
+                                }}
+                                min={startValue}
+                                required
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">Ticket URL (optional)</label>
+                            <input
+                              type="url"
+                              value={st.ticket_url || ''}
+                              onChange={(e) => {
+                                const updated = [...showtimes];
+                                updated[index] = { ...updated[index], ticket_url: e.target.value || undefined };
+                                setShowtimes(updated);
+                              }}
+                              className="w-full px-2 py-1 text-sm border rounded"
+                              placeholder="https://..."
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowtimes(showtimes.filter((_, i) => i !== index))}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Remove"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      setShowtimes([...showtimes, {
+                        start_time: now.toISOString(),
+                        end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                      }]);
+                    }}
+                    className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
+                  >
+                    + Add Another Performance
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Recurring Event Logic (Simplified for brevity but functional) */}
