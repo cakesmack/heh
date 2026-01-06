@@ -315,13 +315,30 @@ def list_events(
         query = query.where(Event.age_restriction == age_restriction)
 
     # Filter by date range
-    if date_from:
-        query = query.where(Event.date_start >= date_from)
+    # For multi-day events (theatre runs), we also check showtimes
+    if date_from or date_to:
+        # Join with EventShowtime to catch multi-day events with performances on those dates
+        query = query.outerjoin(EventShowtime, Event.id == EventShowtime.event_id)
+        
+        if date_from:
+            # Include event if date_start matches OR any showtime matches
+            query = query.where(
+                (Event.date_start >= date_from) | 
+                (EventShowtime.start_time >= date_from)
+            )
+        
+        if date_to:
+            # Include event if date_end matches OR any showtime matches
+            query = query.where(
+                (Event.date_end <= date_to) | 
+                (EventShowtime.start_time <= date_to)
+            )
+        
+        # Deduplicate events that matched multiple showtimes
+        query = query.distinct()
     elif not include_past:
         # By default, exclude past events (using date_end to not cut off ongoing events)
         query = query.where(Event.date_end >= datetime.utcnow())
-    if date_to:
-        query = query.where(Event.date_end <= date_to)
 
     # Filter by price range
     if price_min is not None:
