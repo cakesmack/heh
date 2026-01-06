@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
         from sqlalchemy import text
         from app.core.database import get_session
         with engine.connect() as conn:
-            # Add venue contact fields if they don't exist
+            # Add venue contact and social media fields if they don't exist
             conn.execute(text("""
                 DO $$ 
                 BEGIN 
@@ -50,6 +50,24 @@ async def lifespan(app: FastAPI):
                     END IF;
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='opening_hours') THEN
                         ALTER TABLE venues ADD COLUMN opening_hours VARCHAR(500);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='social_facebook') THEN
+                        ALTER TABLE venues ADD COLUMN social_facebook VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='social_instagram') THEN
+                        ALTER TABLE venues ADD COLUMN social_instagram VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='social_x') THEN
+                        ALTER TABLE venues ADD COLUMN social_x VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='social_linkedin') THEN
+                        ALTER TABLE venues ADD COLUMN social_linkedin VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='social_tiktok') THEN
+                        ALTER TABLE venues ADD COLUMN social_tiktok VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='website_url') THEN
+                        ALTER TABLE venues ADD COLUMN website_url VARCHAR(255);
                     END IF;
                 END $$;
             """))
