@@ -10,6 +10,8 @@ import { Map, Marker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { format } from 'date-fns';
 import type { EventResponse, VenueResponse } from '@/types';
 import EventMarker from './EventMarker';
+import ClusterMarker from './ClusterMarker';
+import { groupEventsByLocation, type EventGroup } from '@/utils/groupEventsByLocation';
 
 // GPS/Location icon component
 function LocationIcon({ className = 'w-5 h-5' }: { className?: string }) {
@@ -82,6 +84,7 @@ export function GoogleMapView({
   onFocusComplete,
 }: GoogleMapViewProps) {
   const [infoWindowMarkerId, setInfoWindowMarkerId] = useState<string | null>(null);
+  const [selectedEventGroup, setSelectedEventGroup] = useState<EventGroup | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [currentUserLocation, setCurrentUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -93,6 +96,11 @@ export function GoogleMapView({
     if (!showEvents) return [];
     return events.filter((e) => e.latitude && e.longitude);
   }, [events, showEvents]);
+
+  // Group events by location for cluster rendering
+  const groupedEvents = useMemo(() => {
+    return groupEventsByLocation(validEvents);
+  }, [validEvents]);
 
   const venueMarkers = useMemo<MapMarker[]>(() => {
     if (!showVenues) return [];
@@ -124,6 +132,7 @@ export function GoogleMapView({
   // Close info window
   const handleInfoWindowClose = useCallback(() => {
     setInfoWindowMarkerId(null);
+    setSelectedEventGroup(null);
   }, []);
 
   // Handle "Locate Me" button click
@@ -185,28 +194,60 @@ export function GoogleMapView({
         style={{ width: '100%', height: '100%' }}
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
       >
-        {/* Event Markers - Using custom EventMarker with colored dots */}
-        {validEvents.map((event) => (
-          <EventMarker
-            key={event.id}
-            event={event}
-            isSelected={selectedMarkerId === event.id}
-            isHovered={hoveredEventId === event.id}
-            onClick={() => {
-              setInfoWindowMarkerId(event.id);
-              onEventClick?.(event);
-              onMarkerClick?.({
-                id: event.id,
-                type: 'event',
-                longitude: event.longitude,
-                latitude: event.latitude,
-                title: event.title,
-                description: event.description,
-                category: event.category?.name,
-              });
-            }}
-          />
-        ))}
+        {/* Event Markers - Grouped by location */}
+        {groupedEvents.map((group) => {
+          if (group.events.length === 1) {
+            // Single event - render standard EventMarker
+            const event = group.events[0];
+            return (
+              <EventMarker
+                key={event.id}
+                event={event}
+                isSelected={selectedMarkerId === event.id}
+                isHovered={hoveredEventId === event.id}
+                onClick={() => {
+                  setInfoWindowMarkerId(event.id);
+                  setSelectedEventGroup(null);
+                  onEventClick?.(event);
+                  onMarkerClick?.({
+                    id: event.id,
+                    type: 'event',
+                    longitude: event.longitude,
+                    latitude: event.latitude,
+                    title: event.title,
+                    description: event.description,
+                    category: event.category?.name,
+                  });
+                }}
+              />
+            );
+          } else {
+            // Multiple events - render ClusterMarker
+            return (
+              <ClusterMarker
+                key={group.key}
+                group={group}
+                isSelected={selectedEventGroup?.key === group.key}
+                onClick={() => {
+                  setSelectedEventGroup(group);
+                  setInfoWindowMarkerId(null);
+                  // Trigger callback with first event for mobile handling
+                  const firstEvent = group.events[0];
+                  onEventClick?.(firstEvent);
+                  onMarkerClick?.({
+                    id: group.key,
+                    type: 'event',
+                    longitude: group.lng,
+                    latitude: group.lat,
+                    title: `${group.events.length} events`,
+                    description: undefined,
+                    category: undefined,
+                  });
+                }}
+              />
+            );
+          }
+        })}
 
         {/* Venue Markers - Keep default Google marker */}
         {venueMarkers.map((marker) => (
@@ -234,8 +275,8 @@ export function GoogleMapView({
           />
         )}
 
-        {/* Info Window for Events - Desktop Only - Rich Card Design */}
-        {selectedEvent && !isMobile && (
+        {/* Info Window for Single Event - Desktop Only - Rich Card Design */}
+        {selectedEvent && !selectedEventGroup && !isMobile && (
           <InfoWindow
             position={{ lat: selectedEvent.latitude, lng: selectedEvent.longitude }}
             onCloseClick={handleInfoWindowClose}
@@ -311,8 +352,72 @@ export function GoogleMapView({
           </InfoWindow>
         )}
 
+        {/* Info Window for Multi-Event Cluster - Desktop Only */}
+        {selectedEventGroup && !isMobile && (
+          <InfoWindow
+            position={{ lat: selectedEventGroup.lat, lng: selectedEventGroup.lng }}
+            onCloseClick={handleInfoWindowClose}
+          >
+            <div className="w-[280px] overflow-hidden -m-2">
+              {/* Header */}
+              <div className="px-3 py-2 bg-amber-50 border-b border-amber-100">
+                <h3 className="font-bold text-gray-900 text-sm">
+                  {selectedEventGroup.events.length} Events Here
+                </h3>
+              </div>
+
+              {/* Scrollable Event List */}
+              <div className="max-h-[200px] overflow-y-auto">
+                {selectedEventGroup.events.map((event) => (
+                  <a
+                    key={event.id}
+                    href={`/events/${event.id}`}
+                    className="flex gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                  >
+                    {/* Thumbnail */}
+                    <div className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                      {event.image_url ? (
+                        <img
+                          src={event.image_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Event Info */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 text-xs leading-snug line-clamp-1">
+                        {event.title}
+                      </h4>
+                      <p className="text-xs text-emerald-600 mt-0.5">
+                        {event.date_start
+                          ? format(new Date(event.date_start), 'h:mm a')
+                          : 'Time TBD'}
+                      </p>
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="flex items-center">
+                      <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </InfoWindow>
+        )}
+
         {/* Info Window for Venues - Desktop Only */}
-        {selectedVenue && !selectedEvent && !isMobile && (
+        {selectedVenue && !selectedEvent && !selectedEventGroup && !isMobile && (
           <InfoWindow
             position={{ lat: selectedVenue.latitude, lng: selectedVenue.longitude }}
             onCloseClick={handleInfoWindowClose}
