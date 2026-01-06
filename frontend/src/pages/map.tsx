@@ -98,9 +98,18 @@ export function MapPage() {
       // Category filter
       if (selectedCategory && event.category?.id !== selectedCategory) return false;
 
-      // Date filter (Single Day)
+      // Date filter
       if (selectedDate && event.date_start) {
-        return isSameDay(new Date(event.date_start), selectedDate);
+        // Case A: Standard single-day event - check if date_start matches
+        const dateStartMatches = isSameDay(new Date(event.date_start), selectedDate);
+
+        // Case B: Multi-day event - check if any showtime falls on selectedDate
+        const hasShowtimeOnDate = event.showtimes?.some(showtime =>
+          showtime.start_time && isSameDay(new Date(showtime.start_time), selectedDate)
+        ) ?? false;
+
+        // Include event if EITHER the date_start matches OR a showtime matches
+        return dateStartMatches || hasShowtimeOnDate;
       }
 
       return true;
