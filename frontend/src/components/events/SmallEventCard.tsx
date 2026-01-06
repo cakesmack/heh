@@ -52,7 +52,22 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
                     {/* Date & Category */}
                     <div className="flex justify-between items-start mb-1">
                         <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                            {formatDate(event.date_start)}
+                            {/* Multi-day: show range, Single day: show date */}
+                            {event.showtimes && event.showtimes.length > 1 ? (
+                                <>
+                                    {formatDate(event.showtimes[0].start_time)}
+                                    {' - '}
+                                    {formatDate(event.showtimes[event.showtimes.length - 1].start_time)}
+                                </>
+                            ) : event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() ? (
+                                <>
+                                    {formatDate(event.date_start)}
+                                    {' - '}
+                                    {formatDate(event.date_end)}
+                                </>
+                            ) : (
+                                formatDate(event.date_start)
+                            )}
                         </span>
                         {event.category && (
                             <span className="text-gray-300 text-[10px] font-bold uppercase tracking-wider opacity-80">
