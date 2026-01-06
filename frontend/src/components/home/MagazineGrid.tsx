@@ -3,6 +3,30 @@ import { EventResponse } from '@/types';
 import { Button } from '@/components/common/Button';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 
+// Helper: Format event date with multi-day support
+function formatEventDate(event: EventResponse, options?: { long?: boolean }): string {
+    const formatShort = (date: Date) => date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+    const formatLong = (date: Date) => date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Case 1: Multiple showtimes
+    if (event.showtimes && event.showtimes.length > 1) {
+        const first = new Date(event.showtimes[0].start_time);
+        const last = new Date(event.showtimes[event.showtimes.length - 1].start_time);
+        return `${formatShort(first)} - ${formatShort(last)}`;
+    }
+
+    // Case 2: Multi-day span (date_start differs from date_end)
+    if (event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString()) {
+        const start = new Date(event.date_start);
+        const end = new Date(event.date_end);
+        return `${formatShort(start)} - ${formatShort(end)}`;
+    }
+
+    // Case 3: Single day
+    const date = new Date(event.date_start);
+    return options?.long ? formatLong(date) : formatShort(date);
+}
+
 interface MagazineGridProps {
     events: EventResponse[];
     title?: string;
@@ -139,12 +163,7 @@ export default function MagazineGrid({
                                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
-                                        {new Date(mainFeature.date_start).toLocaleDateString(undefined, {
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric'
-                                        })}
+                                        {formatEventDate(mainFeature, { long: true })}
                                     </div>
                                     <p className="text-gray-200 text-base line-clamp-2">
                                         {mainFeature.description}
@@ -171,7 +190,7 @@ export default function MagazineGrid({
                                 title={event.title}
                                 category={event.category?.name}
                                 categoryColor={event.category?.gradient_color}
-                                date={new Date(event.date_start).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                date={formatEventDate(event)}
                                 description={event.description}
                                 venue={event.venue_name}
                                 checkins={event.checkin_count}

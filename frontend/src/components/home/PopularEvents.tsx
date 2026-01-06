@@ -10,6 +10,26 @@ import EventCardSkeleton from '@/components/events/EventCardSkeleton';
 import Link from 'next/link';
 import Image from 'next/image';
 
+// Helper: Format event date with multi-day support
+function formatEventDate(event: EventResponse): string {
+    const formatShort = (date: Date) => date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+
+    // Case 1: Multiple showtimes
+    if (event.showtimes && event.showtimes.length > 1) {
+        const first = new Date(event.showtimes[0].start_time);
+        const last = new Date(event.showtimes[event.showtimes.length - 1].start_time);
+        return `${formatShort(first)} - ${formatShort(last)}`;
+    }
+
+    // Case 2: Multi-day span
+    if (event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString()) {
+        return `${formatShort(new Date(event.date_start))} - ${formatShort(new Date(event.date_end))}`;
+    }
+
+    // Case 3: Single day
+    return formatShort(new Date(event.date_start));
+}
+
 export default function PopularEvents() {
     const [events, setEvents] = useState<EventResponse[]>([]);
     const [trendingIds, setTrendingIds] = useState<string[]>([]);
@@ -140,7 +160,7 @@ export default function PopularEvents() {
                                 </p>
                                 <div className="flex items-center gap-2 mt-2">
                                     <span className="text-amber-500 text-xs font-bold uppercase tracking-widest">
-                                        {new Date(event.date_start).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                        {formatEventDate(event)}
                                     </span>
                                     <span className="w-1 h-1 rounded-full bg-white/20" />
                                     <span className="text-gray-400 text-xs truncate">
