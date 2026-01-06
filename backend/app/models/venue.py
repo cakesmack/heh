@@ -71,6 +71,14 @@ class Venue(SQLModel, table=True):
     serves_food: bool = Field(default=False)
     amenities_notes: Optional[str] = Field(default=None, max_length=500)
 
+    # Social Media Links
+    social_facebook: Optional[str] = Field(default=None, max_length=255)
+    social_instagram: Optional[str] = Field(default=None, max_length=255)
+    social_x: Optional[str] = Field(default=None, max_length=255)
+    social_linkedin: Optional[str] = Field(default=None, max_length=255)
+    social_tiktok: Optional[str] = Field(default=None, max_length=255)
+    website_url: Optional[str] = Field(default=None, max_length=255)
+
     # Ownership
     owner_id: Optional[str] = Field(default=None, foreign_key="users.id")
 

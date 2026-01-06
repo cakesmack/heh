@@ -38,6 +38,8 @@ export default function AdminVenues() {
     description: '',
     website: '',
     phone: '',
+    email: '',
+    opening_hours: '',
     image_url: '',
     // Amenities
     is_dog_friendly: false,
@@ -45,6 +47,13 @@ export default function AdminVenues() {
     has_parking: false,
     serves_food: false,
     amenities_notes: '',
+    // Social Media
+    social_facebook: '',
+    social_instagram: '',
+    social_x: '',
+    social_linkedin: '',
+    social_tiktok: '',
+    website_url: '',
   });
   const [isPostcodeValid, setIsPostcodeValid] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -138,12 +147,20 @@ export default function AdminVenues() {
       description: '',
       website: '',
       phone: '',
+      email: '',
+      opening_hours: '',
       image_url: '',
       is_dog_friendly: false,
       has_wheelchair_access: false,
       has_parking: false,
       serves_food: false,
       amenities_notes: '',
+      social_facebook: '',
+      social_instagram: '',
+      social_x: '',
+      social_linkedin: '',
+      social_tiktok: '',
+      website_url: '',
     });
     setError(null);
     setIsPostcodeValid(true);
@@ -163,12 +180,20 @@ export default function AdminVenues() {
       description: venue.description || '',
       website: venue.website || '',
       phone: venue.phone || '',
+      email: venue.email || '',
+      opening_hours: venue.opening_hours || '',
       image_url: venue.image_url || '',
       is_dog_friendly: (venue as any).is_dog_friendly || false,
       has_wheelchair_access: (venue as any).has_wheelchair_access || false,
       has_parking: (venue as any).has_parking || false,
       serves_food: (venue as any).serves_food || false,
       amenities_notes: (venue as any).amenities_notes || '',
+      social_facebook: venue.social_facebook || '',
+      social_instagram: venue.social_instagram || '',
+      social_x: venue.social_x || '',
+      social_linkedin: venue.social_linkedin || '',
+      social_tiktok: venue.social_tiktok || '',
+      website_url: venue.website_url || '',
     });
     setError(null);
     setIsPostcodeValid(venue.postcode ? isHIERegion(venue.postcode) : true);
@@ -559,6 +584,17 @@ export default function AdminVenues() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  placeholder="contact@venue.com"
+                />
+              </div>
+
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
                 <input
@@ -571,6 +607,17 @@ export default function AdminVenues() {
               </div>
 
               <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Opening Hours</label>
+                <textarea
+                  value={formData.opening_hours}
+                  onChange={(e) => setFormData({ ...formData, opening_hours: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  rows={3}
+                  placeholder="Mon-Fri: 9am-5pm&#10;Sat: 10am-4pm&#10;Sun: Closed"
+                />
+              </div>
+
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                   value={formData.description}
@@ -578,6 +625,56 @@ export default function AdminVenues() {
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                   rows={3}
                 />
+                <p className="mt-1 text-xs text-gray-500">URLs pasted here will automatically become clickable links on the site.</p>
+              </div>
+
+              {/* Social Media */}
+              <div className="col-span-2 pt-4 border-t">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Social Media Links</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="url"
+                    value={formData.social_facebook}
+                    onChange={(e) => setFormData({ ...formData, social_facebook: e.target.value })}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Facebook URL"
+                  />
+                  <input
+                    type="url"
+                    value={formData.social_instagram}
+                    onChange={(e) => setFormData({ ...formData, social_instagram: e.target.value })}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Instagram URL"
+                  />
+                  <input
+                    type="url"
+                    value={formData.social_x}
+                    onChange={(e) => setFormData({ ...formData, social_x: e.target.value })}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="X (Twitter) URL"
+                  />
+                  <input
+                    type="url"
+                    value={formData.social_linkedin}
+                    onChange={(e) => setFormData({ ...formData, social_linkedin: e.target.value })}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="LinkedIn URL"
+                  />
+                  <input
+                    type="url"
+                    value={formData.social_tiktok}
+                    onChange={(e) => setFormData({ ...formData, social_tiktok: e.target.value })}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="TikTok URL"
+                  />
+                  <input
+                    type="url"
+                    value={formData.website_url}
+                    onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Additional Website URL"
+                  />
+                </div>
               </div>
 
               {/* Amenities */}

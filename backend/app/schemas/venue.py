@@ -56,6 +56,13 @@ class VenueCreate(BaseModel):
     has_parking: bool = False
     serves_food: bool = False
     amenities_notes: Optional[str] = Field(None, max_length=500)
+    # Social Media Links
+    social_facebook: Optional[str] = Field(None, max_length=255)
+    social_instagram: Optional[str] = Field(None, max_length=255)
+    social_x: Optional[str] = Field(None, max_length=255)
+    social_linkedin: Optional[str] = Field(None, max_length=255)
+    social_tiktok: Optional[str] = Field(None, max_length=255)
+    website_url: Optional[str] = Field(None, max_length=255)
 
 
 class VenueUpdate(BaseModel):
@@ -81,6 +88,13 @@ class VenueUpdate(BaseModel):
     has_parking: Optional[bool] = None
     serves_food: Optional[bool] = None
     amenities_notes: Optional[str] = Field(None, max_length=500)
+    # Social Media Links
+    social_facebook: Optional[str] = Field(None, max_length=255)
+    social_instagram: Optional[str] = Field(None, max_length=255)
+    social_x: Optional[str] = Field(None, max_length=255)
+    social_linkedin: Optional[str] = Field(None, max_length=255)
+    social_tiktok: Optional[str] = Field(None, max_length=255)
+    website_url: Optional[str] = Field(None, max_length=255)
 
 
 class VenueResponse(BaseModel):
@@ -113,6 +127,13 @@ class VenueResponse(BaseModel):
     has_parking: bool = False
     serves_food: bool = False
     amenities_notes: Optional[str] = None
+    # Social Media Links
+    social_facebook: Optional[str] = None
+    social_instagram: Optional[str] = None
+    social_x: Optional[str] = None
+    social_linkedin: Optional[str] = None
+    social_tiktok: Optional[str] = None
+    website_url: Optional[str] = None
     owner_email: Optional[str] = None
     staff: list["VenueStaffResponse"] = []
 
@@ -157,3 +178,9 @@ class VenueStaffCreate(BaseModel):
     user_email: str
     role: str = "staff"
 
+
+class VenueStatsResponse(BaseModel):
+    """Schema for venue stats response."""
+    total_events: int
+    upcoming_events: int
+    last_event_date: Optional[datetime] = None

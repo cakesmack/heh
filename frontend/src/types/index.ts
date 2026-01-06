@@ -171,6 +171,13 @@ export interface VenueResponse extends Venue {
   email?: string;
   opening_hours?: string;
   owner_email?: string;
+  // Social Media Links
+  social_facebook?: string;
+  social_instagram?: string;
+  social_x?: string;
+  social_linkedin?: string;
+  social_tiktok?: string;
+  website_url?: string;
 }
 
 export interface VenueCreate {
@@ -797,6 +804,16 @@ export interface VenueStaffResponse {
 export interface VenueStaffCreate {
   user_email: string;
   role: string;
+}
+
+// ============================================================
+// VENUE STATS TYPES
+// ============================================================
+
+export interface VenueStats {
+  total_events: number;
+  upcoming_events: number;
+  last_event_date?: string;
 }
 
 // ============================================================

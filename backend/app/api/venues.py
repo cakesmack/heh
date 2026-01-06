@@ -28,7 +28,8 @@ from app.schemas.venue import (
     VenueCategoryCreate,
     VenueCategoryUpdate,
     VenueStaffCreate,
-    VenueStaffResponse
+    VenueStaffResponse,
+    VenueStatsResponse
 )
 from app.schemas.event import EventListResponse, EventResponse
 from app.services.geolocation import calculate_geohash, haversine_distance, get_bounding_box
@@ -351,6 +352,13 @@ def create_venue(
         has_parking=venue_data.has_parking,
         serves_food=venue_data.serves_food,
         amenities_notes=venue_data.amenities_notes,
+        # Social Media
+        social_facebook=venue_data.social_facebook,
+        social_instagram=venue_data.social_instagram,
+        social_x=venue_data.social_x,
+        social_linkedin=venue_data.social_linkedin,
+        social_tiktok=venue_data.social_tiktok,
+        website_url=venue_data.website_url,
         # Ownership
         owner_id=current_user.id
     )
@@ -380,6 +388,52 @@ def get_venue(
         )
 
     return build_venue_response(venue, session)
+
+
+@router.get("/{venue_id}/stats", response_model=VenueStatsResponse)
+def get_venue_stats(
+    venue_id: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Get statistics for a specific venue.
+
+    Returns total events, upcoming events, and last event date.
+    """
+    venue = session.get(Venue, normalize_uuid(venue_id))
+    if not venue:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Venue not found"
+        )
+
+    now = datetime.utcnow()
+
+    # Total events count
+    total_events = session.exec(
+        select(func.count(Event.id)).where(Event.venue_id == venue.id)
+    ).one()
+
+    # Upcoming events count
+    upcoming_events = session.exec(
+        select(func.count(Event.id))
+        .where(Event.venue_id == venue.id)
+        .where(Event.date_start >= now)
+    ).one()
+
+    # Last event date (most recent event)
+    last_event = session.exec(
+        select(Event.date_start)
+        .where(Event.venue_id == venue.id)
+        .order_by(Event.date_start.desc())
+        .limit(1)
+    ).first()
+
+    return VenueStatsResponse(
+        total_events=total_events,
+        upcoming_events=upcoming_events,
+        last_event_date=last_event
+    )
 
 
 @router.put("/{venue_id}", response_model=VenueResponse)

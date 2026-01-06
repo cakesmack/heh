@@ -20,6 +20,7 @@ import { Spinner } from '@/components/common/Spinner';
 import { EventCard } from '@/components/events/EventCard';
 import { PromotionCard } from '@/components/promotions/PromotionCard';
 import { FollowButton } from '@/components/common/FollowButton';
+import SocialLinks from '@/components/common/SocialLinks';
 import RichText from '@/components/ui/RichText';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
@@ -521,6 +522,17 @@ export default function VenueDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Social Media Links */}
+              <SocialLinks
+                facebook={venue.social_facebook}
+                instagram={venue.social_instagram}
+                x={venue.social_x}
+                linkedin={venue.social_linkedin}
+                tiktok={venue.social_tiktok}
+                website={venue.website_url}
+                className="mt-4 pt-4 border-t border-gray-100"
+              />
             </Card>
 
             {/* Opening Hours Card */}
