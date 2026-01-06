@@ -18,12 +18,18 @@ function formatEventDate(event: EventResponse): string {
     if (event.showtimes && event.showtimes.length > 1) {
         const first = new Date(event.showtimes[0].start_time);
         const last = new Date(event.showtimes[event.showtimes.length - 1].start_time);
-        return `${formatShort(first)} - ${formatShort(last)}`;
+        const firstStr = formatShort(first);
+        const lastStr = formatShort(last);
+        // Only show range if dates are different
+        return firstStr === lastStr ? firstStr : `${firstStr} - ${lastStr}`;
     }
 
     // Case 2: Multi-day span
     if (event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString()) {
-        return `${formatShort(new Date(event.date_start))} - ${formatShort(new Date(event.date_end))}`;
+        const startStr = formatShort(new Date(event.date_start));
+        const endStr = formatShort(new Date(event.date_end));
+        // Only show range if dates are different
+        return startStr === endStr ? startStr : `${startStr} - ${endStr}`;
     }
 
     // Case 3: Single day

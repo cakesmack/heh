@@ -106,28 +106,32 @@ export function EventCard({ event }: EventCardProps) {
                 />
               </svg>
               {/* Case 1: Multiple showtimes (theatre runs) */}
-              {event.showtimes && event.showtimes.length > 1 ? (
-                <>
-                  <span>
-                    {new Date(event.showtimes[0].start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                    {' - '}
-                    {new Date(event.showtimes[event.showtimes.length - 1].start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                  </span>
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                    <svg className="mr-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Multiple Showings
-                  </span>
-                </>
-              ) : /* Case 2: Multi-day event (date_start and date_end on different days) */
-                event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() ? (
-                  <span>
-                    {new Date(event.date_start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                    {' - '}
-                    {new Date(event.date_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                  </span>
-                ) : (
+              {event.showtimes && event.showtimes.length > 1 ? (() => {
+                const firstDate = new Date(event.showtimes[0].start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                const lastDate = new Date(event.showtimes[event.showtimes.length - 1].start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                return (
+                  <>
+                    <span>
+                      {firstDate === lastDate ? firstDate : `${firstDate} - ${lastDate}`}
+                    </span>
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                      <svg className="mr-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Multiple Showings
+                    </span>
+                  </>
+                );
+              })() : /* Case 2: Multi-day event (date_start and date_end on different days) */
+                event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() ? (() => {
+                  const startDate = new Date(event.date_start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                  const endDate = new Date(event.date_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                  return (
+                    <span>
+                      {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                    </span>
+                  );
+                })() : (
                   /* Case 3: Single day event */
                   <span>
                     {formatDate(event.date_start)} · {formatTime(event.date_start)}
