@@ -49,3 +49,23 @@ export function isHIERegion(postcode: string): boolean {
 
     return false;
 }
+
+/**
+ * Coordinate-based Highland region check.
+ * Used as fallback when postcode is not available (e.g., landmarks).
+ * 
+ * Bounding box roughly covers:
+ * - North: Cape Wrath area (~58.6°N)
+ * - South: Fort William / Oban area (~56.3°N)
+ * - West: Outer Hebrides (~-7.5°W)
+ * - East: Moray / Speyside (~-3.0°E)
+ */
+export function isPointInHighlands(lat: number, lng: number): boolean {
+    // Scottish Highlands & Islands bounding box
+    const MIN_LAT = 56.3;   // Southern boundary (around Oban/Fort William)
+    const MAX_LAT = 58.7;   // Northern boundary (Cape Wrath)
+    const MIN_LNG = -7.7;   // Western boundary (Outer Hebrides)
+    const MAX_LNG = -3.0;   // Eastern boundary (Moray coast)
+
+    return lat >= MIN_LAT && lat <= MAX_LAT && lng >= MIN_LNG && lng <= MAX_LNG;
+}

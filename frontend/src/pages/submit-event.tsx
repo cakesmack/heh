@@ -19,7 +19,7 @@ import ImageUpload from '@/components/common/ImageUpload';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
-import { isHIERegion } from '@/utils/validation/hie-check';
+import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';
 
 import LocationPickerMap from '@/components/maps/LocationPickerMap';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
@@ -118,8 +118,12 @@ export default function SubmitEventPage() {
         postcode = postcodeComponent?.long_name || '';
       }
 
-      // Validate region using postcode
-      const isValid = postcode ? isHIERegion(postcode) : false;
+      // Validate region using hybrid check:
+      // 1. If postcode found -> use postcode validation
+      // 2. If no postcode (landmarks) -> fall back to coordinate check
+      const isValid = postcode
+        ? isHIERegion(postcode)
+        : isPointInHighlands(lat, lng);
       setIsLocationValid(isValid);
 
       setFormData(prev => ({
