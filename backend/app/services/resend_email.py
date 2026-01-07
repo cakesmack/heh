@@ -182,6 +182,8 @@ class ResendEmailService:
         if not events_html:
             events_html = "<p>Check the Hub for the latest events in your area!</p>"
 
+        logo_url = f"{settings.FRONTEND_URL}/icons/logo_knot.jpg"
+        
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -200,7 +202,7 @@ class ResendEmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <img src="{settings.FRONTEND_URL}/icons/logo_knot.jpg" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
+                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
                     <h1>Your Weekend in the Highlands</h1>
                 </div>
                 <div class="content">
@@ -559,6 +561,8 @@ class ResendEmailService:
         if not events_html:
             events_html = "<p style='color: #6b7280;'>Check the Hub for the latest events!</p>"
 
+        logo_url = f"{settings.FRONTEND_URL}/icons/logo_knot.jpg"
+        
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -578,7 +582,7 @@ class ResendEmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <img src="{settings.FRONTEND_URL}/icons/logo_knot.jpg" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
+                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
                     <h1>Welcome to the Hub!</h1>
                     <p>Your guide to events in the Scottish Highlands</p>
                 </div>
@@ -635,6 +639,8 @@ class ResendEmailService:
             logger.info(f"[DRY RUN] Would send system alert to {mask_email(to_email)}")
             return True
 
+        logo_url = f"{settings.FRONTEND_URL}/icons/logo_knot.jpg"
+        
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -653,7 +659,7 @@ class ResendEmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <img src="{settings.FRONTEND_URL}/icons/logo_knot.jpg" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
+                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
                     <h1>{subject}</h1>
                 </div>
                 <div class="content">
