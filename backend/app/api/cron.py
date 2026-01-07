@@ -68,12 +68,12 @@ async def trigger_weekly_digest(
     
     # Featured Events (Top 3)
     featured_raw = get_featured_events(session, limit=3)
-    featured_data = [format_event_data(e) for e in featured_raw]
-    
+    featured_data = [format_event_data(e, session) for e in featured_raw]
+
     # Popular/Trending Events (Fallback - Top 5 next 7 days)
     now = datetime.utcnow()
     next_week = now + timedelta(days=7)
-    
+
     popular_query = (
         select(Event)
         .where(Event.date_start >= now)
@@ -93,9 +93,9 @@ async def trigger_weekly_digest(
             .limit(5)
         )
          popular_raw = session.exec(popular_query).all()
-         
-    popular_data = [format_event_data(e) for e in popular_raw]
-    
+
+    popular_data = [format_event_data(e, session) for e in popular_raw]
+
     # 2. Get Subscribed Users
     # Join with UserPreferences to filter by weekly_digest=True
     user_query = (
@@ -106,20 +106,20 @@ async def trigger_weekly_digest(
         .options(selectinload(User.preferences))
     )
     subscribed_users = session.exec(user_query).all()
-    
+
     sent_count = 0
-    
+
     for user in subscribed_users:
         # 3. Personalization Loop
         user_prefs = user.preferences
         preferred_cats = user_prefs.preferred_categories if user_prefs else []
-        
+
         # Find matches next 7 days
         # Match by Category OR Followed Venues (if we had that logic ready, for now Category is easier)
         # We need a query that filters by category IN preferred_cats
-        
+
         personalized_data = []
-        
+
         if preferred_cats:
             # Query events in these categories
             match_query = (
@@ -132,8 +132,8 @@ async def trigger_weekly_digest(
                 .limit(6)
             )
             matches = session.exec(match_query).all()
-            personalized_data = [format_event_data(e) for e in matches]
-            
+            personalized_data = [format_event_data(e, session) for e in matches]
+
         # Fallback if no matches or no preferences
         if not personalized_data:
             personalized_data = popular_data
