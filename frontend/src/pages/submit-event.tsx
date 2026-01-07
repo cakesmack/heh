@@ -19,8 +19,8 @@ import ImageUpload from '@/components/common/ImageUpload';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
+import { isHIERegion } from '@/utils/validation/hie-check';
 
-// ... (imports will be updated separately or by context)
 import LocationPickerMap from '@/components/maps/LocationPickerMap';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
@@ -65,6 +65,7 @@ export default function SubmitEventPage() {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<{ type: 'published' | 'pending'; eventId: string } | null>(null);
+  const [isLocationValid, setIsLocationValid] = useState(true); // Geofencing validation state
 
   // ... (useEffect for fetching categories/organizers remains same)
   // Fetch categories on mount
@@ -107,11 +108,26 @@ export default function SubmitEventPage() {
     if (place.geometry?.location) {
       const lat = place.geometry.location.lat();
       const lng = place.geometry.location.lng();
+
+      // Extract postcode from address_components
+      let postcode = '';
+      if (place.address_components) {
+        const postcodeComponent = place.address_components.find(
+          comp => comp.types.includes('postal_code')
+        );
+        postcode = postcodeComponent?.long_name || '';
+      }
+
+      // Validate region using postcode
+      const isValid = postcode ? isHIERegion(postcode) : false;
+      setIsLocationValid(isValid);
+
       setFormData(prev => ({
         ...prev,
         location_name: place.name || place.formatted_address || '',
         latitude: lat,
         longitude: lng,
+        postcode: postcode,
       }));
     }
   };
@@ -162,6 +178,10 @@ export default function SubmitEventPage() {
       if (locationMode === 'custom') {
         if (!formData.location_name) {
           throw new Error('Please enter a location name');
+        }
+        // Geofencing: block locations outside the Scottish Highlands
+        if (!isLocationValid) {
+          throw new Error('Events must be located within the Scottish Highlands.');
         }
       }
       if (!formData.category_id) throw new Error('Please select a category');
@@ -343,6 +363,19 @@ export default function SubmitEventPage() {
                       onLocationChange={handleLocationChange}
                     />
                   </div>
+
+                  {/* Geofencing Warning */}
+                  {!isLocationValid && formData.location_name && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                      <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-red-800">Location outside the Scottish Highlands</p>
+                        <p className="text-xs text-red-600 mt-1">Events must be located within the Scottish Highlands (IV, HS, KW, ZE, or qualifying PH/PA/AB/KA postcodes).</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
