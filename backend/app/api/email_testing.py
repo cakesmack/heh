@@ -4,17 +4,27 @@ Admin Email Testing API - Test email templates with real data.
 from datetime import datetime, timedelta
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select, desc
 
 from app.core.database import get_session
-from app.core.security import get_current_user, require_admin
+from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
 from app.models.follow import Follow
 from app.services.resend_email import resend_email_service
 
 router = APIRouter()
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency that requires admin privileges."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
 
 
 # Request schemas
