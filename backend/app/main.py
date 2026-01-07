@@ -69,6 +69,10 @@ async def lifespan(app: FastAPI):
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='website_url') THEN
                         ALTER TABLE venues ADD COLUMN website_url VARCHAR(255);
                     END IF;
+                    -- Add moderation_reason to events table
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='moderation_reason') THEN
+                        ALTER TABLE events ADD COLUMN moderation_reason VARCHAR(255);
+                    END IF;
                 END $$;
             """))
             conn.commit()
