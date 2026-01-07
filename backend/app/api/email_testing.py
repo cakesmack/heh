@@ -76,6 +76,13 @@ def get_featured_events(session: Session, limit: int = 3) -> list:
     return featured[:limit]
 
 
+def format_uuid(hex_id: str) -> str:
+    """Format a 32-char hex ID as a UUID with hyphens."""
+    if not hex_id or len(hex_id) != 32:
+        return hex_id
+    return f"{hex_id[:8]}-{hex_id[8:12]}-{hex_id[12:16]}-{hex_id[16:20]}-{hex_id[20:]}"
+
+
 def format_event_data(event, session) -> dict:
     """Format an event for email template."""
     from app.models.venue import Venue
@@ -85,8 +92,11 @@ def format_event_data(event, session) -> dict:
         venue = session.get(Venue, event.venue_id)
         venue_name = venue.name if venue else None
     
+    # Format event ID as UUID for URL
+    event_id = format_uuid(event.id) if event.id else ""
+    
     return {
-        "id": event.id,
+        "id": event_id,
         "title": event.title,
         "date_display": event.date_start.strftime("%a %d %b, %H:%M") if event.date_start else "",
         "venue_name": venue_name or event.location_name or "Various Locations",
