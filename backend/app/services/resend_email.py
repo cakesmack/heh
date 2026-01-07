@@ -154,7 +154,13 @@ class ResendEmailService:
         logo_url = f"{site_url}/icons/logo_knot.jpg"
         unsubscribe_url = f"{site_url}/unsubscribe?token={unsubscribe_token}&type=weekly_digest"
 
-        # Build featured events HTML (3 large cards)
+        # BRAND COLORS
+        # Highland Green: #0F3E35
+        # Warm White: #FAF9F6
+        # Stone Dark: #2F2F2F
+        # Badge Warning: #FEF9C3 (bg), #854D0E (text)
+
+        # Build featured events HTML (Site-like Event Cards)
         featured_html = ""
         for event in featured_events[:3]:
             # IDs are already formatted as UUID strings
@@ -164,24 +170,32 @@ class ResendEmailService:
             
             image_html = ""
             if image_url:
-                image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 160px; object-fit: cover; display: block;">'
+                image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 180px; object-fit: cover; display: block;">'
             else:
-                image_html = '<div style="height: 160px; background: linear-gradient(135deg, #10b981, #059669);"></div>'
+                image_html = '<div style="height: 180px; background: linear-gradient(135deg, #0F3E35, #3F7F66);"></div>'
             
             featured_html += f"""
-            <div style="margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
-                <a href="{event_url}" style="text-decoration: none;">
+            <div style="margin-bottom: 24px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <a href="{event_url}" style="text-decoration: none; display: block; position: relative;">
                     {image_html}
+                    <!-- Featured Badge -->
+                    <div style="position: absolute; top: 10px; left: 10px; background: #FEF9C3; color: #854D0E; font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 999px;">
+                        ⭐ Featured
+                    </div>
                 </a>
                 <div style="padding: 16px;">
-                    <span style="display: inline-block; background: #10b981; color: white; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 10px; margin-bottom: 8px; text-transform: uppercase;">Top Pick</span>
-                    <a href="{event_url}" style="display: block; color: #1a1a1a; font-weight: 600; text-decoration: none; font-size: 17px; margin-bottom: 4px;">{event.get('title', 'Event')}</a>
-                    <span style="color: #6b7280; font-size: 14px;">📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', '')}</span>
+                    <a href="{event_url}" style="display: block; color: #2F2F2F; font-weight: 600; text-decoration: none; font-size: 18px; margin-bottom: 6px; line-height: 1.4;">{event.get('title', 'Event')}</a>
+                    <div style="color: #52525b; font-size: 14px; display: flex; align-items: center; margin-bottom: 4px;">
+                        📅 {event.get('date_display', '')}
+                    </div>
+                    <div style="color: #52525b; font-size: 14px;">
+                        📍 {event.get('venue_name', '')}
+                    </div>
                 </div>
             </div>
             """
 
-        # Build personalized events HTML (compact list: thumbnail left, text right)
+        # Build personalized events HTML (Compact List)
         personalized_html = ""
         if personalized_events:
             for event in personalized_events[:6]:
@@ -193,26 +207,27 @@ class ResendEmailService:
                 if image_url:
                     image_html = f'<img src="{image_url}" alt="" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">'
                 else:
-                    image_html = '<div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px;"></div>'
+                    image_html = '<div style="width: 80px; height: 80px; background: #f4f4f5; border-radius: 8px;"></div>'
                 
                 personalized_html += f"""
-                <a href="{event_url}" style="display: flex; align-items: center; text-decoration: none; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                <a href="{event_url}" style="display: flex; align-items: start; text-decoration: none; padding: 12px 0; border-bottom: 1px solid #f4f4f5;">
                     {image_html}
-                    <div style="margin-left: 14px; flex: 1;">
-                        <div style="color: #1a1a1a; font-weight: 600; font-size: 15px; margin-bottom: 4px;">{event.get('title', 'Event')}</div>
-                        <div style="color: #6b7280; font-size: 13px;">📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', '')}</div>
+                    <div style="margin-left: 16px; flex: 1;">
+                        <div style="color: #2F2F2F; font-weight: 600; font-size: 15px; margin-bottom: 4px; line-height: 1.4;">{event.get('title', 'Event')}</div>
+                        <div style="color: #71717a; font-size: 13px;">📅 {event.get('date_display', '')}</div>
+                        <div style="color: #71717a; font-size: 13px;">📍 {event.get('venue_name', '')}</div>
                     </div>
                 </a>
                 """
         else:
             personalized_html = f"""
-            <p style="color: #6b7280; text-align: center; padding: 20px 0;">Follow venues and categories to get personalized recommendations!</p>
-            <p style="text-align: center;">
-                <a href="{site_url}" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">Browse All Events</a>
-            </p>
+            <div style="text-align: center; padding: 30px 20px; background: #fafafa; border-radius: 12px;">
+                <p style="color: #71717a; margin-bottom: 20px;">Follow venues and categories to get personalized recommendations!</p>
+                <a href="{site_url}" style="display: inline-block; background: #0F3E35; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Browse All Events</a>
+            </div>
             """
 
-        # Construct HTML string without f-string for main block to avoid interpolation issues
+        # Construct HTML string (New Brand Design)
         html_content = """
         <!DOCTYPE html>
         <html>
@@ -220,39 +235,47 @@ class ResendEmailService:
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; background: #f9fafb;">
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2F2F2F; margin: 0; padding: 0; background: #FAF9F6;">
             <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-                <!-- Green top border -->
-                <div style="height: 4px; background: #10b981;"></div>
+                <!-- Brand Top Border -->
+                <div style="height: 4px; background: #0F3E35;"></div>
                 
                 <!-- Header -->
-                <div style="padding: 30px; text-align: center; background: #ffffff;">
-                    <img src="__LOGO_URL__" alt="Highland Events Hub" style="width: 50px; height: 50px; border-radius: 10px;">
-                    <h1 style="color: #1a1a1a; margin: 16px 0 0 0; font-size: 24px; font-weight: 700;">Your Weekly Highland Guide</h1>
+                <div style="padding: 24px; text-align: center; border-bottom: 1px solid #f4f4f5;">
+                    <img src="__LOGO_URL__" alt="Highland Events Hub" style="width: 48px; height: 48px;">
+                    <h1 style="color: #0F3E35; margin: 12px 0 0 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">Highland Events Hub</h1>
                 </div>
                 
-                <!-- Content -->
-                <div style="padding: 0 30px 30px;">
-                    <p style="color: #4b5563; font-size: 16px; margin-bottom: 24px;">Hey __NAME__! Here's what's happening this week.</p>
+                <!-- Main Content -->
+                <div style="padding: 32px 24px;">
+                    <p style="font-size: 16px; margin-bottom: 32px; color: #2F2F2F;">Hi __NAME__, check out what's happening this week across the Highlands.</p>
                     
                     <!-- Featured Section -->
-                    <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0; font-weight: 600;">🔥 Featured This Week</h2>
-                    __FEATURED_HTML__
+                    <div style="margin-bottom: 40px;">
+                        <h2 style="color: #0F3E35; font-size: 18px; margin: 0 0 16px 0; font-weight: 700;">Top Picks</h2>
+                        __FEATURED_HTML__
+                    </div>
                     
-                    <!-- Personalized Section -->
-                    <h2 style="color: #1a1a1a; font-size: 18px; margin: 30px 0 16px 0; font-weight: 600;">✨ Matches for You</h2>
-                    __PERSONALIZED_HTML__
+                    <!-- Personalized Feed -->
+                    <div>
+                        <h2 style="color: #0F3E35; font-size: 18px; margin: 0 0 16px 0; font-weight: 700;">For You</h2>
+                        __PERSONALIZED_HTML__
+                    </div>
                     
                     <!-- CTA -->
-                    <p style="text-align: center; margin-top: 30px;">
-                        <a href="__SITE_URL__" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">See All Events</a>
-                    </p>
+                    <div style="text-align: center; margin-top: 40px;">
+                        <a href="__SITE_URL__" style="display: inline-block; background: #0F3E35; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">View All Events</a>
+                    </div>
                 </div>
                 
                 <!-- Footer -->
-                <div style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                    <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px 0;">Highland Events Hub • Discover what's on across the Scottish Highlands</p>
-                    <p style="margin: 0;"><a href="__UNSUBSCRIBE_URL__" style="color: #9ca3af; font-size: 12px;">Unsubscribe from weekly digest</a></p>
+                <div style="background: #2F2F2F; padding: 32px 24px; text-align: center; color: #a1a1aa;">
+                    <p style="margin: 0 0 16px 0; font-size: 14px; color: #ffffff;">Highland Events Hub</p>
+                    <p style="font-size: 12px; margin-bottom: 24px;">Discover what's on across the Scottish Highlands</p>
+                    <div style="font-size: 12px;">
+                        <a href="__SITE_URL__/account/dashboard" style="color: #a1a1aa; text-decoration: underline; margin: 0 8px;">My Dashboard</a>
+                        <a href="__UNSUBSCRIBE_URL__" style="color: #a1a1aa; text-decoration: underline; margin: 0 8px;">Unsubscribe</a>
+                    </div>
                 </div>
             </div>
         </body>
@@ -580,7 +603,13 @@ class ResendEmailService:
             
         logo_url = f"{site_url}/icons/logo_knot.jpg"
 
-        # Build featured events HTML (3 large cards with Top Pick badge)
+        # BRAND COLORS
+        # Highland Green: #0F3E35
+        # Warm White: #FAF9F6
+        # Stone Dark: #2F2F2F
+        # Badge Warning: #FEF9C3 (bg), #854D0E (text)
+
+        # Build featured events HTML (Site-like Event Cards)
         featured_html = ""
         for event in featured_events[:3]:
             event_id = event.get('id', '')
@@ -589,24 +618,32 @@ class ResendEmailService:
             
             image_html = ""
             if image_url:
-                image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 160px; object-fit: cover; display: block;">'
+                image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 180px; object-fit: cover; display: block;">'
             else:
-                image_html = '<div style="height: 160px; background: linear-gradient(135deg, #10b981, #059669);"></div>'
+                image_html = '<div style="height: 180px; background: linear-gradient(135deg, #0F3E35, #3F7F66);"></div>'
             
             featured_html += f"""
-            <div style="margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
-                <a href="{event_url}" style="text-decoration: none;">
+            <div style="margin-bottom: 24px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <a href="{event_url}" style="text-decoration: none; display: block; position: relative;">
                     {image_html}
+                    <!-- Featured Badge -->
+                    <div style="position: absolute; top: 10px; left: 10px; background: #FEF9C3; color: #854D0E; font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 999px;">
+                        ⭐ Featured
+                    </div>
                 </a>
                 <div style="padding: 16px;">
-                    <span style="display: inline-block; background: #10b981; color: white; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 10px; margin-bottom: 8px; text-transform: uppercase;">Top Pick</span>
-                    <a href="{event_url}" style="display: block; color: #1a1a1a; font-weight: 600; text-decoration: none; font-size: 17px; margin-bottom: 4px;">{event.get('title', 'Event')}</a>
-                    <span style="color: #6b7280; font-size: 14px;">📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', '')}</span>
+                    <a href="{event_url}" style="display: block; color: #2F2F2F; font-weight: 600; text-decoration: none; font-size: 18px; margin-bottom: 6px; line-height: 1.4;">{event.get('title', 'Event')}</a>
+                    <div style="color: #52525b; font-size: 14px; display: flex; align-items: center; margin-bottom: 4px;">
+                        📅 {event.get('date_display', '')}
+                    </div>
+                    <div style="color: #52525b; font-size: 14px;">
+                        📍 {event.get('venue_name', '')}
+                    </div>
                 </div>
             </div>
             """
 
-        # Build trending events HTML (compact list)
+        # Build trending events HTML (Compact List)
         trending_html = ""
         if trending_events:
             for event in trending_events[:4]:
@@ -616,94 +653,95 @@ class ResendEmailService:
                 
                 image_html = ""
                 if image_url:
-                    image_html = f'<img src="{image_url}" alt="" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px;">'
+                    image_html = f'<img src="{image_url}" alt="" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">'
                 else:
-                    image_html = '<div style="width: 70px; height: 70px; background: #e5e7eb; border-radius: 8px;"></div>'
+                    image_html = '<div style="width: 80px; height: 80px; background: #f4f4f5; border-radius: 8px;"></div>'
                 
                 trending_html += f"""
-                <a href="{event_url}" style="display: flex; align-items: center; text-decoration: none; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                <a href="{event_url}" style="display: flex; align-items: start; text-decoration: none; padding: 12px 0; border-bottom: 1px solid #f4f4f5;">
                     {image_html}
-                    <div style="margin-left: 14px; flex: 1;">
-                        <div style="color: #1a1a1a; font-weight: 600; font-size: 15px; margin-bottom: 4px;">{event.get('title', 'Event')}</div>
-                        <div style="color: #6b7280; font-size: 13px;">📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', '')}</div>
+                    <div style="margin-left: 16px; flex: 1;">
+                        <div style="color: #2F2F2F; font-weight: 600; font-size: 15px; margin-bottom: 4px; line-height: 1.4;">{event.get('title', 'Event')}</div>
+                        <div style="color: #71717a; font-size: 13px;">📅 {event.get('date_display', '')}</div>
+                        <div style="color: #71717a; font-size: 13px;">📍 {event.get('venue_name', '')}</div>
                     </div>
                 </a>
                 """
 
         # Onboarding icons row
         onboarding_html = f"""
-        <div style="display: flex; justify-content: space-around; margin: 30px 0; text-align: center;">
-            <a href="{site_url}/venues" style="text-decoration: none; flex: 1;">
-                <div style="font-size: 28px; margin-bottom: 8px;">📍</div>
-                <div style="color: #1a1a1a; font-size: 13px; font-weight: 600;">Find Venues</div>
+        <div style="display: flex; justify-content: space-between; margin: 40px 0; text-align: center; gap: 12px;">
+            <a href="{site_url}/venues" style="text-decoration: none; flex: 1; background: #ffffff; padding: 20px 10px; border-radius: 12px; border: 1px solid #e5e5e5;">
+                <div style="font-size: 24px; margin-bottom: 12px;">📍</div>
+                <div style="color: #0F3E35; font-size: 13px; font-weight: 600;">Find Venues</div>
             </a>
-            <a href="{site_url}" style="text-decoration: none; flex: 1;">
-                <div style="font-size: 28px; margin-bottom: 8px;">❤️</div>
-                <div style="color: #1a1a1a; font-size: 13px; font-weight: 600;">Follow Favorites</div>
+            <a href="{site_url}" style="text-decoration: none; flex: 1; background: #ffffff; padding: 20px 10px; border-radius: 12px; border: 1px solid #e5e5e5;">
+                <div style="font-size: 24px; margin-bottom: 12px;">❤️</div>
+                <div style="color: #0F3E35; font-size: 13px; font-weight: 600;">Favorites</div>
             </a>
-            <a href="{site_url}/account/notifications" style="text-decoration: none; flex: 1;">
-                <div style="font-size: 28px; margin-bottom: 8px;">🔔</div>
-                <div style="color: #1a1a1a; font-size: 13px; font-weight: 600;">Get Alerts</div>
+            <a href="{site_url}/account/notifications" style="text-decoration: none; flex: 1; background: #ffffff; padding: 20px 10px; border-radius: 12px; border: 1px solid #e5e5e5;">
+                <div style="font-size: 24px; margin-bottom: 12px;">🔔</div>
+                <div style="color: #0F3E35; font-size: 13px; font-weight: 600;">Get Alerts</div>
             </a>
         </div>
         """
 
-        # Construct HTML string without f-string for main block to avoid interpolation issues
-        html_content = """
+        html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; background: #f9fafb;">
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2F2F2F; margin: 0; padding: 0; background: #FAF9F6;">
             <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-                <!-- Green top border -->
-                <div style="height: 4px; background: #10b981;"></div>
+                <!-- Brand Top Border -->
+                <div style="height: 4px; background: #0F3E35;"></div>
                 
                 <!-- Header -->
-                <div style="padding: 30px; text-align: center; background: #ffffff;">
-                    <img src="__LOGO_URL__" alt="Highland Events Hub" style="width: 50px; height: 50px; border-radius: 10px;">
-                    <h1 style="color: #1a1a1a; margin: 16px 0 8px 0; font-size: 26px; font-weight: 700;">Welcome to the Hub, __NAME__!</h1>
-                    <p style="color: #6b7280; font-size: 16px; margin: 0;">Your guide to events in the Scottish Highlands</p>
+                <div style="padding: 24px; text-align: center; border-bottom: 1px solid #f4f4f5;">
+                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 48px; height: 48px;">
+                    <h1 style="color: #0F3E35; margin: 12px 0 8px 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em;">Welcome, {name}!</h1>
+                    <p style="color: #52525b; font-size: 16px; margin: 0;">You're all set to discover the best of the Highlands.</p>
                 </div>
                 
-                <!-- Content -->
-                <div style="padding: 0 30px 30px;">
+                <!-- Main Content -->
+                <div style="padding: 32px 24px;">
                     
                     <!-- Featured Section -->
-                    <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0; font-weight: 600;">🔥 Featured Events</h2>
-                    __FEATURED_HTML__
+                    <div style="margin-bottom: 40px;">
+                        <h2 style="color: #0F3E35; font-size: 18px; margin: 0 0 16px 0; font-weight: 700;">Top Picks This Week</h2>
+                        {featured_html}
+                    </div>
                     
                     <!-- Onboarding -->
-                    __ONBOARDING_HTML__
+                    <h2 style="color: #0F3E35; font-size: 18px; margin: 0 0 16px 0; font-weight: 700; text-align: center;">Get Started</h2>
+                    {onboarding_html}
                     
                     <!-- Trending Section -->
-                    <h2 style="color: #1a1a1a; font-size: 18px; margin: 24px 0 16px 0; font-weight: 600;">📈 Trending This Week</h2>
-                    __TRENDING_HTML__
+                    <div style="margin-top: 40px;">
+                        <h2 style="color: #0F3E35; font-size: 18px; margin: 0 0 16px 0; font-weight: 700;">Trending Now</h2>
+                        {trending_html}
+                    </div>
                     
                     <!-- CTA -->
-                    <p style="text-align: center; margin-top: 30px;">
-                        <a href="__SITE_URL__" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">Explore All Events</a>
-                    </p>
+                    <div style="text-align: center; margin-top: 40px;">
+                        <a href="{site_url}" style="display: inline-block; background: #0F3E35; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">Explore All Events</a>
+                    </div>
                 </div>
                 
                 <!-- Footer -->
-                <div style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">Highland Events Hub • Discover what's on across the Scottish Highlands</p>
+                <div style="background: #2F2F2F; padding: 32px 24px; text-align: center; color: #a1a1aa;">
+                    <p style="margin: 0 0 16px 0; font-size: 14px; color: #ffffff;">Highland Events Hub</p>
+                    <p style="font-size: 12px; margin-bottom: 24px;">Discover what's on across the Scottish Highlands</p>
+                    <div style="font-size: 12px;">
+                         <a href="{site_url}/account/dashboard" style="color: #a1a1aa; text-decoration: underline; margin: 0 8px;">My Dashboard</a>
+                    </div>
                 </div>
             </div>
         </body>
         </html>
         """
-
-        # Perform string replacements
-        html_content = html_content.replace("__LOGO_URL__", logo_url)
-        html_content = html_content.replace("__NAME__", name)
-        html_content = html_content.replace("__FEATURED_HTML__", featured_html)
-        html_content = html_content.replace("__ONBOARDING_HTML__", onboarding_html)
-        html_content = html_content.replace("__TRENDING_HTML__", trending_html)
-        html_content = html_content.replace("__SITE_URL__", site_url)
 
         try:
             response = resend.Emails.send({
