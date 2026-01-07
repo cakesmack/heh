@@ -146,6 +146,11 @@ class ResendEmailService:
         name = display_name or "there"
         # Ensure URLs have no trailing slashes consistency
         site_url = settings.FRONTEND_URL.rstrip('/')
+        
+        # FIX: Force www. for production domain to prevent link/image issues
+        if "highlandeventshub.co.uk" in site_url and "www." not in site_url:
+            site_url = site_url.replace("highlandeventshub.co.uk", "www.highlandeventshub.co.uk")
+            
         logo_url = f"{site_url}/icons/logo_knot.jpg"
         unsubscribe_url = f"{site_url}/unsubscribe?token={unsubscribe_token}&type=weekly_digest"
 
@@ -568,6 +573,11 @@ class ResendEmailService:
         
         # Ensure URLs have no trailing slashes consistency
         site_url = settings.FRONTEND_URL.rstrip('/')
+        
+        # FIX: Force www. for production domain to prevent link/image issues
+        if "highlandeventshub.co.uk" in site_url and "www." not in site_url:
+            site_url = site_url.replace("highlandeventshub.co.uk", "www.highlandeventshub.co.uk")
+            
         logo_url = f"{site_url}/icons/logo_knot.jpg"
 
         # Build featured events HTML (3 large cards with Top Pick badge)
