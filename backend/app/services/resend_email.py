@@ -480,6 +480,171 @@ class ResendEmailService:
             logger.error(f"Failed to send event rejected email to {mask_email(to_email)}: {e}")
             return False
 
+    def send_welcome_with_events(
+        self,
+        to_email: str,
+        display_name: Optional[str] = None,
+        events: list = None
+    ) -> bool:
+        """
+        Send welcome email with featured events.
+
+        Args:
+            to_email: User's email address
+            display_name: User's display name (optional)
+            events: List of event dicts with title, date_display, venue_name, id
+
+        Returns:
+            True if sent successfully
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send welcome email with events to {mask_email(to_email)}")
+            return True
+
+        name = display_name or "there"
+        events = events or []
+
+        # Build event cards HTML
+        events_html = ""
+        for event in events[:6]:
+            event_url = f"{settings.FRONTEND_URL}/events/{event.get('id', '')}"
+            events_html += f"""
+            <div style="border-left: 4px solid #10b981; padding: 12px 15px; margin: 12px 0; background: #f9fafb; border-radius: 0 8px 8px 0;">
+                <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 15px;">{event.get('title', 'Event')}</a><br>
+                <span style="color: #6b7280; font-size: 13px;">
+                    📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', 'Various Locations')}
+                </span>
+            </div>
+            """
+
+        if not events_html:
+            events_html = "<p style='color: #6b7280;'>Check the Hub for the latest events!</p>"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 28px; }}
+                .header p {{ color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; }}
+                .content {{ padding: 40px 30px; background: #ffffff; }}
+                .content h2 {{ color: #059669; margin-top: 0; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Welcome to the Hub!</h1>
+                    <p>Your guide to events in the Scottish Highlands</p>
+                </div>
+                <div class="content">
+                    <h2>Hey {name}!</h2>
+                    <p>You're now part of a community that celebrates everything happening across the Highlands - from ceilidhs in village halls to festivals on the shores of Loch Ness.</p>
+                    
+                    <h3 style="color: #374151; margin-top: 30px;">🎉 Happening Soon</h3>
+                    {events_html}
+                    
+                    <p style="text-align: center; margin-top: 30px;">
+                        <a href="{settings.FRONTEND_URL}" class="button">Explore All Events</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            response = resend.Emails.send({
+                "from": self.from_address,
+                "to": [to_email],
+                "subject": "Welcome to the Hub! 🎉",
+                "html": html_content,
+            })
+            logger.info(f"Welcome email with events sent to {mask_email(to_email)}, id: {response.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send welcome email with events to {mask_email(to_email)}: {e}")
+            return False
+
+    def send_system_alert(
+        self,
+        to_email: str,
+        subject: str,
+        message_body: str
+    ) -> bool:
+        """
+        Send a system alert email (styled like event approval).
+
+        Args:
+            to_email: Recipient email
+            subject: Email subject line
+            message_body: HTML message body
+
+        Returns:
+            True if sent successfully
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send system alert to {mask_email(to_email)}")
+            return True
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ padding: 40px 30px; background: #ffffff; }}
+                .alert-icon {{ width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 30px; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{subject}</h1>
+                </div>
+                <div class="content">
+                    <div class="alert-icon">📢</div>
+                    <div style="font-size: 16px;">
+                        {message_body}
+                    </div>
+                    <p style="text-align: center; margin-top: 30px;">
+                        <a href="{settings.FRONTEND_URL}" class="button">Visit Highland Events Hub</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            response = resend.Emails.send({
+                "from": self.from_address,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+            })
+            logger.info(f"System alert sent to {mask_email(to_email)}, id: {response.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send system alert to {mask_email(to_email)}: {e}")
+            return False
+
 
 # Global instance
 resend_email_service = ResendEmailService()
