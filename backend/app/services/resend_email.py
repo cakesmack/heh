@@ -708,6 +708,12 @@ class ResendEmailService:
                 <!-- Main Content -->
                 <div style="padding: 32px 24px;">
                     
+                    <!-- Intro Text -->
+                    <div style="margin-bottom: 32px; color: #52525b; font-size: 16px;">
+                        <p style="margin-top: 0;">You're now part of a community that celebrates everything happening across the Highlands - from ceilidhs in village halls to festivals on the shores of Loch Ness.</p>
+                        <p>We've picked out some events we think you'll love to get you started.</p>
+                    </div>
+
                     <!-- Featured Section -->
                     <div style="margin-bottom: 40px;">
                         <h2 style="color: #0F3E35; font-size: 18px; margin: 0 0 16px 0; font-weight: 700;">Top Picks This Week</h2>
