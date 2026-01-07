@@ -27,6 +27,80 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+def get_featured_events(session: Session, limit: int = 3) -> list:
+    """
+    Get featured events with auto-fill logic.
+    1. First get paid featured events
+    2. Fill remaining slots with high-popularity events
+    Returns exactly `limit` events.
+    """
+    from app.models.venue import Venue
+    from app.models.bookmark import Bookmark
+    from sqlmodel import func
+    
+    now = datetime.utcnow()
+    featured = []
+    
+    # Step 1: Get paid featured events
+    paid_events = session.exec(
+        select(Event)
+        .where(Event.featured == True)
+        .where(Event.status == "published")
+        .where(Event.date_start >= now)
+        .where(Event.parent_event_id == None)
+        .order_by(Event.date_start)
+        .limit(limit)
+    ).all()
+    featured.extend(paid_events)
+    
+    # Step 2: If we need more, fill with popular events (most bookmarked)
+    if len(featured) < limit:
+        remaining = limit - len(featured)
+        existing_ids = [e.id for e in featured]
+        
+        # Get events with most bookmarks
+        popular_query = (
+            select(Event)
+            .where(Event.status == "published")
+            .where(Event.date_start >= now)
+            .where(Event.parent_event_id == None)
+        )
+        if existing_ids:
+            popular_query = popular_query.where(Event.id.notin_(existing_ids))
+        
+        popular_events = session.exec(
+            popular_query.order_by(desc(Event.date_start)).limit(remaining)
+        ).all()
+        featured.extend(popular_events)
+    
+    return featured[:limit]
+
+
+def format_event_data(event, session) -> dict:
+    """Format an event for email template."""
+    from app.models.venue import Venue
+    
+    venue_name = None
+    if event.venue_id:
+        venue = session.get(Venue, event.venue_id)
+        venue_name = venue.name if venue else None
+    
+    return {
+        "id": event.id,
+        "title": event.title,
+        "date_display": event.date_start.strftime("%a %d %b, %H:%M") if event.date_start else "",
+        "venue_name": venue_name or event.location_name or "Various Locations",
+        "image_url": event.image_url or None
+    }
+
+
+def capitalize_name(name: str) -> str:
+    """Capitalize first letter of each word in name."""
+    if not name:
+        return "there"
+    return " ".join(word.capitalize() for word in name.split())
+
+
 # Request schemas
 class WelcomeTestRequest(BaseModel):
     recipient_email: EmailStr
@@ -58,47 +132,45 @@ def test_welcome_email(
     session: Session = Depends(get_session)
 ):
     """
-    Send test welcome email with 6 upcoming events.
+    Send test welcome email with featured events (auto-fill) and trending events.
     """
-    # Fetch 6 upcoming published events
     now = datetime.utcnow()
-    events = session.exec(
+    
+    # Get 3 featured events (paid or auto-filled)
+    featured_events = get_featured_events(session, limit=3)
+    featured_data = [format_event_data(e, session) for e in featured_events]
+    
+    # Get 4 trending events (exclude featured)
+    featured_ids = [e.id for e in featured_events]
+    trending_query = (
         select(Event)
         .where(Event.status == "published")
         .where(Event.date_start >= now)
         .where(Event.parent_event_id == None)
-        .order_by(Event.date_start)
-        .limit(6)
+    )
+    if featured_ids:
+        trending_query = trending_query.where(Event.id.notin_(featured_ids))
+    
+    trending_events = session.exec(
+        trending_query.order_by(Event.date_start).limit(4)
     ).all()
-
-    # Format events for email template
-    events_data = []
-    for event in events:
-        venue_name = None
-        if event.venue_id:
-            from app.models.venue import Venue
-            venue = session.get(Venue, event.venue_id)
-            venue_name = venue.name if venue else None
-        
-        events_data.append({
-            "id": event.id,
-            "title": event.title,
-            "date_display": event.date_start.strftime("%a %d %b, %H:%M") if event.date_start else "",
-            "venue_name": venue_name or event.location_name or "Various Locations",
-            "image_url": event.image_url or None
-        })
-
-    # Send email
+    trending_data = [format_event_data(e, session) for e in trending_events]
+    
+    # Capitalize user name
+    display_name = capitalize_name(request.mock_user_name)
+    
+    # Send email with new template
     success = resend_email_service.send_welcome_with_events(
         to_email=request.recipient_email,
-        display_name=request.mock_user_name,
-        events=events_data
+        display_name=display_name,
+        featured_events=featured_data,
+        trending_events=trending_data
     )
 
     return EmailTestResponse(
         success=success,
         message=f"Welcome email sent to {request.recipient_email}" if success else "Failed to send email",
-        events_count=len(events_data)
+        events_count=len(featured_data) + len(trending_data)
     )
 
 
@@ -109,11 +181,10 @@ def test_weekly_digest(
     session: Session = Depends(get_session)
 ):
     """
-    Send test weekly digest simulating a specific user's preferences.
-    Matches 'My Feed' logic: events from followed venues, organizers, OR categories.
+    Send test weekly digest with featured events + personalized matches.
     """
     from app.models.user_category_follow import UserCategoryFollow
-    from app.models.venue import Venue
+    from app.models.user_preferences import UserPreferences
     from sqlalchemy import or_
     
     # Fetch the user to simulate
@@ -121,6 +192,13 @@ def test_weekly_digest(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    now = datetime.utcnow()
+    
+    # Get 3 featured events (paid or auto-filled)
+    featured_events = get_featured_events(session, limit=3)
+    featured_data = [format_event_data(e, session) for e in featured_events]
+    featured_ids = [e.id for e in featured_events]
+    
     # Get user's venue/organizer follows
     follows = session.exec(
         select(Follow).where(Follow.follower_id == request.simulate_user_id)
@@ -135,77 +213,54 @@ def test_weekly_digest(
     followed_group_ids = [f.target_id for f in follows if f.target_type == "group"]
     followed_category_ids = [cf.category_id for cf in category_follows]
 
-    # Check if user has any follows at all
-    if not followed_venue_ids and not followed_group_ids and not followed_category_ids:
-        return EmailTestResponse(
-            success=False,
-            message=f"User '{target_user.display_name or target_user.email}' has no follows. No digest to generate.",
-            events_count=0
-        )
-
-    # Build OR conditions for matching events
-    now = datetime.utcnow()
-    conditions = []
-    if followed_venue_ids:
-        conditions.append(Event.venue_id.in_(followed_venue_ids))
-    if followed_group_ids:
-        conditions.append(Event.organizer_profile_id.in_(followed_group_ids))
-    if followed_category_ids:
-        conditions.append(Event.category_id.in_(followed_category_ids))
-
-    # Query matching events (no 7-day limit for better testing)
-    events = session.exec(
-        select(Event)
-        .where(or_(*conditions))
-        .where(Event.status == "published")
-        .where(Event.date_start >= now)
-        .where(Event.parent_event_id == None)
-        .order_by(Event.date_start)
-        .limit(10)
-    ).all()
-
-    if not events:
-        return EmailTestResponse(
-            success=False,
-            message=f"No upcoming events for user '{target_user.display_name or target_user.email}' (checked {len(followed_venue_ids)} venues, {len(followed_group_ids)} groups, {len(followed_category_ids)} categories).",
-            events_count=0
-        )
-
-    # Format events for digest with images
-    events_data = []
-    for event in events:
-        venue_name = None
-        if event.venue_id:
-            venue = session.get(Venue, event.venue_id)
-            venue_name = venue.name if venue else None
+    # Get personalized events based on follows (exclude featured)
+    personalized_data = []
+    if followed_venue_ids or followed_group_ids or followed_category_ids:
+        conditions = []
+        if followed_venue_ids:
+            conditions.append(Event.venue_id.in_(followed_venue_ids))
+        if followed_group_ids:
+            conditions.append(Event.organizer_profile_id.in_(followed_group_ids))
+        if followed_category_ids:
+            conditions.append(Event.category_id.in_(followed_category_ids))
         
-        events_data.append({
-            "id": event.id,
-            "title": event.title,
-            "date_display": event.date_start.strftime("%a %d %b, %H:%M") if event.date_start else "",
-            "location": venue_name or event.location_name or "Various Locations",
-            "image_url": event.image_url or None
-        })
+        personalized_query = (
+            select(Event)
+            .where(or_(*conditions))
+            .where(Event.status == "published")
+            .where(Event.date_start >= now)
+            .where(Event.parent_event_id == None)
+        )
+        if featured_ids:
+            personalized_query = personalized_query.where(Event.id.notin_(featured_ids))
+        
+        personalized_events = session.exec(
+            personalized_query.order_by(Event.date_start).limit(6)
+        ).all()
+        personalized_data = [format_event_data(e, session) for e in personalized_events]
 
-    # Get unsubscribe token from preferences
-    from app.models.user_preferences import UserPreferences
+    # Get unsubscribe token
     prefs = session.exec(
         select(UserPreferences).where(UserPreferences.user_id == request.simulate_user_id)
     ).first()
     unsubscribe_token = prefs.unsubscribe_token if prefs else "test-token"
+    
+    # Capitalize user name
+    display_name = capitalize_name(target_user.display_name or target_user.email.split('@')[0])
 
-    # Send digest email to override address
+    # Send digest email with featured + personalized
     success = resend_email_service.send_weekly_digest(
         to_email=request.send_to_email,
-        display_name=target_user.display_name or "there",
-        events=events_data,
+        display_name=display_name,
+        featured_events=featured_data,
+        personalized_events=personalized_data,
         unsubscribe_token=unsubscribe_token
     )
 
     return EmailTestResponse(
         success=success,
         message=f"Weekly digest sent to {request.send_to_email} (simulating {target_user.display_name or target_user.email})" if success else "Failed to send email",
-        events_count=len(events_data)
+        events_count=len(featured_data) + len(personalized_data)
     )
 
 

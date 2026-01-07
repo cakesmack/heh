@@ -125,98 +125,114 @@ class ResendEmailService:
         self,
         to_email: str,
         display_name: Optional[str],
-        events: list,
+        featured_events: list,
+        personalized_events: list,
         unsubscribe_token: str
     ) -> bool:
         """
-        Send weekly digest email with personalized event recommendations.
+        Send modern weekly digest with featured and personalized sections.
 
         Args:
             to_email: User's email
-            display_name: User's name
-            events: List of recommended events
+            display_name: User's name (capitalized)
+            featured_events: 3 featured/top pick events
+            personalized_events: User's personalized matches
             unsubscribe_token: Token for one-click unsubscribe
-
-        Returns:
-            True if sent successfully
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send weekly digest to {mask_email(to_email)}")
             return True
 
         name = display_name or "there"
-        unsubscribe_url = f"{settings.FRONTEND_URL}/unsubscribe?token={unsubscribe_token}&type=weekly_digest"
-
-        # Build event cards HTML with images
-        events_html = ""
-        for event in events[:5]:  # Max 5 events
-            event_id = event.get('id', '')
-            event_url = f"{settings.FRONTEND_URL}/events/{event_id}" if event_id else settings.FRONTEND_URL
-            image_url = event.get('image_url')
-            
-            # Event card with optional image
-            if image_url:
-                events_html += f"""
-                <div style="margin: 20px 0; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
-                    <a href="{event_url}" style="text-decoration: none;">
-                        <img src="{image_url}" alt="{event.get('title', 'Event')}" style="width: 100%; height: 140px; object-fit: cover; display: block;">
-                    </a>
-                    <div style="padding: 16px;">
-                        <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 16px;">{event.get('title', 'Event')}</a><br>
-                        <span style="color: #6b7280; font-size: 14px;">
-                            📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('location', '')}
-                        </span>
-                    </div>
-                </div>
-                """
-            else:
-                events_html += f"""
-                <div style="margin: 20px 0; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; background: #fff;">
-                    <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 16px;">{event.get('title', 'Event')}</a><br>
-                    <span style="color: #6b7280; font-size: 14px;">
-                        📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('location', '')}
-                    </span>
-                </div>
-                """
-
-        if not events_html:
-            events_html = "<p>Check the Hub for the latest events in your area!</p>"
-
         logo_url = f"{settings.FRONTEND_URL}/icons/logo_knot.jpg"
-        
+        unsubscribe_url = f"{settings.FRONTEND_URL}/unsubscribe?token={unsubscribe_token}&type=weekly_digest"
+        site_url = settings.FRONTEND_URL
+
+        # Build featured events HTML (3 large cards)
+        featured_html = ""
+        for event in featured_events[:3]:
+            event_url = f"{site_url}/events/{event.get('id', '')}"
+            image_url = event.get('image_url')
+            image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 160px; object-fit: cover; display: block;">' if image_url else '<div style="height: 160px; background: linear-gradient(135deg, #10b981, #059669);"></div>'
+            
+            featured_html += f"""
+            <div style="margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
+                <a href="{event_url}" style="text-decoration: none;">
+                    {image_html}
+                </a>
+                <div style="padding: 16px;">
+                    <span style="display: inline-block; background: #10b981; color: white; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 10px; margin-bottom: 8px; text-transform: uppercase;">Top Pick</span>
+                    <a href="{event_url}" style="display: block; color: #1a1a1a; font-weight: 600; text-decoration: none; font-size: 17px; margin-bottom: 4px;">{event.get('title', 'Event')}</a>
+                    <span style="color: #6b7280; font-size: 14px;">📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', '')}</span>
+                </div>
+            </div>
+            """
+
+        # Build personalized events HTML (compact list: thumbnail left, text right)
+        personalized_html = ""
+        if personalized_events:
+            for event in personalized_events[:6]:
+                event_url = f"{site_url}/events/{event.get('id', '')}"
+                image_url = event.get('image_url')
+                image_html = f'<img src="{image_url}" alt="" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">' if image_url else '<div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px;"></div>'
+                
+                personalized_html += f"""
+                <a href="{event_url}" style="display: flex; align-items: center; text-decoration: none; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    {image_html}
+                    <div style="margin-left: 14px; flex: 1;">
+                        <div style="color: #1a1a1a; font-weight: 600; font-size: 15px; margin-bottom: 4px;">{event.get('title', 'Event')}</div>
+                        <div style="color: #6b7280; font-size: 13px;">📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', '')}</div>
+                    </div>
+                </a>
+                """
+        else:
+            personalized_html = f"""
+            <p style="color: #6b7280; text-align: center; padding: 20px 0;">Follow venues and categories to get personalized recommendations!</p>
+            <p style="text-align: center;">
+                <a href="{site_url}" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">Browse All Events</a>
+            </p>
+            """
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
-                .container {{ max-width: 600px; margin: 0 auto; }}
-                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; }}
-                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
-                .content {{ padding: 30px; background: #ffffff; }}
-                .button {{ display: inline-block; background: #10b981; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; }}
-                .footer {{ background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280; font-size: 12px; }}
-                .footer a {{ color: #6b7280; }}
-            </style>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
-                    <h1>Your Weekend in the Highlands</h1>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; background: #f9fafb;">
+            <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+                <!-- Green top border -->
+                <div style="height: 4px; background: #10b981;"></div>
+                
+                <!-- Header -->
+                <div style="padding: 30px; text-align: center; background: #ffffff;">
+                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 50px; height: 50px; border-radius: 10px;">
+                    <h1 style="color: #1a1a1a; margin: 16px 0 0 0; font-size: 24px; font-weight: 700;">Your Weekly Highland Guide</h1>
                 </div>
-                <div class="content">
-                    <p>Hey {name}! Here's what's happening this weekend:</p>
-
-                    {events_html}
-
+                
+                <!-- Content -->
+                <div style="padding: 0 30px 30px;">
+                    <p style="color: #4b5563; font-size: 16px; margin-bottom: 24px;">Hey {name}! Here's what's happening this week.</p>
+                    
+                    <!-- Featured Section -->
+                    <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0; font-weight: 600;">🔥 Featured This Week</h2>
+                    {featured_html}
+                    
+                    <!-- Personalized Section -->
+                    <h2 style="color: #1a1a1a; font-size: 18px; margin: 30px 0 16px 0; font-weight: 600;">✨ Matches for You</h2>
+                    {personalized_html}
+                    
+                    <!-- CTA -->
                     <p style="text-align: center; margin-top: 30px;">
-                        <a href="{settings.FRONTEND_URL}" class="button">See All Events</a>
+                        <a href="{site_url}" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">See All Events</a>
                     </p>
                 </div>
-                <div class="footer">
-                    <p>You're receiving this because you signed up for the weekly digest.</p>
-                    <p><a href="{unsubscribe_url}">Unsubscribe from weekly digest</a></p>
+                
+                <!-- Footer -->
+                <div style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px 0;">Highland Events Hub • Discover what's on across the Scottish Highlands</p>
+                    <p style="margin: 0;"><a href="{unsubscribe_url}" style="color: #9ca3af; font-size: 12px;">Unsubscribe from weekly digest</a></p>
                 </div>
             </div>
         </body>
@@ -227,7 +243,7 @@ class ResendEmailService:
             response = resend.Emails.send({
                 "from": self.from_address,
                 "to": [to_email],
-                "subject": "Your Weekend in the Highlands",
+                "subject": f"Your Weekly Highland Guide 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
                 "html": html_content,
             })
             logger.info(f"Weekly digest sent to {mask_email(to_email)}, id: {response.get('id')}")
@@ -507,98 +523,126 @@ class ResendEmailService:
         self,
         to_email: str,
         display_name: Optional[str] = None,
-        events: list = None
+        featured_events: list = None,
+        trending_events: list = None
     ) -> bool:
         """
-        Send welcome email with featured events.
+        Send modern welcome email with featured and trending sections.
 
         Args:
             to_email: User's email address
-            display_name: User's display name (optional)
-            events: List of event dicts with title, date_display, venue_name, id
-
-        Returns:
-            True if sent successfully
+            display_name: User's display name (capitalized)
+            featured_events: 3 featured/top pick events
+            trending_events: Trending events list
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send welcome email with events to {mask_email(to_email)}")
             return True
 
         name = display_name or "there"
-        events = events or []
-
-        # Build event cards HTML with images
-        events_html = ""
-        for event in events[:6]:
-            event_url = f"{settings.FRONTEND_URL}/events/{event.get('id', '')}"
-            image_url = event.get('image_url')
-            
-            # Event card with optional image
-            if image_url:
-                events_html += f"""
-                <div style="margin: 12px 0; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
-                    <a href="{event_url}" style="text-decoration: none;">
-                        <img src="{image_url}" alt="{event.get('title', 'Event')}" style="width: 100%; height: 120px; object-fit: cover; display: block;">
-                    </a>
-                    <div style="padding: 12px 15px;">
-                        <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 15px;">{event.get('title', 'Event')}</a><br>
-                        <span style="color: #6b7280; font-size: 13px;">
-                            📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', 'Various Locations')}
-                        </span>
-                    </div>
-                </div>
-                """
-            else:
-                events_html += f"""
-                <div style="margin: 12px 0; padding: 12px 15px; border-radius: 12px; border: 1px solid #e5e7eb; background: #fff;">
-                    <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 15px;">{event.get('title', 'Event')}</a><br>
-                    <span style="color: #6b7280; font-size: 13px;">
-                        📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', 'Various Locations')}
-                    </span>
-                </div>
-                """
-
-        if not events_html:
-            events_html = "<p style='color: #6b7280;'>Check the Hub for the latest events!</p>"
-
+        featured_events = featured_events or []
+        trending_events = trending_events or []
         logo_url = f"{settings.FRONTEND_URL}/icons/logo_knot.jpg"
-        
+        site_url = settings.FRONTEND_URL
+
+        # Build featured events HTML (3 large cards with Top Pick badge)
+        featured_html = ""
+        for event in featured_events[:3]:
+            event_url = f"{site_url}/events/{event.get('id', '')}"
+            image_url = event.get('image_url')
+            image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 160px; object-fit: cover; display: block;">' if image_url else '<div style="height: 160px; background: linear-gradient(135deg, #10b981, #059669);"></div>'
+            
+            featured_html += f"""
+            <div style="margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
+                <a href="{event_url}" style="text-decoration: none;">
+                    {image_html}
+                </a>
+                <div style="padding: 16px;">
+                    <span style="display: inline-block; background: #10b981; color: white; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 10px; margin-bottom: 8px; text-transform: uppercase;">Top Pick</span>
+                    <a href="{event_url}" style="display: block; color: #1a1a1a; font-weight: 600; text-decoration: none; font-size: 17px; margin-bottom: 4px;">{event.get('title', 'Event')}</a>
+                    <span style="color: #6b7280; font-size: 14px;">📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', '')}</span>
+                </div>
+            </div>
+            """
+
+        # Build trending events HTML (compact list)
+        trending_html = ""
+        if trending_events:
+            for event in trending_events[:4]:
+                event_url = f"{site_url}/events/{event.get('id', '')}"
+                image_url = event.get('image_url')
+                image_html = f'<img src="{image_url}" alt="" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px;">' if image_url else '<div style="width: 70px; height: 70px; background: #e5e7eb; border-radius: 8px;"></div>'
+                
+                trending_html += f"""
+                <a href="{event_url}" style="display: flex; align-items: center; text-decoration: none; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    {image_html}
+                    <div style="margin-left: 14px; flex: 1;">
+                        <div style="color: #1a1a1a; font-weight: 600; font-size: 15px; margin-bottom: 4px;">{event.get('title', 'Event')}</div>
+                        <div style="color: #6b7280; font-size: 13px;">📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', '')}</div>
+                    </div>
+                </a>
+                """
+
+        # Onboarding icons row
+        onboarding_html = f"""
+        <div style="display: flex; justify-content: space-around; margin: 30px 0; text-align: center;">
+            <a href="{site_url}/venues" style="text-decoration: none; flex: 1;">
+                <div style="font-size: 28px; margin-bottom: 8px;">📍</div>
+                <div style="color: #1a1a1a; font-size: 13px; font-weight: 600;">Find Venues</div>
+            </a>
+            <a href="{site_url}" style="text-decoration: none; flex: 1;">
+                <div style="font-size: 28px; margin-bottom: 8px;">❤️</div>
+                <div style="color: #1a1a1a; font-size: 13px; font-weight: 600;">Follow Favorites</div>
+            </a>
+            <a href="{site_url}/account/notifications" style="text-decoration: none; flex: 1;">
+                <div style="font-size: 28px; margin-bottom: 8px;">🔔</div>
+                <div style="color: #1a1a1a; font-size: 13px; font-weight: 600;">Get Alerts</div>
+            </a>
+        </div>
+        """
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
-                .container {{ max-width: 600px; margin: 0 auto; }}
-                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
-                .header h1 {{ color: white; margin: 0; font-size: 28px; }}
-                .header p {{ color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; }}
-                .content {{ padding: 40px 30px; background: #ffffff; }}
-                .content h2 {{ color: #059669; margin-top: 0; }}
-                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
-                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
-            </style>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
-                    <h1>Welcome to the Hub!</h1>
-                    <p>Your guide to events in the Scottish Highlands</p>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; background: #f9fafb;">
+            <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+                <!-- Green top border -->
+                <div style="height: 4px; background: #10b981;"></div>
+                
+                <!-- Header -->
+                <div style="padding: 30px; text-align: center; background: #ffffff;">
+                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 50px; height: 50px; border-radius: 10px;">
+                    <h1 style="color: #1a1a1a; margin: 16px 0 8px 0; font-size: 26px; font-weight: 700;">Welcome to the Hub, {name}!</h1>
+                    <p style="color: #6b7280; font-size: 16px; margin: 0;">Your guide to events in the Scottish Highlands</p>
                 </div>
-                <div class="content">
-                    <h2>Hey {name}!</h2>
-                    <p>You're now part of a community that celebrates everything happening across the Highlands - from ceilidhs in village halls to festivals on the shores of Loch Ness.</p>
+                
+                <!-- Content -->
+                <div style="padding: 0 30px 30px;">
                     
-                    <h3 style="color: #374151; margin-top: 30px;">🎉 Happening Soon</h3>
-                    {events_html}
+                    <!-- Featured Section -->
+                    <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0; font-weight: 600;">🔥 Featured Events</h2>
+                    {featured_html}
                     
+                    <!-- Onboarding -->
+                    {onboarding_html}
+                    
+                    <!-- Trending Section -->
+                    <h2 style="color: #1a1a1a; font-size: 18px; margin: 24px 0 16px 0; font-weight: 600;">📈 Trending This Week</h2>
+                    {trending_html}
+                    
+                    <!-- CTA -->
                     <p style="text-align: center; margin-top: 30px;">
-                        <a href="{settings.FRONTEND_URL}" class="button">Explore All Events</a>
+                        <a href="{site_url}" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">Explore All Events</a>
                     </p>
                 </div>
-                <div class="footer">
-                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                
+                <!-- Footer -->
+                <div style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">Highland Events Hub • Discover what's on across the Scottish Highlands</p>
                 </div>
             </div>
         </body>
@@ -609,7 +653,7 @@ class ResendEmailService:
             response = resend.Emails.send({
                 "from": self.from_address,
                 "to": [to_email],
-                "subject": "Welcome to the Hub! 🎉",
+                "subject": f"Welcome to the Hub, {name}! 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
                 "html": html_content,
             })
             logger.info(f"Welcome email with events sent to {mask_email(to_email)}, id: {response.get('id')}")
