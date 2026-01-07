@@ -147,17 +147,37 @@ class ResendEmailService:
         name = display_name or "there"
         unsubscribe_url = f"{settings.FRONTEND_URL}/unsubscribe?token={unsubscribe_token}&type=weekly_digest"
 
-        # Build event list HTML
+        # Build event cards HTML with images
         events_html = ""
         for event in events[:5]:  # Max 5 events
-            events_html += f"""
-            <div style="border-left: 4px solid #10b981; padding-left: 15px; margin: 20px 0;">
-                <strong style="color: #1f2937;">{event.get('title', 'Event')}</strong><br>
-                <span style="color: #6b7280; font-size: 14px;">
-                    {event.get('date_display', '')} • {event.get('location', '')}
-                </span>
-            </div>
-            """
+            event_id = event.get('id', '')
+            event_url = f"{settings.FRONTEND_URL}/events/{event_id}" if event_id else settings.FRONTEND_URL
+            image_url = event.get('image_url')
+            
+            # Event card with optional image
+            if image_url:
+                events_html += f"""
+                <div style="margin: 20px 0; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
+                    <a href="{event_url}" style="text-decoration: none;">
+                        <img src="{image_url}" alt="{event.get('title', 'Event')}" style="width: 100%; height: 140px; object-fit: cover; display: block;">
+                    </a>
+                    <div style="padding: 16px;">
+                        <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 16px;">{event.get('title', 'Event')}</a><br>
+                        <span style="color: #6b7280; font-size: 14px;">
+                            📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('location', '')}
+                        </span>
+                    </div>
+                </div>
+                """
+            else:
+                events_html += f"""
+                <div style="margin: 20px 0; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; background: #fff;">
+                    <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 16px;">{event.get('title', 'Event')}</a><br>
+                    <span style="color: #6b7280; font-size: 14px;">
+                        📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('location', '')}
+                    </span>
+                </div>
+                """
 
         if not events_html:
             events_html = "<p>Check the Hub for the latest events in your area!</p>"
@@ -504,18 +524,36 @@ class ResendEmailService:
         name = display_name or "there"
         events = events or []
 
-        # Build event cards HTML
+        # Build event cards HTML with images
         events_html = ""
         for event in events[:6]:
             event_url = f"{settings.FRONTEND_URL}/events/{event.get('id', '')}"
-            events_html += f"""
-            <div style="border-left: 4px solid #10b981; padding: 12px 15px; margin: 12px 0; background: #f9fafb; border-radius: 0 8px 8px 0;">
-                <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 15px;">{event.get('title', 'Event')}</a><br>
-                <span style="color: #6b7280; font-size: 13px;">
-                    📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', 'Various Locations')}
-                </span>
-            </div>
-            """
+            image_url = event.get('image_url')
+            
+            # Event card with optional image
+            if image_url:
+                events_html += f"""
+                <div style="margin: 12px 0; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
+                    <a href="{event_url}" style="text-decoration: none;">
+                        <img src="{image_url}" alt="{event.get('title', 'Event')}" style="width: 100%; height: 120px; object-fit: cover; display: block;">
+                    </a>
+                    <div style="padding: 12px 15px;">
+                        <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 15px;">{event.get('title', 'Event')}</a><br>
+                        <span style="color: #6b7280; font-size: 13px;">
+                            📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', 'Various Locations')}
+                        </span>
+                    </div>
+                </div>
+                """
+            else:
+                events_html += f"""
+                <div style="margin: 12px 0; padding: 12px 15px; border-radius: 12px; border: 1px solid #e5e7eb; background: #fff;">
+                    <a href="{event_url}" style="color: #059669; font-weight: 600; text-decoration: none; font-size: 15px;">{event.get('title', 'Event')}</a><br>
+                    <span style="color: #6b7280; font-size: 13px;">
+                        📅 {event.get('date_display', '')} &nbsp;•&nbsp; 📍 {event.get('venue_name', 'Various Locations')}
+                    </span>
+                </div>
+                """
 
         if not events_html:
             events_html = "<p style='color: #6b7280;'>Check the Hub for the latest events!</p>"
