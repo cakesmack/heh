@@ -173,6 +173,14 @@ export default function AdminModeration() {
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1">
                                                     <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
+                                                    {/* Show moderation reason if flagged */}
+                                                    {event.moderation_reason && (
+                                                        <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                                                            <span className="text-sm font-semibold text-red-700">
+                                                                ⚠️ Flagged: {event.moderation_reason}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                     <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
                                                     <div className="flex gap-4 text-sm text-gray-500">
                                                         <span>📅 {new Date(event.date_start).toLocaleDateString()}</span>

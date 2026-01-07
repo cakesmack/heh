@@ -281,6 +281,7 @@ export interface Event {
   address_full?: string;
   location_name?: string;
   status?: string;
+  moderation_reason?: string;  // Why it was flagged (e.g., "Contains: razor")
   // Phase 2.3 additions
   organizer_profile_id?: string;
   recurrence_rule?: string;

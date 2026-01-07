@@ -36,7 +36,7 @@ from app.services.geolocation import calculate_geohash, haversine_distance, get_
 from app.services.notifications import notification_service
 from app.services.resend_email import resend_email_service
 from app.services.recurrence import generate_recurring_instances
-from app.services.moderation import check_is_offensive
+from app.services.moderation import check_content_with_reason
 from app.utils.pii import mask_email
 import logging
 
@@ -599,7 +599,9 @@ def create_event(
     if event_data.tags:
         content_to_check += " " + " ".join(event_data.tags)
     
-    is_offensive = check_is_offensive(content_to_check)
+    moderation_result = check_content_with_reason(content_to_check)
+    is_offensive = moderation_result["flagged"]
+    moderation_reason = moderation_result["reason"]
     
     # Auto-Approval Logic
     # A user qualifies for auto-approval if:
@@ -615,7 +617,8 @@ def create_event(
     # OVERRIDE: Offensive content must go to moderation regardless of trust
     if is_offensive:
         new_event.status = "pending"
-        print(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged for moderation due to offensive content")
+        new_event.moderation_reason = moderation_reason
+        print(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged: {moderation_reason}")
     elif is_auto_approved:
         new_event.status = "published"
         logger.info(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved for user_id={current_user.id} "

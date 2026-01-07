@@ -78,6 +78,7 @@ class Event(SQLModel, table=True):
 
     # Moderation
     status: str = Field(default="published", index=True)  # published, pending, rejected, draft
+    moderation_reason: Optional[str] = Field(default=None, max_length=255)  # Why it was flagged
 
     # Organizer - SET NULL so events survive if user is deleted
     organizer_id: Optional[str] = Field(
