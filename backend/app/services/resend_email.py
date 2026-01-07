@@ -19,8 +19,8 @@ class ResendEmailService:
         if settings.RESEND_API_KEY:
             resend.api_key = settings.RESEND_API_KEY
             self.enabled = True
-            # Using onboarding email for dev, replace with custom domain for prod
-            self.from_address = "Highland Events <onboarding@resend.dev>"
+            # Production email from verified domain
+            self.from_address = "Highland Events Hub <noreply@highlandeventshub.co.uk>"
         else:
             self.enabled = False
             logger.warning("RESEND_API_KEY not configured - emails disabled")
