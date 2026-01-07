@@ -144,16 +144,24 @@ class ResendEmailService:
             return True
 
         name = display_name or "there"
-        logo_url = f"{settings.FRONTEND_URL}/icons/logo_knot.jpg"
-        unsubscribe_url = f"{settings.FRONTEND_URL}/unsubscribe?token={unsubscribe_token}&type=weekly_digest"
-        site_url = settings.FRONTEND_URL
+        # Ensure URLs have no trailing slashes consistency
+        site_url = settings.FRONTEND_URL.rstrip('/')
+        logo_url = f"{site_url}/icons/logo_knot.jpg"
+        unsubscribe_url = f"{site_url}/unsubscribe?token={unsubscribe_token}&type=weekly_digest"
 
         # Build featured events HTML (3 large cards)
         featured_html = ""
         for event in featured_events[:3]:
-            event_url = f"{site_url}/events/{event.get('id', '')}"
+            # IDs are already formatted as UUID strings
+            event_id = event.get('id', '')
+            event_url = f"{site_url}/events/{event_id}"
             image_url = event.get('image_url')
-            image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 160px; object-fit: cover; display: block;">' if image_url else '<div style="height: 160px; background: linear-gradient(135deg, #10b981, #059669);"></div>'
+            
+            image_html = ""
+            if image_url:
+                image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 160px; object-fit: cover; display: block;">'
+            else:
+                image_html = '<div style="height: 160px; background: linear-gradient(135deg, #10b981, #059669);"></div>'
             
             featured_html += f"""
             <div style="margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
@@ -172,9 +180,15 @@ class ResendEmailService:
         personalized_html = ""
         if personalized_events:
             for event in personalized_events[:6]:
-                event_url = f"{site_url}/events/{event.get('id', '')}"
+                event_id = event.get('id', '')
+                event_url = f"{site_url}/events/{event_id}"
                 image_url = event.get('image_url')
-                image_html = f'<img src="{image_url}" alt="" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">' if image_url else '<div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px;"></div>'
+                
+                image_html = ""
+                if image_url:
+                    image_html = f'<img src="{image_url}" alt="" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">'
+                else:
+                    image_html = '<div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px;"></div>'
                 
                 personalized_html += f"""
                 <a href="{event_url}" style="display: flex; align-items: center; text-decoration: none; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
@@ -193,7 +207,8 @@ class ResendEmailService:
             </p>
             """
 
-        html_content = f"""
+        # Construct HTML string without f-string for main block to avoid interpolation issues
+        html_content = """
         <!DOCTYPE html>
         <html>
         <head>
@@ -207,37 +222,45 @@ class ResendEmailService:
                 
                 <!-- Header -->
                 <div style="padding: 30px; text-align: center; background: #ffffff;">
-                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 50px; height: 50px; border-radius: 10px;">
+                    <img src="__LOGO_URL__" alt="Highland Events Hub" style="width: 50px; height: 50px; border-radius: 10px;">
                     <h1 style="color: #1a1a1a; margin: 16px 0 0 0; font-size: 24px; font-weight: 700;">Your Weekly Highland Guide</h1>
                 </div>
                 
                 <!-- Content -->
                 <div style="padding: 0 30px 30px;">
-                    <p style="color: #4b5563; font-size: 16px; margin-bottom: 24px;">Hey {name}! Here's what's happening this week.</p>
+                    <p style="color: #4b5563; font-size: 16px; margin-bottom: 24px;">Hey __NAME__! Here's what's happening this week.</p>
                     
                     <!-- Featured Section -->
                     <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0; font-weight: 600;">🔥 Featured This Week</h2>
-                    {featured_html}
+                    __FEATURED_HTML__
                     
                     <!-- Personalized Section -->
                     <h2 style="color: #1a1a1a; font-size: 18px; margin: 30px 0 16px 0; font-weight: 600;">✨ Matches for You</h2>
-                    {personalized_html}
+                    __PERSONALIZED_HTML__
                     
                     <!-- CTA -->
                     <p style="text-align: center; margin-top: 30px;">
-                        <a href="{site_url}" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">See All Events</a>
+                        <a href="__SITE_URL__" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">See All Events</a>
                     </p>
                 </div>
                 
                 <!-- Footer -->
                 <div style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
                     <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px 0;">Highland Events Hub • Discover what's on across the Scottish Highlands</p>
-                    <p style="margin: 0;"><a href="{unsubscribe_url}" style="color: #9ca3af; font-size: 12px;">Unsubscribe from weekly digest</a></p>
+                    <p style="margin: 0;"><a href="__UNSUBSCRIBE_URL__" style="color: #9ca3af; font-size: 12px;">Unsubscribe from weekly digest</a></p>
                 </div>
             </div>
         </body>
         </html>
         """
+
+        # Perform string replacements
+        html_content = html_content.replace("__LOGO_URL__", logo_url)
+        html_content = html_content.replace("__NAME__", name)
+        html_content = html_content.replace("__FEATURED_HTML__", featured_html)
+        html_content = html_content.replace("__PERSONALIZED_HTML__", personalized_html)
+        html_content = html_content.replace("__SITE_URL__", site_url)
+        html_content = html_content.replace("__UNSUBSCRIBE_URL__", unsubscribe_url)
 
         try:
             response = resend.Emails.send({
@@ -542,15 +565,23 @@ class ResendEmailService:
         name = display_name or "there"
         featured_events = featured_events or []
         trending_events = trending_events or []
-        logo_url = f"{settings.FRONTEND_URL}/icons/logo_knot.jpg"
-        site_url = settings.FRONTEND_URL
+        
+        # Ensure URLs have no trailing slashes consistency
+        site_url = settings.FRONTEND_URL.rstrip('/')
+        logo_url = f"{site_url}/icons/logo_knot.jpg"
 
         # Build featured events HTML (3 large cards with Top Pick badge)
         featured_html = ""
         for event in featured_events[:3]:
-            event_url = f"{site_url}/events/{event.get('id', '')}"
+            event_id = event.get('id', '')
+            event_url = f"{site_url}/events/{event_id}"
             image_url = event.get('image_url')
-            image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 160px; object-fit: cover; display: block;">' if image_url else '<div style="height: 160px; background: linear-gradient(135deg, #10b981, #059669);"></div>'
+            
+            image_html = ""
+            if image_url:
+                image_html = f'<img src="{image_url}" alt="" style="width: 100%; height: 160px; object-fit: cover; display: block;">'
+            else:
+                image_html = '<div style="height: 160px; background: linear-gradient(135deg, #10b981, #059669);"></div>'
             
             featured_html += f"""
             <div style="margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff;">
@@ -569,9 +600,15 @@ class ResendEmailService:
         trending_html = ""
         if trending_events:
             for event in trending_events[:4]:
-                event_url = f"{site_url}/events/{event.get('id', '')}"
+                event_id = event.get('id', '')
+                event_url = f"{site_url}/events/{event_id}"
                 image_url = event.get('image_url')
-                image_html = f'<img src="{image_url}" alt="" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px;">' if image_url else '<div style="width: 70px; height: 70px; background: #e5e7eb; border-radius: 8px;"></div>'
+                
+                image_html = ""
+                if image_url:
+                    image_html = f'<img src="{image_url}" alt="" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px;">'
+                else:
+                    image_html = '<div style="width: 70px; height: 70px; background: #e5e7eb; border-radius: 8px;"></div>'
                 
                 trending_html += f"""
                 <a href="{event_url}" style="display: flex; align-items: center; text-decoration: none; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
@@ -601,7 +638,8 @@ class ResendEmailService:
         </div>
         """
 
-        html_content = f"""
+        # Construct HTML string without f-string for main block to avoid interpolation issues
+        html_content = """
         <!DOCTYPE html>
         <html>
         <head>
@@ -615,8 +653,8 @@ class ResendEmailService:
                 
                 <!-- Header -->
                 <div style="padding: 30px; text-align: center; background: #ffffff;">
-                    <img src="{logo_url}" alt="Highland Events Hub" style="width: 50px; height: 50px; border-radius: 10px;">
-                    <h1 style="color: #1a1a1a; margin: 16px 0 8px 0; font-size: 26px; font-weight: 700;">Welcome to the Hub, {name}!</h1>
+                    <img src="__LOGO_URL__" alt="Highland Events Hub" style="width: 50px; height: 50px; border-radius: 10px;">
+                    <h1 style="color: #1a1a1a; margin: 16px 0 8px 0; font-size: 26px; font-weight: 700;">Welcome to the Hub, __NAME__!</h1>
                     <p style="color: #6b7280; font-size: 16px; margin: 0;">Your guide to events in the Scottish Highlands</p>
                 </div>
                 
@@ -625,18 +663,18 @@ class ResendEmailService:
                     
                     <!-- Featured Section -->
                     <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0; font-weight: 600;">🔥 Featured Events</h2>
-                    {featured_html}
+                    __FEATURED_HTML__
                     
                     <!-- Onboarding -->
-                    {onboarding_html}
+                    __ONBOARDING_HTML__
                     
                     <!-- Trending Section -->
                     <h2 style="color: #1a1a1a; font-size: 18px; margin: 24px 0 16px 0; font-weight: 600;">📈 Trending This Week</h2>
-                    {trending_html}
+                    __TRENDING_HTML__
                     
                     <!-- CTA -->
                     <p style="text-align: center; margin-top: 30px;">
-                        <a href="{site_url}" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">Explore All Events</a>
+                        <a href="__SITE_URL__" style="display: inline-block; background: #1a1a1a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600;">Explore All Events</a>
                     </p>
                 </div>
                 
@@ -648,6 +686,14 @@ class ResendEmailService:
         </body>
         </html>
         """
+
+        # Perform string replacements
+        html_content = html_content.replace("__LOGO_URL__", logo_url)
+        html_content = html_content.replace("__NAME__", name)
+        html_content = html_content.replace("__FEATURED_HTML__", featured_html)
+        html_content = html_content.replace("__ONBOARDING_HTML__", onboarding_html)
+        html_content = html_content.replace("__TRENDING_HTML__", trending_html)
+        html_content = html_content.replace("__SITE_URL__", site_url)
 
         try:
             response = resend.Emails.send({
