@@ -200,6 +200,7 @@ class ResendEmailService:
         <body>
             <div class="container">
                 <div class="header">
+                    <img src="{settings.FRONTEND_URL}/icons/logo_knot.jpg" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
                     <h1>Your Weekend in the Highlands</h1>
                 </div>
                 <div class="content">
@@ -577,6 +578,7 @@ class ResendEmailService:
         <body>
             <div class="container">
                 <div class="header">
+                    <img src="{settings.FRONTEND_URL}/icons/logo_knot.jpg" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
                     <h1>Welcome to the Hub!</h1>
                     <p>Your guide to events in the Scottish Highlands</p>
                 </div>
@@ -651,6 +653,7 @@ class ResendEmailService:
         <body>
             <div class="container">
                 <div class="header">
+                    <img src="{settings.FRONTEND_URL}/icons/logo_knot.jpg" alt="Highland Events Hub" style="width: 60px; height: 60px; border-radius: 12px; margin-bottom: 15px;">
                     <h1>{subject}</h1>
                 </div>
                 <div class="content">
