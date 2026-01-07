@@ -13,7 +13,7 @@ from sqlmodel import SQLModel
 
 from app.core.config import settings
 from app.core.database import engine, check_db_connection
-from app.api import auth, events, venues, checkins, promotions, categories, tags, media, geocode, users, admin, hero, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, email_testing
+from app.api import auth, events, venues, checkins, promotions, categories, tags, media, geocode, users, admin, hero, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, email_testing, cron
 
 logger = logging.getLogger(__name__)
 
@@ -167,3 +167,5 @@ app.include_router(preferences.router, prefix="/api")
 app.include_router(featured.router, prefix="/api/featured", tags=["Featured"])
 app.include_router(notifications.router)
 app.include_router(email_testing.router, prefix="/api/admin/email-testing", tags=["Admin Email Testing"])
+app.include_router(cron.router, prefix="/api")
+

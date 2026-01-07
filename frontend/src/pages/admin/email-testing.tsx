@@ -40,6 +40,25 @@ export default function AdminEmailTesting() {
     const [alertLoading, setAlertLoading] = useState(false);
     const [alertResult, setAlertResult] = useState<EmailTestResponse | null>(null);
 
+    // Cron Trigger State
+    const [cronLoading, setCronLoading] = useState(false);
+    const [cronResult, setCronResult] = useState<any>(null);
+
+    const handleTriggerCron = async () => {
+        setCronLoading(true);
+        setCronResult(null);
+        try {
+            const response = await apiFetch<any>('/api/cron/weekly-digest', {
+                method: 'POST'
+            });
+            setCronResult({ success: true, message: response.message, processed: response.processed_users });
+        } catch (err: any) {
+            setCronResult({ success: false, message: err.message || 'Cron failed' });
+        } finally {
+            setCronLoading(false);
+        }
+    };
+
     // Initialize email fields with admin email
     useEffect(() => {
         if (user?.email) {
@@ -328,6 +347,53 @@ export default function AdminEmailTesting() {
                         </button>
 
                         <ResultBadge result={alertResult} />
+                    </div>
+
+                    {/* Automation Center Card */}
+                    <div className="bg-white rounded-lg shadow p-6 border-t-4 border-indigo-500">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                <span className="text-xl">⚙️</span>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900">Automation Center</h3>
+                                <p className="text-sm text-gray-500">Manually trigger scheduled jobs</p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h4 className="font-medium text-gray-900 mb-2">Weekly Digest Blast</h4>
+                            <p className="text-sm text-gray-600 mb-4">
+                                This will identify all subscribed users, generate personalized matches for next week, and send emails via Resend.
+                                <br />
+                                <span className="text-xs text-orange-600 font-semibold">⚠️ Warning: This will send real emails to all subscribed users!</span>
+                            </p>
+                            <button
+                                onClick={handleTriggerCron}
+                                disabled={cronLoading}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {cronLoading ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Running Job...
+                                    </>
+                                ) : (
+                                    'Trigger Weekly Digest Now'
+                                )}
+                            </button>
+                            {cronResult && (
+                                <div className={`mt-4 p-3 rounded-lg text-sm ${cronResult.success ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                                    <span className="font-bold">{cronResult.success ? 'Success:' : 'Error:'}</span> {cronResult.message}
+                                    {cronResult.processed !== undefined && (
+                                        <div className="mt-1 text-xs">Processed {cronResult.processed} users.</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </AdminLayout>
