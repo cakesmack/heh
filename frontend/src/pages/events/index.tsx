@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useSearch } from '@/context/SearchContext';
@@ -23,6 +23,9 @@ export default function EventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentFilters, setCurrentFilters] = useState<EventFilter>({});
   const [initialFilters, setInitialFilters] = useState<any>({});
+
+  // Ref for infinite scroll sentinel
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Fetch events with current filters
   const fetchEvents = useCallback(async (filters: EventFilter, append = false) => {
@@ -98,10 +101,24 @@ export default function EventsPage() {
     fetchEvents(filters as EventFilter);
   }, [router.isReady, router.query]);
 
-  // Handle Load More
-  const handleLoadMore = () => {
-    fetchEvents(currentFilters, true);
-  };
+  // Infinite scroll with Intersection Observer
+  useEffect(() => {
+    const hasMore = displayedEvents.length < total;
+    if (!loadMoreRef.current || isLoadingMore || isLoading || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          fetchEvents(currentFilters, true);
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    observer.observe(loadMoreRef.current);
+
+    return () => observer.disconnect();
+  }, [displayedEvents.length, total, isLoadingMore, isLoading, currentFilters, fetchEvents]);
 
   const handleSearch = async (filters: {
     q?: string;
@@ -127,7 +144,7 @@ export default function EventsPage() {
   const hasMore = displayedEvents.length < total;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-8 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -180,31 +197,18 @@ export default function EventsPage() {
 
           <EventList events={displayedEvents} isLoading={isLoading} error={error} />
 
-          {/* Load More Button */}
+          {/* Infinite Scroll Sentinel & Loading Indicator */}
           {hasMore && !isLoading && !error && (
-            <div className="mt-8 flex justify-center">
-              <button
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isLoadingMore ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    Load More Events
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </>
-                )}
-              </button>
+            <div ref={loadMoreRef} className="mt-8 flex justify-center py-4">
+              {isLoadingMore && (
+                <div className="flex items-center gap-2 text-gray-500">
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  <span>Loading more events...</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -212,4 +216,5 @@ export default function EventsPage() {
     </div>
   );
 }
+
 
