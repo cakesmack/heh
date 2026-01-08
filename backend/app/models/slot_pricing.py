@@ -46,10 +46,10 @@ DEFAULT_PRICING = {
         "max_concurrent": 3,
         "description": "Pinned at top of category page"
     },
-    SlotType.NEWSLETTER.value: {
+    SlotType.MAGAZINE_CAROUSEL.value: {
         "price_per_day": 1500,
         "min_days": 1,
-        "max_concurrent": 2,
-        "description": "Featured in weekly newsletter"
+        "max_concurrent": 3,
+        "description": "Featured in Magazine section"
     },
 }
