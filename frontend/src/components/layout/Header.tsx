@@ -10,12 +10,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSearch } from '@/context/SearchContext';
 import { NotificationCenter } from './NotificationCenter';
 import { apiFetch } from '@/lib/api';
 
 export function Header() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
+  const { openMobileSearch } = useSearch();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -188,8 +190,26 @@ export function Header() {
             )}
           </nav>
 
-          {/* Mobile Notification Bell */}
-          <div className="md:hidden">
+          {/* Mobile Header Row - Logo, Brand, Search, Notifications */}
+          <div className="md:hidden flex items-center gap-2">
+            {/* Brand Name - visible on mobile */}
+            <span className="text-white font-bold text-sm">Highland Events Hub</span>
+
+            {/* Spacer */}
+            <div className="flex-grow" />
+
+            {/* Search Icon */}
+            <button
+              onClick={openMobileSearch}
+              className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              aria-label="Search events"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+
+            {/* Notification Bell */}
             {isAuthenticated && (
               <NotificationCenter />
             )}

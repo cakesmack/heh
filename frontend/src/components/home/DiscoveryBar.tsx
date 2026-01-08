@@ -496,7 +496,7 @@ export default function DiscoveryBar({
                     </div>
 
                     {/* Modal Content - Scrollable */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
                         {/* Keyword Search */}
                         <div>
                             <label htmlFor="mobile-search" className="block text-sm font-medium text-gray-700 mb-1">Keywords</label>
@@ -554,8 +554,8 @@ export default function DiscoveryBar({
                                     }}
                                     disabled={isGettingLocation}
                                     className={`block w-full pl-10 pr-8 py-3 text-base rounded-lg cursor-pointer appearance-none transition-colors ${gpsMode
-                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-700 font-medium focus:ring-emerald-500 focus:border-emerald-500'
-                                            : 'border-gray-300 bg-gray-50 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500'
+                                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700 font-medium focus:ring-emerald-500 focus:border-emerald-500'
+                                        : 'border-gray-300 bg-gray-50 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500'
                                         } ${locationInputError ? 'border-red-500 ring-2 ring-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                     <option value="">Distance: Any</option>
@@ -631,7 +631,7 @@ export default function DiscoveryBar({
                     </div>
 
                     {/* Modal Footer - Actions */}
-                    <div className="p-4 border-t border-gray-200 bg-gray-50 sticky bottom-0 flex gap-3">
+                    <div className="p-4 border-t border-gray-200 bg-gray-50 sticky bottom-0 z-50 flex gap-3">
                         <button
                             onClick={handleClear}
                             className="flex-1 px-4 py-3 bg-white text-gray-700 font-bold rounded-xl border border-gray-300 shadow-sm hover:bg-gray-50 active:scale-95 transition-all"

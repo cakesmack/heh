@@ -55,7 +55,7 @@ export default function HomePage() {
     isLoading: isMagazineLoading
   } = useEvents({
     filters: {
-      limit: 9, // Fixed limit for teaser
+      limit: 13, // Hero (1 big + 2 small) + 2 rows of 4 = 11, plus 2 extra buffer
       skip: 0
     },
     autoFetch: true, // Auto fetch on mount

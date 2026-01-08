@@ -1,19 +1,60 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { useEvents } from '@/hooks/useEvents';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useSearch } from '@/context/SearchContext';
 import { EventList } from '@/components/events/EventList';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
-import { EventFilter } from '@/types';
+import { EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
+import { eventsAPI } from '@/lib/api';
+
+const EVENTS_PER_PAGE = 12;
 
 export default function EventsPage() {
   const router = useRouter();
   const { coordinates } = useGeolocation();
   const { openMobileSearch } = useSearch();
-  const { events, total, isLoading, error, fetchEvents } = useEvents({ autoFetch: false });
+
+  // Events state
+  const [displayedEvents, setDisplayedEvents] = useState<EventResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentFilters, setCurrentFilters] = useState<EventFilter>({});
   const [initialFilters, setInitialFilters] = useState<any>({});
+
+  // Fetch events with current filters
+  const fetchEvents = useCallback(async (filters: EventFilter, append = false) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+      setDisplayedEvents([]);
+    }
+    setError(null);
+
+    try {
+      const response = await eventsAPI.list({
+        ...filters,
+        limit: EVENTS_PER_PAGE,
+        skip: append ? displayedEvents.length : 0,
+      });
+
+      if (append) {
+        setDisplayedEvents(prev => [...prev, ...response.events]);
+      } else {
+        setDisplayedEvents(response.events);
+      }
+      setTotal(response.total);
+      setCurrentFilters(filters);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch events');
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, [displayedEvents.length]);
 
   // Read URL params on mount and apply filters
   useEffect(() => {
@@ -54,8 +95,13 @@ export default function EventsPage() {
       dateTo: date_to as string
     });
 
-    fetchEvents(filters);
+    fetchEvents(filters as EventFilter);
   }, [router.isReady, router.query]);
+
+  // Handle Load More
+  const handleLoadMore = () => {
+    fetchEvents(currentFilters, true);
+  };
 
   const handleSearch = async (filters: {
     q?: string;
@@ -77,6 +123,8 @@ export default function EventsPage() {
 
     router.push({ pathname: '/events', query }, undefined, { shallow: true });
   };
+
+  const hasMore = displayedEvents.length < total;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -125,14 +173,43 @@ export default function EventsPage() {
           {!isLoading && !error && (
             <div className="mb-6">
               <p className="text-sm text-gray-600">
-                {total} event{total !== 1 ? 's' : ''} found
+                Showing {displayedEvents.length} of {total} event{total !== 1 ? 's' : ''}
               </p>
             </div>
           )}
 
-          <EventList events={events} isLoading={isLoading} error={error} />
+          <EventList events={displayedEvents} isLoading={isLoading} error={error} />
+
+          {/* Load More Button */}
+          {hasMore && !isLoading && !error && (
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More Events
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

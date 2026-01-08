@@ -92,6 +92,12 @@ export function MapPage() {
     fetchData();
   }, [selectedDate]);
 
+  // Clear selected event when date changes
+  useEffect(() => {
+    setSelectedEvents([]);
+    setSelectedMarkerId(undefined);
+  }, [selectedDate]);
+
   // Filter events by category and date
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
@@ -303,6 +309,7 @@ export function MapPage() {
             showEvents={true}
             showVenues={false}
             onMarkerClick={handleMarkerClick}
+            onMapClick={closeMobileModal}
             onEventClick={(event) => {
               setSelectedMarkerId(event.id);
 

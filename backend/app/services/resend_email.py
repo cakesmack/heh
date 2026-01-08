@@ -63,7 +63,7 @@ class ResendEmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to the Hub!</h1>
+                    <h1>Welcome to Highland Events Hub!</h1>
                     <p>Your guide to events in the Scottish Highlands</p>
                 </div>
                 <div class="content">
@@ -112,7 +112,7 @@ class ResendEmailService:
             response = resend.Emails.send({
                 "from": self.from_address,
                 "to": [to_email],
-                "subject": "Welcome to the Hub!",
+                "subject": "Welcome to Highland Events Hub!",
                 "html": html_content,
             })
             logger.info(f"Welcome email sent to {mask_email(to_email)}, id: {response.get('id')}")
@@ -753,7 +753,7 @@ class ResendEmailService:
             response = resend.Emails.send({
                 "from": self.from_address,
                 "to": [to_email],
-                "subject": f"Welcome to the Hub, {name}! 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+                "subject": f"Welcome to Highland Events Hub, {name}! 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
                 "html": html_content,
             })
             logger.info(f"Welcome email with events sent to {mask_email(to_email)}, id: {response.get('id')}")

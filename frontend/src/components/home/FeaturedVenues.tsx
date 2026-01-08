@@ -17,7 +17,7 @@ export default function FeaturedVenues() {
         const fetchVenues = async () => {
             try {
                 // Fetch popular/featured venues
-                const data = await venuesAPI.list({ limit: 12 });
+                const data = await venuesAPI.list({ limit: 12, sort_by: 'activity' });
                 setVenues(data.venues || []);
             } catch (error) {
                 console.error('Failed to fetch venues:', error);
@@ -41,7 +41,7 @@ export default function FeaturedVenues() {
                 >
                     {[1, 2, 3, 4, 5, 6].map((i) => (
                         <div key={i} className="shrink-0 flex flex-col items-center">
-                            <div className="w-24 h-24 rounded-full bg-gray-200 animate-pulse" />
+                            <div className="w-24 h-24 rounded-lg bg-gray-200 animate-pulse" />
                             <div className="w-20 h-4 mt-3 rounded bg-gray-200 animate-pulse" />
                         </div>
                     ))}
@@ -74,8 +74,8 @@ export default function FeaturedVenues() {
                         className={`snap-center shrink-0 flex flex-col items-center group ${index === 0 ? 'ml-4 md:ml-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''
                             } ${index === venues.length - 1 ? 'mr-4 md:mr-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''}`}
                     >
-                        {/* Circular Image */}
-                        <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden bg-white shadow-lg border-4 border-white group-hover:border-emerald-200 group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                        {/* Squircle Image */}
+                        <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-lg overflow-hidden bg-white shadow-lg border-4 border-white group-hover:border-emerald-200 group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
                             {venue.image_url ? (
                                 <Image
                                     src={venue.image_url}

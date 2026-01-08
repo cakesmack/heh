@@ -122,8 +122,59 @@ export default function MagazineGrid({
                 </div>
             )}
 
-            {/* Full Width Grid */}
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0">
+            {/* Mobile View: Vertical Card List */}
+            <div className="md:hidden flex flex-col gap-4 px-4 py-4">
+                {events.map((event) => (
+                    <Link key={event.id} href={`/events/${event.id}`} className="block">
+                        <div className="relative h-48 rounded-xl overflow-hidden shadow-sm bg-stone-800 group hover:scale-[1.02] transition-transform duration-300">
+                            {/* Background Image */}
+                            <img
+                                src={event.image_url || '/images/event-placeholder.jpg'}
+                                alt={event.title}
+                                className="absolute inset-0 w-full h-full object-cover"
+                            />
+                            {/* Category Ribbon */}
+                            {event.category && (
+                                <div className="absolute top-3 right-[-2px] z-20">
+                                    <div
+                                        className="relative px-2 py-0.5 text-white text-[10px] font-bold uppercase tracking-wider shadow-md"
+                                        style={{ backgroundColor: event.category.gradient_color || '#10b981' }}
+                                    >
+                                        {event.category.name}
+                                        <div
+                                            className="absolute top-full right-0 w-[3px] h-[3px] brightness-75"
+                                            style={{
+                                                backgroundColor: event.category.gradient_color || '#10b981',
+                                                clipPath: 'polygon(0 0, 100% 0, 0 100%)'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            {/* Blurred Glass Overlay at Bottom */}
+                            <div className="absolute inset-x-0 bottom-0 backdrop-blur-md bg-black/50 p-3 border-t border-white/10">
+                                <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider block mb-0.5">
+                                    {formatEventDate(event)}
+                                </span>
+                                <h3 className="text-white font-bold text-base leading-tight line-clamp-1">
+                                    {event.title}
+                                </h3>
+                                {event.venue_name && (
+                                    <p className="text-gray-300 text-xs mt-0.5 truncate flex items-center">
+                                        <svg className="w-3 h-3 mr-1 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        </svg>
+                                        {event.venue_name}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </Link>
+                ))}
+            </div>
+
+            {/* Desktop View: Full Width Grid */}
+            <div className="hidden md:grid w-full grid-cols-2 lg:grid-cols-4 gap-0">
                 {/* Main Feature - Spans 2 cols and 2 rows on large screens */}
                 <div className="lg:col-span-2 lg:row-span-2 relative group h-[500px] lg:h-[600px] overflow-hidden">
                     <Link href={`/events/${mainFeature.id}`} className="block w-full h-full relative z-10">
@@ -182,7 +233,7 @@ export default function MagazineGrid({
 
                 {/* Grid Items */}
                 {gridItems.map((event) => (
-                    <div key={event.id} className="relative group h-[300px] overflow-hidden col-span-1">
+                    <div key={event.id} className="relative group h-[300px] overflow-hidden col-span-1 hover:scale-[1.02] transition-transform duration-300">
                         <Link href={`/events/${event.id}`} className="block w-full h-full relative z-10">
                             <img
                                 src={event.image_url || '/images/event-placeholder.jpg'}

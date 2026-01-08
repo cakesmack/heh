@@ -222,6 +222,7 @@ export interface VenueFilter {
   latitude?: number;
   longitude?: number;
   radius_km?: number;
+  sort_by?: 'name' | 'activity';
   skip?: number;
   limit?: number;
 }

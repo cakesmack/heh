@@ -243,6 +243,7 @@ def list_venues(
     latitude: Optional[float] = None,
     longitude: Optional[float] = None,
     radius_km: Optional[float] = None,
+    sort_by: Optional[str] = Query(None, description="Sort order: 'activity' (future events count) or 'name' (default A-Z)"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=1000),
     session: Session = Depends(get_session)
@@ -254,8 +255,24 @@ def list_venues(
     - Category ID
     - Category
     - Geographic proximity (latitude, longitude, radius)
+    
+    Supports sorting by:
+    - name (default): Alphabetical A-Z
+    - activity: By count of future events (most active first)
     """
-    query = select(Venue)
+    # Build base query
+    if sort_by == "activity":
+        # Subquery to count future events per venue
+        future_events_count = (
+            select(func.count(Event.id))
+            .where(Event.venue_id == Venue.id)
+            .where(Event.date_start >= func.now())
+            .correlate(Venue)
+            .scalar_subquery()
+        )
+        query = select(Venue).add_columns(future_events_count.label("event_count"))
+    else:
+        query = select(Venue)
 
     # Filter by category
     if category_id:
@@ -269,15 +286,32 @@ def list_venues(
             Venue.longitude.between(min_lon, max_lon)
         )
 
-    # Order by name
-    query = query.order_by(Venue.name)
+    # Apply sorting
+    if sort_by == "activity":
+        query = query.order_by(future_events_count.desc(), Venue.name)
+    else:
+        query = query.order_by(Venue.name)
 
-    # Count total
-    total = session.exec(select(func.count()).select_from(query.subquery())).one()
+    # Count total (need to handle subquery differently for activity sort)
+    if sort_by == "activity":
+        count_query = select(func.count()).select_from(
+            select(Venue.id).where(
+                (Venue.category_id == category_id) if category_id else True
+            ).subquery()
+        )
+        total = session.exec(count_query).one()
+    else:
+        total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
     # Apply pagination
     query = query.offset(skip).limit(limit)
-    venues = session.exec(query).all()
+    results = session.exec(query).all()
+    
+    # Extract venues from results (handle tuple for activity sort)
+    if sort_by == "activity":
+        venues = [result[0] if isinstance(result, tuple) else result for result in results]
+    else:
+        venues = results
 
     # Build response with computed fields
     venue_responses = [

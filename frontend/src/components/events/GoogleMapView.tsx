@@ -53,6 +53,7 @@ interface GoogleMapViewProps {
   venues?: VenueResponse[];
   onMarkerClick?: (marker: MapMarker) => void;
   onEventClick?: (event: EventResponse) => void;
+  onMapClick?: () => void;
   selectedMarkerId?: string;
   hoveredEventId?: string | null;
   userLocation?: { latitude: number; longitude: number };
@@ -72,6 +73,7 @@ export function GoogleMapView({
   venues = [],
   onMarkerClick,
   onEventClick,
+  onMapClick,
   selectedMarkerId,
   hoveredEventId,
   userLocation,
@@ -135,6 +137,13 @@ export function GoogleMapView({
     setSelectedEventGroup(null);
   }, []);
 
+  // Handle map click (click on empty map area)
+  const handleMapClick = useCallback(() => {
+    setInfoWindowMarkerId(null);
+    setSelectedEventGroup(null);
+    onMapClick?.();
+  }, [onMapClick]);
+
   // Handle "Locate Me" button click
   const handleLocateMe = useCallback(() => {
     if (!navigator.geolocation) {
@@ -191,6 +200,7 @@ export function GoogleMapView({
         gestureHandling="greedy"
         disableDefaultUI={false}
         clickableIcons={false}
+        onClick={handleMapClick}
         style={{ width: '100%', height: '100%' }}
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
       >
