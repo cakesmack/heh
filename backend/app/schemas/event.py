@@ -11,6 +11,7 @@ from app.schemas.category import CategoryResponse
 from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
 from app.schemas.venue import VenueResponse
+from typing import Union
 
 
 class ShowtimeCreate(BaseModel):
@@ -44,11 +45,11 @@ class EventCreate(BaseModel):
     location_name: Optional[str] = Field(None, max_length=255)
     category_id: str
     tags: Optional[List[str]] = Field(None, max_length=5, description="List of tag names (max 5)")
-    price: float = Field(default=0.0, ge=0.0)
+    price: Optional[Union[str, float]] = Field(default="Free", description="Price as text (e.g., 'Free', '£5', '£5-£10') or number")
     image_url: Optional[str] = Field(None, max_length=500)
     # Phase 2.10 additions
     ticket_url: Optional[str] = Field(None, max_length=500)
-    age_restriction: Optional[str] = Field(None, max_length=50)
+    age_restriction: Optional[Union[str, int]] = Field(None, description="Age restriction as number (0=all ages, 18, 21) or legacy string")
     # Phase 2.3 additions
     organizer_profile_id: Optional[UUID] = None
     is_recurring: Optional[bool] = False
@@ -76,11 +77,11 @@ class EventUpdate(BaseModel):
     location_name: Optional[str] = Field(None, max_length=255)
     category_id: Optional[str] = None
     tags: Optional[List[str]] = Field(None, description="List of tag names")
-    price: Optional[float] = Field(None, ge=0.0)
+    price: Optional[Union[str, float]] = Field(None, description="Price as text or number")
     image_url: Optional[str] = Field(None, max_length=500)
     # Phase 2.10 additions
     ticket_url: Optional[str] = Field(None, max_length=500)
-    age_restriction: Optional[str] = Field(None, max_length=50)
+    age_restriction: Optional[Union[str, int]] = Field(None, description="Age restriction as number or string")
     # Phase 2.3 additions
     organizer_profile_id: Optional[UUID] = None
     recurrence_rule: Optional[str] = Field(None, max_length=500)

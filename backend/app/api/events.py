@@ -33,6 +33,7 @@ from app.schemas.venue import VenueResponse
 from app.schemas.tag import TagResponse
 from app.schemas.tag import TagResponse
 from app.services.geolocation import calculate_geohash, haversine_distance, get_bounding_box
+from app.utils.price_age_parser import parse_price_input, parse_age_input
 from app.services.notifications import notification_service
 from app.services.resend_email import resend_email_service
 from app.services.recurrence import generate_recurring_instances
@@ -566,6 +567,10 @@ def create_event(
                 until_str = event_data.recurrence_end_date.strftime("%Y%m%dT%H%M%SZ")
                 recurrence_rule += f";UNTIL={until_str}"
     
+    # Parse price and age inputs
+    price_display, min_price = parse_price_input(event_data.price)
+    age_restriction_str, min_age = parse_age_input(event_data.age_restriction)
+    
     # Create event
     new_event = Event(
         id=normalize_uuid(uuid4()),
@@ -579,12 +584,15 @@ def create_event(
         longitude=longitude,
         geohash=geohash,
         category_id=category_id_normalized,
-        price=event_data.price,
+        price=min_price,  # Backward compatibility (numeric)
+        price_display=price_display,  # User-friendly text
+        min_price=min_price,  # For filtering
         image_url=event_data.image_url,
         organizer_id=normalize_uuid(current_user.id),
         # Phase 2.10 fields
         ticket_url=event_data.ticket_url,
-        age_restriction=event_data.age_restriction,
+        age_restriction=age_restriction_str,  # Backward compatibility (string)
+        min_age=min_age,  # Numeric for filtering
         # Phase 2.3 fields
         organizer_profile_id=normalize_uuid(event_data.organizer_profile_id) if event_data.organizer_profile_id else None,
         recurrence_rule=recurrence_rule,
@@ -859,6 +867,19 @@ def update_event(
                 detail="Category not found"
             )
         update_data["category_id"] = normalize_uuid(update_data["category_id"])
+
+    # Parse price if being updated
+    if "price" in update_data:
+        price_display, min_price = parse_price_input(update_data["price"])
+        update_data["price"] = min_price  # Keep legacy field as float
+        update_data["price_display"] = price_display
+        update_data["min_price"] = min_price
+    
+    # Parse age_restriction if being updated
+    if "age_restriction" in update_data:
+        age_restriction_str, min_age = parse_age_input(update_data["age_restriction"])
+        update_data["age_restriction"] = age_restriction_str  # Keep legacy field
+        update_data["min_age"] = min_age
 
     for field, value in update_data.items():
         if field in ("venue_id", "organizer_profile_id") and value is not None:
