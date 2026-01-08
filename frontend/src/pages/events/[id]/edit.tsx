@@ -181,7 +181,7 @@ export default function EditEventPage() {
                 category_id: formData.category_id,
                 date_start: new Date(formData.date_start).toISOString(),
                 date_end: new Date(formData.date_end).toISOString(),
-                price: parseFloat(formData.price),
+                price: formData.price,
                 image_url: formData.image_url || undefined,
                 ticket_url: formData.ticket_url || undefined,
                 age_restriction: formData.age_restriction || undefined,

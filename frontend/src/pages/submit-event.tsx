@@ -239,7 +239,7 @@ export default function SubmitEventPage() {
         longitude: locationMode === 'custom' ? formData.longitude : undefined,
         date_start: calculatedDateStart,
         date_end: calculatedDateEnd,
-        price: parseFloat(formData.price),
+        price: formData.price,
         image_url: formData.image_url || undefined,
         ticket_url: formData.ticket_url || undefined,
         age_restriction: formData.age_restriction || undefined,
