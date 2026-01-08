@@ -296,11 +296,21 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
               {(event.category || event.age_restriction) && (
                 <div className="mb-4 flex flex-wrap gap-2">
                   {event.category && (
-                    <Badge variant="info" size="sm">
-                      {event.category.name}
-                    </Badge>
+                    <Link href={`/category/${event.category.slug}`}>
+                      <Badge variant="info" size="sm" className="hover:opacity-80 transition-opacity cursor-pointer">
+                        {event.category.name}
+                      </Badge>
+                    </Link>
                   )}
-                  <AgeRestrictionBadge value={event.age_restriction} size="md" />
+                  {event.age_restriction && (
+                    <Link href={`/events?age_restriction=${encodeURIComponent(event.age_restriction)}`}>
+                      <AgeRestrictionBadge
+                        value={event.age_restriction}
+                        size="md"
+                        className="hover:opacity-80 transition-opacity cursor-pointer"
+                      />
+                    </Link>
+                  )}
                 </div>
               )}
 
@@ -329,12 +339,13 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
               {event.tags && event.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-4">
                   {event.tags.map((tag: any) => (
-                    <span
-                      key={tag.id}
-                      className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full"
-                    >
-                      #{tag.name}
-                    </span>
+                    <Link key={tag.id} href={`/events?tag=${encodeURIComponent(tag.name)}`}>
+                      <span
+                        className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full hover:bg-purple-200 transition-colors cursor-pointer"
+                      >
+                        #{tag.name}
+                      </span>
+                    </Link>
                   ))}
                 </div>
               )}
