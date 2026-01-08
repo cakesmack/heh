@@ -63,13 +63,14 @@ export default function EventsPage() {
   useEffect(() => {
     if (!router.isReady) return;
 
-    const { category, q, tag, age_restriction, date_from, date_to, location, latitude, longitude, radius, date } = router.query;
+    const { category, q, tag, tag_names, age_restriction, date_from, date_to, location, latitude, longitude, radius, date } = router.query;
 
     const filters: Partial<EventFilter> & { location?: string; latitude?: number; longitude?: number } = {};
     // Pass category as category (slug) for API filtering
     if (category) filters.category = category as any;
     if (q) filters.q = q as string;
     if (tag) filters.tag = tag as string;
+    if (tag_names) filters.tag_names = (tag_names as string).split(',');
     if (age_restriction) filters.age_restriction = age_restriction as string;
 
     // Handle date logic

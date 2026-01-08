@@ -35,8 +35,9 @@ export default function AdminCollections() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [queryBuilderMode, setQueryBuilderMode] = useState(true);
     const [qbState, setQbState] = useState({
-        category: '',
-        tag: '',
+        category: [] as string[],
+        q: '',
+        tags: '',
         age: '',
         price: 'any', // 'any', 'free', 'paid'
     });
@@ -73,8 +74,9 @@ export default function AdminCollections() {
             fixed_end_date: '',
         });
         setQbState({
-            category: '',
-            tag: '',
+            category: [],
+            q: '',
+            tags: '',
             age: '',
             price: 'any',
         });
@@ -115,8 +117,9 @@ export default function AdminCollections() {
             const searchParams = new URLSearchParams(url.split('?')[1] || '');
 
             setQbState({
-                category: searchParams.get('category') || '',
-                tag: searchParams.get('q') || '', // Mapping 'q' to tag/search
+                category: searchParams.get('category')?.split(',') || [],
+                q: searchParams.get('q') || '',
+                tags: searchParams.get('tag_names') || searchParams.get('tag') || '',
                 age: searchParams.get('age_restriction') || '',
                 price: searchParams.get('price') === 'free' ? 'free' : (searchParams.get('price') === 'paid' ? 'paid' : 'any'),
             });
@@ -131,8 +134,9 @@ export default function AdminCollections() {
         if (!queryBuilderMode || !modalOpen) return;
 
         const params = new URLSearchParams();
-        if (qbState.category) params.append('category', qbState.category);
-        if (qbState.tag) params.append('q', qbState.tag);
+        if (qbState.category.length > 0) params.append('category', qbState.category.join(','));
+        if (qbState.q) params.append('q', qbState.q);
+        if (qbState.tags) params.append('tag_names', qbState.tags);
         if (qbState.age) params.append('age_restriction', qbState.age);
         if (qbState.price === 'free') params.append('price', 'free');
 
@@ -327,34 +331,50 @@ export default function AdminCollections() {
 
                             {queryBuilderMode ? (
                                 <div className="space-y-3">
-                                    {/* Category */}
+                                    {/* Categories (Multi-select) */}
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
-                                        <select
-                                            value={qbState.category}
-                                            onChange={(e) => setQbState({ ...qbState, category: e.target.value })}
-                                            className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                        >
-                                            <option value="">Any Category</option>
+                                        <label className="block text-xs font-medium text-gray-500 mb-2">Categories (Select matches)</label>
+                                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded bg-white">
                                             {categories.map(c => (
-                                                <option key={c.id} value={c.name}>{c.name}</option> // Using name as slug for now, or should use ID? Backend filters by slug usually? 
-                                                // Actually backend filters by ID usually for category_id, but frontend URL often uses name/slug. 
-                                                // Let's check how /events page works. It uses category=slug usually.
-                                                // Wait, api.ts says `category` param. 
-                                                // Let's assume name for now as that's what URL usually has.
+                                                <label key={c.id} className="flex items-center space-x-2 text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={qbState.category.includes(c.name)} // Assuming name handles slug matching for now as per previous logic
+                                                        onChange={(e) => {
+                                                            const newCats = e.target.checked
+                                                                ? [...qbState.category, c.name]
+                                                                : qbState.category.filter(cat => cat !== c.name);
+                                                            setQbState({ ...qbState, category: newCats });
+                                                        }}
+                                                        className="rounded text-emerald-600 focus:ring-emerald-500"
+                                                    />
+                                                    <span className="truncate">{c.name}</span>
+                                                </label>
                                             ))}
-                                        </select>
+                                        </div>
                                     </div>
 
-                                    {/* Tag / Search */}
+                                    {/* Search Query */}
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Search / Tag</label>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Search Keywords (Title/Desc)</label>
                                         <input
                                             type="text"
-                                            value={qbState.tag}
-                                            onChange={(e) => setQbState({ ...qbState, tag: e.target.value })}
+                                            value={qbState.q}
+                                            onChange={(e) => setQbState({ ...qbState, q: e.target.value })}
                                             className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                            placeholder="e.g. jazz, workshop"
+                                            placeholder="e.g. workshop, gala"
+                                        />
+                                    </div>
+
+                                    {/* Tags */}
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Tags (Comma separated)</label>
+                                        <input
+                                            type="text"
+                                            value={qbState.tags}
+                                            onChange={(e) => setQbState({ ...qbState, tags: e.target.value })}
+                                            className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
+                                            placeholder="e.g. jazz, outdoor, family"
                                         />
                                     </div>
 

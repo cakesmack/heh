@@ -215,20 +215,24 @@ def list_events(
     # Track joins to avoid duplicates
     venue_joined = False
 
-    # Filter by category slug (resolve to ID first) - case-insensitive
+    # Filter by category slug (resolves to ID first) - case-insensitive
+    # Supports comma-separated list of slugs (e.g. "music,food")
     if category:
-        category_lower = category.lower()
-        cat = session.exec(
+        category_list = [c.strip().lower() for c in category.split(",")]
+        
+        # Find all matching categories
+        cats = session.exec(
             select(Category).where(
-                (Category.slug == category_lower) | 
-                (Category.id == normalize_uuid(category)) |
-                (func.lower(Category.name) == category_lower)
+                (Category.slug.in_(category_list)) | 
+                (func.lower(Category.name).in_(category_list))
             )
-        ).first()
-        if cat:
-            query = query.where(Event.category_id == cat.id)
+        ).all()
+        
+        if cats:
+            cat_ids = [c.id for c in cats]
+            query = query.where(Event.category_id.in_(cat_ids))
         else:
-            # No matching category, return empty
+            # No matching categories found
             return EventListResponse(events=[], total=0, skip=skip, limit=limit)
 
     # Filter by single category ID (only if category slug not provided)
