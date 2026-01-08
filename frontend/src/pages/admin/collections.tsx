@@ -224,7 +224,15 @@ export default function AdminCollections() {
                 </div>
             ),
         },
-        { key: 'target_link', header: 'Link' },
+        {
+            key: 'target_link',
+            header: 'Link',
+            render: (col: Collection) => (
+                <div className="max-w-[200px] truncate text-gray-500 text-xs" title={col.target_link}>
+                    {col.target_link}
+                </div>
+            )
+        },
         { key: 'sort_order', header: 'Order' },
         {
             key: 'is_active',
