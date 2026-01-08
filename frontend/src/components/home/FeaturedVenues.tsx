@@ -16,8 +16,8 @@ export default function FeaturedVenues() {
     useEffect(() => {
         const fetchVenues = async () => {
             try {
-                // Fetch popular/featured venues
-                const data = await venuesAPI.list({ limit: 12, sort_by: 'activity' });
+                // Fetch popular/featured venues - limit to 8 for single row feel
+                const data = await venuesAPI.list({ limit: 8, sort_by: 'activity' });
                 setVenues(data.venues || []);
             } catch (error) {
                 console.error('Failed to fetch venues:', error);
@@ -74,8 +74,8 @@ export default function FeaturedVenues() {
                         className={`snap-center shrink-0 flex flex-col items-center group ${index === 0 ? 'ml-4 md:ml-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''
                             } ${index === venues.length - 1 ? 'mr-4 md:mr-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''}`}
                     >
-                        {/* Squircle Image */}
-                        <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-lg overflow-hidden bg-white shadow-lg border-4 border-white group-hover:border-emerald-200 group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                        {/* Squircle Image -> Circle Image */}
+                        <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden bg-white shadow-lg border-4 border-white group-hover:border-emerald-200 group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
                             {venue.image_url ? (
                                 <Image
                                     src={venue.image_url}

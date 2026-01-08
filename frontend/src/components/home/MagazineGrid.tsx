@@ -270,10 +270,10 @@ export default function MagazineGrid({
                                     <div
                                         key={`progress-${index}-${carouselIndex}`}
                                         className={`absolute inset-0 ${index === carouselIndex
-                                                ? 'bg-emerald-500'
-                                                : index < carouselIndex
-                                                    ? 'bg-white/60'
-                                                    : 'bg-transparent'
+                                            ? 'bg-emerald-500'
+                                            : index < carouselIndex
+                                                ? 'bg-white/60'
+                                                : 'bg-transparent'
                                             }`}
                                         style={{
                                             width: index === carouselIndex ? '100%' : index < carouselIndex ? '100%' : '0%',
@@ -288,7 +288,7 @@ export default function MagazineGrid({
 
                 {/* Grid Items */}
                 {gridItems.map((event) => (
-                    <div key={event.id} className="relative group h-[300px] overflow-hidden col-span-1 hover:scale-[1.02] transition-transform duration-300">
+                    <div key={event.id} className="relative group h-[300px] rounded-xl md:rounded-none overflow-hidden col-span-1 hover:scale-[1.02] transition-transform duration-300">
                         <Link href={`/events/${event.id}`} className="block w-full h-full relative z-10">
                             <img
                                 src={event.image_url || '/images/event-placeholder.jpg'}

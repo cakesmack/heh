@@ -224,6 +224,24 @@ export default function HomePage() {
       {/* Popular Events Section */}
       <PopularEvents />
 
+      {/* Organizer CTA Banner */}
+      <section className="bg-emerald-600 py-12 px-4 text-center">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+            Hosting an event in the Highlands?
+          </h2>
+          <p className="text-emerald-100 mb-8 text-lg">
+            List your event for free and reach thousands of locals and visitors.
+          </p>
+          <a
+            href="/submit-event"
+            className="inline-block bg-white text-emerald-600 font-bold py-3 px-8 rounded-full hover:bg-emerald-50 transition-colors shadow-lg"
+          >
+            List it for free today
+          </a>
+        </div>
+      </section>
+
       {/* Featured Venues Carousel */}
       <FeaturedVenues />
 

@@ -123,7 +123,7 @@ export default function PopularEvents() {
                         className={`snap-start shrink-0 w-64 group relative transition-all duration-500 hover:z-10 ${index === 0 ? 'ml-4 md:ml-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''} ${index === events.length - 1 ? 'mr-4 md:mr-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''}`}
                     >
                         {/* Card with Image */}
-                        <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-stone-800 shadow-2xl border border-white/5 group-hover:border-white/20 transition-all duration-500">
+                        <div className="relative aspect-[2/3] rounded-xl md:rounded-none overflow-hidden bg-stone-800 shadow-2xl border border-white/5 group-hover:border-white/20 transition-all duration-500">
                             {event.image_url ? (
                                 <Image
                                     src={event.image_url}

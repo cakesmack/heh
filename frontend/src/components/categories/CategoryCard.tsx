@@ -25,12 +25,12 @@ export default function CategoryCard({ category }: CategoryCardProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
 
             {/* Content */}
-            <div className="absolute bottom-0 left-0 p-6 md:p-8 w-full">
-                <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-wider mb-2">
+            <div className="absolute bottom-0 left-0 p-3 md:p-8 w-full">
+                <h3 className="text-sm sm:text-lg md:text-3xl lg:text-4xl font-black text-white uppercase tracking-wider mb-1 md:mb-2 line-clamp-2 md:line-clamp-none">
                     {category.name}
                 </h3>
                 {category.event_count !== undefined && category.event_count > 0 && (
-                    <p className="text-sm font-medium text-gray-300">
+                    <p className="text-[10px] md:text-sm font-medium text-gray-300 hidden sm:block">
                         {category.event_count} event{category.event_count !== 1 ? 's' : ''}
                     </p>
                 )}

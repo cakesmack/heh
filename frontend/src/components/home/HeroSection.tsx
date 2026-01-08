@@ -224,11 +224,8 @@ export default function HeroSection() {
                 })
             )}
 
-            {/* Gradient Overlay */}
-            <div className={`absolute inset-0 transition-colors duration-1000 ${(!hasPaidSlots && slots[currentIndex]?.overlay_style === 'light')
-                ? 'bg-white/30'
-                : 'bg-gradient-to-t from-stone-dark via-stone-dark/60 to-transparent'
-                }`} />
+            {/* Gradient Overlay - Strong scrim for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
 
             {/* Navigation Buttons */}
             {displayLength > 1 && (
