@@ -256,19 +256,31 @@ export default function MagazineGrid({
                         ))}
                     </div>
 
-                    {/* Carousel Navigation Dots */}
+                    {/* Progress Bar Indicators - full width at very bottom */}
                     {featuredEvents.length > 1 && (
-                        <div className="absolute bottom-28 left-1/2 transform -translate-x-1/2 z-30 flex items-center gap-2">
+                        <div className="absolute bottom-0 left-0 right-0 z-30 flex gap-0">
                             {featuredEvents.map((_, index) => (
                                 <button
                                     key={index}
                                     onClick={(e) => { e.preventDefault(); setCarouselIndex(index); }}
-                                    className={`w-3 h-3 rounded-full transition-all duration-300 ${index === carouselIndex
-                                        ? 'bg-emerald-500 scale-110'
-                                        : 'bg-white/50 hover:bg-white/80'
-                                        }`}
+                                    className="relative flex-1 h-1 bg-white/20 overflow-hidden cursor-pointer hover:bg-white/30 transition-colors"
                                     aria-label={`Go to slide ${index + 1}`}
-                                />
+                                >
+                                    {/* Progress fill - animates when this slide is active */}
+                                    <div
+                                        key={`progress-${index}-${carouselIndex}`}
+                                        className={`absolute inset-0 ${index === carouselIndex
+                                                ? 'bg-emerald-500'
+                                                : index < carouselIndex
+                                                    ? 'bg-white/60'
+                                                    : 'bg-transparent'
+                                            }`}
+                                        style={{
+                                            width: index === carouselIndex ? '100%' : index < carouselIndex ? '100%' : '0%',
+                                            animation: index === carouselIndex ? 'progressFill 5s linear forwards' : 'none',
+                                        }}
+                                    />
+                                </button>
                             ))}
                         </div>
                     )}
