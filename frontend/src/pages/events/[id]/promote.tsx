@@ -16,7 +16,7 @@ const SLOT_DESCRIPTIONS: Record<SlotType, { name: string; description: string }>
   hero_home: { name: 'Hero Carousel', description: 'Maximum visibility on homepage' },
   global_pinned: { name: 'Homepage Pinned', description: 'Top of all events list' },
   category_pinned: { name: 'Category Pinned', description: 'Top of category page' },
-  newsletter: { name: 'Weekly Newsletter', description: 'Featured in Thursday digest' },
+  magazine_carousel: { name: 'Magazine Feature', description: 'Featured in Magazine section' },
 };
 
 export default function PromoteEventPage() {
@@ -197,7 +197,7 @@ export default function PromoteEventPage() {
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Placement</h2>
             <div className="space-y-3">
-              {(['hero_home', 'global_pinned', 'category_pinned'] as SlotType[]).map(slotType => {
+              {(['hero_home', 'global_pinned', 'category_pinned', 'magazine_carousel'] as SlotType[]).map(slotType => {
                 const config = getSlotConfig(slotType);
                 const info = SLOT_DESCRIPTIONS[slotType];
                 if (!config) return null;

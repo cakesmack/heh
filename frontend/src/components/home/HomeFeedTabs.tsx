@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { EventResponse, User } from '@/types';
 import { api, eventsAPI } from '@/lib/api';
@@ -18,6 +18,37 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
     const [isLoadingTonight, setIsLoadingTonight] = useState(false);
     const [hasFetchedFeed, setHasFetchedFeed] = useState(false);
     const [hasFetchedTonight, setHasFetchedTonight] = useState(false);
+
+    // Magazine Carousel: Paid bookings take priority
+    const [magazineBookingEvents, setMagazineBookingEvents] = useState<EventResponse[]>([]);
+
+    // Fetch magazine_carousel bookings on mount
+    useEffect(() => {
+        const fetchMagazineBookings = async () => {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/featured/active?slot_type=magazine_carousel`);
+                if (res.ok) {
+                    const bookings = await res.json();
+                    // Fetch full event details for each booking
+                    const eventPromises = bookings.map((b: { event_id: string }) =>
+                        eventsAPI.get(b.event_id).catch(() => null)
+                    );
+                    const events = (await Promise.all(eventPromises)).filter(Boolean) as EventResponse[];
+                    setMagazineBookingEvents(events);
+                }
+            } catch (err) {
+                console.error('Error fetching magazine bookings:', err);
+            }
+        };
+        fetchMagazineBookings();
+    }, []);
+
+    // Merge magazine booking events with latest events (bookings first)
+    const mergedLatestEvents = React.useMemo(() => {
+        const bookingIds = new Set(magazineBookingEvents.map(e => e.id));
+        const nonBookingLatest = latestEvents.filter(e => !bookingIds.has(e.id));
+        return [...magazineBookingEvents, ...nonBookingLatest];
+    }, [magazineBookingEvents, latestEvents]);
 
     // Fetch Tonight events when tab is clicked
     useEffect(() => {
@@ -109,7 +140,7 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
             <div className="min-h-[400px]">
                 {activeTab === 'latest' ? (
                     <>
-                        <MagazineGrid events={latestEvents} hideHeader={true} hideFooter={true} />
+                        <MagazineGrid events={mergedLatestEvents} hideHeader={true} hideFooter={true} />
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 text-center">
                             <Link
                                 href="/events"

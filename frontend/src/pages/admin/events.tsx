@@ -36,7 +36,6 @@ export default function AdminEvents() {
     location_name: '',
     category_id: '',
     price: 0,
-    featured: false,
     image_url: '',
     ticket_url: '',
     age_restriction: '',
@@ -50,6 +49,13 @@ export default function AdminEvents() {
   const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
   const [isMultiSession, setIsMultiSession] = useState(false);
   const [noEndTime, setNoEndTime] = useState(false);
+
+  // Admin Promote Modal State
+  const [promoteModalOpen, setPromoteModalOpen] = useState(false);
+  const [promotingEvent, setPromotingEvent] = useState<EventResponse | null>(null);
+  const [promoteSlotType, setPromoteSlotType] = useState<'hero_home' | 'global_pinned' | 'magazine_carousel'>('global_pinned');
+  const [promoteDuration, setPromoteDuration] = useState(7);
+  const [promoteLoading, setPromoteLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -118,7 +124,6 @@ export default function AdminEvents() {
       location_name: '',
       category_id: categories[0]?.id || '',
       price: 0,
-      featured: false,
       image_url: '',
       ticket_url: '',
       age_restriction: '',
@@ -144,7 +149,6 @@ export default function AdminEvents() {
       location_name: event.location_name || '',
       category_id: event.category_id || '',
       price: event.price,
-      featured: event.featured,
       image_url: event.image_url || '',
       ticket_url: event.ticket_url || '',
       age_restriction: event.age_restriction || '',
@@ -251,7 +255,6 @@ export default function AdminEvents() {
         location_name: useManualLocation ? formData.location_name : undefined,
         category_id: formData.category_id,
         price: formData.price,
-        featured: formData.featured,
         image_url: formData.image_url || undefined,
         ticket_url: formData.ticket_url || undefined,
         age_restriction: formData.age_restriction || undefined,
@@ -281,6 +284,34 @@ export default function AdminEvents() {
       fetchData();
     } catch (err: any) {
       alert(err.message || 'Failed to delete event');
+    }
+  };
+
+  // Admin Promote Handler
+  const handlePromote = async () => {
+    if (!promotingEvent) return;
+    setPromoteLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/featured/admin-create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          event_id: promotingEvent.id,
+          slot_type: promoteSlotType,
+          duration_days: promoteDuration
+        })
+      });
+      if (!res.ok) throw new Error('Failed to create featured booking');
+      setPromoteModalOpen(false);
+      setPromotingEvent(null);
+      fetchData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to promote event');
+    } finally {
+      setPromoteLoading(false);
     }
   };
 
@@ -424,6 +455,12 @@ export default function AdminEvents() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setPromotingEvent(event); setPromoteModalOpen(true); }}
+                          className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
+                        >
+                          Promote
+                        </button>
                         <button
                           onClick={(e) => openEditModal(event, e)}
                           className="text-xs text-gray-600 hover:text-emerald-600 px-2 py-1 rounded hover:bg-gray-100"
@@ -775,19 +812,6 @@ export default function AdminEvents() {
                   placeholder="0 = All Ages"
                 />
               </div>
-
-              <div className="flex items-center pt-6">
-                <input
-                  type="checkbox"
-                  id="featured"
-                  checked={formData.featured}
-                  onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
-                  className="w-4 h-4 text-emerald-600 rounded"
-                />
-                <label htmlFor="featured" className="ml-2 text-sm text-gray-700">
-                  Featured Event
-                </label>
-              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
@@ -807,6 +831,64 @@ export default function AdminEvents() {
               </button>
             </div>
           </form>
+        </Modal>
+
+        {/* Admin Promote Modal */}
+        <Modal
+          isOpen={promoteModalOpen}
+          onClose={() => { setPromoteModalOpen(false); setPromotingEvent(null); }}
+          title={`Promote: ${promotingEvent?.title || ''}`}
+          size="sm"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Create a free featured placement for this event. It will automatically expire.
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Placement Type</label>
+              <select
+                value={promoteSlotType}
+                onChange={(e) => setPromoteSlotType(e.target.value as any)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="global_pinned">Homepage Pinned (Top of Events)</option>
+                <option value="hero_home">Hero Carousel</option>
+                <option value="magazine_carousel">Magazine Feature</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+              <select
+                value={promoteDuration}
+                onChange={(e) => setPromoteDuration(Number(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+              >
+                <option value={7}>7 days</option>
+                <option value={14}>14 days</option>
+                <option value={30}>30 days</option>
+                <option value={60}>60 days</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <button
+                type="button"
+                onClick={() => { setPromoteModalOpen(false); setPromotingEvent(null); }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePromote}
+                disabled={promoteLoading}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {promoteLoading ? 'Creating...' : 'Promote Event'}
+              </button>
+            </div>
+          </div>
         </Modal>
       </AdminLayout>
     </AdminGuard >

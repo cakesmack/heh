@@ -7,6 +7,7 @@ from typing import Optional, List
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, func
+from sqlalchemy import case
 
 from app.core.database import get_session
 from app.core.security import get_current_user
@@ -18,7 +19,7 @@ from app.models.venue_category import VenueCategory
 from app.models.category import Category
 from app.models.tag import Tag, EventTag, normalize_tag_name
 from app.models.event_participating_venue import EventParticipatingVenue
-from app.models.featured_booking import FeaturedBooking
+from app.models.featured_booking import FeaturedBooking, SlotType, BookingStatus
 from app.models.showtime import EventShowtime
 from app.schemas.event import (
     EventCreate,
@@ -214,6 +215,18 @@ def list_events(
 
     # Track joins to avoid duplicates
     venue_joined = False
+    
+    # Join with active FeaturedBooking for pinned sorting
+    # This allows us to prioritize events with active global_pinned or category_pinned bookings
+    from datetime import date as date_today
+    today = date_today.today()
+    query = query.outerjoin(
+        FeaturedBooking,
+        (FeaturedBooking.event_id == Event.id) &
+        (FeaturedBooking.status == BookingStatus.ACTIVE) &
+        (FeaturedBooking.start_date <= today) &
+        (FeaturedBooking.end_date >= today)
+    )
 
     # Filter by category slug (resolves to ID first) - case-insensitive
     # Supports comma-separated list of slugs (e.g. "music,food")
@@ -425,7 +438,14 @@ def list_events(
         total = session.exec(count_query).one() or 0
 
         # Apply ordering and pagination
-        query = query.order_by(Event.featured.desc(), Event.date_start.asc())
+        # Tiered sorting: Pinned bookings first, then featured, then date
+        pinned_priority = case(
+            (FeaturedBooking.slot_type == SlotType.GLOBAL_PINNED, 1),
+            (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 2),
+            (FeaturedBooking.slot_type == SlotType.HERO_HOME, 3),
+            else_=4
+        )
+        query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
         if skip:
             query = query.offset(skip)
         if limit:

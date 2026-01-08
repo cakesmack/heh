@@ -843,7 +843,7 @@ export interface UserPreferencesUpdate {
 // FEATURED BOOKING TYPES
 // ============================================================
 
-export type SlotType = 'hero_home' | 'global_pinned' | 'category_pinned' | 'newsletter';
+export type SlotType = 'hero_home' | 'global_pinned' | 'category_pinned' | 'magazine_carousel';
 export type BookingStatus = 'pending_payment' | 'pending_approval' | 'active' | 'completed' | 'cancelled' | 'rejected';
 
 export interface SlotConfig {

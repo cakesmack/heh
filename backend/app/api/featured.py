@@ -431,5 +431,81 @@ def verify_stripe_session(
         traceback.print_exc()
         return VerifySessionResponse(
             success=False,
-            message=f"Verification failed: {str(e)}"
+        message=f"Verification failed: {str(e)}"
         )
+
+
+# ============================================================
+# ADMIN ENDPOINTS
+# ============================================================
+
+class AdminCreateRequest(BaseModel):
+    event_id: str
+    slot_type: SlotType
+    duration_days: int = 7  # Default 7 days
+    custom_subtitle: Optional[str] = None
+
+
+class AdminCreateResponse(BaseModel):
+    success: bool
+    booking_id: str
+    message: str
+
+
+@router.post("/admin-create", response_model=AdminCreateResponse)
+def admin_create_featured(
+    request: AdminCreateRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Admin-only endpoint to create free featured bookings.
+    These bookings are immediately active and will auto-expire.
+    """
+    # Require admin privileges
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin privileges required"
+        )
+    
+    # Normalize event ID
+    from app.core.utils import normalize_uuid
+    from datetime import timedelta
+    from uuid import uuid4
+    
+    event_id = normalize_uuid(request.event_id)
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    # Calculate dates
+    start = date.today()
+    end = start + timedelta(days=request.duration_days)
+    
+    # Create the booking
+    booking = FeaturedBooking(
+        id=normalize_uuid(uuid4()),
+        event_id=event_id,
+        user_id=normalize_uuid(current_user.id),
+        slot_type=request.slot_type,
+        start_date=start,
+        end_date=end,
+        status=BookingStatus.ACTIVE,
+        amount_paid=0,  # Free admin booking
+        custom_subtitle=request.custom_subtitle
+    )
+    session.add(booking)
+    
+    # Also set the event's featured flag and expiry
+    event.featured = True
+    event.featured_until = datetime.combine(end, datetime.max.time())
+    session.add(event)
+    
+    session.commit()
+    
+    return AdminCreateResponse(
+        success=True,
+        booking_id=str(booking.id),
+        message=f"Featured booking created. Active until {end.isoformat()}"
+    )

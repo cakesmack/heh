@@ -19,7 +19,7 @@ class SlotType(str, Enum):
     HERO_HOME = "hero_home"
     GLOBAL_PINNED = "global_pinned"
     CATEGORY_PINNED = "category_pinned"
-    NEWSLETTER = "newsletter"
+    MAGAZINE_CAROUSEL = "magazine_carousel"
 
 
 class BookingStatus(str, Enum):
