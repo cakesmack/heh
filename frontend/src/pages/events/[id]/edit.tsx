@@ -13,6 +13,7 @@ import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import TagInput from '@/components/tags/TagInput';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
+import RichTextEditor from '@/components/common/RichTextEditor';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 
 export default function EditEventPage() {
@@ -320,15 +321,10 @@ export default function EditEventPage() {
                             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
                                 Description
                             </label>
-                            <textarea
-                                id="description"
-                                name="description"
-                                rows={4}
+                            <RichTextEditor
                                 value={formData.description}
-                                onChange={handleChange}
+                                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
                                 placeholder="Describe your event..."
-                                disabled={isLoading}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                             />
                         </div>
 
@@ -459,21 +455,18 @@ export default function EditEventPage() {
                         {/* Price */}
                         <div>
                             <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                                Price (GBP) *
+                                Price
                             </label>
                             <Input
                                 id="price"
                                 name="price"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                required
+                                type="text"
                                 value={formData.price}
                                 onChange={handleChange}
-                                placeholder="0.00"
+                                placeholder="e.g., Free, £5, £5-£10"
                                 disabled={isLoading}
                             />
-                            <p className="mt-1 text-sm text-gray-500">Enter 0 for free events</p>
+                            <p className="mt-1 text-sm text-gray-500">Enter "Free" for free events or any price format.</p>
                         </div>
 
                         {/* Ticket URL */}
@@ -496,22 +489,19 @@ export default function EditEventPage() {
                         {/* Age Restriction */}
                         <div>
                             <label htmlFor="age_restriction" className="block text-sm font-medium text-gray-700 mb-2">
-                                Age Restriction
+                                Minimum Age
                             </label>
-                            <select
+                            <Input
                                 id="age_restriction"
                                 name="age_restriction"
+                                type="number"
+                                min="0"
                                 value={formData.age_restriction}
                                 onChange={handleChange}
+                                placeholder="0 = All Ages"
                                 disabled={isLoading}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                            >
-                                {AGE_RESTRICTION_OPTIONS.map(option => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
+                            />
+                            <p className="mt-1 text-sm text-gray-500">Enter 0 for All Ages, or minimum age required.</p>
                         </div>
 
                         {/* Stop Recurring Series */}

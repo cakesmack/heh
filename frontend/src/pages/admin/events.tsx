@@ -13,6 +13,7 @@ import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import { eventsAPI, categoriesAPI } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
+import RichTextEditor from '@/components/common/RichTextEditor';
 import type { EventResponse, VenueResponse, Category, ShowtimeCreate } from '@/types';
 
 export default function AdminEvents() {
@@ -48,6 +49,7 @@ export default function AdminEvents() {
   const [includePast, setIncludePast] = useState(false);
   const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
   const [isMultiSession, setIsMultiSession] = useState(false);
+  const [noEndTime, setNoEndTime] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -229,7 +231,14 @@ export default function AdminEvents() {
       } else {
         // Single session: use form dates, clear any stale showtimes
         calculatedDateStart = new Date(formData.date_start).toISOString();
-        calculatedDateEnd = new Date(formData.date_end).toISOString();
+
+        // If no specific end time, calculate as start + 4 hours
+        if (noEndTime) {
+          const startDate = new Date(formData.date_start);
+          calculatedDateEnd = new Date(startDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+        } else {
+          calculatedDateEnd = new Date(formData.date_end).toISOString();
+        }
         showtimesPayload = []; // Clear stale showtimes
       }
 
@@ -472,11 +481,10 @@ export default function AdminEvents() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                rows={3}
+                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                placeholder="Describe the event..."
               />
             </div>
 
@@ -543,19 +551,33 @@ export default function AdminEvents() {
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date/Time *</label>
-                    <DateTimePicker
-                      id="date_end"
-                      name="date_end"
-                      value={formData.date_end}
-                      onChange={(value) => handleDateChange('date_end', value)}
-                      min={formData.date_start}
-                      required
+                  {!noEndTime && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">End Date/Time *</label>
+                      <DateTimePicker
+                        id="date_end"
+                        name="date_end"
+                        value={formData.date_end}
+                        onChange={(value) => handleDateChange('date_end', value)}
+                        min={formData.date_start}
+                        required
+                      />
+                      {dateError && (
+                        <p className="text-sm text-red-600 mt-1">{dateError}</p>
+                      )}
+                    </div>
+                  )}
+                  <div className="col-span-2 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="noEndTime"
+                      checked={noEndTime}
+                      onChange={(e) => setNoEndTime(e.target.checked)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
                     />
-                    {dateError && (
-                      <p className="text-sm text-red-600 mt-1">{dateError}</p>
-                    )}
+                    <label htmlFor="noEndTime" className="text-sm text-gray-600">
+                      No specific end time (auto: +4hrs)
+                    </label>
                   </div>
                 </>
               )}
@@ -721,14 +743,13 @@ export default function AdminEvents() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price (GBP)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value as any })}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  placeholder="e.g., Free, £5, £5-£10"
                 />
               </div>
 
@@ -744,16 +765,15 @@ export default function AdminEvents() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Age Restriction</label>
-                <select
+                <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Age</label>
+                <input
+                  type="number"
+                  min="0"
                   value={formData.age_restriction}
                   onChange={(e) => setFormData({ ...formData, age_restriction: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                >
-                  {AGE_RESTRICTION_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                  placeholder="0 = All Ages"
+                />
               </div>
 
               <div className="flex items-center pt-6">

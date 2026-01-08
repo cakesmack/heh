@@ -18,6 +18,7 @@ import TagInput from '@/components/tags/TagInput';
 import ImageUpload from '@/components/common/ImageUpload';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
 import DateTimePicker from '@/components/common/DateTimePicker';
+import RichTextEditor from '@/components/common/RichTextEditor';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';
 
@@ -33,6 +34,7 @@ export default function SubmitEventPage() {
   const [selectedVenue, setSelectedVenue] = useState<VenueResponse | null>(null);
   const [participatingVenues, setParticipatingVenues] = useState<VenueResponse[]>([]);
 
+  const [locationTab, setLocationTab] = useState<'main' | 'multi'>('main');
   const [locationMode, setLocationMode] = useState<'venue' | 'custom'>('venue');
 
   const [formData, setFormData] = useState({
@@ -61,6 +63,7 @@ export default function SubmitEventPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
   const [isMultiSession, setIsMultiSession] = useState(false);
+  const [noEndTime, setNoEndTime] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -175,21 +178,28 @@ export default function SubmitEventPage() {
     setIsLoading(true);
 
     try {
-      // Validate required fields
-      if (locationMode === 'venue' && !formData.venue_id) {
-        throw new Error('Please select a venue');
-      }
-      if (locationMode === 'custom') {
-        if (!formData.location_name) {
-          throw new Error('Please enter a location name');
+      // Validate required fields based on location tab
+      if (locationTab === 'main') {
+        if (locationMode === 'venue' && !formData.venue_id) {
+          throw new Error('Please select a venue');
         }
-        // Geofencing: block locations outside the Scottish Highlands
-        if (!isLocationValid) {
-          throw new Error('Events must be located within the Scottish Highlands.');
+        if (locationMode === 'custom') {
+          if (!formData.location_name) {
+            throw new Error('Please enter a location name');
+          }
+          // Geofencing: block locations outside the Scottish Highlands
+          if (!isLocationValid) {
+            throw new Error('Events must be located within the Scottish Highlands.');
+          }
+        }
+      } else {
+        // Multi-venue tab
+        if (participatingVenues.length === 0) {
+          throw new Error('Please add at least one participating venue');
         }
       }
       if (!formData.category_id) throw new Error('Please select a category');
-      if (new Date(formData.date_end) <= new Date(formData.date_start)) throw new Error('End date must be after start date');
+      if (new Date(formData.date_end) <= new Date(formData.date_start) && !noEndTime) throw new Error('End date must be after start date');
 
       // Calculate dates based on mode
       let calculatedDateStart = formData.date_start;
@@ -207,9 +217,16 @@ export default function SubmitEventPage() {
         throw new Error('Please add at least one showtime');
       } else {
         // Single session: use form dates, clear any stale showtimes
-        showtimesPayload = undefined; // Public API might expect explicit [] or undefined, sticking to undefined if not used
+        showtimesPayload = undefined;
         calculatedDateStart = new Date(formData.date_start).toISOString();
-        calculatedDateEnd = new Date(formData.date_end).toISOString();
+
+        // If no specific end time, calculate as start + 4 hours
+        if (noEndTime) {
+          const startDate = new Date(formData.date_start);
+          calculatedDateEnd = new Date(startDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+        } else {
+          calculatedDateEnd = new Date(formData.date_end).toISOString();
+        }
       }
 
       const eventData = {
@@ -302,7 +319,11 @@ export default function SubmitEventPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea name="description" rows={4} value={formData.description} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg" />
+              <RichTextEditor
+                value={formData.description}
+                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                placeholder="Describe your event..."
+              />
             </div>
 
             <div>
@@ -315,83 +336,128 @@ export default function SubmitEventPage() {
 
             <TagInput selectedTags={selectedTags} onChange={setSelectedTags} maxTags={5} />
 
-            {/* LOCATION PICKER */}
+            {/* LOCATION SECTION - Tab Split */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
               <label className="block text-sm font-medium text-gray-900">Event Location *</label>
 
-              {/* Tabs */}
+              {/* Main Tabs: Main Location vs Multi-Venue */}
               <div className="flex border-b border-gray-200 mb-4">
                 <button
                   type="button"
-                  onClick={() => setLocationMode('venue')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationMode === 'venue' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  onClick={() => {
+                    setLocationTab('main');
+                    // Clear multi-venue data when switching to main
+                    setParticipatingVenues([]);
+                  }}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationTab === 'main'
+                    ? 'border-emerald-600 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                  📍 At a Venue
+                  📍 Main Location
                 </button>
                 <button
                   type="button"
-                  onClick={() => setLocationMode('custom')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationMode === 'custom' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  onClick={() => {
+                    setLocationTab('multi');
+                    // Clear main location data when switching to multi-venue
+                    setFormData(prev => ({ ...prev, venue_id: '', location_name: '' }));
+                    setSelectedVenue(null);
+                  }}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationTab === 'multi'
+                    ? 'border-emerald-600 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                  🗺️ Custom Location
+                  🎪 Multi-Venue Event
                 </button>
               </div>
 
-              {locationMode === 'venue' ? (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Search for a venue</label>
-                  <VenueTypeahead value={formData.venue_id} onChange={handleVenueChange} placeholder="e.g. The Ironworks" />
-                  <p className="mt-1 text-xs text-gray-500">
-                    <Link href="/venues" className="text-emerald-600 hover:underline">Can't find it? Add a new venue.</Link>
-                  </p>
-                </div>
-              ) : (
+              {/* Tab Content */}
+              {locationTab === 'main' ? (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Location Name *</label>
-                    <GooglePlacesAutocomplete
-                      placeholder="e.g. Belladrum Estate, High Street, etc."
-                      defaultValue={formData.location_name}
-                      onPlaceSelect={handlePlaceSelect}
-                      required
-                    />
+                  {/* Sub-tabs: Venue vs Custom */}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLocationMode('venue')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'venue'
+                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                        : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                        }`}
+                    >
+                      Select Venue
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocationMode('custom')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'custom'
+                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                        : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                        }`}
+                    >
+                      Custom Location
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Pin Location</label>
-                    <LocationPickerMap
-                      latitude={formData.latitude}
-                      longitude={formData.longitude}
-                      onLocationChange={handleLocationChange}
-                    />
-                  </div>
-
-                  {/* Geofencing Warning */}
-                  {!isLocationValid && formData.location_name && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                      <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
+                  {locationMode === 'venue' ? (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Search for a venue</label>
+                      <VenueTypeahead value={formData.venue_id} onChange={handleVenueChange} placeholder="e.g. The Ironworks" />
+                      <p className="mt-1 text-xs text-gray-500">
+                        <Link href="/venues" className="text-emerald-600 hover:underline">Can't find it? Add a new venue.</Link>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
                       <div>
-                        <p className="text-sm font-medium text-red-800">Location outside the Scottish Highlands</p>
-                        <p className="text-xs text-red-600 mt-1">Events must be located within the Scottish Highlands (IV, HS, KW, ZE, or qualifying PH/PA/AB/KA postcodes).</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Location Name *</label>
+                        <GooglePlacesAutocomplete
+                          placeholder="e.g. Belladrum Estate, High Street, etc."
+                          defaultValue={formData.location_name}
+                          onPlaceSelect={handlePlaceSelect}
+                          required
+                        />
                       </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Pin Location</label>
+                        <LocationPickerMap
+                          latitude={formData.latitude}
+                          longitude={formData.longitude}
+                          onLocationChange={handleLocationChange}
+                        />
+                      </div>
+
+                      {/* Geofencing Warning */}
+                      {!isLocationValid && formData.location_name && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                          <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <div>
+                            <p className="text-sm font-medium text-red-800">Location outside the Scottish Highlands</p>
+                            <p className="text-xs text-red-600 mt-1">Events must be located within the Scottish Highlands (IV, HS, KW, ZE, or qualifying PH/PA/AB/KA postcodes).</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    For festivals, pub crawls, or multi-venue events. Add all participating venues below.
+                  </p>
+                  <MultiVenueSelector
+                    selectedVenues={participatingVenues}
+                    onChange={setParticipatingVenues}
+                  />
+                  {participatingVenues.length === 0 && (
+                    <p className="text-xs text-amber-600">Please add at least one participating venue.</p>
+                  )}
+                </div>
               )}
-            </div>
-
-            {/* PARTICIPATING VENUES */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <label className="block text-sm font-medium text-gray-900 mb-2">Participating Venues (Optional)</label>
-              <p className="text-xs text-gray-500 mb-3">For pub crawls, festivals, or multi-venue events.</p>
-              <MultiVenueSelector
-                selectedVenues={participatingVenues}
-                onChange={setParticipatingVenues}
-              />
             </div>
 
             {/* Event Type Toggle */}
@@ -444,15 +510,31 @@ export default function SubmitEventPage() {
 
               {/* Single Event Date Inputs */}
               {!isMultiSession && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
-                    <DateTimePicker id="date_start" name="date_start" required value={formData.date_start} onChange={(val) => setFormData({ ...formData, date_start: val })} />
+                <div className="mt-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
+                      <DateTimePicker id="date_start" name="date_start" required value={formData.date_start} onChange={(val) => setFormData({ ...formData, date_start: val })} />
+                    </div>
+                    {!noEndTime && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
+                        <DateTimePicker id="date_end" name="date_end" required value={formData.date_end} onChange={(val) => setFormData({ ...formData, date_end: val })} min={formData.date_start} />
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
-                    <DateTimePicker id="date_end" name="date_end" required value={formData.date_end} onChange={(val) => setFormData({ ...formData, date_end: val })} min={formData.date_start} />
-                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={noEndTime}
+                      onChange={(e) => setNoEndTime(e.target.checked)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-sm text-gray-600">No specific end time</span>
+                  </label>
+                  {noEndTime && (
+                    <p className="text-xs text-gray-500">End time will be set to 4 hours after start time.</p>
+                  )}
                 </div>
               )}
 
@@ -587,8 +669,15 @@ export default function SubmitEventPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Price (GBP) *</label>
-              <Input name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
+              <Input
+                name="price"
+                type="text"
+                value={formData.price}
+                onChange={handleChange}
+                placeholder="e.g., Free, £5, £5-£10, Donation"
+              />
+              <p className="mt-1 text-xs text-gray-500">Enter "Free" for free events, or any price format.</p>
             </div>
 
             <div>
@@ -597,10 +686,16 @@ export default function SubmitEventPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Age Restriction</label>
-              <select name="age_restriction" value={formData.age_restriction} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
-                {AGE_RESTRICTION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Age</label>
+              <Input
+                name="age_restriction"
+                type="number"
+                min="0"
+                value={formData.age_restriction}
+                onChange={handleChange}
+                placeholder="0"
+              />
+              <p className="mt-1 text-xs text-gray-500">Enter 0 for All Ages, or minimum age required (e.g., 18).</p>
             </div>
 
             <div className="flex justify-between pt-4 border-t border-gray-200">
