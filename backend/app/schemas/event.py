@@ -109,6 +109,8 @@ class EventResponse(BaseModel):
     geohash: Optional[str]
     category_id: Optional[str]
     price: float
+    price_display: Optional[str] = None  # User-friendly price text (e.g., "From £5")
+    min_price: Optional[float] = None  # Numeric minimum for filtering
     featured: bool
     featured_until: Optional[datetime]
     organizer_id: UUID
@@ -120,6 +122,7 @@ class EventResponse(BaseModel):
     # Phase 2.10 additions
     ticket_url: Optional[str] = None
     age_restriction: Optional[str] = None
+    min_age: Optional[int] = None  # Numeric minimum age
     postcode: Optional[str] = None
     address_full: Optional[str] = None
     

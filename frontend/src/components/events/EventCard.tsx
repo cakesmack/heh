@@ -188,7 +188,7 @@ export function EventCard({ event }: EventCardProps) {
           <div className="mt-4 pt-3 border-t border-gray-200 flex items-center justify-between">
             {/* Price */}
             <div className="text-sm font-medium text-gray-900">
-              {event.price === 0 ? 'Free' : `£${event.price.toFixed(2)}`}
+              {event.price_display || (event.price === 0 ? 'Free' : `£${event.price.toFixed(2)}`)}
             </div>
 
             {/* Check-ins */}

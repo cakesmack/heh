@@ -269,6 +269,8 @@ export interface Event {
   longitude: number;
   category_id?: string;
   price: number;
+  price_display?: string;  // User-friendly text like "Free", "£5-£10"
+  min_price?: number;      // Numeric for filtering
   image_url?: string;
   featured: boolean;
   featured_until?: string;
@@ -278,6 +280,7 @@ export interface Event {
   // Phase 2.10 additions
   ticket_url?: string;
   age_restriction?: string;
+  min_age?: number;  // Numeric minimum age (0 = all ages)
   postcode?: string;
   address_full?: string;
   location_name?: string;
@@ -312,12 +315,12 @@ export interface EventCreate {
   date_end: string;
   venue_id: string;
   category_id: string;
-  price?: number;
+  price?: number | string;  // Can be number or text like "Free", "£5-£10"
   image_url?: string;
   tags?: string[];
   // Phase 2.10 additions
   ticket_url?: string;
-  age_restriction?: string;
+  age_restriction?: number | string;  // Can be number (18) or string ("18+")
   location_name?: string;
   // Phase 2.3 additions
   organizer_profile_id?: string;
