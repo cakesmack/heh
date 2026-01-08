@@ -292,7 +292,7 @@ export default function AdminEvents() {
     if (!promotingEvent) return;
     setPromoteLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/featured/admin-create`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/featured/admin-create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -26,7 +26,7 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
     useEffect(() => {
         const fetchMagazineBookings = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/featured/active?slot_type=magazine_carousel`);
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/featured/active?slot_type=magazine_carousel`);
                 if (res.ok) {
                     const bookings = await res.json();
                     // Fetch full event details for each booking
