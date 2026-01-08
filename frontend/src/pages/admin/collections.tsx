@@ -137,6 +137,9 @@ export default function AdminCollections() {
         if (qbState.price === 'free') params.append('price', 'free');
 
         // Add fixed date range to URL params if set
+        if (formData.fixed_start_date || formData.fixed_end_date) {
+            params.append('date', 'custom');
+        }
         if (formData.fixed_start_date) params.append('date_from', formData.fixed_start_date);
         if (formData.fixed_end_date) params.append('date_to', formData.fixed_end_date);
 
