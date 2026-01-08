@@ -53,9 +53,11 @@ export default function AdminEvents() {
   // Admin Promote Modal State
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [promotingEvent, setPromotingEvent] = useState<EventResponse | null>(null);
-  const [promoteSlotType, setPromoteSlotType] = useState<'hero_home' | 'global_pinned' | 'magazine_carousel'>('global_pinned');
-  const [promoteDuration, setPromoteDuration] = useState(7);
+  const [promoteSlotType, setPromoteSlotType] = useState<'hero_home' | 'global_pinned' | 'magazine_carousel'>('magazine_carousel');
   const [promoteLoading, setPromoteLoading] = useState(false);
+
+  // Track active promotions for each event: { eventId: [{id, slot_type},...] }
+  const [activePromotions, setActivePromotions] = useState<Record<string, { id: string, slot_type: string }[]>>({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -287,7 +289,7 @@ export default function AdminEvents() {
     }
   };
 
-  // Admin Promote Handler
+  // Admin Promote Handler - runs until event ends
   const handlePromote = async () => {
     if (!promotingEvent) return;
     setPromoteLoading(true);
@@ -300,18 +302,61 @@ export default function AdminEvents() {
         },
         body: JSON.stringify({
           event_id: promotingEvent.id,
-          slot_type: promoteSlotType,
-          duration_days: promoteDuration
+          slot_type: promoteSlotType
         })
       });
       if (!res.ok) throw new Error('Failed to create featured booking');
       setPromoteModalOpen(false);
       setPromotingEvent(null);
       fetchData();
+      fetchPromotions();
     } catch (err: any) {
       alert(err.message || 'Failed to promote event');
     } finally {
       setPromoteLoading(false);
+    }
+  };
+
+  // Fetch active promotions for all events
+  const fetchPromotions = useCallback(async () => {
+    try {
+      // Fetch for each event that might be promoted
+      const promotedEvents = events.filter(e => e.featured);
+      const promoMap: Record<string, { id: string, slot_type: string }[]> = {};
+      await Promise.all(promotedEvents.map(async (event) => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/featured/active-bookings/${event.id}`);
+          if (res.ok) {
+            const bookings = await res.json();
+            if (bookings.length > 0) {
+              promoMap[event.id] = bookings;
+            }
+          }
+        } catch { }
+      }));
+      setActivePromotions(promoMap);
+    } catch { }
+  }, [events]);
+
+  useEffect(() => {
+    if (events.length > 0) {
+      fetchPromotions();
+    }
+  }, [events, fetchPromotions]);
+
+  // Stop promotion handler
+  const handleStopPromotion = async (bookingId: string, eventId: string) => {
+    if (!confirm('Stop this promotion?')) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/featured/admin-stop/${bookingId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (!res.ok) throw new Error('Failed to stop promotion');
+      fetchData();
+      fetchPromotions();
+    } catch (err: any) {
+      alert(err.message || 'Failed to stop promotion');
     }
   };
 
@@ -455,12 +500,29 @@ export default function AdminEvents() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setPromotingEvent(event); setPromoteModalOpen(true); }}
-                          className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
-                        >
-                          Promote
-                        </button>
+                        {/* Show promotion indicator and Stop button if promoted */}
+                        {activePromotions[event.id]?.map((promo) => (
+                          <button
+                            key={promo.id}
+                            onClick={(e) => { e.stopPropagation(); handleStopPromotion(promo.id, event.id); }}
+                            className="text-xs text-orange-600 hover:text-orange-800 px-2 py-1 rounded hover:bg-orange-50 flex items-center gap-1"
+                            title={`Stop ${promo.slot_type} promotion`}
+                          >
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                            </svg>
+                            Stop
+                          </button>
+                        ))}
+                        {/* Show Promote button only if not already promoted */}
+                        {!activePromotions[event.id]?.length && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPromotingEvent(event); setPromoteModalOpen(true); }}
+                            className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
+                          >
+                            Promote
+                          </button>
+                        )}
                         <button
                           onClick={(e) => openEditModal(event, e)}
                           className="text-xs text-gray-600 hover:text-emerald-600 px-2 py-1 rounded hover:bg-gray-100"
@@ -842,7 +904,7 @@ export default function AdminEvents() {
         >
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Create a free featured placement for this event. It will automatically expire.
+              Promote this event. The promotion will run until the event ends or you stop it.
             </p>
 
             <div>
@@ -852,23 +914,9 @@ export default function AdminEvents() {
                 onChange={(e) => setPromoteSlotType(e.target.value as any)}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
               >
+                <option value="magazine_carousel">Magazine Carousel</option>
                 <option value="global_pinned">Homepage Pinned (Top of Events)</option>
                 <option value="hero_home">Hero Carousel</option>
-                <option value="magazine_carousel">Magazine Feature</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-              <select
-                value={promoteDuration}
-                onChange={(e) => setPromoteDuration(Number(e.target.value))}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-              >
-                <option value={7}>7 days</option>
-                <option value={14}>14 days</option>
-                <option value={30}>30 days</option>
-                <option value={60}>60 days</option>
               </select>
             </div>
 

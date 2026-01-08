@@ -124,9 +124,9 @@ export default function MagazineGrid({
         return null;
     }
 
-    // Grid items exclude carousel events to avoid duplicates
+    // Grid items exclude carousel events to avoid duplicates - need 10 items to fill grid
     const carouselIds = new Set(featuredEvents.map(e => e.id));
-    const gridItems = events.filter(e => !carouselIds.has(e.id)).slice(0, 10);
+    const gridItems = events.filter(e => !carouselIds.has(e.id)).slice(0, 12);
 
     return (
         <section className="w-full bg-stone-dark">
@@ -264,8 +264,8 @@ export default function MagazineGrid({
                                     key={index}
                                     onClick={(e) => { e.preventDefault(); setCarouselIndex(index); }}
                                     className={`w-3 h-3 rounded-full transition-all duration-300 ${index === carouselIndex
-                                            ? 'bg-emerald-500 scale-110'
-                                            : 'bg-white/50 hover:bg-white/80'
+                                        ? 'bg-emerald-500 scale-110'
+                                        : 'bg-white/50 hover:bg-white/80'
                                         }`}
                                     aria-label={`Go to slide ${index + 1}`}
                                 />

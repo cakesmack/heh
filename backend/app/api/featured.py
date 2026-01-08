@@ -442,7 +442,6 @@ def verify_stripe_session(
 class AdminCreateRequest(BaseModel):
     event_id: str
     slot_type: SlotType
-    duration_days: int = 7  # Default 7 days
     custom_subtitle: Optional[str] = None
 
 
@@ -460,7 +459,7 @@ def admin_create_featured(
 ):
     """
     Admin-only endpoint to create free featured bookings.
-    These bookings are immediately active and will auto-expire.
+    Bookings run until the event ends or are manually stopped.
     """
     # Require admin privileges
     if not current_user.is_admin:
@@ -471,7 +470,6 @@ def admin_create_featured(
     
     # Normalize event ID
     from app.core.utils import normalize_uuid
-    from datetime import timedelta
     from uuid import uuid4
     
     event_id = normalize_uuid(request.event_id)
@@ -479,9 +477,13 @@ def admin_create_featured(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     
-    # Calculate dates
+    # Calculate dates - runs until event ends
     start = date.today()
-    end = start + timedelta(days=request.duration_days)
+    # Use event end date, or 1 year from now if no end date
+    if event.date_end:
+        end = event.date_end.date() if hasattr(event.date_end, 'date') else event.date_end
+    else:
+        end = start + timedelta(days=365)
     
     # Create the booking
     booking = FeaturedBooking(
@@ -507,5 +509,72 @@ def admin_create_featured(
     return AdminCreateResponse(
         success=True,
         booking_id=str(booking.id),
-        message=f"Featured booking created. Active until {end.isoformat()}"
+        message=f"Featured booking created. Active until event ends ({end.isoformat()})"
     )
+
+
+@router.post("/admin-stop/{booking_id}")
+def admin_stop_featured(
+    booking_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Admin-only endpoint to stop/cancel a featured booking.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    
+    from app.core.utils import normalize_uuid
+    
+    booking = session.get(FeaturedBooking, normalize_uuid(booking_id))
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Set end date to today to stop it
+    booking.end_date = date.today()
+    booking.status = BookingStatus.CANCELLED
+    session.add(booking)
+    
+    # Update event featured status
+    event = session.get(Event, booking.event_id)
+    if event:
+        # Check if there are other active bookings for this event
+        other_active = session.exec(
+            select(FeaturedBooking).where(
+                FeaturedBooking.event_id == booking.event_id,
+                FeaturedBooking.id != booking.id,
+                FeaturedBooking.status == BookingStatus.ACTIVE,
+                FeaturedBooking.end_date >= date.today()
+            )
+        ).first()
+        if not other_active:
+            event.featured = False
+            event.featured_until = None
+            session.add(event)
+    
+    session.commit()
+    
+    return {"success": True, "message": "Featured booking stopped"}
+
+
+@router.get("/active-bookings/{event_id}")
+def get_event_active_bookings(
+    event_id: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Get active featured bookings for a specific event.
+    """
+    from app.core.utils import normalize_uuid
+    
+    bookings = session.exec(
+        select(FeaturedBooking).where(
+            FeaturedBooking.event_id == normalize_uuid(event_id),
+            FeaturedBooking.status == BookingStatus.ACTIVE,
+            FeaturedBooking.end_date >= date.today()
+        )
+    ).all()
+    
+    return [{"id": b.id, "slot_type": b.slot_type.value, "end_date": b.end_date.isoformat()} for b in bookings]
+
