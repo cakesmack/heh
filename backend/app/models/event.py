@@ -70,7 +70,9 @@ class Event(SQLModel, table=True):
         default=None,
         sa_column=Column(String, ForeignKey("categories.id", ondelete="SET NULL"), index=True, nullable=True)
     )
-    price: float = Field(default=0.0, ge=0.0)  # 0 = free event
+    price: float = Field(default=0.0, ge=0.0)  # Legacy - keeping for backward compatibility
+    price_display: Optional[str] = Field(default=None, max_length=100)  # User-friendly price text
+    min_price: float = Field(default=0.0, ge=0.0)  # For search filtering (parsed from price_display)
 
     # Featured status (paid promotion)
     featured: bool = Field(default=False, index=True)
@@ -102,7 +104,8 @@ class Event(SQLModel, table=True):
 
     # Phase 2.10 additions
     ticket_url: Optional[str] = Field(default=None, max_length=500)
-    age_restriction: Optional[str] = Field(default=None, max_length=50)
+    age_restriction: Optional[str] = Field(default=None, max_length=50)  # Legacy - keeping for compatibility
+    min_age: Optional[int] = Field(default=None)  # Numeric minimum age (0 = all ages, None = not specified)
     postcode: Optional[str] = Field(default=None, max_length=10)
     address_full: Optional[str] = Field(default=None, max_length=500)
 
