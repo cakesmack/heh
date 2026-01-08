@@ -37,7 +37,7 @@ SLOT_CONFIG = {
     SlotType.HERO_HOME: {"max": 5, "price_per_day": 4000, "min_days": 3},
     SlotType.GLOBAL_PINNED: {"max": 3, "price_per_day": 2000, "min_days": 3},
     SlotType.CATEGORY_PINNED: {"max": 3, "price_per_day": 1000, "min_days": 3},
-    SlotType.NEWSLETTER: {"max": 2, "price_per_day": 1500, "min_days": 1},
+    SlotType.MAGAZINE_CAROUSEL: {"max": 3, "price_per_day": 1500, "min_days": 1},
 }
 
 
