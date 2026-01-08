@@ -487,7 +487,7 @@ def admin_create_featured(
     booking = FeaturedBooking(
         id=normalize_uuid(uuid4()),
         event_id=event_id,
-        user_id=normalize_uuid(current_user.id),
+        organizer_id=normalize_uuid(current_user.id),
         slot_type=request.slot_type,
         start_date=start,
         end_date=end,
