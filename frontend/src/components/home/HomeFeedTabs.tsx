@@ -140,7 +140,7 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
             <div className="min-h-[400px]">
                 {activeTab === 'latest' ? (
                     <>
-                        <MagazineGrid events={mergedLatestEvents} hideHeader={true} hideFooter={true} />
+                        <MagazineGrid events={mergedLatestEvents} carouselEvents={magazineBookingEvents} hideHeader={true} hideFooter={true} />
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 text-center">
                             <Link
                                 href="/events"

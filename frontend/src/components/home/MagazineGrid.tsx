@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { EventResponse } from '@/types';
 import { Button } from '@/components/common/Button';
@@ -36,6 +37,7 @@ function formatEventDate(event: EventResponse, options?: { long?: boolean }): st
 
 interface MagazineGridProps {
     events: EventResponse[];
+    carouselEvents?: EventResponse[];  // Up to 3 featured events for carousel
     title?: string;
     subtitle?: string;
     hideHeader?: boolean;
@@ -99,19 +101,32 @@ const TileOverlay = ({ title, category, date, description, venue, checkins, cate
 
 export default function MagazineGrid({
     events,
+    carouselEvents = [],
     title = "Latest Events",
     subtitle = "Discover what's happening now",
     hideHeader = false,
     hideFooter = false
 }: MagazineGridProps) {
+    // Carousel state
+    const [carouselIndex, setCarouselIndex] = useState(0);
+    const featuredEvents = carouselEvents.length > 0 ? carouselEvents.slice(0, 3) : [events[0]].filter(Boolean);
+
+    // Auto-rotate carousel every 5 seconds
+    useEffect(() => {
+        if (featuredEvents.length <= 1) return;
+        const interval = setInterval(() => {
+            setCarouselIndex((prev) => (prev + 1) % featuredEvents.length);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [featuredEvents.length]);
+
     if (!events || events.length === 0) {
         return null;
     }
 
-    // First event is the "Feature" (large)
-    const mainFeature = events[0];
-    // Rest are standard grid items
-    const gridItems = events.slice(1);
+    // Grid items exclude carousel events to avoid duplicates
+    const carouselIds = new Set(featuredEvents.map(e => e.id));
+    const gridItems = events.filter(e => !carouselIds.has(e.id)).slice(0, 10);
 
     return (
         <section className="w-full bg-stone-dark">
@@ -176,60 +191,87 @@ export default function MagazineGrid({
 
             {/* Desktop View: Full Width Grid */}
             <div className="hidden md:grid w-full grid-cols-2 lg:grid-cols-4 gap-0">
-                {/* Main Feature - Spans 2 cols and 2 rows on large screens */}
+                {/* Main Feature Carousel - Spans 2 cols and 2 rows on large screens */}
                 <div className="lg:col-span-2 lg:row-span-2 relative group h-[500px] lg:h-[600px] overflow-hidden">
-                    <Link href={`/events/${mainFeature.id}`} className="block w-full h-full relative z-10">
-                        <img
-                            src={mainFeature.image_url || '/images/event-placeholder.jpg'}
-                            alt={mainFeature.title}
-                            className="w-full h-full object-cover transition-transform duration-1000 ease-in-out group-hover:scale-105"
-                        />
-
-                        {/* Category Ribbon for Feature */}
-                        {mainFeature.category && (
-                            <div className="absolute top-6 right-[-2px] z-20">
-                                <div
-                                    className="relative px-4 py-1.5 text-white text-sm font-bold uppercase tracking-wider shadow-md"
-                                    style={{ backgroundColor: mainFeature.category.gradient_color || '#059669' }}
-                                >
-                                    {mainFeature.category.name}
-                                    <div
-                                        className="absolute top-full right-0 w-[4px] h-[4px] brightness-75"
-                                        style={{
-                                            backgroundColor: mainFeature.category.gradient_color || '#059669',
-                                            clipPath: 'polygon(0 0, 100% 0, 0 100%)'
-                                        }}
+                    {/* Carousel Slides */}
+                    <div className="relative w-full h-full">
+                        {featuredEvents.map((event, index) => (
+                            <div
+                                key={event.id}
+                                className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === carouselIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                                    }`}
+                            >
+                                <Link href={`/events/${event.id}`} className="block w-full h-full relative">
+                                    <img
+                                        src={event.image_url || '/images/event-placeholder.jpg'}
+                                        alt={event.title}
+                                        className="w-full h-full object-cover transition-transform duration-1000 ease-in-out group-hover:scale-105"
                                     />
-                                </div>
-                            </div>
-                        )}
 
-                        <div className="absolute top-6 left-6 z-20">
-                            <BookmarkButton eventId={mainFeature.id} size="lg" className="bg-white/90 hover:bg-white shadow-lg" />
-                        </div>
+                                    {/* Category Ribbon */}
+                                    {event.category && (
+                                        <div className="absolute top-6 right-[-2px] z-20">
+                                            <div
+                                                className="relative px-4 py-1.5 text-white text-sm font-bold uppercase tracking-wider shadow-md"
+                                                style={{ backgroundColor: event.category.gradient_color || '#059669' }}
+                                            >
+                                                {event.category.name}
+                                                <div
+                                                    className="absolute top-full right-0 w-[4px] h-[4px] brightness-75"
+                                                    style={{
+                                                        backgroundColor: event.category.gradient_color || '#059669',
+                                                        clipPath: 'polygon(0 0, 100% 0, 0 100%)'
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
 
-                        <div className="absolute inset-0 flex flex-col justify-end">
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-                            {/* Large Tile Content - Tighter Spacing */}
-                            <div className="relative z-10 backdrop-blur-md bg-stone-dark/60 p-6 md:p-8 border-t border-white/10 shadow-[0_-4px_30px_rgba(0,0,0,0.1)]">
-                                <div className="max-w-4xl">
-                                    <h3 className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
-                                        {mainFeature.title}
-                                    </h3>
-                                    <div className="flex items-center text-gray-300 text-base mb-2">
-                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        {formatEventDate(mainFeature, { long: true })}
+                                    <div className="absolute top-6 left-6 z-20">
+                                        <BookmarkButton eventId={event.id} size="lg" className="bg-white/90 hover:bg-white shadow-lg" />
                                     </div>
-                                    <p className="text-gray-200 text-base line-clamp-2">
-                                        {stripHtml(mainFeature.description || '')}
-                                    </p>
-                                </div>
+
+                                    <div className="absolute inset-0 flex flex-col justify-end">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                                        <div className="relative z-10 backdrop-blur-md bg-stone-dark/60 p-6 md:p-8 border-t border-white/10 shadow-[0_-4px_30px_rgba(0,0,0,0.1)]">
+                                            <div className="max-w-4xl">
+                                                <h3 className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
+                                                    {event.title}
+                                                </h3>
+                                                <div className="flex items-center text-gray-300 text-base mb-2">
+                                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    {formatEventDate(event, { long: true })}
+                                                </div>
+                                                <p className="text-gray-200 text-base line-clamp-2">
+                                                    {stripHtml(event.description || '')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
                             </div>
+                        ))}
+                    </div>
+
+                    {/* Carousel Navigation Dots */}
+                    {featuredEvents.length > 1 && (
+                        <div className="absolute bottom-28 left-1/2 transform -translate-x-1/2 z-30 flex items-center gap-2">
+                            {featuredEvents.map((_, index) => (
+                                <button
+                                    key={index}
+                                    onClick={(e) => { e.preventDefault(); setCarouselIndex(index); }}
+                                    className={`w-3 h-3 rounded-full transition-all duration-300 ${index === carouselIndex
+                                            ? 'bg-emerald-500 scale-110'
+                                            : 'bg-white/50 hover:bg-white/80'
+                                        }`}
+                                    aria-label={`Go to slide ${index + 1}`}
+                                />
+                            ))}
                         </div>
-                    </Link>
+                    )}
                 </div>
 
                 {/* Grid Items */}
