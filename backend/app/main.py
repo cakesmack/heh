@@ -73,6 +73,11 @@ async def lifespan(app: FastAPI):
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='moderation_reason') THEN
                         ALTER TABLE events ADD COLUMN moderation_reason VARCHAR(255);
                     END IF;
+                    
+                    -- Add MAGAZINE_CAROUSEL to slottype enum if it doesn't exist
+                    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'MAGAZINE_CAROUSEL' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'slottype')) THEN
+                        ALTER TYPE slottype ADD VALUE IF NOT EXISTS 'MAGAZINE_CAROUSEL';
+                    END IF;
                 END $$;
             """))
             conn.commit()
