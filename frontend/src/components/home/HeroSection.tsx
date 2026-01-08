@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { HeroSlot, ActiveFeatured } from '@/types';
 import { heroAPI, api } from '@/lib/api';
+import { stripHtml } from '@/lib/stringUtils';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 
@@ -290,7 +291,7 @@ export default function HeroSection() {
                                         {slots[currentIndex].event!.venue_name && ` • ${slots[currentIndex].event!.venue_name}`}
                                     </span>
                                 )}
-                                {slots[currentIndex]?.event?.description || "Join us for this amazing event."}
+                                {stripHtml(slots[currentIndex]?.event?.description || "Join us for this amazing event.")}
                             </>
                         )}
                     </p>

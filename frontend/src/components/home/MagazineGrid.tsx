@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { EventResponse } from '@/types';
 import { Button } from '@/components/common/Button';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
+import { stripHtml } from '@/lib/stringUtils';
 
 // Helper: Format event date with multi-day support
 function formatEventDate(event: EventResponse, options?: { long?: boolean }): string {
@@ -223,7 +224,7 @@ export default function MagazineGrid({
                                         {formatEventDate(mainFeature, { long: true })}
                                     </div>
                                     <p className="text-gray-200 text-base line-clamp-2">
-                                        {mainFeature.description}
+                                        {stripHtml(mainFeature.description || '')}
                                     </p>
                                 </div>
                             </div>
@@ -248,7 +249,7 @@ export default function MagazineGrid({
                                 category={event.category?.name}
                                 categoryColor={event.category?.gradient_color}
                                 date={formatEventDate(event)}
-                                description={event.description}
+                                description={stripHtml(event.description || '')}
                                 venue={event.venue_name}
                                 checkins={event.checkin_count}
                             />

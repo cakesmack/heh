@@ -10,6 +10,7 @@ import { EventResponse } from '@/types';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
+import { stripHtml } from '@/lib/stringUtils';
 
 interface EventCardProps {
   event: EventResponse;
@@ -90,7 +91,7 @@ export function EventCard({ event }: EventCardProps) {
 
           {/* Description */}
           {event.description && (
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{event.description}</p>
+            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{stripHtml(event.description)}</p>
           )}
 
           {/* Meta Info */}
