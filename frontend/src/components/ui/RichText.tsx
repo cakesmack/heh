@@ -1,6 +1,6 @@
 /**
  * RichText Component
- * Renders text with preserved line breaks and auto-linked URLs
+ * Renders rich text content (HTML from Tiptap) or plain text with auto-linking.
  */
 
 import React from 'react';
@@ -10,17 +10,28 @@ interface RichTextProps {
     className?: string;
 }
 
-// Regex to match URLs
+// Regex to match URLs (for compatible plain text mode)
 const URL_REGEX = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
 
-/**
- * Converts plain text to React elements with:
- * - Preserved line breaks (via CSS whitespace-pre-wrap)
- * - Auto-linked URLs (clickable, opens in new tab)
- */
+// Simple check for HTML tags
+const isHtml = (text: string) => {
+    return /<[a-z][\s\S]*>/i.test(text);
+};
+
 export default function RichText({ content, className = '' }: RichTextProps) {
     if (!content) return null;
 
+    // Handle HTML content (from Tiptap editor)
+    if (isHtml(content)) {
+        return (
+            <div
+                className={`prose prose-sm max-w-none text-gray-700 ${className} [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&>a]:text-emerald-600 [&>a]:underline`}
+                dangerouslySetInnerHTML={{ __html: content }}
+            />
+        );
+    }
+
+    // Handle Plain Text (Legacy)
     // Split content by URLs and map to elements
     const parts = content.split(URL_REGEX);
 
