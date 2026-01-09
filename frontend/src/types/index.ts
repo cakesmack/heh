@@ -763,6 +763,16 @@ export interface Organizer {
   user_id: string;
   created_at: string;
   updated_at: string;
+  // Enhanced profile fields
+  cover_image_url?: string;
+  city?: string;
+  social_facebook?: string;
+  social_instagram?: string;
+  social_website?: string;
+  public_email?: string;
+  // Computed stats (from API)
+  total_events_hosted?: number;
+  follower_count?: number;
 }
 
 export interface OrganizerCreate {
@@ -790,6 +800,32 @@ export interface OrganizerUpdate {
 export interface OrganizerListResponse {
   organizers: Organizer[];
   total: number;
+}
+
+// ============================================================
+// GROUP MEMBER TYPES (Team Management)
+// ============================================================
+
+export type GroupRole = 'owner' | 'admin' | 'editor';
+
+export interface GroupMember {
+  group_id: string;
+  user_id: string;
+  role: GroupRole;
+  joined_at: string;
+  user_email?: string;
+  user_display_name?: string;
+}
+
+export interface GroupInvite {
+  token: string;
+  group_id: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface GroupMemberRoleUpdate {
+  role: string;
 }
 
 // ============================================================

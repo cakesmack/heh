@@ -24,9 +24,17 @@ class Organizer(SQLModel, table=True):
     logo_url: Optional[str] = Field(default=None, max_length=500)
     hero_image_url: Optional[str] = Field(default=None, max_length=500)
     
-    # Socials
+    # Socials (legacy - JSON blob)
     website_url: Optional[str] = Field(default=None, max_length=500)
     social_links: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    
+    # Enhanced Profile Fields (Part 2)
+    cover_image_url: Optional[str] = Field(default=None, max_length=500)  # 3:1 aspect ratio banner
+    city: Optional[str] = Field(default=None, max_length=100)
+    social_facebook: Optional[str] = Field(default=None, max_length=500)
+    social_instagram: Optional[str] = Field(default=None, max_length=500)
+    social_website: Optional[str] = Field(default=None, max_length=500)
+    public_email: Optional[str] = Field(default=None, max_length=255)
     
     # Owner of this profile
     user_id: str = Field(foreign_key="users.id", index=True)

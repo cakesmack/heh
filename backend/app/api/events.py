@@ -44,6 +44,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 from app.models.organizer import Organizer
+from app.models.group_member import GroupMember, GroupRole
 from app.core.query_utils import deduplicate_recurring_events
 
 router = APIRouter(tags=["Events"])
@@ -567,6 +568,32 @@ def create_event(
                 detail="Either venue_id or location_name must be provided"
             )
 
+    # Validate organizer profile (group) membership if provided
+    organizer_profile_id_normalized = None
+    if event_data.organizer_profile_id:
+        organizer_profile_id_normalized = normalize_uuid(event_data.organizer_profile_id)
+        organizer_profile = session.get(Organizer, organizer_profile_id_normalized)
+        if not organizer_profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organizer profile (group) not found"
+            )
+        
+        # Check if user is a member of this group (any role can create events)
+        is_creator = organizer_profile.user_id == current_user.id
+        if not is_creator:
+            member = session.exec(
+                select(GroupMember).where(
+                    GroupMember.group_id == organizer_profile_id_normalized,
+                    GroupMember.user_id == current_user.id
+                )
+            ).first()
+            if not member:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You must be a member of this group to create events for it"
+                )
+
     # Validate category
     category_id_normalized = None
     if event_data.category_id:
@@ -621,7 +648,7 @@ def create_event(
         age_restriction=age_restriction_str,  # Backward compatibility (string)
         min_age=min_age,  # Numeric for filtering
         # Phase 2.3 fields
-        organizer_profile_id=normalize_uuid(event_data.organizer_profile_id) if event_data.organizer_profile_id else None,
+        organizer_profile_id=organizer_profile_id_normalized,
         recurrence_rule=recurrence_rule,
         is_recurring=event_data.is_recurring if event_data.is_recurring is not None else False,
         # Status will be set below based on trust evaluation

@@ -1391,9 +1391,20 @@ export const notificationsAPI = {
 };
 
 export const groupsAPI = {
+  // Invite management
   createInvite: async (groupId: string) => {
     return apiFetch<any>(`/api/groups/${groupId}/invite`, {
       method: 'POST',
+    });
+  },
+
+  listInvites: async (groupId: string): Promise<any[]> => {
+    return apiFetch<any[]>(`/api/groups/${groupId}/invites`);
+  },
+
+  deleteInvite: async (groupId: string, token: string): Promise<void> => {
+    return apiFetch<void>(`/api/groups/${groupId}/invites/${token}`, {
+      method: 'DELETE',
     });
   },
 
@@ -1403,8 +1414,27 @@ export const groupsAPI = {
     });
   },
 
-  listMembers: async (groupId: string) => {
+  // Member management
+  listMembers: async (groupId: string): Promise<any[]> => {
     return apiFetch<any[]>(`/api/groups/${groupId}/members`);
+  },
+
+  removeMember: async (groupId: string, userId: string): Promise<void> => {
+    return apiFetch<void>(`/api/groups/${groupId}/members/${userId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  updateMemberRole: async (groupId: string, userId: string, role: string): Promise<any> => {
+    return apiFetch<any>(`/api/groups/${groupId}/members/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  // Membership check (for permission UI)
+  checkMembership: async (groupId: string): Promise<{ is_member: boolean; role: string | null }> => {
+    return apiFetch<{ is_member: boolean; role: string | null }>(`/api/groups/${groupId}/membership`);
   },
 };
 

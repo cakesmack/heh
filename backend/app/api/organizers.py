@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, func
 
@@ -7,6 +8,9 @@ from app.core.security import get_current_user
 from app.core.utils import normalize_uuid, simple_slugify
 from app.models.user import User
 from app.models.organizer import Organizer
+from app.models.event import Event
+from app.models.follow import Follow
+from app.models.group_member import GroupMember, GroupRole
 from app.schemas.organizer import (
     OrganizerCreate,
     OrganizerUpdate,
@@ -83,7 +87,7 @@ def get_organizer_by_slug(
     session: Session = Depends(get_session)
 ):
     """
-    Get a specific organizer by slug.
+    Get a specific organizer by slug with computed stats.
     """
     organizer = session.exec(select(Organizer).where(Organizer.slug == slug)).first()
     if not organizer:
@@ -91,7 +95,30 @@ def get_organizer_by_slug(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organizer not found"
         )
-    return organizer
+    
+    # Compute total events hosted (past events only)
+    total_events = session.exec(
+        select(func.count()).select_from(Event).where(
+            Event.organizer_profile_id == organizer.id,
+            Event.date_end < datetime.utcnow(),
+            Event.status == "published"
+        )
+    ).one() or 0
+    
+    # Compute follower count
+    follower_count = session.exec(
+        select(func.count()).select_from(Follow).where(
+            Follow.target_id == organizer.id,
+            Follow.target_type == "group"
+        )
+    ).one() or 0
+    
+    # Build response with computed fields
+    response_data = OrganizerResponse.model_validate(organizer)
+    response_data.total_events_hosted = total_events
+    response_data.follower_count = follower_count
+    
+    return response_data
 
 @router.get("/{organizer_id}", response_model=OrganizerResponse)
 def get_organizer(
@@ -125,13 +152,25 @@ def update_organizer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organizer not found"
         )
-        
-    # Check permissions
-    if organizer.user_id != current_user.id and not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this organizer"
-        )
+    
+    # Check permissions - OWNER, ADMIN, or site admin can update
+    is_creator = organizer.user_id == current_user.id
+    is_site_admin = current_user.is_admin
+    
+    if not is_creator and not is_site_admin:
+        # Check if user is OWNER or ADMIN via GroupMember
+        member = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == organizer.id,
+                GroupMember.user_id == current_user.id,
+                GroupMember.role.in_([GroupRole.OWNER, GroupRole.ADMIN])
+            )
+        ).first()
+        if not member:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to update this organizer"
+            )
         
     update_data = organizer_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -158,12 +197,12 @@ def delete_organizer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organizer not found"
         )
-        
-    # Check permissions
+    
+    # Check permissions - Only OWNER (creator) or site admin can delete
     if organizer.user_id != current_user.id and not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this organizer"
+            detail="Only the group owner can delete this organizer"
         )
         
     session.delete(organizer)

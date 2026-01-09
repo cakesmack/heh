@@ -78,6 +78,26 @@ async def lifespan(app: FastAPI):
                     IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'MAGAZINE_CAROUSEL' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'slottype')) THEN
                         ALTER TYPE slottype ADD VALUE IF NOT EXISTS 'MAGAZINE_CAROUSEL';
                     END IF;
+                    
+                    -- Organizer profile enhancements (Part 2 upgrade)
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizers' AND column_name='cover_image_url') THEN
+                        ALTER TABLE organizers ADD COLUMN cover_image_url VARCHAR(500);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizers' AND column_name='city') THEN
+                        ALTER TABLE organizers ADD COLUMN city VARCHAR(100);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizers' AND column_name='social_facebook') THEN
+                        ALTER TABLE organizers ADD COLUMN social_facebook VARCHAR(500);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizers' AND column_name='social_instagram') THEN
+                        ALTER TABLE organizers ADD COLUMN social_instagram VARCHAR(500);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizers' AND column_name='social_website') THEN
+                        ALTER TABLE organizers ADD COLUMN social_website VARCHAR(500);
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizers' AND column_name='public_email') THEN
+                        ALTER TABLE organizers ADD COLUMN public_email VARCHAR(255);
+                    END IF;
                 END $$;
             """))
             conn.commit()

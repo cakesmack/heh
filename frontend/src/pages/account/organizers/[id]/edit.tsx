@@ -1,5 +1,6 @@
 /**
  * Edit Organizer Profile Page
+ * Features tabbed interface for Profile Details and Team Management
  */
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
@@ -10,26 +11,51 @@ import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Spinner } from '@/components/common/Spinner';
+import { GroupMember, GroupInvite, GroupRole } from '@/types';
+
+// Role badge colors
+const ROLE_COLORS: Record<GroupRole, { bg: string; text: string }> = {
+    owner: { bg: 'bg-purple-100', text: 'text-purple-800' },
+    admin: { bg: 'bg-blue-100', text: 'text-blue-800' },
+    editor: { bg: 'bg-gray-100', text: 'text-gray-800' },
+};
 
 export default function EditOrganizerPage() {
     const router = useRouter();
     const { id } = router.query;
-    const { isAuthenticated, isLoading: authLoading } = useAuth();
+    const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+    // Tab state
+    const [activeTab, setActiveTab] = useState<'profile' | 'team'>('profile');
+
+    // Profile form data
     const [formData, setFormData] = useState({
         name: '',
         bio: '',
         website_url: '',
         logo_url: '',
         social_links: {} as Record<string, string>,
+        // New profile fields
+        cover_image_url: '',
+        city: '',
+        social_facebook: '',
+        social_instagram: '',
+        social_website: '',
+        public_email: '',
     });
 
     const [newSocialPlatform, setNewSocialPlatform] = useState('');
     const [newSocialUrl, setNewSocialUrl] = useState('');
-    const [members, setMembers] = useState<any[]>([]);
+
+    // Team management state
+    const [members, setMembers] = useState<GroupMember[]>([]);
+    const [invites, setInvites] = useState<GroupInvite[]>([]);
+    const [userRole, setUserRole] = useState<GroupRole | null>(null);
+    const [organizerUserId, setOrganizerUserId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id || authLoading) return;
@@ -39,7 +65,7 @@ export default function EditOrganizerPage() {
             return;
         }
 
-        const fetchOrganizer = async () => {
+        const fetchData = async () => {
             try {
                 const org = await api.organizers.get(id as string);
                 setFormData({
@@ -48,7 +74,23 @@ export default function EditOrganizerPage() {
                     website_url: org.website_url || '',
                     logo_url: org.logo_url || '',
                     social_links: org.social_links || {},
+                    // New profile fields
+                    cover_image_url: org.cover_image_url || '',
+                    city: org.city || '',
+                    social_facebook: org.social_facebook || '',
+                    social_instagram: org.social_instagram || '',
+                    social_website: org.social_website || '',
+                    public_email: org.public_email || '',
                 });
+                setOrganizerUserId(org.user_id);
+
+                // Check user's role in this group
+                try {
+                    const membership = await api.groups.checkMembership(id as string);
+                    setUserRole(membership.role as GroupRole);
+                } catch (err) {
+                    console.error('Failed to check membership:', err);
+                }
 
                 // Fetch members
                 try {
@@ -57,6 +99,15 @@ export default function EditOrganizerPage() {
                 } catch (err) {
                     console.error('Failed to fetch members:', err);
                 }
+
+                // Fetch pending invites (only if OWNER or ADMIN)
+                try {
+                    const invitesData = await api.groups.listInvites(id as string);
+                    setInvites(invitesData || []);
+                } catch (err) {
+                    // May fail if user is EDITOR - that's OK
+                    console.log('Failed to fetch invites (may not have permission)');
+                }
             } catch (err) {
                 setError('Failed to load organizer profile');
             } finally {
@@ -64,7 +115,7 @@ export default function EditOrganizerPage() {
             }
         };
 
-        fetchOrganizer();
+        fetchData();
     }, [id, isAuthenticated, authLoading, router]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -106,10 +157,18 @@ export default function EditOrganizerPage() {
                 website_url: formData.website_url || undefined,
                 logo_url: formData.logo_url || undefined,
                 social_links: Object.keys(formData.social_links).length > 0 ? formData.social_links : undefined,
+                // New profile fields
+                cover_image_url: formData.cover_image_url || undefined,
+                city: formData.city || undefined,
+                social_facebook: formData.social_facebook || undefined,
+                social_instagram: formData.social_instagram || undefined,
+                social_website: formData.social_website || undefined,
+                public_email: formData.public_email || undefined,
             };
 
             await api.organizers.update(id as string, data);
-            router.push('/account');
+            setSuccessMessage('Profile updated successfully!');
+            setTimeout(() => setSuccessMessage(null), 3000);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update organizer profile');
         } finally {
@@ -130,17 +189,68 @@ export default function EditOrganizerPage() {
         }
     };
 
+    // Team management handlers
     const handleGenerateInvite = async () => {
         try {
             const invite = await api.groups.createInvite(id as string);
             const inviteUrl = `${window.location.origin}/join/group/${invite.token}`;
             navigator.clipboard.writeText(inviteUrl);
-            alert(`Invite link copied to clipboard!\n\n${inviteUrl}`);
+            alert(`Invite link copied to clipboard!\n\n${inviteUrl}\n\nThis link expires in 7 days.`);
+            // Refresh invites
+            const invitesData = await api.groups.listInvites(id as string);
+            setInvites(invitesData || []);
         } catch (err) {
             console.error('Failed to generate invite:', err);
             alert('Failed to generate invite link');
         }
     };
+
+    const handleCopyInviteLink = (token: string) => {
+        const inviteUrl = `${window.location.origin}/join/group/${token}`;
+        navigator.clipboard.writeText(inviteUrl);
+        setSuccessMessage('Invite link copied!');
+        setTimeout(() => setSuccessMessage(null), 2000);
+    };
+
+    const handleDeleteInvite = async (token: string) => {
+        if (!confirm('Are you sure you want to revoke this invite link?')) return;
+        try {
+            await api.groups.deleteInvite(id as string, token);
+            setInvites(prev => prev.filter(inv => inv.token !== token));
+            setSuccessMessage('Invite revoked');
+            setTimeout(() => setSuccessMessage(null), 2000);
+        } catch (err) {
+            setError('Failed to revoke invite');
+        }
+    };
+
+    const handleRemoveMember = async (userId: string, userEmail?: string) => {
+        if (!confirm(`Remove ${userEmail || 'this member'} from the team?`)) return;
+        try {
+            await api.groups.removeMember(id as string, userId);
+            setMembers(prev => prev.filter(m => m.user_id !== userId));
+            setSuccessMessage('Member removed');
+            setTimeout(() => setSuccessMessage(null), 2000);
+        } catch (err: any) {
+            setError(err.message || 'Failed to remove member');
+        }
+    };
+
+    const handleRoleChange = async (userId: string, newRole: GroupRole) => {
+        try {
+            await api.groups.updateMemberRole(id as string, userId, newRole);
+            setMembers(prev => prev.map(m =>
+                m.user_id === userId ? { ...m, role: newRole } : m
+            ));
+            setSuccessMessage('Role updated');
+            setTimeout(() => setSuccessMessage(null), 2000);
+        } catch (err: any) {
+            setError(err.message || 'Failed to update role');
+        }
+    };
+
+    const canManageTeam = userRole === 'owner' || userRole === 'admin';
+    const isOwner = userRole === 'owner';
 
     if (authLoading || isLoading) {
         return (
@@ -152,7 +262,7 @@ export default function EditOrganizerPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="mb-8">
                     <Link href="/account" className="text-sm text-gray-600 hover:text-emerald-600 mb-4 inline-block">
@@ -161,193 +271,422 @@ export default function EditOrganizerPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Edit Organizer Profile</h1>
                 </div>
 
-                <Card>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {error && (
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                                <p className="text-sm text-red-800">{error}</p>
-                            </div>
-                        )}
+                {/* Success/Error Messages */}
+                {successMessage && (
+                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800">{successMessage}</p>
+                    </div>
+                )}
+                {error && (
+                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-800">{error}</p>
+                    </div>
+                )}
 
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                                Organization Name *
-                            </label>
-                            <Input
-                                id="name"
-                                name="name"
-                                required
-                                value={formData.name}
-                                onChange={handleChange}
-                                placeholder="e.g., Highland Music Society"
-                                disabled={isSubmitting}
-                            />
-                        </div>
+                {/* Tabs */}
+                <div className="border-b border-gray-200 mb-6">
+                    <nav className="-mb-px flex space-x-8">
+                        <button
+                            onClick={() => setActiveTab('profile')}
+                            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'profile'
+                                ? 'border-emerald-500 text-emerald-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            Profile Details
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('team')}
+                            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'team'
+                                ? 'border-emerald-500 text-emerald-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            Manage Team
+                            <span className="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
+                                {members.length}
+                            </span>
+                        </button>
+                    </nav>
+                </div>
 
-                        <div>
-                            <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                                Bio / Description
-                            </label>
-                            <textarea
-                                id="bio"
-                                name="bio"
-                                rows={4}
-                                value={formData.bio}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                placeholder="Tell people about your organization..."
-                                disabled={isSubmitting}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="website_url" className="block text-sm font-medium text-gray-700 mb-2">
-                                Website URL
-                            </label>
-                            <Input
-                                id="website_url"
-                                name="website_url"
-                                type="url"
-                                value={formData.website_url}
-                                onChange={handleChange}
-                                placeholder="https://example.com"
-                                disabled={isSubmitting}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700 mb-2">
-                                Logo URL
-                            </label>
-                            <Input
-                                id="logo_url"
-                                name="logo_url"
-                                type="url"
-                                value={formData.logo_url}
-                                onChange={handleChange}
-                                placeholder="https://example.com/logo.png"
-                                disabled={isSubmitting}
-                            />
-                        </div>
-
-                        {/* Social Links */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Social Links
-                            </label>
-
-                            {Object.entries(formData.social_links).length > 0 && (
-                                <div className="space-y-2 mb-4">
-                                    {Object.entries(formData.social_links).map(([platform, url]) => (
-                                        <div key={platform} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
-                                            <span className="text-sm">
-                                                <span className="font-medium capitalize">{platform}:</span> {url}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveSocialLink(platform)}
-                                                className="text-red-600 hover:text-red-800 text-sm"
-                                            >
-                                                Remove
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="flex gap-2">
+                {/* Profile Tab */}
+                {activeTab === 'profile' && (
+                    <Card>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Organization Name *
+                                </label>
                                 <Input
-                                    placeholder="Platform (e.g., facebook)"
-                                    value={newSocialPlatform}
-                                    onChange={(e) => setNewSocialPlatform(e.target.value)}
+                                    id="name"
+                                    name="name"
+                                    required
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    placeholder="e.g., Highland Music Society"
                                     disabled={isSubmitting}
-                                    className="flex-1"
                                 />
-                                <Input
-                                    placeholder="URL"
-                                    value={newSocialUrl}
-                                    onChange={(e) => setNewSocialUrl(e.target.value)}
-                                    disabled={isSubmitting}
-                                    className="flex-1"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={handleAddSocialLink}
-                                    disabled={isSubmitting || !newSocialPlatform || !newSocialUrl}
-                                >
-                                    Add
-                                </Button>
                             </div>
-                        </div>
 
-                        {/* Group Management */}
-                        <div className="pt-6 border-t border-gray-200">
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">Group Management</h3>
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                                <div className="flex items-center justify-between">
+                            <div>
+                                <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Bio / Description
+                                </label>
+                                <textarea
+                                    id="bio"
+                                    name="bio"
+                                    rows={4}
+                                    value={formData.bio}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                    placeholder="Tell people about your organization..."
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="website_url" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Website URL
+                                </label>
+                                <Input
+                                    id="website_url"
+                                    name="website_url"
+                                    type="url"
+                                    value={formData.website_url}
+                                    onChange={handleChange}
+                                    placeholder="https://example.com"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Logo URL
+                                </label>
+                                <Input
+                                    id="logo_url"
+                                    name="logo_url"
+                                    type="url"
+                                    value={formData.logo_url}
+                                    onChange={handleChange}
+                                    placeholder="https://example.com/logo.png"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            {/* Cover Image */}
+                            <div>
+                                <label htmlFor="cover_image_url" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Cover Image URL
+                                    <span className="text-gray-500 font-normal ml-1">(3:1 aspect ratio recommended)</span>
+                                </label>
+                                <Input
+                                    id="cover_image_url"
+                                    name="cover_image_url"
+                                    type="url"
+                                    value={formData.cover_image_url}
+                                    onChange={handleChange}
+                                    placeholder="https://example.com/cover.jpg"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            {/* City */}
+                            <div>
+                                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
+                                    City / Location
+                                </label>
+                                <Input
+                                    id="city"
+                                    name="city"
+                                    value={formData.city}
+                                    onChange={handleChange}
+                                    placeholder="e.g., Inverness"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            {/* Social Media Links */}
+                            <div className="pt-6 border-t border-gray-200">
+                                <h3 className="text-lg font-medium text-gray-900 mb-4">Social & Contact</h3>
+
+                                <div className="space-y-4">
                                     <div>
-                                        <h4 className="text-sm font-medium text-gray-900">Invite Members</h4>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            Generate a link to invite others to manage this profile.
-                                        </p>
+                                        <label htmlFor="social_facebook" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Facebook URL
+                                        </label>
+                                        <Input
+                                            id="social_facebook"
+                                            name="social_facebook"
+                                            type="url"
+                                            value={formData.social_facebook}
+                                            onChange={handleChange}
+                                            placeholder="https://facebook.com/yourpage"
+                                            disabled={isSubmitting}
+                                        />
                                     </div>
+
+                                    <div>
+                                        <label htmlFor="social_instagram" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Instagram URL
+                                        </label>
+                                        <Input
+                                            id="social_instagram"
+                                            name="social_instagram"
+                                            type="url"
+                                            value={formData.social_instagram}
+                                            onChange={handleChange}
+                                            placeholder="https://instagram.com/yourhandle"
+                                            disabled={isSubmitting}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="social_website" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Website URL
+                                        </label>
+                                        <Input
+                                            id="social_website"
+                                            name="social_website"
+                                            type="url"
+                                            value={formData.social_website}
+                                            onChange={handleChange}
+                                            placeholder="https://yourwebsite.com"
+                                            disabled={isSubmitting}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="public_email" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Public Contact Email
+                                            <span className="text-gray-500 font-normal ml-1">(visible on your profile)</span>
+                                        </label>
+                                        <Input
+                                            id="public_email"
+                                            name="public_email"
+                                            type="email"
+                                            value={formData.public_email}
+                                            onChange={handleChange}
+                                            placeholder="contact@yourorganization.com"
+                                            disabled={isSubmitting}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Additional Social Links (legacy) */}
+                            <div className="pt-6 border-t border-gray-200">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Other Social Links
+                                </label>
+
+                                {Object.entries(formData.social_links).length > 0 && (
+                                    <div className="space-y-2 mb-4">
+                                        {Object.entries(formData.social_links).map(([platform, url]) => (
+                                            <div key={platform} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
+                                                <span className="text-sm">
+                                                    <span className="font-medium capitalize">{platform}:</span> {url}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveSocialLink(platform)}
+                                                    className="text-red-600 hover:text-red-800 text-sm"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Platform (e.g., twitter)"
+                                        value={newSocialPlatform}
+                                        onChange={(e) => setNewSocialPlatform(e.target.value)}
+                                        disabled={isSubmitting}
+                                        className="flex-1"
+                                    />
+                                    <Input
+                                        placeholder="URL"
+                                        value={newSocialUrl}
+                                        onChange={(e) => setNewSocialUrl(e.target.value)}
+                                        disabled={isSubmitting}
+                                        className="flex-1"
+                                    />
                                     <Button
                                         type="button"
                                         variant="secondary"
-                                        onClick={handleGenerateInvite}
+                                        onClick={handleAddSocialLink}
+                                        disabled={isSubmitting || !newSocialPlatform || !newSocialUrl}
                                     >
-                                        Copy Invite Link
+                                        Add
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                                {isOwner && (
+                                    <button
+                                        type="button"
+                                        onClick={handleDelete}
+                                        className="text-sm text-red-600 hover:text-red-800"
+                                    >
+                                        Delete Profile
+                                    </button>
+                                )}
+                                <div className="flex gap-3 ml-auto">
+                                    <Link href="/account" className="text-sm text-gray-600 hover:text-emerald-600 py-2">
+                                        Cancel
+                                    </Link>
+                                    <Button type="submit" variant="primary" size="lg" disabled={isSubmitting}>
+                                        {isSubmitting ? 'Saving...' : 'Save Changes'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </form>
+                    </Card>
+                )}
+
+                {/* Team Tab */}
+                {activeTab === 'team' && (
+                    <div className="space-y-6">
+                        {/* Team Members */}
+                        <Card>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Members</h3>
+                            <div className="space-y-3">
+                                {members.map((member) => {
+                                    const isCreator = member.user_id === organizerUserId;
+                                    const isSelf = member.user_id === user?.id;
+                                    const roleColors = ROLE_COLORS[member.role] || ROLE_COLORS.editor;
+
+                                    return (
+                                        <div
+                                            key={member.user_id}
+                                            className="flex items-center justify-between bg-gray-50 p-4 rounded-lg"
+                                        >
+                                            <div className="flex items-center">
+                                                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold mr-3">
+                                                    {(member.user_display_name || member.user_email || '?').charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-900">
+                                                        {member.user_display_name || member.user_email || 'Unknown'}
+                                                        {isSelf && <span className="text-gray-500 ml-1">(you)</span>}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">{member.user_email}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                {/* Role Badge / Selector */}
+                                                {isOwner && !isCreator ? (
+                                                    <select
+                                                        value={member.role}
+                                                        onChange={(e) => handleRoleChange(member.user_id, e.target.value as GroupRole)}
+                                                        className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                                                    >
+                                                        <option value="admin">Admin</option>
+                                                        <option value="editor">Editor</option>
+                                                    </select>
+                                                ) : (
+                                                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${roleColors.bg} ${roleColors.text}`}>
+                                                        {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                                                    </span>
+                                                )}
+
+                                                {/* Remove Button */}
+                                                {canManageTeam && !isCreator && !isSelf && (
+                                                    <button
+                                                        onClick={() => handleRemoveMember(member.user_id, member.user_email)}
+                                                        className="text-red-600 hover:text-red-800 p-1"
+                                                        title="Remove member"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {members.length === 0 && (
+                                    <p className="text-sm text-gray-500 text-center py-4">No team members yet.</p>
+                                )}
+                            </div>
+                        </Card>
+
+                        {/* Invite Section - Only for OWNER/ADMIN */}
+                        {canManageTeam && (
+                            <Card>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Invite New Members</h3>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-sm text-gray-600">
+                                            Generate an invite link to share with new team members. Links expire after 7 days.
+                                        </p>
+                                    </div>
+                                    <Button variant="primary" onClick={handleGenerateInvite}>
+                                        Generate Invite Link
                                     </Button>
                                 </div>
 
-                                {/* Members List */}
-                                <div className="mt-6 border-t border-gray-200 pt-6">
-                                    <h4 className="text-sm font-medium text-gray-900 mb-4">Current Members ({members.length})</h4>
-                                    {members.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {members.map((member) => (
-                                                <div key={member.user_id} className="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-lg">
-                                                    <div className="flex items-center">
-                                                        <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold mr-3">
-                                                            {(member.user_name || '?').charAt(0).toUpperCase()}
-                                                        </div>
+                                {/* Pending Invites */}
+                                {invites.length > 0 && (
+                                    <div className="mt-6 pt-6 border-t border-gray-200">
+                                        <h4 className="text-sm font-medium text-gray-900 mb-3">Pending Invites</h4>
+                                        <div className="space-y-2">
+                                            {invites.map((invite) => {
+                                                const expiresIn = Math.max(0, Math.ceil((new Date(invite.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                                                return (
+                                                    <div key={invite.token} className="flex items-center justify-between bg-yellow-50 p-3 rounded-lg">
                                                         <div>
-                                                            <p className="text-sm font-medium text-gray-900">{member.user_name || 'Unknown User'}</p>
-                                                            <p className="text-xs text-gray-500 capitalize">{member.role}</p>
+                                                            <p className="text-sm text-gray-700 font-mono">
+                                                                ...{invite.token.slice(-8)}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">
+                                                                Expires in {expiresIn} day{expiresIn !== 1 ? 's' : ''}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleCopyInviteLink(invite.token)}
+                                                                className="text-sm text-emerald-600 hover:text-emerald-800"
+                                                            >
+                                                                Copy Link
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteInvite(invite.token)}
+                                                                className="text-sm text-red-600 hover:text-red-800"
+                                                            >
+                                                                Revoke
+                                                            </button>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
-                                    ) : (
-                                        <p className="text-sm text-gray-500">No members found.</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                                    </div>
+                                )}
+                            </Card>
+                        )}
 
-                        {/* Actions */}
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                            <button
-                                type="button"
-                                onClick={handleDelete}
-                                className="text-sm text-red-600 hover:text-red-800"
-                            >
-                                Delete Profile
-                            </button>
-                            <div className="flex gap-3">
-                                <Link href="/account" className="text-sm text-gray-600 hover:text-emerald-600 py-2">
-                                    Cancel
-                                </Link>
-                                <Button type="submit" variant="primary" size="lg" disabled={isSubmitting}>
-                                    {isSubmitting ? 'Saving...' : 'Save Changes'}
-                                </Button>
-                            </div>
-                        </div>
-                    </form>
-                </Card >
-            </div >
-        </div >
+                        {/* Permissions Info for non-admins */}
+                        {!canManageTeam && (
+                            <Card>
+                                <div className="text-center py-4">
+                                    <p className="text-sm text-gray-500">
+                                        You can view team members but need Admin or Owner permissions to invite or manage members.
+                                    </p>
+                                </div>
+                            </Card>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
+

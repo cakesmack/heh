@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 class GroupRole(str, Enum):
     OWNER = "owner"
+    ADMIN = "admin"
     EDITOR = "editor"
 
 class GroupMember(SQLModel, table=True):
