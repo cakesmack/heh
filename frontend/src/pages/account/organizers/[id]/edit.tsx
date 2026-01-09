@@ -11,6 +11,7 @@ import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Spinner } from '@/components/common/Spinner';
+import ImageUpload from '@/components/common/ImageUpload';
 import { GroupMember, GroupInvite, GroupRole } from '@/types';
 
 // Role badge colors
@@ -46,6 +47,7 @@ export default function EditOrganizerPage() {
         social_instagram: '',
         social_website: '',
         public_email: '',
+        slug: '',
     });
 
     const [newSocialPlatform, setNewSocialPlatform] = useState('');
@@ -81,6 +83,7 @@ export default function EditOrganizerPage() {
                     social_instagram: org.social_instagram || '',
                     social_website: org.social_website || '',
                     public_email: org.public_email || '',
+                    slug: org.slug,
                 });
                 setOrganizerUserId(org.user_id);
 
@@ -168,7 +171,16 @@ export default function EditOrganizerPage() {
 
             await api.organizers.update(id as string, data);
             setSuccessMessage('Profile updated successfully!');
-            setTimeout(() => setSuccessMessage(null), 3000);
+
+            // Redirect to public profile after short delay
+            setTimeout(() => {
+                if (formData.slug) {
+                    router.push(`/groups/${formData.slug}`);
+                } else {
+                    // Fallback if slug isn't in state (shouldn't happen for existing orgs)
+                    router.push('/account/profile');
+                }
+            }, 1000);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update organizer profile');
         } finally {
@@ -361,35 +373,37 @@ export default function EditOrganizerPage() {
                             </div>
 
                             <div>
-                                <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Logo URL
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Logo
                                 </label>
-                                <Input
-                                    id="logo_url"
-                                    name="logo_url"
-                                    type="url"
-                                    value={formData.logo_url}
-                                    onChange={handleChange}
-                                    placeholder="https://example.com/logo.png"
-                                    disabled={isSubmitting}
-                                />
+                                <div className="max-w-xs">
+                                    <ImageUpload
+                                        folder="organizers"
+                                        currentImageUrl={formData.logo_url}
+                                        onUpload={(urls) => setFormData(prev => ({ ...prev, logo_url: urls.url }))}
+                                        onRemove={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
+                                        aspectRatio="1/1"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">Recommended: Square image (1:1), at least 200x200px</p>
+                                </div>
                             </div>
+
 
                             {/* Cover Image */}
                             <div>
-                                <label htmlFor="cover_image_url" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Cover Image URL
-                                    <span className="text-gray-500 font-normal ml-1">(3:1 aspect ratio recommended)</span>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Cover Image
                                 </label>
-                                <Input
-                                    id="cover_image_url"
-                                    name="cover_image_url"
-                                    type="url"
-                                    value={formData.cover_image_url}
-                                    onChange={handleChange}
-                                    placeholder="https://example.com/cover.jpg"
-                                    disabled={isSubmitting}
-                                />
+                                <div className="w-full">
+                                    <ImageUpload
+                                        folder="organizers"
+                                        currentImageUrl={formData.cover_image_url}
+                                        onUpload={(urls) => setFormData(prev => ({ ...prev, cover_image_url: urls.url }))}
+                                        onRemove={() => setFormData(prev => ({ ...prev, cover_image_url: '' }))}
+                                        aspectRatio="3/1"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">Recommended: Landscape image (3:1 aspect ratio), e.g., 1200x400px</p>
+                                </div>
                             </div>
 
                             {/* City */}

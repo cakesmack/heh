@@ -7,7 +7,15 @@ import { Spinner } from '@/components/common/Spinner';
 import { EventCard } from '@/components/events/EventCard';
 import { FollowButton } from '@/components/common/FollowButton';
 
+import { useAuth } from '@/hooks/useAuth';
+import { GroupRole } from '@/types';
+
 // Icons
+const PencilIcon = ({ className }: { className?: string }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+    </svg>
+);
 const MapPinIcon = ({ className }: { className?: string }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -56,6 +64,8 @@ export default function OrganizerProfilePage() {
     const { slug } = router.query;
     const [organizer, setOrganizer] = useState<Organizer | null>(null);
     const [events, setEvents] = useState<EventResponse[]>([]);
+    const { user, isAuthenticated } = useAuth();
+    const [canEdit, setCanEdit] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +86,18 @@ export default function OrganizerProfilePage() {
                         setEvents(eventsData.events);
                     } catch (err) {
                         console.error('Error fetching events:', err);
+                    }
+
+                    // Check permissions if logged in
+                    if (isAuthenticated && user) {
+                        try {
+                            const membership = await api.groups.checkMembership(organizerData.id);
+                            if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
+                                setCanEdit(true);
+                            }
+                        } catch (err) {
+                            // Not a member or error checking - ignore
+                        }
                     }
                 }
             } catch (err) {
@@ -164,7 +186,16 @@ export default function OrganizerProfilePage() {
                         </div>
 
                         {/* Follow Button (desktop) */}
-                        <div className="hidden md:block mt-4 md:mt-0">
+                        <div className="hidden md:flex items-center space-x-3 mt-4 md:mt-0">
+                            {canEdit && (
+                                <Link
+                                    href={`/account/organizers/${organizer.id}/edit`}
+                                    className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                                >
+                                    <PencilIcon className="w-4 h-4 mr-2" />
+                                    Edit Profile
+                                </Link>
+                            )}
                             <FollowButton targetId={organizer.id} targetType="group" />
                         </div>
                     </div>
@@ -188,7 +219,15 @@ export default function OrganizerProfilePage() {
                     </div>
 
                     {/* Follow Button (mobile) */}
-                    <div className="md:hidden ml-auto">
+                    <div className="md:hidden ml-auto flex items-center space-x-3">
+                        {canEdit && (
+                            <Link
+                                href={`/account/organizers/${organizer.id}/edit`}
+                                className="inline-flex items-center p-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                            >
+                                <PencilIcon className="w-4 h-4" />
+                            </Link>
+                        )}
                         <FollowButton targetId={organizer.id} targetType="group" />
                     </div>
                 </div>
