@@ -101,6 +101,12 @@ export function ClusteredEventMarkers({
     // Get Google Map instance
     const map = useMap();
 
+    // State for cluster popup (when can't zoom further)
+    const [clusterPopup, setClusterPopup] = useState<{
+        position: google.maps.LatLng;
+        events: EventResponse[];
+    } | null>(null);
+
     // Create MarkerClusterer with improved settings
     const clusterer = useMemo(() => {
         if (!map) return null;
@@ -112,23 +118,48 @@ export function ClusteredEventMarkers({
                 gridSize: 60,  // Default grid size
                 maxZoom: 15,   // Stop clustering at zoom 15 (street level)
             }),
-            // Custom click handler to prevent over-zooming
-            onClusterClick: (event, cluster, map) => {
-                // Get current zoom
-                const currentZoom = map.getZoom() || 7;
+            // Custom click handler to show popup or zoom
+            onClusterClick: (event, cluster, mapInstance) => {
+                const currentZoom = mapInstance.getZoom() || 7;
+                const clusterMarkers = cluster.markers || [];
 
-                // Calculate target zoom (increase by 2, max 15)
+                // If we're at max zoom (15) or near it, show a popup with event list
+                if (currentZoom >= 14) {
+                    // Find events that match these markers
+                    const clusterEventIds = new Set(
+                        clusterMarkers.map((m: any) => {
+                            // AdvancedMarker stores data in the element or we track by position
+                            const pos = m.position;
+                            return pos ? `${pos.lat},${pos.lng}` : null;
+                        }).filter(Boolean)
+                    );
+
+                    // Get all events at this cluster location
+                    const clusterPosition = cluster.position;
+                    const eventsAtLocation = events.filter(e => {
+                        const key = `${e.latitude},${e.longitude}`;
+                        // Check if event is near the cluster center (within ~100m)
+                        const latDiff = Math.abs(e.latitude - clusterPosition.lat());
+                        const lngDiff = Math.abs(e.longitude - clusterPosition.lng());
+                        return latDiff < 0.001 && lngDiff < 0.001;
+                    });
+
+                    if (eventsAtLocation.length > 0) {
+                        setClusterPopup({
+                            position: clusterPosition,
+                            events: eventsAtLocation,
+                        });
+                        return; // Don't zoom
+                    }
+                }
+
+                // Otherwise, zoom in moderately
                 const targetZoom = Math.min(currentZoom + 2, 15);
-
-                // Get cluster position
-                const position = cluster.position;
-
-                // Pan to cluster and zoom in moderately
-                map.panTo(position);
-                map.setZoom(targetZoom);
+                mapInstance.panTo(cluster.position);
+                mapInstance.setZoom(targetZoom);
             },
         });
-    }, [map]);
+    }, [map, events]);
 
     // Update clusterer when markers change
     useEffect(() => {
@@ -263,6 +294,78 @@ export function ClusteredEventMarkers({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
                             </a>
+                        </div>
+                    </div>
+                </InfoWindow>
+            )}
+
+            {/* Cluster Popup - Shows list of events at same location */}
+            {clusterPopup && !isMobile && (
+                <InfoWindow
+                    position={{ lat: clusterPopup.position.lat(), lng: clusterPopup.position.lng() }}
+                    onCloseClick={() => setClusterPopup(null)}
+                >
+                    <div className="w-[280px] overflow-hidden -m-2">
+                        {/* Header */}
+                        <div className="px-3 py-2 bg-amber-50 border-b border-amber-100">
+                            <h3 className="font-bold text-gray-900 text-sm">
+                                {clusterPopup.events.length} Events Here
+                            </h3>
+                        </div>
+
+                        {/* Scrollable Event List */}
+                        <div className="max-h-[250px] overflow-y-auto">
+                            {clusterPopup.events.map((event) => (
+                                <a
+                                    key={event.id}
+                                    href={`/events/${event.id}`}
+                                    className="flex gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                                >
+                                    {/* Thumbnail */}
+                                    <div className="w-12 h-12 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                                        {event.image_url ? (
+                                            <img
+                                                src={event.image_url}
+                                                alt=""
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Event Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-medium text-gray-900 text-sm leading-snug line-clamp-1">
+                                            {event.title}
+                                        </h4>
+                                        <p className="text-xs text-emerald-600 mt-0.5">
+                                            {event.date_start
+                                                ? format(new Date(event.date_start), 'EEE, MMM d • h:mm a')
+                                                : 'Date TBD'}
+                                        </p>
+                                        {event.category && (
+                                            <span
+                                                className="inline-block px-1.5 py-0.5 text-xs font-medium rounded text-white mt-1"
+                                                style={{ backgroundColor: event.category.gradient_color || '#10b981' }}
+                                            >
+                                                {event.category.name}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Arrow */}
+                                    <div className="flex items-center">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                </a>
+                            ))}
                         </div>
                     </div>
                 </InfoWindow>
