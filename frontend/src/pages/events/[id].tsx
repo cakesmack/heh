@@ -28,6 +28,9 @@ import type { EventResponse } from '@/types';
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
+// Dynamic import for AccommodationMap (Stay22) - heavy iframe, lazy loaded
+const AccommodationMap = dynamic(() => import('@/components/events/AccommodationMap'), { ssr: false });
+
 interface EventDetailPageProps {
   initialEvent: EventResponse | null;
   error?: string;
@@ -701,6 +704,17 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
         </div>
 
         <SimilarEvents eventId={event.id} />
+
+        {/* Stay22 Accommodation Map Widget */}
+        {event.latitude && event.longitude && (
+          <AccommodationMap
+            latitude={event.latitude}
+            longitude={event.longitude}
+            eventName={event.title}
+            startDate={event.date_start}
+            endDate={event.date_end}
+          />
+        )}
       </div>
 
       {event && (
