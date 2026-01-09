@@ -88,14 +88,6 @@ export enum DiscountType {
   FREE_ITEM = "free_item",
 }
 
-export enum BadgeType {
-  CHECKIN_COUNT = "checkin_count",
-  VENUE_EXPLORER = "venue_explorer",
-  NIGHT_OWL = "night_owl",
-  XP_MILESTONE = "xp_milestone",
-  SPECIAL = "special",
-}
-
 // ============================================================
 // USER TYPES
 // ============================================================
@@ -441,8 +433,6 @@ export interface CheckInStatsResponse {
   first_checkin?: string;
   last_checkin?: string;
 }
-
-// Gamification types removed
 
 // ============================================================
 // PROMOTION TYPES
