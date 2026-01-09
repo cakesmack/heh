@@ -333,25 +333,40 @@ def list_events(
     if age_restriction:
         query = query.where(Event.age_restriction == age_restriction)
 
-    # Filter by date range
-    # For multi-day events (theatre runs), we also check showtimes
+    # Filter by date range using OVERLAP logic for multi-day events
+    # An event overlaps with range [date_from, date_to] if:
+    #   event.date_start <= date_to AND event.date_end >= date_from
     if date_from or date_to:
         # Join with EventShowtime to catch multi-day events with performances on those dates
         query = query.outerjoin(EventShowtime, Event.id == EventShowtime.event_id)
         
-        if date_from:
-            # Include event if date_start matches OR any showtime matches
-            query = query.where(
-                (Event.date_start >= date_from) | 
-                (EventShowtime.start_time >= date_from)
-            )
+        # Build overlap conditions for the main event dates
+        overlap_conditions = []
         
-        if date_to:
-            # Include event if date_end matches OR any showtime matches
-            query = query.where(
-                (Event.date_end <= date_to) | 
-                (EventShowtime.start_time <= date_to)
+        if date_from and date_to:
+            # Full overlap check: event spans across or falls within the date range
+            # Event overlaps if: date_start <= date_to AND date_end >= date_from
+            overlap_conditions.append(
+                (Event.date_start <= date_to) & (Event.date_end >= date_from)
             )
+            # Also include if any showtime falls within range
+            overlap_conditions.append(
+                (EventShowtime.start_time >= date_from) & (EventShowtime.start_time <= date_to)
+            )
+        elif date_from:
+            # Only date_from provided: show events that haven't ended yet as of date_from
+            # event.date_end >= date_from (event is still ongoing or starts after)
+            overlap_conditions.append(Event.date_end >= date_from)
+            overlap_conditions.append(EventShowtime.start_time >= date_from)
+        elif date_to:
+            # Only date_to provided: show events that have started by date_to
+            # event.date_start <= date_to
+            overlap_conditions.append(Event.date_start <= date_to)
+            overlap_conditions.append(EventShowtime.start_time <= date_to)
+        
+        # Apply overlap conditions with OR (match if any condition is true)
+        from sqlalchemy import or_
+        query = query.where(or_(*overlap_conditions))
         
         # Deduplicate events that matched multiple showtimes
         # Use GROUP BY instead of distinct() to allow ordering by aggregated joined columns in Postgres
