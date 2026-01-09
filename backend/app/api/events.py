@@ -680,6 +680,15 @@ def create_event(
     is_offensive = moderation_result["flagged"]
     moderation_reason = moderation_result["reason"]
     
+    # Link Warden: Detect URLs in title/description
+    import re
+    link_pattern = re.compile(
+        r'(https?://|www\.|\.com|\.co\.uk|\.org|\.net|\.io|\.info|\.biz)',
+        re.IGNORECASE
+    )
+    content_for_link_check = f"{event_data.title or ''} {event_data.description or ''}"
+    contains_link = bool(link_pattern.search(content_for_link_check))
+    
     # Auto-Approval Logic
     # A user qualifies for auto-approval if:
     # - They are an admin, OR
@@ -691,11 +700,18 @@ def create_event(
         current_user.trust_level >= 5
     )
 
-    # OVERRIDE: Offensive content must go to moderation regardless of trust
+    # OVERRIDE 1: Offensive content must go to moderation regardless of trust
     if is_offensive:
         new_event.status = "pending"
         new_event.moderation_reason = moderation_reason
         print(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged: {moderation_reason}")
+    # OVERRIDE 2: Links require manual approval unless user is admin or explicitly trusted organizer
+    # This overrides trust_level >= 5 for security (Link Warden)
+    elif contains_link and not current_user.is_admin and not current_user.is_trusted_organizer:
+        new_event.status = "pending"
+        new_event.moderation_reason = "Contains External Link"
+        logger.info(f"[LINK_WARDEN] Event '{new_event.title}' pending for user_id={current_user.id} "
+              f"(contains external link, trust_level={current_user.trust_level})")
     elif is_auto_approved:
         new_event.status = "published"
         logger.info(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved for user_id={current_user.id} "

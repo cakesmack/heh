@@ -324,6 +324,9 @@ export default function SubmitEventPage() {
                 onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
                 placeholder="Describe your event..."
               />
+              <p className="mt-2 text-sm text-amber-600">
+                <span className="font-medium">Note:</span> To prevent spam, events containing external links (URLs) in the description will require manual approval and may take up to 24 hours to appear on the map.
+              </p>
             </div>
 
             <div>
