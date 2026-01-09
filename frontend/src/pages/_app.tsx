@@ -19,40 +19,47 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 import AnalyticsProvider from '@/components/common/AnalyticsProvider';
 import { SearchProvider } from '@/context/SearchContext';
+import { ConsentProvider } from '@/context/ConsentContext';
+import CookieBanner from '@/components/layout/CookieBanner';
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
 
 export default function App({ Component, pageProps }: AppProps) {
   const content = (
-    <AuthProvider>
-      <SearchProvider>
-        <AnalyticsProvider>
-          <div className={`${inter.variable} font-sans flex flex-col min-h-screen`}>
-            {/* Header */}
-            <Header />
+    <ConsentProvider>
+      <AuthProvider>
+        <SearchProvider>
+          <AnalyticsProvider>
+            <div className={`${inter.variable} font-sans flex flex-col min-h-screen`}>
+              {/* Header */}
+              <Header />
 
-            {/* Main Content */}
-            <main className="flex-1">
-              <Component {...pageProps} />
-            </main>
+              {/* Main Content */}
+              <main className="flex-1">
+                <Component {...pageProps} />
+              </main>
 
-            {/* Footer - Hidden on mobile */}
-            <div className="hidden md:block">
-              <Footer />
+              {/* Footer - Hidden on mobile */}
+              <div className="hidden md:block">
+                <Footer />
+              </div>
+
+              {/* Bottom Navigation Bar - Mobile only */}
+              <div className="md:hidden">
+                <BottomNavBar />
+              </div>
+
+              <ScrollToTop />
+              <UsernameBlockerModal />
+
+              {/* Cookie Consent Banner */}
+              <CookieBanner />
             </div>
-
-            {/* Bottom Navigation Bar - Mobile only */}
-            <div className="md:hidden">
-              <BottomNavBar />
-            </div>
-
-            <ScrollToTop />
-            <UsernameBlockerModal />
-          </div>
-        </AnalyticsProvider>
-      </SearchProvider>
-    </AuthProvider>
+          </AnalyticsProvider>
+        </SearchProvider>
+      </AuthProvider>
+    </ConsentProvider>
   );
 
   // Wrap with providers
