@@ -224,7 +224,7 @@ export function GoogleMapView({
         clickableIcons={false}
         onClick={handleMapClick}
         style={{ width: '100%', height: '100%' }}
-        styles={MAP_STYLES}
+        mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
       >
         {/* Event Markers - Using MarkerClusterer for zoom-based clustering */}
         <ClusteredEventMarkers
