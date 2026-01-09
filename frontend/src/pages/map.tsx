@@ -104,18 +104,22 @@ export function MapPage() {
       // Category filter
       if (selectedCategory && event.category?.id !== selectedCategory) return false;
 
-      // Date filter
+      // Date filter - check if selectedDate falls within the event's date range
       if (selectedDate && event.date_start) {
-        // Case A: Standard single-day event - check if date_start matches
-        const dateStartMatches = isSameDay(new Date(event.date_start), selectedDate);
+        const eventStart = startOfDay(new Date(event.date_start));
+        const eventEnd = event.date_end ? startOfDay(new Date(event.date_end)) : eventStart;
+        const targetDate = startOfDay(selectedDate);
 
-        // Case B: Multi-day event - check if any showtime falls on selectedDate
+        // Case A: Check if selectedDate falls within [date_start, date_end] range (inclusive)
+        const isWithinDateRange = targetDate >= eventStart && targetDate <= eventEnd;
+
+        // Case B: Multi-day event with showtimes - check if any showtime falls on selectedDate
         const hasShowtimeOnDate = event.showtimes?.some(showtime =>
           showtime.start_time && isSameDay(new Date(showtime.start_time), selectedDate)
         ) ?? false;
 
-        // Include event if EITHER the date_start matches OR a showtime matches
-        return dateStartMatches || hasShowtimeOnDate;
+        // Include event if EITHER within date range OR a showtime matches
+        return isWithinDateRange || hasShowtimeOnDate;
       }
 
       return true;
