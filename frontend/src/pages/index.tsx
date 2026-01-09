@@ -10,6 +10,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useEvents } from '@/hooks/useEvents';
 import { useAuth } from '@/hooks/useAuth';
 import HeroSection from '@/components/home/HeroSection';
+import Features from '@/components/home/Features';
 import MagazineGrid from '@/components/home/MagazineGrid';
 import CategoryGrid from '@/components/categories/CategoryGrid';
 import HomeFeedTabs from '@/components/home/HomeFeedTabs';
@@ -202,6 +203,8 @@ export default function HomePage() {
       {/* Discovery System */}
       <DiscoveryBar onSearch={handleSearch} isLoading={isSearchLoading} />
 
+      {/* Features Section */}
+      <Features />
 
       <SearchResultsDrawer
         isOpen={isSearchOpen}
