@@ -166,10 +166,10 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
           <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/40 to-transparent" />
         </div>
 
-        {/* Sharp Centered Image */}
+        {/* Sharp Centered Image - Now Full Container Width */}
         <div className="absolute inset-0 flex items-center justify-center px-4 pb-20">
           <div
-            className={`relative w-full max-w-3xl aspect-[16/9] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 ${event.image_url ? 'cursor-pointer group' : ''}`}
+            className={`relative w-full max-w-7xl aspect-[21/9] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 ${event.image_url ? 'cursor-pointer group' : ''}`}
             onClick={() => event.image_url && setImageLightboxOpen(true)}
           >
             {event.image_url ? (
@@ -232,7 +232,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
 
       {/* Info Ribbon */}
       <div className="sticky top-0 z-30 bg-stone-950/80 backdrop-blur-xl border-y border-white/5 text-white py-6 shadow-2xl">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-bold text-white break-words mb-2">{event.title}</h1>
@@ -290,11 +290,54 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Event Details */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* Main Content - Wider Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Mobile: Sidebar content appears first */}
+        <div className="lg:hidden mb-8 space-y-6">
+          {/* Mobile Date/Time Card */}
+          <Card>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {event.showtimes && event.showtimes.length > 0 ? 'Dates + Times' : 'When'}
+            </h3>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
+                <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                  {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
+                </span>
+                <span className="text-lg font-bold text-emerald-900 leading-none">
+                  {new Date(event.date_start).getDate()}
+                </span>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
+                <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              {event.ticket_url ? (
+                <a
+                  href={event.ticket_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackTicketClick(event.id)}
+                  className="w-full px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-lg text-center transition-colors"
+                >
+                  Get Tickets
+                </a>
+              ) : (
+                <div className="w-full px-6 py-3 bg-gray-100 text-gray-500 font-medium rounded-lg text-center">
+                  No Tickets Needed
+                </div>
+              )}
+              <AddToCalendar event={event} className="w-full" />
+            </div>
+          </Card>
+        </div>
+
+        {/* Desktop: 70/30 Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
+          {/* Event Details - 70% (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
             <Card>
               {(event.category || event.age_restriction) && (
                 <div className="mb-4 flex flex-wrap gap-2">
@@ -505,216 +548,220 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
             </Card>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Time & Date Sidebar Card */}
-            <Card>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {event.showtimes && event.showtimes.length > 0 ? 'Dates + Times' : 'When'}
-              </h3>
-              <div className="space-y-4">
-                {/* Show showtimes table if available */}
-                {event.showtimes && event.showtimes.length > 0 ? (
-                  <div className="divide-y divide-gray-100">
-                    {event.showtimes.map((st: any, index: number) => {
-                      const stDate = new Date(st.start_time);
-                      const stEndDate = st.end_time ? new Date(st.end_time) : null;
-                      return (
-                        <div key={st.id || index} className="flex items-center justify-between py-3 first:pt-0">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                              <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                                {stDate.toLocaleDateString('en-GB', { weekday: 'short' })}
-                              </span>
-                              <span className="text-lg font-bold text-emerald-900 leading-none">
-                                {stDate.getDate()}
-                              </span>
+          {/* Sticky Sidebar - 30% (3 cols) - Hidden on Mobile (shown above) */}
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-24 space-y-6">
+              {/* Time & Date Sidebar Card */}
+              <Card>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {event.showtimes && event.showtimes.length > 0 ? 'Dates + Times' : 'When'}
+                </h3>
+                <div className="space-y-4">
+                  {/* Show showtimes table if available */}
+                  {event.showtimes && event.showtimes.length > 0 ? (
+                    <div className="divide-y divide-gray-100">
+                      {event.showtimes.map((st: any, index: number) => {
+                        const stDate = new Date(st.start_time);
+                        const stEndDate = st.end_time ? new Date(st.end_time) : null;
+                        return (
+                          <div key={st.id || index} className="flex items-center justify-between py-3 first:pt-0">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
+                                <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                                  {stDate.toLocaleDateString('en-GB', { weekday: 'short' })}
+                                </span>
+                                <span className="text-lg font-bold text-emerald-900 leading-none">
+                                  {stDate.getDate()}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {stDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {stDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                  {stEndDate && ` - ${stEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
+                                </p>
+                                {st.notes && (
+                                  <p className="text-xs text-amber-600 font-medium mt-0.5">{st.notes}</p>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {stDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {stDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                {stEndDate && ` - ${stEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
-                              </p>
-                              {st.notes && (
-                                <p className="text-xs text-amber-600 font-medium mt-0.5">{st.notes}</p>
-                              )}
-                            </div>
+                            <a
+                              href={st.ticket_url || event.ticket_url || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => trackTicketClick(event.id)}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded-full ${st.ticket_url || event.ticket_url
+                                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                }`}
+                            >
+                              Buy Tickets
+                            </a>
                           </div>
-                          <a
-                            href={st.ticket_url || event.ticket_url || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => trackTicketClick(event.id)}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-full ${st.ticket_url || event.ticket_url
-                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              }`}
-                          >
-                            Buy Tickets
-                          </a>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* Standard single date display */
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                      <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                        {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
-                      </span>
-                      <span className="text-lg font-bold text-emerald-900 leading-none">
-                        {new Date(event.date_start).getDate()}
-                      </span>
+                        );
+                      })}
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
-                      <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
+                  ) : (
+                    /* Standard single date display */
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                          {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
+                        </span>
+                        <span className="text-lg font-bold text-emerald-900 leading-none">
+                          {new Date(event.date_start).getDate()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
+                        <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <AddToCalendar event={event} className="w-full" />
-
-                {event.is_recurring && (
-                  <div className="p-3 bg-emerald-50 rounded-lg flex items-start gap-2">
-                    <svg className="w-4 h-4 text-emerald-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <p className="text-xs text-emerald-800">This event repeats weekly. Check the calendar for more dates.</p>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Event Stats Sidebar Card */}
-            <Card>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Event Details</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Category</span>
-                  <span className="font-medium text-gray-900">{event.category?.name || 'General'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Price</span>
-                  <span className="font-medium text-gray-900">
-                    {event.price_display || (event.price === 0 ? 'Free' : `£${event.price.toFixed(2)}`)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Attendance</span>
-                  <span className="font-medium text-gray-900">{event.checkin_count || 0} checked in</span>
-                </div>
-                {isAuthenticated && (
-                  <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Views</span>
-                      <span className="font-medium text-gray-900">{event.view_count || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Saves</span>
-                      <span className="font-medium text-gray-900">{event.save_count || 0}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Owner Actions */}
-            {user && (event.organizer_id === user.id || user.is_admin) && (
-              <Card className="mt-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Manage Event</h3>
-                <div className="space-y-2">
-                  <Link
-                    href={`/events/${event.id}/edit`}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-medium transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                    Edit Event
-                  </Link>
-
-                  <Link
-                    href={`/events/${event.id}/promote`}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                    Promote Event
-                  </Link>
+                  <AddToCalendar event={event} className="w-full" />
 
                   {event.is_recurring && (
+                    <div className="p-3 bg-emerald-50 rounded-lg flex items-start gap-2">
+                      <svg className="w-4 h-4 text-emerald-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <p className="text-xs text-emerald-800">This event repeats weekly. Check the calendar for more dates.</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Event Stats Sidebar Card */}
+              <Card>
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Event Details</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Category</span>
+                    <span className="font-medium text-gray-900">{event.category?.name || 'General'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Price</span>
+                    <span className="font-medium text-gray-900">
+                      {event.price_display || (event.price === 0 ? 'Free' : `£${event.price.toFixed(2)}`)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Attendance</span>
+                    <span className="font-medium text-gray-900">{event.checkin_count || 0} checked in</span>
+                  </div>
+                  {isAuthenticated && (
+                    <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Views</span>
+                        <span className="font-medium text-gray-900">{event.view_count || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Saves</span>
+                        <span className="font-medium text-gray-900">{event.save_count || 0}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Owner Actions */}
+              {user && (event.organizer_id === user.id || user.is_admin) && (
+                <Card className="mt-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Manage Event</h3>
+                  <div className="space-y-2">
+                    <Link
+                      href={`/events/${event.id}/edit`}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-medium transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      Edit Event
+                    </Link>
+
+                    <Link
+                      href={`/events/${event.id}/promote`}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                      Promote Event
+                    </Link>
+
+                    {event.is_recurring && (
+                      <button
+                        onClick={async () => {
+                          if (confirm('Are you sure you want to stop this recurring series? All future instances will be deleted.')) {
+                            try {
+                              const { api } = await import('@/lib/api');
+                              await api.events.stopRecurrence(event.id);
+                              alert('Recurring series stopped. Future instances have been removed.');
+                              refetch();
+                            } catch (err) {
+                              alert('Failed to stop series. Please try again.');
+                            }
+                          }
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg font-medium transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                        </svg>
+                        Stop Recurring Series
+                      </button>
+                    )}
+
                     <button
                       onClick={async () => {
-                        if (confirm('Are you sure you want to stop this recurring series? All future instances will be deleted.')) {
+                        const isRecurring = event.is_recurring || event.parent_event_id;
+                        const message = isRecurring
+                          ? 'Are you sure you want to delete this event? This will also delete ALL child instances in this recurring series. This action cannot be undone.'
+                          : 'Are you sure you want to delete this event? This action cannot be undone.';
+
+                        if (confirm(message)) {
                           try {
                             const { api } = await import('@/lib/api');
-                            await api.events.stopRecurrence(event.id);
-                            alert('Recurring series stopped. Future instances have been removed.');
-                            refetch();
+                            await api.events.delete(event.id);
+                            alert('Event deleted successfully.');
+                            window.location.href = '/events';
                           } catch (err) {
-                            alert('Failed to stop series. Please try again.');
+                            alert('Failed to delete event. Please try again.');
                           }
                         }
                       }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg font-medium transition-colors"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg font-medium transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
-                      Stop Recurring Series
+                      Delete Event
                     </button>
-                  )}
-
-                  <button
-                    onClick={async () => {
-                      const isRecurring = event.is_recurring || event.parent_event_id;
-                      const message = isRecurring
-                        ? 'Are you sure you want to delete this event? This will also delete ALL child instances in this recurring series. This action cannot be undone.'
-                        : 'Are you sure you want to delete this event? This action cannot be undone.';
-
-                      if (confirm(message)) {
-                        try {
-                          const { api } = await import('@/lib/api');
-                          await api.events.delete(event.id);
-                          alert('Event deleted successfully.');
-                          window.location.href = '/events';
-                        } catch (err) {
-                          alert('Failed to delete event. Please try again.');
-                        }
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg font-medium transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete Event
-                  </button>
-                </div>
-              </Card>
-            )}
+                  </div>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
 
-        <SimilarEvents eventId={event.id} />
-
-        {/* Stay22 Accommodation Map Widget */}
+        {/* AccommodationMap - Full Width, Before SimilarEvents */}
         {event.latitude && event.longitude && (
-          <AccommodationMap
-            latitude={event.latitude}
-            longitude={event.longitude}
-            eventName={event.title}
-            startDate={event.date_start}
-            endDate={event.date_end}
-          />
+          <div className="mt-12">
+            <AccommodationMap
+              latitude={event.latitude}
+              longitude={event.longitude}
+              eventName={event.title}
+              startDate={event.date_start}
+              endDate={event.date_end}
+            />
+          </div>
         )}
+
+        <SimilarEvents eventId={event.id} />
       </div>
 
       {event && (
