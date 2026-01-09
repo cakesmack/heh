@@ -101,14 +101,32 @@ export function ClusteredEventMarkers({
     // Get Google Map instance
     const map = useMap();
 
-    // Create MarkerClusterer with increased grid size (80 instead of default 60)
+    // Create MarkerClusterer with improved settings
     const clusterer = useMemo(() => {
         if (!map) return null;
 
         return new MarkerClusterer({
             map,
-            // Use GridAlgorithm with larger gridSize for more aggressive clustering
-            algorithm: new GridAlgorithm({ gridSize: 80 }),
+            // Use GridAlgorithm with settings tuned for the map
+            algorithm: new GridAlgorithm({
+                gridSize: 60,  // Default grid size
+                maxZoom: 15,   // Stop clustering at zoom 15 (street level)
+            }),
+            // Custom click handler to prevent over-zooming
+            onClusterClick: (event, cluster, map) => {
+                // Get current zoom
+                const currentZoom = map.getZoom() || 7;
+
+                // Calculate target zoom (increase by 2, max 15)
+                const targetZoom = Math.min(currentZoom + 2, 15);
+
+                // Get cluster position
+                const position = cluster.position;
+
+                // Pan to cluster and zoom in moderately
+                map.panTo(position);
+                map.setZoom(targetZoom);
+            },
         });
     }, [map]);
 
