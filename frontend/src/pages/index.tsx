@@ -228,19 +228,30 @@ export default function HomePage() {
       <PopularEvents />
 
       {/* Organizer CTA Banner */}
-      <section className="bg-emerald-600 py-12 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-            Hosting an event in the Highlands?
+      <section className="relative py-28 px-4 text-center overflow-hidden">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: 'url(https://res.cloudinary.com/dakq1xwn1/image/upload/v1767454232/highland_events/events/lhxbivhjsqpwn1hsbz5x.jpg)',
+          }}
+        />
+        {/* Green Overlay */}
+        <div className="absolute inset-0 bg-emerald-700/90" />
+
+        {/* Content */}
+        <div className="relative z-10 max-w-3xl mx-auto">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+            Fill Your Venue. Find Your Crowd.
           </h2>
-          <p className="text-emerald-100 mb-8 text-lg">
-            List your event for free and reach thousands of locals and visitors.
+          <p className="text-emerald-100 mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            Stop hoping the Facebook algorithm works. List your event on the Highlands' dedicated discovery platform and get seen by people actively looking for things to do.
           </p>
           <a
             href="/submit-event"
-            className="inline-block bg-white text-emerald-600 font-bold py-3 px-8 rounded-full hover:bg-emerald-50 transition-colors shadow-lg"
+            className="inline-block bg-white text-emerald-700 font-bold py-4 px-10 rounded-full hover:bg-emerald-50 transition-colors shadow-xl text-lg"
           >
-            List it for free today
+            List an Event for Free
           </a>
         </div>
       </section>
