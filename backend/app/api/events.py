@@ -353,7 +353,8 @@ def list_events(
             )
         
         # Deduplicate events that matched multiple showtimes
-        query = query.distinct()
+        # Use GROUP BY instead of distinct() to allow ordering by aggregated joined columns in Postgres
+        query = query.group_by(Event.id)
     elif not include_past:
         # By default, exclude past events (using date_end to not cut off ongoing events)
         query = query.where(Event.date_end >= datetime.utcnow())
@@ -439,12 +440,14 @@ def list_events(
 
         # Apply ordering and pagination
         # Tiered sorting: Pinned bookings first, then featured, then date
-        pinned_priority = case(
+        # Tiered sorting: Pinned bookings first, then featured, then date
+        # Use MIN() to aggregate potential multiple bookings (though unlikely) and satisfy Postgres GROUP BY rule
+        pinned_priority = sa_func.min(case(
             (FeaturedBooking.slot_type == SlotType.GLOBAL_PINNED, 1),
             (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 2),
             (FeaturedBooking.slot_type == SlotType.HERO_HOME, 3),
             else_=4
-        )
+        ))
         query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
         if skip:
             query = query.offset(skip)
