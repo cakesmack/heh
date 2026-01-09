@@ -7,6 +7,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@googlemaps/markerclusterer": "^2.6.2",
     "@react-oauth/google": "^0.13.0",
     "@tiptap/extension-link": "^3.15.3",
     "@tiptap/pm": "^3.15.3",
