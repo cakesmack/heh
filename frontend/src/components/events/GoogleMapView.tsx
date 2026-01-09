@@ -35,6 +35,27 @@ function LocationIcon({ className = 'w-5 h-5' }: { className?: string }) {
 const HIGHLANDS_CENTER = { lat: 57.3, lng: -4.4 };
 const DEFAULT_ZOOM = 7;
 
+// Clean map styles - hide POIs, transit, and road labels for less clutter
+const MAP_STYLES = [
+  {
+    featureType: 'poi',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'poi.business',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'transit',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels.icon',
+    stylers: [{ visibility: 'off' }],
+  },
+];
+
 export interface MapMarker {
   id: string;
   type: 'event' | 'venue';
@@ -192,6 +213,7 @@ export function GoogleMapView({
         clickableIcons={false}
         onClick={handleMapClick}
         style={{ width: '100%', height: '100%' }}
+        styles={MAP_STYLES}
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
       >
         {/* Event Markers - Using MarkerClusterer for zoom-based clustering */}

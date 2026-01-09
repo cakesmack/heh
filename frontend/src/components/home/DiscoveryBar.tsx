@@ -496,7 +496,7 @@ export default function DiscoveryBar({
                     </div>
 
                     {/* Modal Content - Scrollable */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-8">
                         {/* Keyword Search */}
                         <div>
                             <label htmlFor="mobile-search" className="block text-sm font-medium text-gray-700 mb-1">Keywords</label>
@@ -627,23 +627,22 @@ export default function DiscoveryBar({
                                 </select>
                             </div>
                         )}
+                        {/* Action Buttons - In normal flow, not sticky */}
+                        <div className="pt-6 mt-4 border-t border-gray-200 flex gap-3">
+                            <button
+                                onClick={handleClear}
+                                className="flex-1 px-4 py-3 bg-white text-gray-700 font-bold rounded-xl border border-gray-300 shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
+                            >
+                                Clear
+                            </button>
+                            <button
+                                onClick={handleSearch}
+                                className="flex-[2] px-4 py-3 bg-emerald-600 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                {isLoading ? 'Searching...' : 'Show Results'}
+                            </button>
+                        </div>
 
-                    </div>
-
-                    {/* Modal Footer - Actions */}
-                    <div className="p-4 border-t border-gray-200 bg-gray-50 sticky bottom-0 z-50 flex gap-3">
-                        <button
-                            onClick={handleClear}
-                            className="flex-1 px-4 py-3 bg-white text-gray-700 font-bold rounded-xl border border-gray-300 shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
-                        >
-                            Clear
-                        </button>
-                        <button
-                            onClick={handleSearch}
-                            className="flex-[2] px-4 py-3 bg-emerald-600 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
-                        >
-                            {isLoading ? 'Searching...' : 'Show Results'}
-                        </button>
                     </div>
                 </div>
             )}
