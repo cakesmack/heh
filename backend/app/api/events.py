@@ -567,7 +567,7 @@ def get_top_events(
     upcoming_events = session.exec(
         select(Event)
         .where(Event.date_start > now)
-        .where(Event.status == "approved")
+        .where(Event.status == "published")
         .order_by(Event.date_start)
         .limit(50)
     ).all()
