@@ -836,6 +836,87 @@ class ResendEmailService:
             logger.error(f"Failed to send system alert to {mask_email(to_email)}: {e}")
             return False
 
+    def send_password_reset(
+        self,
+        to_email: str,
+        reset_token: str
+    ) -> bool:
+        """
+        Send password reset email using Resend (custom domain).
+
+        Args:
+            to_email: User's email address
+            reset_token: Password reset token
+
+        Returns:
+            True if sent successfully
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send password reset to {mask_email(to_email)}")
+            return True
+
+        # Build reset URL with www fix
+        site_url = settings.FRONTEND_URL.rstrip('/')
+        if "highlandeventshub.co.uk" in site_url and "www." not in site_url:
+            site_url = site_url.replace("highlandeventshub.co.uk", "www.highlandeventshub.co.uk")
+        
+        reset_link = f"{site_url}/reset-password?token={reset_token}"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2F2F2F; margin: 0; padding: 0; background: #FAF9F6; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: #ffffff; }}
+                .header {{ background: #0F3E35; padding: 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; font-weight: 700; }}
+                .content {{ padding: 40px 30px; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .footer {{ background: #2F2F2F; padding: 24px; text-align: center; color: #a1a1aa; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Reset Your Password</h1>
+                </div>
+                <div class="content">
+                    <p>Hi there,</p>
+                    <p>We received a request to reset your password for your Highland Events Hub account.</p>
+                    <p>Click the button below to set a new password:</p>
+                    <p style="text-align: center;">
+                        <a href="{reset_link}" class="button">Reset Password</a>
+                    </p>
+                    <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, copy and paste this link:</p>
+                    <p style="word-break: break-all; color: #6b7280; font-size: 14px;">{reset_link}</p>
+                    <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+                </div>
+                <div class="footer">
+                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            # Use contact@ for password reset emails
+            from_address = "Highland Events Hub <contact@highlandeventshub.co.uk>"
+            response = resend.Emails.send({
+                "from": from_address,
+                "to": [to_email],
+                "subject": "Reset Your Password - Highland Events Hub",
+                "html": html_content,
+            })
+            logger.info(f"Password reset email sent to {mask_email(to_email)}, id: {response.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send password reset to {mask_email(to_email)}: {e}")
+            return False
+
 
 # Global instance
 resend_email_service = ResendEmailService()

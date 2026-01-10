@@ -20,7 +20,7 @@ from app.models.user import User
 from app.models.password_reset import PasswordResetToken
 from app.models.user_preferences import UserPreferences
 from app.core.config import settings
-from app.services.email_service import send_password_reset_email
+from app.services.resend_email import resend_email_service
 from app.services.resend_email import resend_email_service
 from app.schemas.user import (
     UserCreate,
@@ -360,8 +360,8 @@ def forgot_password(
     session.add(reset_token)
     session.commit()
     
-    # Send email (with raw token in link)
-    email_sent = send_password_reset_email(request.email, raw_token)
+    # Send email using Resend (with raw token in link)
+    email_sent = resend_email_service.send_password_reset(request.email, raw_token)
     
     if not email_sent:
         # Log the error but still return success for security
