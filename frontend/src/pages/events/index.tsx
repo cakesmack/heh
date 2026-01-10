@@ -129,9 +129,12 @@ export default function EventsPage() {
     dateFrom?: string;
     dateTo?: string;
     category?: string;
+    latitude?: number;
+    longitude?: number;
+    radius?: string;
   }) => {
 
-    // Update URL with new filters
+    // Update URL with new filters (including GPS params if present)
     const query: Record<string, string> = {};
     if (filters.category) query.category = filters.category;
     if (filters.q) query.q = filters.q;
@@ -139,6 +142,11 @@ export default function EventsPage() {
     if (filters.dateFrom) query.date_from = filters.dateFrom;
     if (filters.dateTo) query.date_to = filters.dateTo;
     if (filters.location) query.location = filters.location;
+
+    // GPS coordinates from Near Me
+    if (filters.latitude) query.latitude = filters.latitude.toFixed(6);
+    if (filters.longitude) query.longitude = filters.longitude.toFixed(6);
+    if (filters.radius) query.radius = filters.radius;
 
     router.push({ pathname: '/events', query }, undefined, { shallow: true });
   };

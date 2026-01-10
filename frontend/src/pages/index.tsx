@@ -84,9 +84,13 @@ export default function HomePage() {
     dateFrom?: string;
     dateTo?: string;
     category?: string;
+    latitude?: number;
+    longitude?: number;
+    radius?: string;
   }) => {
     // Check if all filters are empty (Clear was pressed)
-    const hasActiveFilters = Object.values(filters).some(v => v && v.length > 0);
+    const hasActiveFilters = filters.q || filters.location || filters.date ||
+      filters.category || filters.latitude;
 
     if (!hasActiveFilters) {
       // Close search drawer and reset state when filters are cleared

@@ -105,14 +105,24 @@ export default function DiscoveryBar({
     }, [initialFilters]);
 
     const handleSearch = () => {
-        onSearch({
+        // Build search params including GPS coords if in gpsMode
+        const searchParams: any = {
             q: q || undefined,
-            location: location || undefined,
+            location: gpsMode ? 'Near Me' : (location || undefined),
             date: date || undefined,
             dateFrom: date === 'custom' ? dateFrom : undefined,
             dateTo: date === 'custom' ? dateTo : undefined,
             category: category || undefined,
-        });
+        };
+
+        // Add GPS coordinates if in gpsMode
+        if (gpsMode && userCoords) {
+            searchParams.latitude = userCoords.lat;
+            searchParams.longitude = userCoords.lng;
+            searchParams.radius = selectedRadius;
+        }
+
+        onSearch(searchParams);
         closeMobileSearch();
     };
 
@@ -164,17 +174,7 @@ export default function DiscoveryBar({
                 setUserCoords({ lat: latitude, lng: longitude });
                 setGpsMode(true);
                 setLocation('');
-                closeMobileSearch();
-                // Navigate to events page with location params and default radius (in miles)
-                router.push({
-                    pathname: '/events',
-                    query: {
-                        latitude: latitude.toFixed(6),
-                        longitude: longitude.toFixed(6),
-                        radius: selectedRadius,
-                        location: 'Near Me'
-                    }
-                });
+                // Don't auto-navigate - user must click Search button
             },
             (error) => {
                 setIsGettingLocation(false);
@@ -192,27 +192,16 @@ export default function DiscoveryBar({
     };
 
     const handleRadiusChange = (newRadius: string) => {
+        // Only update local state - search triggered when user clicks Search button
         setSelectedRadius(newRadius);
-        if (userCoords) {
-            router.push({
-                pathname: '/events',
-                query: {
-                    latitude: userCoords.lat.toFixed(6),
-                    longitude: userCoords.lng.toFixed(6),
-                    radius: newRadius,
-                    location: 'Near Me'
-                }
-            });
-        }
     };
 
     const exitGpsMode = () => {
+        // Only reset local state - URL will be updated when Search is clicked
         setGpsMode(false);
         setUserCoords(null);
         setLocation('');
-        // Remove geo params from URL
-        const { latitude, longitude, radius, ...rest } = router.query;
-        router.push({ pathname: '/events', query: rest }, undefined, { shallow: true });
+        setSelectedRadius('10'); // Reset to default
     };
 
     const handleClear = () => {
