@@ -98,6 +98,11 @@ async def lifespan(app: FastAPI):
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizers' AND column_name='public_email') THEN
                         ALTER TABLE organizers ADD COLUMN public_email VARCHAR(255);
                     END IF;
+                    
+                    -- Personalization Engine: notification preferences for users
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='receive_interest_notifications') THEN
+                        ALTER TABLE users ADD COLUMN receive_interest_notifications BOOLEAN DEFAULT TRUE;
+                    END IF;
                 END $$;
             """))
             conn.commit()
