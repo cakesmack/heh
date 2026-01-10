@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
+import { GetServerSideProps } from 'next';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useEvents } from '@/hooks/useEvents';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,7 +25,15 @@ import PopularEvents from '@/components/home/PopularEvents';
 import CuratedCollections from '@/components/home/CuratedCollections';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 
-export default function HomePage() {
+// Site constants
+const SITE_URL = 'https://www.highlandeventshub.co.uk';
+const DEFAULT_OG_IMAGE = `${SITE_URL}/images/og-default.jpg`;
+
+interface HomePageProps {
+  socialImage: string;
+}
+
+export default function HomePage({ socialImage }: HomePageProps) {
   const { coordinates } = useGeolocation();
   const { user } = useAuth();
   const [page, setPage] = useState(1);
@@ -209,6 +218,24 @@ export default function HomePage() {
       <Head>
         <title>Highland Events Hub - Discover Events in the Highlands</title>
         <meta name="description" content="Find the best events, gigs, and festivals in the Scottish Highlands." />
+        <link rel="canonical" href={SITE_URL} />
+
+        {/* Open Graph / Facebook / WhatsApp */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={SITE_URL} />
+        <meta property="og:title" content="Highland Events Hub" />
+        <meta property="og:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." />
+        <meta property="og:image" content={socialImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="Highland Events Hub" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@HighlandEvents" />
+        <meta name="twitter:title" content="Highland Events Hub" />
+        <meta name="twitter:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." />
+        <meta name="twitter:image" content={socialImage} />
       </Head>
 
       {/* Hero Section */}
@@ -315,3 +342,34 @@ export default function HomePage() {
     </div>
   );
 }
+
+// Server-side fetch for OG image from Hero carousel
+export const getServerSideProps: GetServerSideProps<HomePageProps> = async () => {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+  try {
+    // Fetch active hero slides from backend
+    const response = await fetch(`${API_URL}/api/hero?active_only=true`);
+
+    if (response.ok) {
+      const slides = await response.json();
+
+      // Get first slide with an image (position 1 is typically the welcome/hero slide)
+      const heroSlide = slides.find((slide: any) => slide.image_url && slide.is_active);
+
+      if (heroSlide?.image_url) {
+        // Ensure absolute URL
+        const socialImage = heroSlide.image_url.startsWith('http')
+          ? heroSlide.image_url
+          : `${SITE_URL}${heroSlide.image_url}`;
+
+        return { props: { socialImage } };
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch hero slides for OG image:', error);
+  }
+
+  // Fallback to default image
+  return { props: { socialImage: DEFAULT_OG_IMAGE } };
+};
