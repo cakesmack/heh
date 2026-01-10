@@ -542,6 +542,82 @@ def list_events(
     )
 
 
+
+@router.get("/top", response_model=EventListResponse)
+def get_top_events(
+    limit: int = Query(default=10, ge=1, le=50),
+    session: Session = Depends(get_session)
+):
+    """
+    Get top events ranked by popularity score.
+    
+    Score = (view_count * 1) + (attending_count * 5) + (ticket_click_count * 10)
+    
+    Only returns future events, sorted by score descending.
+    """
+    from app.models.analytics import AnalyticsEvent
+    
+    now = datetime.utcnow()
+    
+    # 1. Fetch upcoming approved events (limit to 100 for efficiency)
+    upcoming_events = session.exec(
+        select(Event)
+        .where(Event.date_start > now)
+        .where(Event.status == "approved")
+        .order_by(Event.date_start)
+        .limit(100)
+    ).all()
+    
+    if not upcoming_events:
+        return EventListResponse(events=[], total=0, skip=0, limit=limit)
+    
+    # 2. Get all relevant analytics in one query
+    analytics = session.exec(
+        select(AnalyticsEvent)
+        .where(AnalyticsEvent.event_type.in_(["event_view", "save_event", "click_ticket"]))
+    ).all()
+    
+    # 3. Build analytics counts per event
+    event_stats = {}
+    for ae in analytics:
+        target_id = ae.event_metadata.get("target_id") if ae.event_metadata else None
+        if target_id:
+            normalized_id = target_id.replace("-", "")
+            if normalized_id not in event_stats:
+                event_stats[normalized_id] = {"views": 0, "saves": 0, "clicks": 0}
+            
+            if ae.event_type == "event_view":
+                event_stats[normalized_id]["views"] += 1
+            elif ae.event_type == "save_event":
+                event_stats[normalized_id]["saves"] += 1
+            elif ae.event_type == "click_ticket":
+                event_stats[normalized_id]["clicks"] += 1
+    
+    # 4. Calculate popularity score for each event
+    events_with_scores = []
+    for event in upcoming_events:
+        normalized_id = str(event.id).replace("-", "")
+        stats = event_stats.get(normalized_id, {"views": 0, "saves": 0, "clicks": 0})
+        
+        # Formula: views * 1 + saves * 5 + clicks * 10
+        score = (stats["views"] * 1) + (stats["saves"] * 5) + (stats["clicks"] * 10)
+        events_with_scores.append((event, score))
+    
+    # 5. Sort by score descending, take top N
+    events_with_scores.sort(key=lambda x: x[1], reverse=True)
+    top_events = [e[0] for e in events_with_scores[:limit]]
+    
+    # 6. Build responses
+    event_responses = [build_event_response(event, session) for event in top_events]
+    
+    return EventListResponse(
+        events=event_responses,
+        total=len(event_responses),
+        skip=0,
+        limit=limit
+    )
+
+
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 def create_event(
     event_data: EventCreate,

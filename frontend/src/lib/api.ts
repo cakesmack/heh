@@ -347,6 +347,14 @@ export const eventsAPI = {
       method: 'DELETE',
     });
   },
+
+  /**
+   * Get top events ranked by popularity score
+   * Score = (views * 1) + (attending * 5) + (ticket_clicks * 10)
+   */
+  getTop: async (limit: number = 10): Promise<EventListResponse> => {
+    return apiFetch<EventListResponse>(`/api/events/top?limit=${limit}`, {}, false);
+  },
 };
 
 // ============================================================

@@ -44,30 +44,13 @@ export default function PopularEvents() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch featured events and trending IDs in parallel
-                const [featuredData, trendingData] = await Promise.all([
-                    eventsAPI.list({ featured_only: true, limit: 10 }),
+                // Fetch top events by popularity score and trending IDs in parallel
+                const [topData, trendingData] = await Promise.all([
+                    eventsAPI.getTop(10),
                     searchAPI.trending(7)
                 ]);
 
-                let allEvents = [...featuredData.events];
-
-                // If we have fewer than 10 featured events, fetch regular events to fill the gap
-                if (allEvents.length < 10) {
-                    const remaining = 10 - allEvents.length;
-                    const regularData = await eventsAPI.list({ limit: 20 }); // Fetch more to ensure we can deduplicate
-
-                    // Add regular events that aren't already in the featured list
-                    const featuredIds = new Set(allEvents.map(e => e.id));
-                    for (const event of regularData.events) {
-                        if (!featuredIds.has(event.id)) {
-                            allEvents.push(event);
-                            if (allEvents.length >= 10) break;
-                        }
-                    }
-                }
-
-                setEvents(allEvents.slice(0, 10));
+                setEvents(topData.events);
                 setTrendingIds(trendingData);
             } catch (err) {
                 console.error('Failed to fetch popular events:', err);
