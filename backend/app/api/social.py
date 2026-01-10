@@ -139,57 +139,7 @@ def unfollow_target(
     session.commit()
     return {"ok": True}
 
-@router.get("/following/{target_id}", response_model=bool)
-def check_is_following(
-    target_id: str,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    """
-    Check if current user follows a target.
-    """
-    from app.core.utils import normalize_uuid
-    import uuid
-    
-    # 1. exact match
-    follow = session.exec(
-        select(Follow).where(
-            Follow.follower_id == current_user.id,
-            Follow.target_id == target_id
-        )
-    ).first()
-    
-    if follow:
-        return True
-        
-    # 2. normalized (no dashes)
-    normalized = normalize_uuid(target_id)
-    if normalized != target_id:
-        follow = session.exec(
-            select(Follow).where(
-                Follow.follower_id == current_user.id,
-                Follow.target_id == normalized
-            )
-        ).first()
-        if follow:
-            return True
-            
-    # 3. dashed
-    try:
-        dashed = str(uuid.UUID(hex=normalized))
-        if dashed != target_id:
-            follow = session.exec(
-                select(Follow).where(
-                    Follow.follower_id == current_user.id,
-                    Follow.target_id == dashed
-                )
-            ).first()
-            if follow:
-                return True
-    except ValueError:
-        pass
 
-    return False
 
 @router.get("/feed", response_model=List[EventResponse])
 def get_activity_feed(
@@ -331,3 +281,57 @@ def get_followed_groups(
         "groups": [{"id": g.id, "name": g.name, "slug": g.slug, "logo_url": g.logo_url} for g in groups],
         "total": len(groups)
     }
+
+
+@router.get("/following/{target_id}", response_model=bool)
+def check_is_following(
+    target_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Check if current user follows a target.
+    """
+    from app.core.utils import normalize_uuid
+    import uuid
+    
+    # 1. exact match
+    follow = session.exec(
+        select(Follow).where(
+            Follow.follower_id == current_user.id,
+            Follow.target_id == target_id
+        )
+    ).first()
+    
+    if follow:
+        return True
+        
+    # 2. normalized (no dashes)
+    normalized = normalize_uuid(target_id)
+    if normalized != target_id:
+        follow = session.exec(
+            select(Follow).where(
+                Follow.follower_id == current_user.id,
+                Follow.target_id == normalized
+            )
+        ).first()
+        if follow:
+            return True
+            
+    # 3. dashed
+    try:
+        dashed = str(uuid.UUID(hex=normalized))
+        if dashed != target_id:
+            follow = session.exec(
+                select(Follow).where(
+                    Follow.follower_id == current_user.id,
+                    Follow.target_id == dashed
+                )
+            ).first()
+            if follow:
+                return True
+    except ValueError:
+        pass
+
+    return False
+
