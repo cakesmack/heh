@@ -549,23 +549,27 @@ def get_top_events(
     session: Session = Depends(get_session)
 ):
     """
-    Get top events ranked by popularity score.
+    Get top events ranked by popularity score with fallback to chronological order.
     
     Score = (view_count * 1) + (attending_count * 5) + (ticket_click_count * 10)
     
-    Only returns future events, sorted by score descending.
+    Sorting:
+    - Primary: popularity_score DESC (highest engagement first)
+    - Secondary: date_start ASC (sooner events first, for ties/cold start)
+    
+    Only returns future approved events.
     """
     from app.models.analytics import AnalyticsEvent
     
     now = datetime.utcnow()
     
-    # 1. Fetch upcoming approved events (limit to 100 for efficiency)
+    # 1. Fetch upcoming approved events (limit to 50 for efficiency)
     upcoming_events = session.exec(
         select(Event)
         .where(Event.date_start > now)
         .where(Event.status == "approved")
         .order_by(Event.date_start)
-        .limit(100)
+        .limit(50)
     ).all()
     
     if not upcoming_events:
@@ -577,10 +581,10 @@ def get_top_events(
         .where(AnalyticsEvent.event_type.in_(["event_view", "save_event", "click_ticket"]))
     ).all()
     
-    # 3. Build analytics counts per event
+    # 3. Build analytics counts per event (null-safe)
     event_stats = {}
     for ae in analytics:
-        target_id = ae.event_metadata.get("target_id") if ae.event_metadata else None
+        target_id = (ae.event_metadata or {}).get("target_id")
         if target_id:
             normalized_id = target_id.replace("-", "")
             if normalized_id not in event_stats:
@@ -593,18 +597,23 @@ def get_top_events(
             elif ae.event_type == "click_ticket":
                 event_stats[normalized_id]["clicks"] += 1
     
-    # 4. Calculate popularity score for each event
+    # 4. Calculate popularity score for each event (null-safe with defaults)
     events_with_scores = []
     for event in upcoming_events:
         normalized_id = str(event.id).replace("-", "")
-        stats = event_stats.get(normalized_id, {"views": 0, "saves": 0, "clicks": 0})
+        stats = event_stats.get(normalized_id, {})
+        
+        # Null-safe score calculation: coalesce to 0
+        views = stats.get("views", 0) or 0
+        saves = stats.get("saves", 0) or 0
+        clicks = stats.get("clicks", 0) or 0
         
         # Formula: views * 1 + saves * 5 + clicks * 10
-        score = (stats["views"] * 1) + (stats["saves"] * 5) + (stats["clicks"] * 10)
-        events_with_scores.append((event, score))
+        score = (views * 1) + (saves * 5) + (clicks * 10)
+        events_with_scores.append((event, score, event.date_start))
     
-    # 5. Sort by score descending, take top N
-    events_with_scores.sort(key=lambda x: x[1], reverse=True)
+    # 5. Two-phase sort: Primary = score DESC, Secondary = date_start ASC
+    events_with_scores.sort(key=lambda x: (-x[1], x[2]))
     top_events = [e[0] for e in events_with_scores[:limit]]
     
     # 6. Build responses
