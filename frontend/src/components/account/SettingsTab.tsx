@@ -75,24 +75,39 @@ export function SettingsTab({ categories }: SettingsTabProps) {
     loadNotificationSettings();
   }, []);
 
-  // Load followed items
+  // Load followed items - fetch each separately to avoid one failure blocking all
   useEffect(() => {
     async function loadFollows() {
       setIsLoadingFollows(true);
+
+      // Fetch categories
       try {
-        const [catRes, venueRes, groupRes] = await Promise.all([
-          followsAPI.getFollowedCategories(),
-          followsAPI.getFollowedVenues(),
-          followsAPI.getFollowedGroups()
-        ]);
+        const catRes = await followsAPI.getFollowedCategories();
+        console.log('Categories response:', catRes);
         setFollowedCategories(catRes.categories || []);
+      } catch (error) {
+        console.error('Failed to load followed categories:', error);
+      }
+
+      // Fetch venues
+      try {
+        const venueRes = await followsAPI.getFollowedVenues();
+        console.log('Venues response:', venueRes);
         setFollowedVenues(venueRes.venues || []);
+      } catch (error) {
+        console.error('Failed to load followed venues:', error);
+      }
+
+      // Fetch groups
+      try {
+        const groupRes = await followsAPI.getFollowedGroups();
+        console.log('Groups response:', groupRes);
         setFollowedGroups(groupRes.groups || []);
       } catch (error) {
-        console.error('Failed to load follows:', error);
-      } finally {
-        setIsLoadingFollows(false);
+        console.error('Failed to load followed groups:', error);
       }
+
+      setIsLoadingFollows(false);
     }
     loadFollows();
   }, []);
@@ -254,8 +269,8 @@ export function SettingsTab({ categories }: SettingsTabProps) {
               key={tab}
               onClick={() => setActiveFollowTab(tab)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeFollowTab === tab
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-emerald-500 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -437,8 +452,8 @@ export function SettingsTab({ categories }: SettingsTabProps) {
                 onClick={() => toggleCategory(category.id)}
                 disabled={isSaving}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${isSelected
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 {category.name}
