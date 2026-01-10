@@ -1446,7 +1446,6 @@ export const api = {
   auth: authAPI,
   events: eventsAPI,
   venues: venuesAPI,
-  checkIns: checkInsAPI,
   promotions: promotionsAPI,
   categories: categoriesAPI,
   tags: tagsAPI,

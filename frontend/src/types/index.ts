@@ -416,17 +416,6 @@ export interface CheckInResponse {
   checkin_id: string;
 }
 
-export interface CheckInHistory {
-  id: string;
-  event_id: string;
-  event_title: string;
-  venue_name: string;
-  timestamp: string;
-  checked_in_at?: string;
-  is_first_at_venue: boolean;
-  is_night_checkin: boolean;
-}
-
 export interface CheckInStatsResponse {
   total_checkins: number;
   unique_venues: number;

@@ -13,7 +13,7 @@ from sqlmodel import SQLModel
 
 from app.core.config import settings
 from app.core.database import engine, check_db_connection
-from app.api import auth, events, venues, checkins, promotions, categories, tags, media, geocode, users, admin, hero, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, email_testing, cron
+from app.api import auth, events, venues, promotions, categories, tags, media, geocode, users, admin, hero, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, email_testing, cron
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +180,7 @@ def root():
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(venues.router, prefix="/api/venues", tags=["Venues"])
-app.include_router(checkins.router, prefix="/api/checkins", tags=["Check-ins"])
+
 app.include_router(promotions.router, prefix="/api/promotions", tags=["Promotions"])
 app.include_router(categories.router, prefix="/api/categories", tags=["Categories"])
 app.include_router(tags.router, prefix="/api/tags", tags=["Tags"])

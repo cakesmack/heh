@@ -12,7 +12,7 @@ from app.core.security import get_current_user
 from app.core.utils import normalize_uuid
 from app.models.user import User
 from app.models.event import Event
-from app.models.checkin import CheckIn
+
 from app.models.venue import Venue
 from app.models.payment import Payment
 from app.models.bookmark import Bookmark
@@ -34,7 +34,7 @@ class UserStatsResponse(BaseModel):
     total_views: int
     total_saves: int
     total_ticket_clicks: int
-    total_checkins: int
+
 
 
 def get_user_stats(user_id: str, session: Session) -> UserStatsResponse:
@@ -71,10 +71,7 @@ def get_user_stats(user_id: str, session: Session) -> UserStatsResponse:
         if is_past:
             past_series += 1
 
-    # Total check-ins
-    total_checkins = session.exec(
-        select(func.count(CheckIn.id)).where(CheckIn.user_id == user_id)
-    ).one()
+
 
     # Analytics stats
     all_event_ids = [e.id for e in user_events]
@@ -113,7 +110,7 @@ def get_user_stats(user_id: str, session: Session) -> UserStatsResponse:
         total_views=total_views,
         total_saves=total_saves,
         total_ticket_clicks=total_ticket_clicks,
-        total_checkins=total_checkins
+
     )
 
 
@@ -176,7 +173,7 @@ def update_me(
     session.refresh(db_user)
 
     # Calculate stats for response
-    total_checkins = len(db_user.check_ins)
+
     total_events_submitted = len(db_user.submitted_events)
 
     return UserProfile(
@@ -186,7 +183,7 @@ def update_me(
         display_name=db_user.display_name,
         is_admin=db_user.is_admin,
         created_at=db_user.created_at,
-        total_checkins=total_checkins,
+
         total_events_submitted=total_events_submitted
     )
 

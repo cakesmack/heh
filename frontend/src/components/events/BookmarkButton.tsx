@@ -97,25 +97,26 @@ export function BookmarkButton({
             className={`
         relative flex items-center justify-center rounded-full transition-all duration-200
         ${isBookmarked
-                    ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                    ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md'
                     : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'}
-        ${showLabel ? 'px-4 py-2 w-auto' : sizeClasses[size]}
+        ${showLabel ? 'px-6 py-3 w-auto gap-2' : sizeClasses[size]}
         ${className}
       `}
-            title={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
+            title={isBookmarked ? 'Not attending' : 'Mark as attending'}
         >
             <svg
-                className={`${iconSizes[size]} ${isBookmarked ? 'fill-current' : 'fill-none'} stroke-current transition-transform ${isBookmarked ? 'scale-110' : ''}`}
+                className={`${iconSizes[size]} ${isBookmarked ? 'fill-none' : 'fill-none'} stroke-current transition-transform ${isBookmarked ? 'scale-110' : ''}`}
                 viewBox="0 0 24 24"
-                strokeWidth="2"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
             >
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                {/* Check Icon */}
+                <polyline points="20 6 9 17 4 12" />
             </svg>
             {showLabel && (
-                <span className="ml-2 text-sm font-medium">
-                    {isBookmarked ? 'Saved' : 'Save'}
+                <span className={`text-sm font-bold ${isBookmarked ? 'text-white' : 'text-gray-600'}`}>
+                    {isBookmarked ? "I'm Going" : "I'm Going"}
                 </span>
             )}
         </button>

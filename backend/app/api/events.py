@@ -93,8 +93,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
     if user_lat is not None and user_lon is not None and final_lat is not None and final_lon is not None:
         distance_km = haversine_distance(user_lat, user_lon, final_lat, final_lon)
 
-    # Count check-ins
-    checkin_count = len(event.check_ins) if event.check_ins else 0
+
 
     # Get category
     category_response = None
@@ -121,7 +120,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
         
     response.venue_name = venue_name
     response.distance_km = distance_km
-    response.checkin_count = checkin_count
+
     response.category = category_response
     response.participating_venues = participating_venue_responses
     # Fetch analytics counts

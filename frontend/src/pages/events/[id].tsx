@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Spinner } from '@/components/common/Spinner';
-import { CheckInButton } from '@/components/events/CheckInButton';
+
 import ShareButtons from '@/components/events/ShareButtons';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 import ReportModal from '@/components/common/ReportModal';
@@ -277,13 +277,13 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 </div>
               )}
 
-              {isAuthenticated && isEventHappening() && (
-                <CheckInButton
-                  eventId={event.id}
-                  eventTitle={event.title}
-                  onSuccess={refetch}
-                  className="flex-1 md:flex-none px-8 py-3 bg-white text-stone-950 font-bold rounded-full hover:bg-stone-200 transition-all transform hover:scale-105 shadow-lg"
-                />
+              <BookmarkButton
+                eventId={event.id}
+                showLabel={true}
+                className="flex-1 md:flex-none transform hover:scale-105 shadow-lg"
+              />
+              {bookmarkCount > 0 && (
+                <span className="text-white font-medium text-sm hidden md:block">{bookmarkCount} going</span>
               )}
             </div>
           </div>
@@ -648,10 +648,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                       {event.price_display || (event.price === 0 ? 'Free' : `£${event.price.toFixed(2)}`)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Attendance</span>
-                    <span className="font-medium text-gray-900">{event.checkin_count || 0} checked in</span>
-                  </div>
+
                   {isAuthenticated && (
                     <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
                       <div className="flex justify-between">
@@ -659,7 +656,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                         <span className="font-medium text-gray-900">{event.view_count || 0}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Saves</span>
+                        <span className="text-gray-500">Going</span>
                         <span className="font-medium text-gray-900">{event.save_count || 0}</span>
                       </div>
                     </div>

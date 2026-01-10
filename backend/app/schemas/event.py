@@ -141,7 +141,7 @@ class EventResponse(BaseModel):
     # Computed fields (populated by endpoint logic)
     venue_name: Optional[str] = None
     distance_km: Optional[float] = None
-    checkin_count: Optional[int] = None
+
     view_count: int = 0
     save_count: int = 0
     ticket_click_count: int = 0
