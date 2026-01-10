@@ -207,3 +207,52 @@ def get_user_stats_by_id(
         )
 
     return get_user_stats(normalized_id, session)
+
+
+# ============================================================
+# NOTIFICATION SETTINGS
+# ============================================================
+
+class NotificationSettingsResponse(BaseModel):
+    """User notification settings response."""
+    receive_interest_notifications: bool
+
+
+class NotificationSettingsUpdate(BaseModel):
+    """Update notification settings."""
+    receive_interest_notifications: bool = None
+
+
+@router.get("/me/notification-settings", response_model=NotificationSettingsResponse)
+def get_notification_settings(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Get current user's notification settings."""
+    return NotificationSettingsResponse(
+        receive_interest_notifications=current_user.receive_interest_notifications
+    )
+
+
+@router.put("/me/notification-settings", response_model=NotificationSettingsResponse)
+def update_notification_settings(
+    settings: NotificationSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Update current user's notification settings."""
+    db_user = session.get(User, current_user.id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if settings.receive_interest_notifications is not None:
+        db_user.receive_interest_notifications = settings.receive_interest_notifications
+    
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    
+    return NotificationSettingsResponse(
+        receive_interest_notifications=db_user.receive_interest_notifications
+    )
+

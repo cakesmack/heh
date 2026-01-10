@@ -1545,3 +1545,95 @@ export const searchAPI = {
     return apiFetch<string[]>(`/api/analytics/trending?days=${days}`, {}, false);
   },
 };
+
+// ============================================================
+// USER SETTINGS API
+// ============================================================
+
+export const userSettingsAPI = {
+  /**
+   * Get notification settings
+   */
+  getNotificationSettings: async (): Promise<{ receive_interest_notifications: boolean }> => {
+    return apiFetch<{ receive_interest_notifications: boolean }>('/api/users/me/notification-settings');
+  },
+
+  /**
+   * Update notification settings
+   */
+  updateNotificationSettings: async (settings: { receive_interest_notifications: boolean }): Promise<{ receive_interest_notifications: boolean }> => {
+    return apiFetch<{ receive_interest_notifications: boolean }>('/api/users/me/notification-settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  },
+};
+
+// ============================================================
+// FOLLOWS API
+// ============================================================
+
+export const followsAPI = {
+  /**
+   * Get followed categories for current user
+   */
+  getFollowedCategories: async (): Promise<{ categories: any[]; total: number }> => {
+    return apiFetch<{ categories: any[]; total: number }>('/api/categories/user/following');
+  },
+
+  /**
+   * Get followed venues (need to query social/following endpoint)
+   */
+  getFollowedVenues: async (): Promise<{ venues: VenueResponse[]; total: number }> => {
+    return apiFetch<{ venues: VenueResponse[]; total: number }>('/api/social/following/venues');
+  },
+
+  /**
+   * Get followed groups/organizers
+   */
+  getFollowedGroups: async (): Promise<{ groups: any[]; total: number }> => {
+    return apiFetch<{ groups: any[]; total: number }>('/api/social/following/groups');
+  },
+
+  /**
+   * Follow a venue
+   */
+  followVenue: async (venueId: string): Promise<any> => {
+    return apiFetch<any>(`/api/social/follow/venue/${venueId}`, { method: 'POST' });
+  },
+
+  /**
+   * Unfollow a venue
+   */
+  unfollowVenue: async (venueId: string): Promise<any> => {
+    return apiFetch<any>(`/api/social/follow/venue/${venueId}`, { method: 'DELETE' });
+  },
+
+  /**
+   * Follow a group/organizer
+   */
+  followGroup: async (groupId: string): Promise<any> => {
+    return apiFetch<any>(`/api/social/follow/group/${groupId}`, { method: 'POST' });
+  },
+
+  /**
+   * Unfollow a group/organizer
+   */
+  unfollowGroup: async (groupId: string): Promise<any> => {
+    return apiFetch<any>(`/api/social/follow/group/${groupId}`, { method: 'DELETE' });
+  },
+
+  /**
+   * Follow a category
+   */
+  followCategory: async (categoryId: string): Promise<any> => {
+    return apiFetch<any>(`/api/categories/${categoryId}/follow`, { method: 'POST' });
+  },
+
+  /**
+   * Unfollow a category
+   */
+  unfollowCategory: async (categoryId: string): Promise<any> => {
+    return apiFetch<any>(`/api/categories/${categoryId}/follow`, { method: 'DELETE' });
+  },
+};

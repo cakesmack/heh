@@ -18,6 +18,7 @@ class NotificationType(str, Enum):
     EVENT_SUBMITTED = "event_submitted"
     EVENT_APPROVED = "event_approved"
     EVENT_REJECTED = "event_rejected"
+    NEW_EVENT = "new_event"  # For new events matching user interests
     VENUE_CLAIM_APPROVED = "venue_claim_approved"
     VENUE_CLAIM_REJECTED = "venue_claim_rejected"
     FEATURED_APPROVED = "featured_approved"

@@ -151,31 +151,108 @@ def get_activity_feed(
     session: Session = Depends(get_session)
 ):
     """
-    Get events from followed venues and organizers.
+    Get events from followed venues, organizers, and categories.
     """
     from app.api.events import build_event_response
+    from app.models.user_category_follow import UserCategoryFollow
     
-    # Get all followed IDs
+    # Get all venue/group follows
     follows = session.exec(
         select(Follow).where(Follow.follower_id == current_user.id)
     ).all()
     
-    if not follows:
+    # Get all category follows
+    category_follows = session.exec(
+        select(UserCategoryFollow).where(UserCategoryFollow.user_id == current_user.id)
+    ).all()
+    
+    # If not following anything, return empty
+    if not follows and not category_follows:
         return []
 
     followed_venue_ids = [f.target_id for f in follows if f.target_type == "venue"]
     followed_group_ids = [f.target_id for f in follows if f.target_type == "group"]
+    followed_category_ids = [f.category_id for f in category_follows]
 
-    # Query events
-    # Logic: Events at followed venues OR events by followed organizers
+    # Build query conditions
+    conditions = []
+    if followed_venue_ids:
+        conditions.append(Event.venue_id.in_(followed_venue_ids))
+    if followed_group_ids:
+        conditions.append(Event.organizer_profile_id.in_(followed_group_ids))
+    if followed_category_ids:
+        conditions.append(Event.category_id.in_(followed_category_ids))
+    
+    if not conditions:
+        return []
+    
+    # Query events matching any followed interest
     # Filter out child recurring events (show only parents)
+    from sqlalchemy import or_
     
     query = select(Event).where(
-        (Event.venue_id.in_(followed_venue_ids)) | 
-        (Event.organizer_profile_id.in_(followed_group_ids))
+        or_(*conditions)
     ).where(Event.parent_event_id == None).order_by(desc(Event.created_at)).offset(skip).limit(limit)
     
     events = session.exec(query).all()
     
     # Build proper EventResponse objects with venue data
     return [build_event_response(event, session) for event in events]
+
+
+@router.get("/following/venues")
+def get_followed_venues(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get all venues the current user follows.
+    """
+    follows = session.exec(
+        select(Follow).where(
+            Follow.follower_id == current_user.id,
+            Follow.target_type == "venue"
+        )
+    ).all()
+    
+    if not follows:
+        return {"venues": [], "total": 0}
+    
+    venue_ids = [f.target_id for f in follows]
+    venues = session.exec(
+        select(Venue).where(Venue.id.in_(venue_ids))
+    ).all()
+    
+    return {
+        "venues": [{"id": v.id, "name": v.name, "slug": v.slug, "image_url": v.image_url} for v in venues],
+        "total": len(venues)
+    }
+
+
+@router.get("/following/groups")
+def get_followed_groups(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get all groups/organizers the current user follows.
+    """
+    follows = session.exec(
+        select(Follow).where(
+            Follow.follower_id == current_user.id,
+            Follow.target_type == "group"
+        )
+    ).all()
+    
+    if not follows:
+        return {"groups": [], "total": 0}
+    
+    group_ids = [f.target_id for f in follows]
+    groups = session.exec(
+        select(Organizer).where(Organizer.id.in_(group_ids))
+    ).all()
+    
+    return {
+        "groups": [{"id": g.id, "name": g.name, "slug": g.slug, "logo_url": g.logo_url} for g in groups],
+        "total": len(groups)
+    }

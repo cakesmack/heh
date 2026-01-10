@@ -196,6 +196,9 @@ def moderate_event(
                     link=f"/events/{event.id}"
                 )
                 logger.info(f"Approval notification created for user {event.organizer_id}")
+                
+                # Notify users who follow this event's category/venue/organizer
+                notify_interested_users(event, session)
             elif action == "reject":
                 reason_text = f" Reason: {moderation.rejection_reason}" if moderation.rejection_reason else ""
                 create_notification(
@@ -211,3 +214,85 @@ def moderate_event(
             logger.error(f"Failed to create in-app notification for event {event.id}: {e}")
 
     return {"status": "success", "event_status": event.status}
+
+
+def notify_interested_users(event: Event, session: Session):
+    """
+    Notify users who follow the event's category, venue, or organizer.
+    Creates NEW_EVENT notifications for applicable users.
+    """
+    from app.models.user_category_follow import UserCategoryFollow
+    from app.models.follow import Follow
+    from sqlalchemy import or_
+    
+    try:
+        # Build conditions to find interested users
+        interested_user_ids = set()
+        
+        # Find users following this category
+        if event.category_id:
+            category_followers = session.exec(
+                select(UserCategoryFollow.user_id).where(
+                    UserCategoryFollow.category_id == event.category_id
+                )
+            ).all()
+            interested_user_ids.update(category_followers)
+        
+        # Find users following this venue
+        if event.venue_id:
+            venue_followers = session.exec(
+                select(Follow.follower_id).where(
+                    Follow.target_id == event.venue_id,
+                    Follow.target_type == "venue"
+                )
+            ).all()
+            interested_user_ids.update(venue_followers)
+        
+        # Find users following this organizer
+        if event.organizer_profile_id:
+            organizer_followers = session.exec(
+                select(Follow.follower_id).where(
+                    Follow.target_id == event.organizer_profile_id,
+                    Follow.target_type == "group"
+                )
+            ).all()
+            interested_user_ids.update(organizer_followers)
+        
+        if not interested_user_ids:
+            return
+        
+        # Filter out users who have disabled notifications
+        # Also exclude the event organizer (they already know about their event)
+        users_to_notify = session.exec(
+            select(User).where(
+                User.id.in_(interested_user_ids),
+                User.receive_interest_notifications == True,
+                User.id != event.organizer_id  # Don't notify the organizer
+            )
+        ).all()
+        
+        # Determine what they're following (for the notification message)
+        interest_name = ""
+        if event.category:
+            interest_name = event.category.name
+        elif event.venue:
+            interest_name = event.venue.name
+        
+        # Create notifications
+        for user in users_to_notify:
+            try:
+                create_notification(
+                    session=session,
+                    user_id=user.id,
+                    notification_type=NotificationType.NEW_EVENT,
+                    title="New Event You Might Like 🎉",
+                    message=f"New event in {interest_name}: {event.title}",
+                    link=f"/events/{event.id}"
+                )
+            except Exception as e:
+                logger.error(f"Failed to create interest notification for user {user.id}: {e}")
+        
+        logger.info(f"Created {len(users_to_notify)} interest notifications for event {event.id}")
+        
+    except Exception as e:
+        logger.error(f"Error notifying interested users for event {event.id}: {e}")
