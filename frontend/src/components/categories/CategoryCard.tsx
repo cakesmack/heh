@@ -6,6 +6,9 @@ interface CategoryCardProps {
 }
 
 export default function CategoryCard({ category }: CategoryCardProps) {
+    // Use gradient_color from database, fallback to black
+    const gradientColor = category.gradient_color || '#000000';
+
     return (
         <Link
             href={`/category/${category.slug}`}
@@ -21,16 +24,27 @@ export default function CategoryCard({ category }: CategoryCardProps) {
                 }}
             />
 
-            {/* Gradient Overlay (Scrim) - Strong black at bottom for text legibility */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
+            {/* Gradient Overlay (Scrim) - Uses category color from database */}
+            <div
+                className="absolute inset-0"
+                style={{
+                    background: `linear-gradient(to top, ${gradientColor}E6 0%, ${gradientColor}99 30%, transparent 100%)`,
+                }}
+            />
 
             {/* Content */}
             <div className="absolute bottom-0 left-0 p-3 md:p-8 w-full">
-                <h3 className="text-sm sm:text-lg md:text-3xl lg:text-4xl font-black text-white uppercase tracking-wider mb-1 md:mb-2 line-clamp-2 md:line-clamp-none">
+                <h3
+                    className="text-sm sm:text-lg md:text-3xl lg:text-4xl font-black text-white uppercase tracking-wider mb-1 md:mb-2 line-clamp-2 md:line-clamp-none"
+                    style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3)' }}
+                >
                     {category.name}
                 </h3>
                 {category.event_count !== undefined && category.event_count > 0 && (
-                    <p className="text-[10px] md:text-sm font-medium text-gray-300 hidden sm:block">
+                    <p
+                        className="text-[10px] md:text-sm font-medium text-gray-300 hidden sm:block"
+                        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                    >
                         {category.event_count} event{category.event_count !== 1 ? 's' : ''}
                     </p>
                 )}

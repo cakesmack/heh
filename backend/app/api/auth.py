@@ -21,7 +21,6 @@ from app.models.password_reset import PasswordResetToken
 from app.models.user_preferences import UserPreferences
 from app.core.config import settings
 from app.services.resend_email import resend_email_service
-from app.services.resend_email import resend_email_service
 from app.schemas.user import (
     UserCreate,
     UserLogin,
