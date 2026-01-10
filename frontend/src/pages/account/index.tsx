@@ -17,7 +17,7 @@ import { SettingsTab } from '@/components/account/SettingsTab';
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, refreshUser } = useAuth();
   const [dashboardStats, setDashboardStats] = useState<UserDashboardStats | null>(null);
   const [checkIns, setCheckIns] = useState<CheckInHistory[]>([]);
   const [submittedEvents, setSubmittedEvents] = useState<EventResponse[]>([]);
@@ -31,6 +31,60 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'venues' | 'settings'>('overview');
   const [eventFilter, setEventFilter] = useState<'all' | 'upcoming' | 'pending' | 'past'>('all');
   const [featuredStatus, setFeaturedStatus] = useState<{ success?: boolean; message?: string } | null>(null);
+
+  // Profile Editing State
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({ display_name: '', username: '' });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const handleEditClick = () => {
+    if (user) {
+      setEditForm({
+        display_name: user.display_name || '',
+        username: user.username || ''
+      });
+      setEditError(null);
+      setIsEditingProfile(true);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setEditError(null);
+  };
+
+  const handleSaveProfile = async () => {
+    setEditError(null);
+    setIsSavingProfile(true);
+
+    // Basic Validation
+    if (!editForm.username.trim()) {
+      setEditError('Username is required');
+      setIsSavingProfile(false);
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(editForm.username)) {
+      setEditError('Username can only contain letters, numbers, and underscores');
+      setIsSavingProfile(false);
+      return;
+    }
+
+    try {
+      await api.users.updateProfile({
+        display_name: editForm.display_name,
+        username: editForm.username
+      });
+      // Refresh global auth state
+      await refreshUser();
+      setIsEditingProfile(false);
+      setIsSavingProfile(false);
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to update profile');
+      setIsSavingProfile(false);
+    }
+  };
 
   // Auto-verify featured payment when redirected from Stripe
   useEffect(() => {
@@ -251,8 +305,8 @@ export default function AccountPage() {
         {/* Featured Payment Status Banner */}
         {featuredStatus && (
           <div className={`mb-6 p-4 rounded-lg flex items-center justify-between ${featuredStatus.success
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-red-50 border border-red-200 text-red-800'
+            ? 'bg-green-50 border border-green-200 text-green-800'
+            : 'bg-red-50 border border-red-200 text-red-800'
             }`}>
             <div className="flex items-center gap-3">
               {featuredStatus.success ? (
@@ -383,35 +437,105 @@ export default function AccountPage() {
               {/* User Info Card */}
               <div className="lg:col-span-1">
                 <Card>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Profile</h2>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="text-gray-600">Display Name</p>
-                      <p className="font-medium text-gray-900">{user?.display_name || user?.username || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Username</p>
-                      <p className="font-medium text-gray-900">@{user?.username || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Email</p>
-                      <p className="font-medium text-gray-900">{user?.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Member Since</p>
-                      <p className="font-medium text-gray-900">
-                        {user?.created_at ? formatDate(user.created_at) : 'N/A'}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
+                    {!isEditingProfile && (
+                      <button
+                        onClick={handleEditClick}
+                        className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
-                  <div className="mt-4 pt-4 border-t">
-                    <Link
-                      href="/forgot-password"
-                      className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                    >
-                      Change Password
-                    </Link>
+
+                  {editError && (
+                    <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">
+                      {editError}
+                    </div>
+                  )}
+
+                  <div className="space-y-4 text-sm">
+                    {isEditingProfile ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-gray-700 mb-1">Display Name</label>
+                          <input
+                            type="text"
+                            value={editForm.display_name}
+                            onChange={(e) => setEditForm({ ...editForm, display_name: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
+                            placeholder="Your Name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-700 mb-1">Username</label>
+                          <div className="flex">
+                            <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                              @
+                            </span>
+                            <input
+                              type="text"
+                              value={editForm.username}
+                              onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                              className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-lg border border-gray-300 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="username"
+                            />
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">Letters, numbers, and underscores only.</p>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            onClick={handleSaveProfile}
+                            disabled={isSavingProfile}
+                            className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {isSavingProfile ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            disabled={isSavingProfile}
+                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <p className="text-gray-600">Display Name</p>
+                          <p className="font-medium text-gray-900">{user?.display_name || user?.username || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Username</p>
+                          <p className="font-medium text-gray-900">@{user?.username || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Email</p>
+                          <p className="font-medium text-gray-900">{user?.email}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Member Since</p>
+                          <p className="font-medium text-gray-900">
+                            {user?.created_at ? formatDate(user.created_at) : 'N/A'}
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
+
+                  {!isEditingProfile && (
+                    <div className="mt-4 pt-4 border-t">
+                      <Link
+                        href="/forgot-password"
+                        className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                      >
+                        Change Password
+                      </Link>
+                    </div>
+                  )}
                 </Card>
               </div>
 
