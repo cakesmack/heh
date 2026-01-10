@@ -216,6 +216,7 @@ export default function DiscoveryBar({
     };
 
     const handleClear = () => {
+        // Reset all filter state
         setQ('');
         setLocation('');
         setDate('');
@@ -224,6 +225,14 @@ export default function DiscoveryBar({
         setCategory('');
         setGpsMode(false);
         setUserCoords(null);
+        setSelectedRadius('10'); // Reset radius to default
+
+        // Clear URL query params by pushing clean pathname
+        router.push(router.pathname, undefined, { shallow: true });
+
+        // Trigger search with empty filters
+        onSearch({});
+        closeMobileSearch();
     };
 
     // Radius options in miles

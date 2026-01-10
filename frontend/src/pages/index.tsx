@@ -85,6 +85,16 @@ export default function HomePage() {
     dateTo?: string;
     category?: string;
   }) => {
+    // Check if all filters are empty (Clear was pressed)
+    const hasActiveFilters = Object.values(filters).some(v => v && v.length > 0);
+
+    if (!hasActiveFilters) {
+      // Close search drawer and reset state when filters are cleared
+      setActiveFilters({});
+      setIsSearchOpen(false);
+      return;
+    }
+
     setActiveFilters(filters);
     setSearchPage(1);
     setIsSearchOpen(true);
