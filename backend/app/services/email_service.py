@@ -182,3 +182,76 @@ def send_new_user_notification(user_email: str, user_name: str) -> bool:
     
     return send_email(admin_email, subject, html_content, text_content)
 
+
+def send_new_event_notification(event_title: str, event_id: str, venue_name: str, status: str) -> bool:
+    """
+    Send a notification to the admin when a new event is posted.
+    """
+    admin_email = settings.ADMIN_EMAIL
+    if not admin_email:
+        return True
+        
+    subject = f"📅 New Event: {event_title}"
+    link = f"https://www.highlandeventshub.co.uk/events/{event_id}"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <body>
+        <h2>New Event Posted</h2>
+        <ul>
+            <li><strong>Title:</strong> {event_title}</li>
+            <li><strong>Venue:</strong> {venue_name or 'N/A'}</li>
+            <li><strong>Status:</strong> {status}</li>
+            <li><strong>Link:</strong> <a href="{link}">{link}</a></li>
+        </ul>
+    </body>
+    </html>
+    """
+    
+    text_content = f"""
+    New Event Posted
+    
+    Title: {event_title}
+    Venue: {venue_name or 'N/A'}
+    Status: {status}
+    Link: {link}
+    """
+    
+    return send_email(admin_email, subject, html_content, text_content)
+
+
+def send_moderation_required_notification(event_title: str, event_id: str) -> bool:
+    """
+    Send a notification to the admin when an event is updated and requires re-approval.
+    """
+    admin_email = settings.ADMIN_EMAIL
+    if not admin_email:
+        return True
+        
+    subject = f"⚠️ Moderation Needed: {event_title}"
+    link = f"https://www.highlandeventshub.co.uk/events/{event_id}"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <body>
+        <h2>Moderation Required</h2>
+        <p>A user updated an event, and it requires re-approval. Please review it in the dashboard.</p>
+        <p><strong>Event:</strong> {event_title}</p>
+        <p><a href="{link}">View Event</a></p>
+    </body>
+    </html>
+    """
+    
+    text_content = f"""
+    Moderation Required
+    
+    A user updated an event, and it requires re-approval. Please review it in the dashboard.
+    Event: {event_title}
+    Link: {link}
+    """
+    
+    return send_email(admin_email, subject, html_content, text_content)
+
+

@@ -5,7 +5,7 @@ Handles event CRUD operations, filtering, and search.
 from datetime import datetime
 from typing import Optional, List
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlmodel import Session, select, func
 from sqlalchemy import case
 
@@ -547,7 +547,8 @@ def list_events(
 def create_event(
     event_data: EventCreate,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    background_tasks: BackgroundTasks = None # Optional for tests
 ):
     """
     Create a new event.
@@ -780,7 +781,22 @@ def create_event(
                     is_auto_approved=True
                 )
                 logger.info(f"Auto-approval email sent to {mask_email(current_user.email)} for event {new_event.id}")
-                # No admin notification needed for auto-approved events
+                # No admin notification needed for auto-approved events (notification_service)
+                # But send EMAIL alert as requested
+                from app.services.email_service import send_new_event_notification
+                # Resolve venue name
+                v_name = new_event.location_name
+                if not v_name and new_event.venue_id:
+                     v = session.get(Venue, new_event.venue_id)
+                     if v: v_name = v.name
+                
+                background_tasks.add_task(
+                    send_new_event_notification,
+                    new_event.title,
+                    str(new_event.id),
+                    v_name,
+                    new_event.status
+                )
             else:
                 # Notify user their event is under review (fallback to notification_service)
                 notification_service.notify_event_submission(current_user.email, new_event.title)
@@ -792,8 +808,24 @@ def create_event(
                     notification_service.notify_admin_new_pending_event(
                         admin_emails,
                         new_event.title,
+                        new_event.title,
                         current_user.email
                     )
+                
+                # Send EMAIL alert to ADMIN_EMAIL (New Event Posted)
+                from app.services.email_service import send_new_event_notification
+                v_name = new_event.location_name
+                if not v_name and new_event.venue_id:
+                     v = session.get(Venue, new_event.venue_id)
+                     if v: v_name = v.name
+
+                background_tasks.add_task(
+                    send_new_event_notification,
+                    new_event.title,
+                    str(new_event.id),
+                    v_name,
+                    new_event.status
+                )
         except Exception as e:
             # Log error but don't fail the request - event creation succeeded
             logger.error(f"Failed to send notification email for event {new_event.id}: {e}")
@@ -919,7 +951,8 @@ def update_event(
     event_id: str,
     event_data: EventUpdate,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    background_tasks: BackgroundTasks = None
 ):
     """
     Update an existing event.
@@ -930,6 +963,9 @@ def update_event(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event not found"
         )
+
+    # Capture original status for moderation check
+    original_status = event.status
 
     # Check permissions - normalize both IDs for comparison
     user_id_str = str(current_user.id).replace('-', '')
@@ -1053,6 +1089,21 @@ def update_event(
             session.add(showtime)
 
     event.updated_at = datetime.utcnow()
+
+    # Moderation Logic: If published event is edited by non-trusted user, revert to pending
+    if original_status == "published" and not (current_user.is_admin or current_user.is_trusted_organizer):
+        event.status = "pending"
+        event.moderation_reason = "Edited after publication"
+        logger.info(f"[MODERATION] Event '{event.title}' reverted to pending update by user {current_user.id}")
+        
+        # Trigger Admin Alert (Moderation Required)
+        from app.services.email_service import send_moderation_required_notification
+        if background_tasks:
+            background_tasks.add_task(
+                send_moderation_required_notification,
+                event.title,
+                str(event.id)
+            )
 
     session.add(event)
     session.commit()
