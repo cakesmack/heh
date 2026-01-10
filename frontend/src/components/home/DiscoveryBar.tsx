@@ -377,7 +377,7 @@ export default function DiscoveryBar({
                                     <option value="weekend">This Weekend</option>
                                     <option value="week">Next 7 Days</option>
                                     <option value="month">This Month</option>
-                                    <option value="custom">Custom Range</option>
+                                    <option value="custom">Pick a Date</option>
                                 </select>
                                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                     <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -387,20 +387,28 @@ export default function DiscoveryBar({
                             </div>
 
                             {date === 'custom' && (
-                                <div className="flex gap-2 w-full animate-fade-in">
+                                <div className="flex gap-2 w-full animate-fade-in items-center">
                                     <input
                                         type="date"
                                         value={dateFrom}
-                                        onChange={(e) => setDateFrom(e.target.value)}
+                                        onChange={(e) => {
+                                            setDateFrom(e.target.value);
+                                            // If no end date or end date is before start, set end to same as start
+                                            if (!dateTo || e.target.value > dateTo) {
+                                                setDateTo(e.target.value);
+                                            }
+                                        }}
                                         className="block w-full px-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-gray-50"
-                                        placeholder="From"
+                                        title="Select date or start of range"
                                     />
+                                    <span className="text-gray-400 text-sm">to</span>
                                     <input
                                         type="date"
                                         value={dateTo}
+                                        min={dateFrom}
                                         onChange={(e) => setDateTo(e.target.value)}
                                         className="block w-full px-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-lg bg-gray-50"
-                                        placeholder="To"
+                                        title="Optional: end of range"
                                     />
                                 </div>
                             )}
@@ -587,19 +595,26 @@ export default function DiscoveryBar({
                                 <option value="weekend">This Weekend</option>
                                 <option value="week">Next 7 Days</option>
                                 <option value="month">This Month</option>
-                                <option value="custom">Custom Range</option>
+                                <option value="custom">Pick a Date</option>
                             </select>
                             {date === 'custom' && (
-                                <div className="flex gap-2 mt-2">
+                                <div className="flex gap-2 mt-2 items-center">
                                     <input
                                         type="date"
                                         value={dateFrom}
-                                        onChange={(e) => setDateFrom(e.target.value)}
+                                        onChange={(e) => {
+                                            setDateFrom(e.target.value);
+                                            if (!dateTo || e.target.value > dateTo) {
+                                                setDateTo(e.target.value);
+                                            }
+                                        }}
                                         className="block w-full px-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50"
                                     />
+                                    <span className="text-gray-400 text-sm">to</span>
                                     <input
                                         type="date"
                                         value={dateTo}
+                                        min={dateFrom}
                                         onChange={(e) => setDateTo(e.target.value)}
                                         className="block w-full px-3 py-3 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 rounded-lg bg-gray-50"
                                     />
