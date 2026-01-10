@@ -213,6 +213,10 @@ def get_followed_venues(
     """
     Get all venues the current user follows.
     """
+    from app.core.utils import normalize_uuid
+    import logging
+    logger = logging.getLogger(__name__)
+    
     follows = session.exec(
         select(Follow).where(
             Follow.follower_id == current_user.id,
@@ -220,13 +224,20 @@ def get_followed_venues(
         )
     ).all()
     
+    logger.info(f"User {current_user.id} has {len(follows)} venue follows")
+    
     if not follows:
         return {"venues": [], "total": 0}
     
-    venue_ids = [f.target_id for f in follows]
+    # Normalize UUIDs to handle format differences
+    venue_ids = [normalize_uuid(f.target_id) for f in follows]
+    logger.info(f"Looking for venues with IDs: {venue_ids}")
+    
     venues = session.exec(
         select(Venue).where(Venue.id.in_(venue_ids))
     ).all()
+    
+    logger.info(f"Found {len(venues)} matching venues")
     
     return {
         "venues": [{"id": v.id, "name": v.name, "slug": v.slug, "image_url": v.image_url} for v in venues],
@@ -242,6 +253,10 @@ def get_followed_groups(
     """
     Get all groups/organizers the current user follows.
     """
+    from app.core.utils import normalize_uuid
+    import logging
+    logger = logging.getLogger(__name__)
+    
     follows = session.exec(
         select(Follow).where(
             Follow.follower_id == current_user.id,
@@ -249,13 +264,20 @@ def get_followed_groups(
         )
     ).all()
     
+    logger.info(f"User {current_user.id} has {len(follows)} group follows")
+    
     if not follows:
         return {"groups": [], "total": 0}
     
-    group_ids = [f.target_id for f in follows]
+    # Normalize UUIDs to handle format differences
+    group_ids = [normalize_uuid(f.target_id) for f in follows]
+    logger.info(f"Looking for groups with IDs: {group_ids}")
+    
     groups = session.exec(
         select(Organizer).where(Organizer.id.in_(group_ids))
     ).all()
+    
+    logger.info(f"Found {len(groups)} matching groups")
     
     return {
         "groups": [{"id": g.id, "name": g.name, "slug": g.slug, "logo_url": g.logo_url} for g in groups],
