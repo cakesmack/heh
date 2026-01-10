@@ -22,51 +22,65 @@ def follow_target(
     """
     Follow a venue or organizer (group).
     """
+    from app.core.utils import normalize_uuid
+    import uuid
+    import logging
+    logger = logging.getLogger(__name__)
+
     if target_type not in ["venue", "group"]:
         raise HTTPException(status_code=400, detail="Invalid target type. Must be 'venue' or 'group'.")
 
-    print(f"DEBUG: follow_target type={target_type} id={target_id}")
-    if target_type == "venue":
-        # Try exact match first
-        target = session.get(Venue, target_id)
-        if not target:
-            # Try removing dashes (if input has them)
-            clean_id = target_id.replace("-", "")
-            if clean_id != target_id:
-                target = session.get(Venue, clean_id)
-        
-        if not target:
-             # Try adding dashes (if input doesn't have them - harder to guess placement, but maybe standard UUID?)
-             # For now, just try to find by ID using select which might be more lenient?
-             target = session.exec(select(Venue).where(Venue.id == target_id)).first()
+    logger.info(f"follow_target: {target_type} {target_id} user={current_user.id}")
 
-        print(f"DEBUG: Venue lookup result: {target}")
+    # 1. Find the target object first
+    target = None
+    
+    # Try exact match
+    if target_type == "venue":
+        target = session.get(Venue, target_id)
     else:
         target = session.get(Organizer, target_id)
-        print(f"DEBUG: Organizer lookup result: {target}")
-    
-    if not target:
-        # Debug: list some venue IDs to see what's going on
-        debug_msg = ""
-        if target_type == "venue":
-            all_venues = session.exec(select(Venue.id).limit(5)).all()
-            print(f"DEBUG: Sample Venue IDs in DB: {all_venues}")
-            debug_msg = f" (Input ID: {target_id}, Sample DB IDs: {all_venues})"
         
-        raise HTTPException(status_code=404, detail=f"{target_type.capitalize()} not found{debug_msg}")
+    # Try normalized match (no dashes) if failed
+    if not target:
+        normalized_id = normalize_uuid(target_id)
+        if normalized_id != target_id:
+            if target_type == "venue":
+                target = session.get(Venue, normalized_id)
+            else:
+                target = session.get(Organizer, normalized_id)
+    
+    # Try dashed match if failed
+    if not target:
+        try:
+            dashed_id = str(uuid.UUID(hex=normalize_uuid(target_id)))
+            if dashed_id != target_id:
+                if target_type == "venue":
+                    target = session.get(Venue, dashed_id)
+                else:
+                    target = session.get(Organizer, dashed_id)
+        except ValueError:
+            pass
 
-    # Check if already following
+    if not target:
+        logger.warning(f"Target not found: {target_type} {target_id}")
+        raise HTTPException(status_code=404, detail=f"{target_type.capitalize()} not found")
+
+    # 2. Check if already following (using the Found Target's ID to match DB usage)
+    # AND also check the input ID just in case existing data is mixed
+    
+    # Search for existing follow by matching against target.id (trust the DB object id)
     existing_follow = session.exec(
         select(Follow).where(
             Follow.follower_id == current_user.id,
-            Follow.target_id == target_id
+            Follow.target_id == target.id
         )
     ).first()
 
     if existing_follow:
         return existing_follow
 
-    # Create follow
+    # Create follow using the TRUE database key of the target
     follow = Follow(
         follower_id=current_user.id,
         target_id=target.id,
@@ -75,6 +89,8 @@ def follow_target(
     session.add(follow)
     session.commit()
     session.refresh(follow)
+    
+    logger.info(f"Created follow: {follow.id}")
     return follow
 
 @router.delete("/follow/{target_type}/{target_id}")
@@ -87,24 +103,34 @@ def unfollow_target(
     """
     Unfollow a venue or organizer.
     """
-    # Try to find follow with exact ID first
-    follow = session.exec(
-        select(Follow).where(
-            Follow.follower_id == current_user.id,
-            Follow.target_id == target_id
-        )
-    ).first()
+    from app.core.utils import normalize_uuid
+    import uuid
+    
+    # Helper to find follow record
+    def find_follow(tid):
+        return session.exec(
+            select(Follow).where(
+                Follow.follower_id == current_user.id,
+                Follow.target_id == tid
+            )
+        ).first()
 
+    # 1. Try exact match
+    follow = find_follow(target_id)
+
+    # 2. Try normalized (no dashes)
     if not follow:
-        # Try with/without dashes just in case
-        clean_id = target_id.replace("-", "")
-        if clean_id != target_id:
-             follow = session.exec(
-                select(Follow).where(
-                    Follow.follower_id == current_user.id,
-                    Follow.target_id == clean_id
-                )
-            ).first()
+        normalized_id = normalize_uuid(target_id)
+        if normalized_id != target_id:
+            follow = find_follow(normalized_id)
+            
+    # 3. Try dashed
+    if not follow:
+        try:
+            dashed_id = str(uuid.UUID(hex=normalize_uuid(target_id)))
+            follow = find_follow(dashed_id)
+        except ValueError:
+            pass
 
     if not follow:
         raise HTTPException(status_code=404, detail="Not following this target")
@@ -122,7 +148,10 @@ def check_is_following(
     """
     Check if current user follows a target.
     """
-    # Check exact match
+    from app.core.utils import normalize_uuid
+    import uuid
+    
+    # 1. exact match
     follow = session.exec(
         select(Follow).where(
             Follow.follower_id == current_user.id,
@@ -130,18 +159,37 @@ def check_is_following(
         )
     ).first()
     
-    if not follow:
-        # Check alternate format
-        clean_id = target_id.replace("-", "")
-        if clean_id != target_id:
+    if follow:
+        return True
+        
+    # 2. normalized (no dashes)
+    normalized = normalize_uuid(target_id)
+    if normalized != target_id:
+        follow = session.exec(
+            select(Follow).where(
+                Follow.follower_id == current_user.id,
+                Follow.target_id == normalized
+            )
+        ).first()
+        if follow:
+            return True
+            
+    # 3. dashed
+    try:
+        dashed = str(uuid.UUID(hex=normalized))
+        if dashed != target_id:
             follow = session.exec(
                 select(Follow).where(
                     Follow.follower_id == current_user.id,
-                    Follow.target_id == clean_id
+                    Follow.target_id == dashed
                 )
             ).first()
+            if follow:
+                return True
+    except ValueError:
+        pass
 
-    return follow is not None
+    return False
 
 @router.get("/feed", response_model=List[EventResponse])
 def get_activity_feed(
