@@ -238,7 +238,7 @@ def get_followed_venues(
     logger.info(f"Found {len(venues)} matching venues")
     
     return {
-        "venues": [{"id": v.id, "name": v.name, "slug": v.slug, "image_url": v.image_url} for v in venues],
+        "venues": [{"id": v.id, "name": v.name, "image_url": v.image_url} for v in venues],
         "total": len(venues)
     }
 
