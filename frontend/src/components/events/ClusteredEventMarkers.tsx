@@ -107,74 +107,101 @@ export function ClusteredEventMarkers({
         events: EventResponse[];
     } | null>(null);
 
-    // Create MarkerClusterer with improved settings
-    const clusterer = useMemo(() => {
-        if (!map) return null;
+    // State for the clusterer (now managed via state, not useMemo, to handle async init)
+    const [clusterer, setClusterer] = useState<MarkerClusterer | null>(null);
 
-        return new MarkerClusterer({
-            map,
-            // Use GridAlgorithm with settings tuned for the map
-            algorithm: new GridAlgorithm({
-                gridSize: 60,  // Default grid size
-                maxZoom: 15,   // Stop clustering at zoom 15 (street level)
-            }),
-            // Custom click handler to show popup or zoom
-            onClusterClick: (event, cluster, mapInstance) => {
-                const currentZoom = mapInstance.getZoom() || 7;
-                const clusterMarkers = cluster.markers || [];
+    // Initialize MarkerClusterer only after map is fully ready (idle event)
+    useEffect(() => {
+        if (!map) return;
 
-                // If we're at max zoom (15) or near it, show a popup with event list
-                if (currentZoom >= 14) {
-                    // Find events that match these markers
-                    const clusterEventIds = new Set(
-                        clusterMarkers.map((m: any) => {
-                            // AdvancedMarker stores data in the element or we track by position
-                            const pos = m.position;
-                            return pos ? `${pos.lat},${pos.lng}` : null;
-                        }).filter(Boolean)
-                    );
+        let clustererInstance: MarkerClusterer | null = null;
 
-                    // Get all events at this cluster location
-                    const clusterPosition = cluster.position;
-                    const eventsAtLocation = events.filter(e => {
-                        const key = `${e.latitude},${e.longitude}`;
-                        // Check if event is near the cluster center (within ~100m)
-                        const latDiff = Math.abs(e.latitude - clusterPosition.lat());
-                        const lngDiff = Math.abs(e.longitude - clusterPosition.lng());
-                        return latDiff < 0.001 && lngDiff < 0.001;
-                    });
+        // Wait for map to be fully idle (projection available)
+        const initClusterer = () => {
+            // Double-check map projection is ready
+            const projection = map.getProjection();
+            if (!projection) {
+                // If projection not ready, wait a bit and retry
+                setTimeout(initClusterer, 100);
+                return;
+            }
 
-                    if (eventsAtLocation.length > 0) {
-                        setClusterPopup({
-                            position: clusterPosition,
-                            events: eventsAtLocation,
+            clustererInstance = new MarkerClusterer({
+                map,
+                // Use GridAlgorithm with settings tuned for the map
+                algorithm: new GridAlgorithm({
+                    gridSize: 60,  // Default grid size
+                    maxZoom: 15,   // Stop clustering at zoom 15 (street level)
+                }),
+                // Custom click handler to show popup or zoom
+                onClusterClick: (event, cluster, mapInstance) => {
+                    const currentZoom = mapInstance.getZoom() || 7;
+                    const clusterMarkers = cluster.markers || [];
+
+                    // If we're at max zoom (15) or near it, show a popup with event list
+                    if (currentZoom >= 14) {
+                        // Get all events at this cluster location
+                        const clusterPosition = cluster.position;
+                        const eventsAtLocation = events.filter(e => {
+                            // Check if event is near the cluster center (within ~100m)
+                            const latDiff = Math.abs(e.latitude - clusterPosition.lat());
+                            const lngDiff = Math.abs(e.longitude - clusterPosition.lng());
+                            return latDiff < 0.001 && lngDiff < 0.001;
                         });
-                        return; // Don't zoom
-                    }
-                }
 
-                // Otherwise, zoom in moderately
-                const targetZoom = Math.min(currentZoom + 2, 15);
-                mapInstance.panTo(cluster.position);
-                mapInstance.setZoom(targetZoom);
-            },
+                        if (eventsAtLocation.length > 0) {
+                            setClusterPopup({
+                                position: clusterPosition,
+                                events: eventsAtLocation,
+                            });
+                            return; // Don't zoom
+                        }
+                    }
+
+                    // Otherwise, zoom in moderately
+                    const targetZoom = Math.min(currentZoom + 2, 15);
+                    mapInstance.panTo(cluster.position);
+                    mapInstance.setZoom(targetZoom);
+                },
+            });
+
+            setClusterer(clustererInstance);
+        };
+
+        // Listen for idle event which fires when map is fully loaded
+        const idleListener = map.addListener('idle', () => {
+            if (!clustererInstance) {
+                initClusterer();
+            }
         });
+
+        // Also try to init immediately if map might already be ready
+        if (map.getProjection()) {
+            initClusterer();
+        }
+
+        return () => {
+            idleListener.remove();
+            if (clustererInstance) {
+                clustererInstance.clearMarkers();
+                clustererInstance.setMap(null);
+            }
+        };
     }, [map, events]);
 
     // Update clusterer when markers change
     useEffect(() => {
         if (!clusterer) return;
 
-        clusterer.clearMarkers();
-        clusterer.addMarkers(Object.values(markers));
+        // Only update if we have markers and clusterer is ready
+        const markerArray = Object.values(markers);
+        if (markerArray.length > 0) {
+            clusterer.clearMarkers();
+            clusterer.addMarkers(markerArray);
+        }
     }, [clusterer, markers]);
 
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            clusterer?.clearMarkers();
-        };
-    }, [clusterer]);
+    // Cleanup on unmount - handled in the init useEffect above
 
     // Callback to track markers
     const setMarkerRef = useCallback((marker: Marker | null, key: string) => {
