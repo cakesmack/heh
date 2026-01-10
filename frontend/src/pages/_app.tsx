@@ -22,12 +22,15 @@ import { SearchProvider } from '@/context/SearchContext';
 import { ConsentProvider } from '@/context/ConsentContext';
 import CookieBanner from '@/components/layout/CookieBanner';
 
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
+
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
 
 export default function App({ Component, pageProps }: AppProps) {
   const content = (
     <ConsentProvider>
+      <GoogleAnalytics />
       <AuthProvider>
         <SearchProvider>
           <AnalyticsProvider>
