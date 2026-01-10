@@ -4,6 +4,7 @@
  */
 
 import type { AppProps } from 'next/app';
+import Head from 'next/head';
 import { Inter } from 'next/font/google';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { APIProvider } from '@vis.gl/react-google-maps';
@@ -27,6 +28,10 @@ import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
 
+// Default OG metadata for site-wide fallback
+const siteUrl = 'https://www.highlandeventshub.co.uk';
+const defaultOgImage = `${siteUrl}/images/og-default.jpg`;
+
 export default function App({ Component, pageProps }: AppProps) {
   const content = (
     <ConsentProvider>
@@ -34,6 +39,18 @@ export default function App({ Component, pageProps }: AppProps) {
       <AuthProvider>
         <SearchProvider>
           <AnalyticsProvider>
+            {/* Default OG tags (overridden by individual pages) */}
+            <Head>
+              <meta property="og:type" content="website" />
+              <meta property="og:site_name" content="Highland Events Hub" />
+              <meta property="og:image" content={defaultOgImage} />
+              <meta property="og:image:width" content="1200" />
+              <meta property="og:image:height" content="630" />
+              <meta name="twitter:card" content="summary_large_image" />
+              <meta name="twitter:site" content="@HighlandEvents" />
+              <meta name="twitter:image" content={defaultOgImage} />
+            </Head>
+
             <div className={`${inter.variable} font-sans flex flex-col min-h-screen`}>
               {/* Header */}
               <Header />

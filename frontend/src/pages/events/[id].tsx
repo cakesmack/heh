@@ -125,29 +125,49 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
   };
 
   const pageTitle = `${event.title} | Highland Events Hub`;
-  const pageDescription = event.description
-    ? (event.description.length > 160 ? `${event.description.substring(0, 157)}...` : event.description)
-    : `Join us for ${event.title} at ${event.venue_name || event.location_name || 'Inverness'}.`;
+
+  // Format date for OG description
+  const eventDate = new Date(event.date_start);
+  const formattedOgDate = eventDate.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short'
+  });
+
+  // Build rich description for social sharing
+  const venueName = event.venue_name || event.location_name || 'the Highlands';
+  const pageDescription = `Join us at ${venueName} on ${formattedOgDate}. ${event.description ? event.description.substring(0, 100) : 'Discover this amazing event in the Scottish Highlands!'}`;
+
+  // Ensure image URL is absolute (required for OG tags)
+  const siteUrl = 'https://www.highlandeventshub.co.uk';
+  const ogImageUrl = event.image_url
+    ? (event.image_url.startsWith('http') ? event.image_url : `${siteUrl}${event.image_url}`)
+    : `${siteUrl}/images/og-default.jpg`;
+  const canonicalUrl = `${siteUrl}/events/${event.id}`;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={canonicalUrl} />
 
-        {/* Open Graph / Facebook */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={`https://highlandeventshub.com/events/${event.id}`} />
-        <meta property="og:title" content={pageTitle} />
+        {/* Open Graph / Facebook / WhatsApp */}
+        <meta property="og:type" content="event" />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:title" content={event.title} />
         <meta property="og:description" content={pageDescription} />
-        {event.image_url && <meta property="og:image" content={event.image_url} />}
+        <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="Highland Events Hub" />
 
         {/* Twitter */}
-        <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content={`https://highlandeventshub.com/events/${event.id}`} />
-        <meta property="twitter:title" content={pageTitle} />
-        <meta property="twitter:description" content={pageDescription} />
-        {event.image_url && <meta property="twitter:image" content={event.image_url} />}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@HighlandEvents" />
+        <meta name="twitter:title" content={event.title} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={ogImageUrl} />
       </Head>
 
       {/* Cinematic Hero */}
