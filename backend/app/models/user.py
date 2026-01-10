@@ -64,11 +64,23 @@ class User(SQLModel, table=True):
     submitted_events: list["Event"] = Relationship(back_populates="organizer")
     owned_venues: list["Venue"] = Relationship(back_populates="owner")
     payments: list["Payment"] = Relationship(back_populates="user")
-    bookmarks: list["Bookmark"] = Relationship(back_populates="user")
+    bookmarks: list["Bookmark"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
     organizer_profiles: list["Organizer"] = Relationship(back_populates="user")
-    following: list["Follow"] = Relationship(back_populates="follower")
+    following: list["Follow"] = Relationship(
+        back_populates="follower",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
     group_memberships: list["GroupMember"] = Relationship(back_populates="user")
     venue_staff: list["VenueStaff"] = Relationship(back_populates="user")
-    preferences: Optional["UserPreferences"] = Relationship(back_populates="user")
+    preferences: Optional["UserPreferences"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
     featured_bookings: list["FeaturedBooking"] = Relationship(back_populates="organizer")
-    notifications: list["Notification"] = Relationship(back_populates="user")
+    notifications: list["Notification"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
