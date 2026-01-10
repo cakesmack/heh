@@ -107,6 +107,14 @@ def register(
         new_user.email,
         new_user.display_name
     )
+    
+    # Notify admin of new user signup
+    from app.services.email_service import send_new_user_notification
+    background_tasks.add_task(
+        send_new_user_notification,
+        new_user.email,
+        new_user.display_name
+    )
 
     # Create access token
     access_token = create_access_token(data={"sub": str(new_user.id)})

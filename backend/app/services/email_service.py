@@ -139,3 +139,46 @@ def send_password_reset_email(to_email: str, reset_token: str) -> bool:
     """
     
     return send_email(to_email, subject, html_content, text_content)
+
+
+def send_new_user_notification(user_email: str, user_name: str) -> bool:
+    """
+    Send a notification to the admin when a new user signs up.
+    
+    Args:
+        user_email: The new user's email
+        user_name: The new user's name/username
+        
+    Returns:
+        True if email sent successfully or no ADMIN_EMAIL configured
+    """
+    admin_email = settings.ADMIN_EMAIL
+    if not admin_email:
+        return True # Skip if not configured, but don't fail
+        
+    subject = f"New User Signup: {user_email}"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <body>
+        <h2>New User Registration</h2>
+        <p>A new user has just registered on Highland Events Hub.</p>
+        <ul>
+            <li><strong>Name:</strong> {user_name}</li>
+            <li><strong>Email:</strong> {user_email}</li>
+        </ul>
+    </body>
+    </html>
+    """
+    
+    text_content = f"""
+    New User Registration
+    
+    A new user has just registered.
+    Name: {user_name}
+    Email: {user_email}
+    """
+    
+    return send_email(admin_email, subject, html_content, text_content)
+

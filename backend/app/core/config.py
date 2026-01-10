@@ -90,6 +90,7 @@ class Settings(BaseSettings):
     SMTP_PASS: Optional[str] = None
     FRONTEND_URL: str = "http://localhost:3000"
     PASSWORD_RESET_EXPIRE_MINUTES: int = 60
+    ADMIN_EMAIL: Optional[str] = None
 
     # Media Upload
     UPLOAD_DIR: str = "static/uploads"

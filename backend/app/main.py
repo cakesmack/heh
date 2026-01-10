@@ -127,7 +127,8 @@ app = FastAPI(
 # CORS middleware - MUST be added first to handle preflight requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    # Combine settings.ALLOWED_ORIGINS with explicitly required production domains
+    allow_origins=settings.ALLOWED_ORIGINS + ["https://www.highlandeventshub.co.uk", "https://highlandeventshub.co.uk"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
