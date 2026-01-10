@@ -23,10 +23,8 @@ import type {
   VenueCategory,
   VenueCategoryCreate,
   VenueCategoryUpdate,
-  CheckInRequest,
-  CheckInResponse,
-  CheckInHistory,
-  CheckInStatsResponse,
+
+
   PromotionResponse,
   PromotionCreate,
   PromotionUpdate,
@@ -494,48 +492,7 @@ export const venuesAPI = {
   },
 };
 
-// ============================================================
-// CHECK-INS API
-// ============================================================
 
-export const checkInsAPI = {
-  /**
-   * Check in to an event
-   */
-  checkIn: async (eventId: string, data: CheckInRequest): Promise<CheckInResponse> => {
-    return apiFetch<CheckInResponse>(`/api/checkins/events/${eventId}/checkin`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  /**
-   * Get user's check-in history
-   */
-  myHistory: async (skip = 0, limit = 50): Promise<CheckInHistory[]> => {
-    return apiFetch<CheckInHistory[]>(
-      `/api/checkins/checkins/my?skip=${skip}&limit=${limit}`
-    );
-  },
-
-  /**
-   * Get check-in statistics
-   */
-  stats: async (): Promise<CheckInStatsResponse> => {
-    return apiFetch<CheckInStatsResponse>('/api/checkins/checkins/stats');
-  },
-
-  /**
-   * Get event check-in count (public)
-   */
-  eventCount: async (eventId: string): Promise<{ event_id: string; checkin_count: number }> => {
-    return apiFetch<{ event_id: string; checkin_count: number }>(
-      `/api/checkins/events/${eventId}/checkins/count`,
-      {},
-      false
-    );
-  },
-};
 
 // ============================================================
 // PROMOTIONS API
