@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { api } from '@/lib/api';
+import Link from 'next/link';
+import { api, eventsAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useEvents } from '@/hooks/useEvents';
 import { EventList } from '@/components/events/EventList';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
-import { Category, EventFilter } from '@/types';
+import { Category, EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 
 export default function CategoryPage() {
@@ -20,6 +21,9 @@ export default function CategoryPage() {
     // Event fetching
     const { events, total, isLoading: isLoadingEvents, error: eventsError, fetchEvents } = useEvents({ autoFetch: false });
     const [initialFilters, setInitialFilters] = useState<Partial<EventFilter>>({});
+
+    // Category Pinned Events (paid featured)
+    const [pinnedEvents, setPinnedEvents] = useState<EventResponse[]>([]);
 
     // Fetch Category Details
     useEffect(() => {
@@ -62,6 +66,31 @@ export default function CategoryPage() {
                 .catch(console.error);
         }
     }, [user, category]);
+
+    // Fetch category_pinned bookings when category loads
+    useEffect(() => {
+        if (!category?.id) return;
+
+        const fetchPinnedEvents = async () => {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/featured/active?slot_type=category_pinned&target_id=${category.id}`
+                );
+                if (res.ok) {
+                    const bookings = await res.json();
+                    // Fetch full event details for each booking
+                    const eventPromises = bookings.map((b: { event_id: string }) =>
+                        eventsAPI.get(b.event_id).catch(() => null)
+                    );
+                    const events = (await Promise.all(eventPromises)).filter(Boolean) as EventResponse[];
+                    setPinnedEvents(events);
+                }
+            } catch (err) {
+                console.error('Error fetching pinned events:', err);
+            }
+        };
+        fetchPinnedEvents();
+    }, [category?.id]);
 
     const handleFollowToggle = async () => {
         if (!user) {
@@ -225,6 +254,53 @@ export default function CategoryPage() {
                         hideCategory={true}
                     />
                 </div>
+
+                {/* Pinned Events (Paid Featured) */}
+                {pinnedEvents.length > 0 && (
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <span className="bg-amber-400 text-amber-900 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                                Featured
+                            </span>
+                            Top Picks in {category?.name}
+                        </h2>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {pinnedEvents.map((event) => (
+                                <Link
+                                    key={event.id}
+                                    href={`/events/${event.id}`}
+                                    className="group relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow border border-gray-100"
+                                >
+                                    <div className="aspect-[16/9] relative">
+                                        <img
+                                            src={event.image_url || '/images/event-placeholder.jpg'}
+                                            alt={event.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                        <div className="absolute top-2 left-2">
+                                            <span className="bg-amber-400 text-amber-900 text-xs font-bold px-2 py-1 rounded-full">
+                                                ⭐ Featured
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <h3 className="font-bold text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-1">
+                                            {event.title}
+                                        </h3>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            {new Date(event.date_start).toLocaleDateString('en-GB', {
+                                                weekday: 'short',
+                                                day: 'numeric',
+                                                month: 'short'
+                                            })}
+                                            {event.venue_name && ` • ${event.venue_name}`}
+                                        </p>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Events List */}
                 <div>

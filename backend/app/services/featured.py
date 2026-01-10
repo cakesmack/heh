@@ -224,8 +224,11 @@ def create_checkout_session(
 def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
     """
     Handle successful Stripe checkout.
-    Updates booking status based on organizer trust level.
+    PAID bookings are ACTIVE immediately - no approval gate.
+    For HERO_HOME bookings, auto-assign to an empty HeroSlot.
     """
+    from app.models.hero import HeroSlot  # Import here to avoid circular
+    
     print(f"[CHECKOUT COMPLETED] Starting processing")
     
     booking_id = stripe_session.get("metadata", {}).get("booking_id")
@@ -240,29 +243,56 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
         print(f"[CHECKOUT COMPLETED] Booking not found: {booking_id}")
         return
     
-    print(f"[CHECKOUT COMPLETED] Found booking, current status: {booking.status}")
+    print(f"[CHECKOUT COMPLETED] Found booking, slot_type: {booking.slot_type}, current status: {booking.status}")
 
     # Get payment intent ID
     booking.stripe_payment_intent_id = stripe_session.get("payment_intent")
     print(f"[CHECKOUT COMPLETED] Payment intent: {booking.stripe_payment_intent_id}")
 
-    # Check if organizer is trusted
-    organizer = session.get(User, booking.organizer_id)
-    print(f"[CHECKOUT COMPLETED] Organizer: {organizer.id if organizer else 'NOT FOUND'}, trusted: {organizer.is_trusted_organizer if organizer else 'N/A'}")
+    # CHANGE 1: Paid bookings are ACTIVE immediately - no trusted organizer gate
+    booking.status = BookingStatus.ACTIVE
+    print(f"[CHECKOUT COMPLETED] Setting status to ACTIVE (paid = instant approval)")
     
-    if organizer and organizer.is_trusted_organizer:
-        booking.status = BookingStatus.ACTIVE
-        print(f"[CHECKOUT COMPLETED] Setting status to ACTIVE")
-        # Also update event featured status for trusted organizers (auto-approval)
-        event = session.get(Event, booking.event_id)
-        if event:
-            event.featured = True
-            event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
-            session.add(event)
-            print(f"[CHECKOUT COMPLETED] Set event.featured = True, until {event.featured_until}")
-    else:
-        booking.status = BookingStatus.PENDING_APPROVAL
-        print(f"[CHECKOUT COMPLETED] Setting status to PENDING_APPROVAL")
+    # Update event featured status
+    event = session.get(Event, booking.event_id)
+    if event:
+        event.featured = True
+        event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
+        session.add(event)
+        print(f"[CHECKOUT COMPLETED] Set event.featured = True, until {event.featured_until}")
+    
+    # CHANGE 2: Auto-assign HERO_HOME bookings to an empty HeroSlot
+    if booking.slot_type == SlotType.HERO_HOME:
+        print(f"[CHECKOUT COMPLETED] HERO_HOME booking - looking for empty slot")
+        
+        # Find first active slot that has no event assigned (positions 2-5, position 1 is welcome)
+        empty_slot = session.exec(
+            select(HeroSlot)
+            .where(HeroSlot.is_active == True)
+            .where(HeroSlot.type == "spotlight_event")
+            .where(HeroSlot.event_id == None)
+            .order_by(HeroSlot.position)
+        ).first()
+        
+        if empty_slot:
+            empty_slot.event_id = booking.event_id
+            session.add(empty_slot)
+            print(f"[CHECKOUT COMPLETED] Assigned event to HeroSlot position {empty_slot.position}")
+        else:
+            # All slots full - find the oldest spotlight slot and replace it
+            oldest_slot = session.exec(
+                select(HeroSlot)
+                .where(HeroSlot.is_active == True)
+                .where(HeroSlot.type == "spotlight_event")
+                .order_by(HeroSlot.position.desc())  # Take highest position (usually last filled)
+            ).first()
+            
+            if oldest_slot:
+                oldest_slot.event_id = booking.event_id
+                session.add(oldest_slot)
+                print(f"[CHECKOUT COMPLETED] All slots full - replaced HeroSlot position {oldest_slot.position}")
+            else:
+                print(f"[CHECKOUT COMPLETED] WARNING: No HeroSlots configured in database")
 
     booking.updated_at = datetime.utcnow()
     session.add(booking)
