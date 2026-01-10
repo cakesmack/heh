@@ -226,6 +226,35 @@ def delete_category(
 from app.models.user_category_follow import UserCategoryFollow
 
 
+# IMPORTANT: This route MUST be defined BEFORE any /{category_id}/* routes
+# or FastAPI will match "/user/following" as "/{category_id}/following" with category_id="user"
+@router.get("/user/following")
+def get_followed_categories(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Get all categories the current user follows."""
+    follows = session.exec(
+        select(UserCategoryFollow).where(
+            UserCategoryFollow.user_id == current_user.id
+        )
+    ).all()
+    
+    category_ids = [f.category_id for f in follows]
+    
+    if not category_ids:
+        return {"categories": [], "total": 0}
+    
+    categories = session.exec(
+        select(Category).where(Category.id.in_(category_ids))
+    ).all()
+    
+    return {
+        "categories": [CategoryResponse.model_validate(c) for c in categories],
+        "total": len(categories)
+    }
+
+
 @router.post("/{category_id}/follow", status_code=status.HTTP_201_CREATED)
 def follow_category(
     category_id: str,
@@ -311,29 +340,3 @@ def check_following(
     
     return {"following": follow is not None}
 
-
-@router.get("/user/following")
-def get_followed_categories(
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    """Get all categories the current user follows."""
-    follows = session.exec(
-        select(UserCategoryFollow).where(
-            UserCategoryFollow.user_id == current_user.id
-        )
-    ).all()
-    
-    category_ids = [f.category_id for f in follows]
-    
-    if not category_ids:
-        return {"categories": [], "total": 0}
-    
-    categories = session.exec(
-        select(Category).where(Category.id.in_(category_ids))
-    ).all()
-    
-    return {
-        "categories": [CategoryResponse.model_validate(c) for c in categories],
-        "total": len(categories)
-    }
