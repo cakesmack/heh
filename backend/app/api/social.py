@@ -188,11 +188,16 @@ def get_activity_feed(
     
     # Query events matching any followed interest
     # Filter out child recurring events (show only parents)
+    # CRITICAL: Only show published events (not deleted/pending)
     from sqlalchemy import or_
     
     query = select(Event).where(
         or_(*conditions)
-    ).where(Event.parent_event_id == None).order_by(desc(Event.created_at)).offset(skip).limit(limit)
+    ).where(
+        Event.parent_event_id == None
+    ).where(
+        Event.status == "published"
+    ).order_by(desc(Event.created_at)).offset(skip).limit(limit)
     
     events = session.exec(query).all()
     

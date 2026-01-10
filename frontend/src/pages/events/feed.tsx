@@ -97,14 +97,28 @@ export default function MyFeedPage() {
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Your Feed is Empty</h3>
                         <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                            Follow your favorite venues and organizers to see their latest events here.
+                            Follow categories, venues, or groups to see their events here!
                         </p>
-                        <Link
-                            href="/venues"
-                            className="inline-block px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-                        >
-                            Browse Venues
-                        </Link>
+                        <div className="flex flex-wrap gap-3 justify-center">
+                            <Link
+                                href="/categories"
+                                className="px-5 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                            >
+                                Browse Categories
+                            </Link>
+                            <Link
+                                href="/venues"
+                                className="px-5 py-2.5 bg-white text-emerald-600 font-medium rounded-lg border border-emerald-600 hover:bg-emerald-50 transition-colors"
+                            >
+                                Browse Venues
+                            </Link>
+                            <Link
+                                href="/groups"
+                                className="px-5 py-2.5 bg-white text-emerald-600 font-medium rounded-lg border border-emerald-600 hover:bg-emerald-50 transition-colors"
+                            >
+                                Browse Groups
+                            </Link>
+                        </div>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
