@@ -517,7 +517,31 @@ export default function SubmitEventPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
-                      <DateTimePicker id="date_start" name="date_start" required value={formData.date_start} onChange={(val) => setFormData({ ...formData, date_start: val })} />
+                      <DateTimePicker
+                        id="date_start"
+                        name="date_start"
+                        required
+                        value={formData.date_start}
+                        onChange={(val) => {
+                          // Smart Date Sync: Update end date when start date changes
+                          const oldStartDate = formData.date_start ? formData.date_start.split('T')[0] : '';
+                          const newStartDate = val.split('T')[0];
+                          const currentEndDate = formData.date_end ? formData.date_end.split('T')[0] : '';
+
+                          // Sync end date if: empty, matches old start, or is before new start
+                          if (!formData.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
+                            // Keep the time from end date if it exists, otherwise use start time + 2 hours
+                            const endTime = formData.date_end ? formData.date_end.split('T')[1] : val.split('T')[1];
+                            setFormData({
+                              ...formData,
+                              date_start: val,
+                              date_end: `${newStartDate}T${endTime || '18:00'}`
+                            });
+                          } else {
+                            setFormData({ ...formData, date_start: val });
+                          }
+                        }}
+                      />
                     </div>
                     {!noEndTime && (
                       <div>

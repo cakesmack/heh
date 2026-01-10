@@ -376,7 +376,7 @@ export default function DiscoveryBar({
                                     <option value="tomorrow">Tomorrow</option>
                                     <option value="weekend">This Weekend</option>
                                     <option value="week">Next 7 Days</option>
-                                    <option value="month">This Month</option>
+                                    <option value="month">Next 30 Days</option>
                                     <option value="custom">Pick a Date</option>
                                 </select>
                                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -594,7 +594,7 @@ export default function DiscoveryBar({
                                 <option value="tomorrow">Tomorrow</option>
                                 <option value="weekend">This Weekend</option>
                                 <option value="week">Next 7 Days</option>
-                                <option value="month">This Month</option>
+                                <option value="month">Next 30 Days</option>
                                 <option value="custom">Pick a Date</option>
                             </select>
                             {date === 'custom' && (

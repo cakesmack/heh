@@ -203,7 +203,27 @@ export default function AdminEvents() {
   };
 
   const handleDateChange = (field: 'date_start' | 'date_end', value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'date_start') {
+      // Smart Date Sync: Update end date when start date changes
+      const oldStartDate = formData.date_start ? formData.date_start.split('T')[0] : '';
+      const newStartDate = value.split('T')[0];
+      const currentEndDate = formData.date_end ? formData.date_end.split('T')[0] : '';
+
+      // Sync end date if: empty, matches old start, or is before new start
+      if (!formData.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
+        // Keep the time from end date if it exists, otherwise use start time
+        const endTime = formData.date_end ? formData.date_end.split('T')[1] : value.split('T')[1];
+        setFormData(prev => ({
+          ...prev,
+          date_start: value,
+          date_end: `${newStartDate}T${endTime || '18:00'}`
+        }));
+      } else {
+        setFormData(prev => ({ ...prev, date_start: value }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     setDateError(null);
   };
 
