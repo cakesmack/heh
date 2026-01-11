@@ -30,18 +30,14 @@ const SITE_URL = 'https://www.highlandeventshub.co.uk';
 const DEFAULT_OG_IMAGE = 'https://res.cloudinary.com/dakq1xwn1/image/upload/v1767454232/highland_events/events/lhxbivhjsqpwn1hsbz5x.jpg';
 
 interface HomePageProps {
-  socialImage: string;
+  meta?: any; // Passed to _app.tsx
 }
 
-export default function HomePage({ socialImage }: HomePageProps) {
+export default function HomePage({ }: HomePageProps) {
   const { coordinates } = useGeolocation();
   const { user } = useAuth();
 
-  // Create optimized OG image URL for WhatsApp/Socials
-  // Inject Cloudinary transformations if it's a Cloudinary URL
-  const optimizedOgImage = socialImage && socialImage.includes('cloudinary') && !socialImage.includes('w_')
-    ? socialImage.replace('/upload/', '/upload/w_1200,h_630,c_fill,q_auto/')
-    : socialImage;
+
   const [page, setPage] = useState(1);
   const EVENTS_PER_PAGE = 9;
 
@@ -221,28 +217,7 @@ export default function HomePage({ socialImage }: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Head>
-        <title>Highland Events Hub - Discover Events in the Highlands</title>
-        <meta name="description" content="Find the best events, gigs, and festivals in the Scottish Highlands." />
-        <link rel="canonical" href={SITE_URL} />
 
-        {/* Open Graph / Facebook / WhatsApp */}
-        <meta property="og:type" content="website" key="og-type" />
-        <meta property="og:url" content={SITE_URL} key="og-url" />
-        <meta property="og:title" content="Highland Events Hub" key="og-title" />
-        <meta property="og:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." key="og-description" />
-        <meta property="og:image" content={optimizedOgImage} key="og-image" />
-        <meta property="og:image:width" content="1200" key="og-image-width" />
-        <meta property="og:image:height" content="630" key="og-image-height" />
-        <meta property="og:site_name" content="Highland Events Hub" key="og-site-name" />
-
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
-        <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
-        <meta name="twitter:title" content="Highland Events Hub" key="twitter-title" />
-        <meta name="twitter:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." key="twitter-description" />
-        <meta name="twitter:image" content={optimizedOgImage} key="twitter-image" />
-      </Head>
 
       {/* Hero Section */}
       <HeroSection />
@@ -393,7 +368,23 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async () =>
       const socialImage = heroImage.startsWith('http')
         ? heroImage
         : `${SITE_URL}${heroImage}`;
-      return { props: { socialImage } };
+
+      // Optimize image for WhatsApp (1200x630)
+      const optimizedImage = socialImage.includes('cloudinary') && !socialImage.includes('w_')
+        ? socialImage.replace('/upload/', '/upload/w_1200,h_630,c_fill,q_auto/')
+        : socialImage;
+
+      return {
+        props: {
+          meta: {
+            image: optimizedImage,
+            title: "Highland Events Hub - Discover Events in the Highlands",
+            description: "Discover the best events, gigs, markets and festivals across the Scottish Highlands.",
+            url: SITE_URL,
+            type: "website"
+          }
+        }
+      };
     }
 
   } catch (error) {
@@ -401,5 +392,15 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async () =>
   }
 
   // Fallback to specific cloudinary default
-  return { props: { socialImage: DEFAULT_OG_IMAGE } };
+  return {
+    props: {
+      meta: {
+        image: DEFAULT_OG_IMAGE, // Already Cloudinary URL
+        title: "Highland Events Hub - Discover Events in the Highlands",
+        description: "Discover the best events, gigs, markets and festivals across the Scottish Highlands.",
+        url: SITE_URL,
+        type: "website"
+      }
+    }
+  };
 };
