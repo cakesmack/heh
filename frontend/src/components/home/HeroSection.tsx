@@ -35,57 +35,60 @@ export default function HeroCarousel() {
 
     useEffect(() => {
         async function fetchData() {
+            // 1. Fetch the Static Welcome Slide (Slot 1)
+            let welcomeSlide = null;
             try {
-                // 1. Fetch the Static Welcome Slide (Slot 1)
-                // We still check the slots API just to get the configurable Welcome slide
-                const slotsData = await api.get<HeroSlot[]>('/hero-slots');
-                const welcomeSlide = slotsData.find((s: HeroSlot) => s.slot_number === 1);
-
-                // 2. Fetch the Paid "Hero Carousel" Bookings DIRECTLY
-                // We ignore the 'slots' table for this and go straight to the receipts
-                const paidBookings = await api.featured.getActive('hero_home');
-
-                // 3. Build the Master List
-                const finalSlides = [];
-
-                // Always add Welcome Slide first
-                if (welcomeSlide) {
-                    finalSlides.push({
-                        type: 'welcome',
-                        id: 'welcome-1',
-                        image: welcomeSlide.image_url,
-                        title: welcomeSlide.title,
-                        subtitle: welcomeSlide.subtitle,
-                        link: welcomeSlide.link_url || '/events',
-                    });
-                }
-
-                // Add Paid Events (Map them to the slide format)
-                // This ensures Hamza Yassin shows up immediately without "Slot Assignment"
-                if (paidBookings && paidBookings.length > 0) {
-                    const eventSlides = paidBookings.map((booking: any) => {
-                        // Handle structure variations (depending on if API returns 'event' object nested)
-                        // ActiveFeaturedResponse is flat: { event_title, event_image_url, event_id ... }
-                        const evt = booking.event || booking;
-                        return {
-                            type: 'event',
-                            id: evt.id,
-                            image: evt.event_image_url || evt.image_url || evt.main_image_url,
-                            title: evt.event_title || evt.title,
-                            subtitle: evt.custom_subtitle || evt.venue?.name || 'Featured Event',
-                            link: `/events/${evt.event_id || evt.slug || evt.id}`,
-                            date: evt.start_date
-                        };
-                    });
-                    finalSlides.push(...eventSlides);
-                }
-
-                setSlides(finalSlides);
-            } catch (error) {
-                console.error("Failed to load hero carousel:", error);
-            } finally {
-                setLoading(false);
+                const slotsData = await api.get<HeroSlot[]>('/api/hero');
+                welcomeSlide = slotsData.find((s: HeroSlot) => s.slot_number === 1);
+            } catch (err) {
+                console.warn("Failed to fetch welcome slide:", err);
             }
+
+            // 2. Fetch the Paid "Hero Carousel" Bookings DIRECTLY
+            let paidBookings = [];
+            try {
+                paidBookings = await api.featured.getActive('hero_home');
+            } catch (err) {
+                console.warn("Failed to fetch paid bookings:", err);
+            }
+
+            // 3. Build the Master List
+            const finalSlides = [];
+
+            // Always add Welcome Slide first
+            if (welcomeSlide) {
+                finalSlides.push({
+                    type: 'welcome',
+                    id: 'welcome-1',
+                    image: welcomeSlide.image_url,
+                    title: welcomeSlide.title,
+                    subtitle: welcomeSlide.subtitle,
+                    link: welcomeSlide.link_url || '/events',
+                });
+            }
+
+            // Add Paid Events (Map them to the slide format)
+            // This ensures Hamza Yassin shows up immediately without "Slot Assignment"
+            if (paidBookings && paidBookings.length > 0) {
+                const eventSlides = paidBookings.map((booking: any) => {
+                    // Handle structure variations (depending on if API returns 'event' object nested)
+                    // ActiveFeaturedResponse is flat: { event_title, event_image_url, event_id ... }
+                    const evt = booking.event || booking;
+                    return {
+                        type: 'event',
+                        id: evt.id,
+                        image: evt.event_image_url || evt.image_url || evt.main_image_url,
+                        title: evt.event_title || evt.title,
+                        subtitle: evt.custom_subtitle || evt.venue?.name || 'Featured Event',
+                        link: `/events/${evt.event_id || evt.slug || evt.id}`,
+                        date: evt.start_date
+                    };
+                });
+                finalSlides.push(...eventSlides);
+            }
+
+            setSlides(finalSlides);
+            setLoading(false);
         }
 
         fetchData();
