@@ -29,7 +29,7 @@ export default function AccountPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'venues' | 'settings'>('overview');
-  const [eventFilter, setEventFilter] = useState<'all' | 'upcoming' | 'pending' | 'past'>('all');
+  const [eventFilter, setEventFilter] = useState<'all' | 'upcoming' | 'pending' | 'rejected' | 'past'>('all');
   const [eventsSubTab, setEventsSubTab] = useState<'hosting' | 'attending'>('hosting');
   const [featuredStatus, setFeaturedStatus] = useState<{ success?: boolean; message?: string } | null>(null);
 
@@ -404,6 +404,15 @@ export default function AccountPage() {
                     <p className="text-sm font-medium text-gray-500 mb-1">Past</p>
                     <p className="text-3xl font-bold text-gray-700">{dashboardStats.past_events}</p>
                   </button>
+                  <button
+                    onClick={() => { setActiveTab('events'); setEventFilter('rejected'); }}
+                    className={`text-left p-6 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${eventFilter === 'rejected' ? 'bg-red-50 shadow-xl ring-2 ring-red-500' : 'bg-white shadow-md hover:shadow-lg'}`}
+                  >
+                    <p className="text-sm font-medium text-red-600 mb-1">Needs Attention</p>
+                    <p className="text-3xl font-bold text-red-700">
+                      {submittedEvents.filter(e => e.status === 'rejected').length}
+                    </p>
+                  </button>
                 </div>
 
                 {/* Bottom Row: Engagement Stats */}
@@ -631,13 +640,13 @@ export default function AccountPage() {
 
                   {eventsSubTab === 'hosting' && (
                     <div className="hidden md:flex bg-gray-100 p-1 rounded-lg">
-                      {(['all', 'upcoming', 'pending', 'past'] as const).map((filter) => (
+                      {(['all', 'upcoming', 'pending', 'rejected', 'past'] as const).map((filter) => (
                         <button
                           key={filter}
                           onClick={() => setEventFilter(filter)}
                           className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${eventFilter === filter ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                          {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                          {filter === 'rejected' ? 'Needs Attention' : filter.charAt(0).toUpperCase() + filter.slice(1)}
                         </button>
                       ))}
                     </div>
@@ -667,13 +676,13 @@ export default function AccountPage() {
               {/* Mobile Filters for Hosting */}
               {eventsSubTab === 'hosting' && (
                 <div className="md:hidden flex bg-gray-100 p-1 rounded-lg mb-4 overflow-x-auto">
-                  {(['all', 'upcoming', 'pending', 'past'] as const).map((filter) => (
+                  {(['all', 'upcoming', 'pending', 'rejected', 'past'] as const).map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setEventFilter(filter)}
                       className={`flex-1 px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${eventFilter === filter ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                     >
-                      {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                      {filter === 'rejected' ? 'Needs Attention' : filter.charAt(0).toUpperCase() + filter.slice(1)}
                     </button>
                   ))}
                 </div>
@@ -690,6 +699,7 @@ export default function AccountPage() {
                         const endDate = new Date(event.date_end);
                         if (eventFilter === 'upcoming') return startDate >= now;
                         if (eventFilter === 'past') return endDate < now;
+                        if (eventFilter === 'rejected') return event.status === 'rejected';
                         if (eventFilter === 'pending') return event.status === 'pending';
                         return true;
                       })
@@ -697,7 +707,7 @@ export default function AccountPage() {
                         <div
                           key={event.id}
                           className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                          onClick={() => router.push(`/events/${event.id}`)}
+                          onClick={() => router.push(event.status === 'rejected' ? `/events/${event.id}/edit` : `/events/${event.id}`)}
                         >
                           {/* Image */}
                           {event.image_url ? (
@@ -726,6 +736,11 @@ export default function AccountPage() {
 
                           {/* Status Badges */}
                           <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-40px)]">
+                            {event.status === 'rejected' && (
+                              <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">
+                                Rejected
+                              </span>
+                            )}
                             {event.status === 'pending' && (
                               <span className="px-1.5 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded uppercase">
                                 Pending

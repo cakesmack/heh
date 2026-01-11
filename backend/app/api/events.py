@@ -207,8 +207,8 @@ def list_events(
     # - For public listing: only show published events
     # - For organizer's own events: show published AND pending (so they can see their pending events)
     if organizer_id:
-        # Organizer can see their own pending + published events
-        query = query.where(Event.status.in_(["published", "pending"]))
+        # Organizer can see their own pending, published, rejected, and draft events
+        query = query.where(Event.status.in_(["published", "pending", "rejected", "draft"]))
     else:
         # Public listing - only published
         query = query.where(Event.status == "published")
@@ -1174,11 +1174,13 @@ def update_event(
 
     event.updated_at = datetime.utcnow()
 
-    # Moderation Logic: If published event is edited by non-trusted user, revert to pending
-    if original_status == "published" and not (current_user.is_admin or current_user.is_trusted_organizer):
+    # Moderation Logic: 
+    # 1. If published event is edited by non-trusted user, revert to pending
+    # 2. If rejected event is edited, reset to pending for re-review
+    if (original_status == "published" and not (current_user.is_admin or current_user.is_trusted_organizer)) or (original_status == "rejected"):
         event.status = "pending"
-        event.moderation_reason = "Edited after publication"
-        logger.info(f"[MODERATION] Event '{event.title}' reverted to pending update by user {current_user.id}")
+        event.moderation_reason = "Edited after rejection/publication"
+        logger.info(f"[MODERATION] Event '{event.title}' reset to pending update by user {current_user.id}")
         
         # Trigger Admin Alert (Moderation Required)
         from app.services.email_service import send_moderation_required_notification
