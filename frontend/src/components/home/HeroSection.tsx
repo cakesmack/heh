@@ -21,11 +21,14 @@ export default function HeroSection() {
                     api.featured.getActive('hero_home').catch(() => [])
                 ]);
 
-                // 1. Get Welcome Slide (admin managed, position 1)
+                // 1. Get Welcome Slide (admin managed)
+                // We trust the manual endpoint to return the welcome slide (position 1)
                 const welcome = manualData.find((s: HeroSlot) => s.position === 1 || s.type === 'welcome');
                 setWelcomeSlot(welcome || null);
 
                 // 2. Get Paid Bookings (max 4)
+                // STRICT MODE: We only use data returned by getActive('hero_home')
+                // This ensures no Magazine events leak here.
                 const paidSlides = paidData.slice(0, 4);
 
                 // 3. Merge: [Welcome, ...Paid]
@@ -36,7 +39,6 @@ export default function HeroSection() {
                 setSlides(mergedSlides);
             } catch (err) {
                 console.error('Failed to load hero slides:', err);
-                // Fallback: Try to show at least welcome slide if available in cache/stale data
             } finally {
                 setLoading(false);
             }

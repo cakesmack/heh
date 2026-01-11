@@ -41,6 +41,7 @@ def get_slot_pricing(session: Session, slot_type: SlotType) -> dict:
     })
 
 
+
 def check_availability(
     session: Session,
     slot_type: SlotType,
@@ -50,27 +51,10 @@ def check_availability(
 ) -> dict:
     """
     Check slot availability for a date range.
-
-    Returns:
-        {
-            "available": bool,
-            "unavailable_dates": [date, ...],
-            "slots_remaining": {date_str: int, ...},
-            "price_quote": int (pence),
-            "num_days": int
-        }
+    STRICT MODE: Filters strictly by slot_type.
     """
     config = get_slot_pricing(session, slot_type)
     max_slots = config["max"]
-    
-    # EXCLUSION LOGIC: 
-    # If checking availability for HERO_HOME, we must remember that 
-    # Slot 1 is the "Welcome Slide" and is NOT stored in FeaturedBooking.
-    # The max_slots logic below purely counts FeaturedBooking rows.
-    # Since we set max=4 for HERO_HOME (Slides 2-5), and we are counting
-    # paid slots only, if we find < 4 paid slots, it is available.
-    # We do NOT subtract 1 for the Welcome Slide because the limit of 4
-    # already accounts for that (Total 5 - 1 Welcome = 4 Paid).
     price_per_day = config["price_per_day"]
     min_days = config["min_days"]
 
@@ -93,6 +77,7 @@ def check_availability(
         BookingStatus.ACTIVE
     ]
 
+    # STRICT FILTER: Only count bookings for THIS EXACT slot_type
     query = select(FeaturedBooking).where(
         and_(
             FeaturedBooking.slot_type == slot_type,
@@ -105,7 +90,6 @@ def check_availability(
     if target_id:
         query = query.where(FeaturedBooking.target_id == target_id)
     elif slot_type == SlotType.CATEGORY_PINNED:
-        # For category pinned without target_id, return error
         return {
             "available": False,
             "error": "target_id required for CATEGORY_PINNED",
@@ -123,7 +107,7 @@ def check_availability(
     current = start_date
 
     while current <= end_date:
-        # Count bookings active on this date
+        # Count bookings active on this date for this specific slot_type
         count = sum(
             1 for b in existing_bookings
             if b.start_date <= current <= b.end_date
@@ -155,29 +139,23 @@ def get_active_featured(
 ) -> list[FeaturedBooking]:
     """
     Get currently active featured bookings for display.
-    STRICT FILTERING: Uses an Allowlist approach.
+    STRICT FILTERING: Only returns bookings for the requested slot_type.
     """
     today = date.today()
+    
+    # Safety: If no slot_type provided, return empty to prevent leaks
+    if not slot_type:
+        return []
 
-    # Base query for ACTIVE bookings in date range
+    # Strict query for ACTIVE bookings
     query = select(FeaturedBooking).where(
         and_(
             FeaturedBooking.status == BookingStatus.ACTIVE,
             FeaturedBooking.start_date <= today,
-            FeaturedBooking.end_date >= today
+            FeaturedBooking.end_date >= today,
+            FeaturedBooking.slot_type == slot_type  # CRITICAL: Strict equality
         )
     )
-
-    # STRICT ALLOWLIST:
-    # Only return bookings that EXACTLY match the requested slot_type.
-    # This prevents "HERO_HOME" events from leaking into "MAGAZINE_CAROUSEL"
-    if slot_type == SlotType.MAGAZINE_CAROUSEL:
-        query = query.where(FeaturedBooking.slot_type == SlotType.MAGAZINE_CAROUSEL)
-    elif slot_type == SlotType.HERO_HOME:
-        query = query.where(FeaturedBooking.slot_type == SlotType.HERO_HOME)
-    else:
-        # Generic strict filter for other types
-        query = query.where(FeaturedBooking.slot_type == slot_type)
 
     if target_id:
         query = query.where(FeaturedBooking.target_id == target_id)
@@ -197,9 +175,6 @@ def create_checkout_session(
 ) -> dict:
     """
     Create a Stripe Checkout session and FeaturedBooking.
-
-    Returns:
-        {"checkout_url": str, "booking_id": str}
     """
     # Check availability first
     availability = check_availability(session, slot_type, start_date, end_date, target_id)
@@ -219,7 +194,7 @@ def create_checkout_session(
         end_date=end_date,
         status=BookingStatus.PENDING_PAYMENT,
         amount_paid=amount,
-        custom_subtitle=custom_subtitle  # Save custom subtitle for hero carousel
+        custom_subtitle=custom_subtitle
     )
     session.add(booking)
     session.commit()
@@ -270,11 +245,10 @@ def create_checkout_session(
 def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
     """
     Handle successful Stripe checkout.
-    PAID bookings are ACTIVE immediately - no approval gate.
-    For HERO_HOME bookings, auto-assign to an empty HeroSlot.
+    PAID bookings are ACTIVE immediately.
+    We NO LONGER sync to 'event.featured' or 'HeroSlot'.
+    The FeaturedBooking record is the single source of truth.
     """
-    from app.models.hero import HeroSlot  # Import here to avoid circular
-    
     print(f"[CHECKOUT COMPLETED] Starting processing")
     
     booking_id = stripe_session.get("metadata", {}).get("booking_id")
@@ -293,59 +267,15 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
 
     # Get payment intent ID
     booking.stripe_payment_intent_id = stripe_session.get("payment_intent")
-    print(f"[CHECKOUT COMPLETED] Payment intent: {booking.stripe_payment_intent_id}")
 
-    # CHANGE 1: Paid bookings are ACTIVE immediately - no trusted organizer gate
+    # Paid bookings are ACTIVE immediately
     booking.status = BookingStatus.ACTIVE
-    print(f"[CHECKOUT COMPLETED] Setting status to ACTIVE (paid = instant approval)")
+    print(f"[CHECKOUT COMPLETED] Setting status to ACTIVE")
     
-    # Update event featured status
-    event = session.get(Event, booking.event_id)
-    if event:
-        event.featured = True
-        event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
-        session.add(event)
-        print(f"[CHECKOUT COMPLETED] Set event.featured = True, until {event.featured_until}")
-    
-        if assign_hero_slot(session, booking.event_id):
-            print(f"[CHECKOUT COMPLETED] Successfully assigned event to Hero Slot")
-        else:
-            print(f"[CHECKOUT COMPLETED] All HeroSlots full - event will display via FeaturedBooking API only")
-
     booking.updated_at = datetime.utcnow()
     session.add(booking)
-    print(f"[CHECKOUT COMPLETED] Calling session.commit()")
     session.commit()
-    print(f"[CHECKOUT COMPLETED] Committed successfully, final status: {booking.status}")
-
-
-def assign_hero_slot(session: Session, event_id: str) -> bool:
-    """
-    Finds the first available Hero Slot (position > 1) and assigns the event to it.
-    Forces the slot to be active.
-    Returns True if assigned, False if no slots available.
-    """
-    from app.models.hero import HeroSlot
-    
-    # 1. Find the first empty slot (Skipping Slot 1 which is the Welcome Slide)
-    # We look for ANY slot > 1 that has no event_id, regardless of 'is_active' status.
-    target_slot = session.exec(
-        select(HeroSlot)
-        .where(HeroSlot.position > 1)
-        .where(HeroSlot.event_id == None)
-        .order_by(HeroSlot.position)
-    ).first()
-    
-    if target_slot:
-        print(f"[HERO ASSIGNMENT] ✅ Found Empty Slot: {target_slot.position}. Assigning event...")
-        target_slot.event_id = event_id
-        target_slot.is_active = True  # Force it to wake up
-        target_slot.type = "spotlight_event" # Ensure type is correct
-        session.add(target_slot)
-        return True
-    
-    print("[HERO ASSIGNMENT] ⚠️ WARNING: All Hero Slots (2-5) are full!")
-    return False
+    print(f"[CHECKOUT COMPLETED] Committed successfully. Booking is now ACTIVE.")
 
 
 def handle_checkout_expired(session: Session, stripe_session: dict) -> None:

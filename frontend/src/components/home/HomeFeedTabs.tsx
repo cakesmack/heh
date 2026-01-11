@@ -23,19 +23,20 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
     const [magazineBookingEvents, setMagazineBookingEvents] = useState<EventResponse[]>([]);
 
     // Fetch magazine_carousel bookings on mount
+    // Fetch magazine_carousel bookings on mount
     useEffect(() => {
         const fetchMagazineBookings = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/featured/active?slot_type=magazine_carousel`);
-                if (res.ok) {
-                    const bookings = await res.json();
-                    // Fetch full event details for each booking
-                    const eventPromises = bookings.map((b: { event_id: string }) =>
-                        eventsAPI.get(b.event_id).catch(() => null)
-                    );
-                    const events = (await Promise.all(eventPromises)).filter(Boolean) as EventResponse[];
-                    setMagazineBookingEvents(events);
-                }
+                // STRICT MODE: Use the shared API helper
+                const bookings = await api.featured.getActive('magazine_carousel');
+
+                // Fetch full event details for each booking
+                const eventPromises = bookings.map((b) =>
+                    eventsAPI.get(b.event_id).catch(() => null)
+                );
+
+                const events = (await Promise.all(eventPromises)).filter(Boolean) as EventResponse[];
+                setMagazineBookingEvents(events);
             } catch (err) {
                 console.error('Error fetching magazine bookings:', err);
             }
