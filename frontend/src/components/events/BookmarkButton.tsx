@@ -9,6 +9,7 @@ interface BookmarkButtonProps {
     className?: string;
     size?: 'sm' | 'md' | 'lg';
     showLabel?: boolean;
+    onToggle?: (isBookmarked: boolean) => void;
 }
 
 export function BookmarkButton({
@@ -17,6 +18,7 @@ export function BookmarkButton({
     className = '',
     size = 'md',
     showLabel = false,
+    onToggle,
 }: BookmarkButtonProps) {
     const { isAuthenticated } = useAuth();
     const [isBookmarked, setIsBookmarked] = useState(initialBookmarked);
@@ -52,13 +54,23 @@ export function BookmarkButton({
         setIsLoading(true);
         try {
             // Optimistic update
-            setIsBookmarked(!isBookmarked);
+            const newIsBookmarked = !isBookmarked;
+            setIsBookmarked(newIsBookmarked);
+
+            // Call onToggle for optimistic update in parent
+            if (onToggle) {
+                onToggle(newIsBookmarked);
+            }
 
             const response = await api.bookmarks.toggle(eventId);
 
             // Verify state matches server
-            if (response.bookmarked !== !isBookmarked) {
+            if (response.bookmarked !== newIsBookmarked) {
+                // Revert if mismatch
                 setIsBookmarked(response.bookmarked);
+                if (onToggle) {
+                    onToggle(response.bookmarked);
+                }
             }
 
             if (response.bookmarked) {
@@ -71,6 +83,9 @@ export function BookmarkButton({
         } catch (error) {
             // Revert on error
             setIsBookmarked(!isBookmarked);
+            if (onToggle) {
+                onToggle(!isBookmarked);
+            }
             toast.error('Failed to update bookmark');
             console.error(error);
         } finally {

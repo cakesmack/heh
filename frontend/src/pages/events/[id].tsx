@@ -301,10 +301,21 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 eventId={event.id}
                 showLabel={true}
                 className="flex-1 md:flex-none transform hover:scale-105 shadow-lg"
+                onToggle={(isBookmarked) => {
+                  setEvent(prev => {
+                    if (!prev) return null;
+                    return {
+                      ...prev,
+                      save_count: isBookmarked
+                        ? (prev.save_count || 0) + 1
+                        : Math.max(0, (prev.save_count || 0) - 1)
+                    };
+                  });
+                  // Also update local bookmark count state just in case other things use it
+                  setBookmarkCount(prev => isBookmarked ? prev + 1 : Math.max(0, prev - 1));
+                }}
               />
-              {bookmarkCount > 0 && (
-                <span className="text-white font-medium text-sm hidden md:block">{bookmarkCount} going</span>
-              )}
+
             </div>
           </div>
         </div>

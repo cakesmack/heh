@@ -37,12 +37,14 @@ def toggle_bookmark(
         )
 
     # Check if bookmark(s) exist - fetch ALL to handle potential duplicates
+    print(f"[DEBUG] Toggling bookmark for user {current_user.id}, event {normalized_event_id}")
     bookmarks = session.exec(
         select(Bookmark).where(
             Bookmark.user_id == current_user.id,
             Bookmark.event_id == normalized_event_id
         )
     ).all()
+    print(f"[DEBUG] Found {len(bookmarks)} existing bookmarks")
 
     if bookmarks:
         # Remove bookmark(s) - handle potential duplicates by deleting all
