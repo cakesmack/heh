@@ -30,7 +30,7 @@ const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
 
 // Default OG metadata for site-wide fallback
 const siteUrl = 'https://www.highlandeventshub.co.uk';
-const defaultOgImage = `${siteUrl}/images/og-default.jpg`;
+const defaultOgImage = 'https://res.cloudinary.com/dakq1xwn1/image/upload/w_1200,h_630,c_fill,q_auto/v1767454232/highland_events/events/lhxbivhjsqpwn1hsbz5x.jpg';
 
 export default function App({ Component, pageProps }: AppProps) {
   const content = (
