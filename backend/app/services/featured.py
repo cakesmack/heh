@@ -265,23 +265,24 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
     if booking.slot_type == SlotType.HERO_HOME:
         print(f"[CHECKOUT COMPLETED] HERO_HOME booking - looking for empty slot")
         
-        # Find first active slot that has no event assigned (positions 2-5, position 1 is welcome)
-        empty_slot = session.exec(
+        # Find the first empty slot (Skipping Slot 1 which is the Welcome Slide)
+        # We look for ANY slot > 1 that has no event_id, regardless of 'is_active' status.
+        target_slot = session.exec(
             select(HeroSlot)
-            .where(HeroSlot.is_active == True)
-            .where(HeroSlot.type == "spotlight_event")
+            .where(HeroSlot.position > 1)
             .where(HeroSlot.event_id == None)
             .order_by(HeroSlot.position)
         ).first()
         
-        if empty_slot:
-            empty_slot.event_id = booking.event_id
-            session.add(empty_slot)
-            print(f"[CHECKOUT COMPLETED] Assigned event to HeroSlot position {empty_slot.position}")
+        if target_slot:
+            print(f"[CHECKOUT COMPLETED] ✅ Found Empty Slot: {target_slot.position}. Assigning event...")
+            target_slot.event_id = booking.event_id
+            target_slot.is_active = True  # Force it to wake up
+            target_slot.type = "spotlight_event" # Ensure type is correct
+            session.add(target_slot)
+            # No commit here, it happens at end of function
         else:
-            # All slots full - do NOT overwrite existing slots
-            # The FeaturedBooking is still ACTIVE, so it will display via the paid slots API
-            print(f"[CHECKOUT COMPLETED] All HeroSlots full - event will display via FeaturedBooking API only")
+            print("[CHECKOUT COMPLETED] ⚠️ WARNING: All Hero Slots (2-5) are full! Event is paid but not displayed in Hero Carousel.")
 
     booking.updated_at = datetime.utcnow()
     session.add(booking)
