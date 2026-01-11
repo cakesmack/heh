@@ -27,7 +27,7 @@ import { getDateRangeFromFilter } from '@/lib/dateUtils';
 
 // Site constants
 const SITE_URL = 'https://www.highlandeventshub.co.uk';
-const DEFAULT_OG_IMAGE = `${SITE_URL}/images/og-default.jpg`;
+const DEFAULT_OG_IMAGE = 'https://res.cloudinary.com/dakq1xwn1/image/upload/v1767454232/highland_events/events/lhxbivhjsqpwn1hsbz5x.jpg';
 
 interface HomePageProps {
   socialImage: string;
@@ -348,28 +348,52 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async () =>
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   try {
-    // Fetch active hero slides from backend
-    const response = await fetch(`${API_URL}/api/hero?active_only=true`);
+    // Parallel fetch: Welcome Slot (Static) + Paid Slots (Dynamic)
+    const [manualRes, paidRes] = await Promise.all([
+      fetch(`${API_URL}/api/hero?active_only=true`),
+      fetch(`${API_URL}/api/featured/active?slot_type=hero_home`)
+    ]);
 
-    if (response.ok) {
-      const slides = await response.json();
+    let heroImage = null;
 
-      // Get first slide with an image (position 1 is typically the welcome/hero slide)
-      const heroSlide = slides.find((slide: any) => slide.image_url && slide.is_active);
+    // 1. Check Welcome Slide (Static)
+    if (manualRes.ok) {
+      const slides = await manualRes.json();
+      const welcome = slides.find((s: any) => (s.position === 1 || s.type === 'welcome') && s.image_url);
+      if (welcome) heroImage = welcome.image_url;
+    }
 
-      if (heroSlide?.image_url) {
-        // Ensure absolute URL
-        const socialImage = heroSlide.image_url.startsWith('http')
-          ? heroSlide.image_url
-          : `${SITE_URL}${heroSlide.image_url}`;
-
-        return { props: { socialImage } };
+    // 2. If no welcome image, check Paid Hero Slots
+    if (!heroImage && paidRes.ok) {
+      const paidBookings = await paidRes.json();
+      // Need to fetch event details for the first booking to get the image
+      if (paidBookings.length > 0) {
+        const firstBooking = paidBookings[0];
+        try {
+          // Fetch event details to get the image
+          const eventRes = await fetch(`${API_URL}/api/events/${firstBooking.event_id}`);
+          if (eventRes.ok) {
+            const event = await eventRes.json();
+            if (event.image_url) heroImage = event.image_url;
+          }
+        } catch (e) {
+          console.error('Error fetching event details for OG image:', e);
+        }
       }
     }
+
+    if (heroImage) {
+      // Ensure absolute URL
+      const socialImage = heroImage.startsWith('http')
+        ? heroImage
+        : `${SITE_URL}${heroImage}`;
+      return { props: { socialImage } };
+    }
+
   } catch (error) {
     console.error('Failed to fetch hero slides for OG image:', error);
   }
 
-  // Fallback to default image
+  // Fallback to specific cloudinary default
   return { props: { socialImage: DEFAULT_OG_IMAGE } };
 };
