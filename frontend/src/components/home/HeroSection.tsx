@@ -35,8 +35,12 @@ export default function HeroSection() {
                         setSlots([welcomeSlot]);
                     }
                 } else {
-                    // No paid slots - use full manual hero slot system
-                    const sortedData = [...manualData].sort((a: HeroSlot, b: HeroSlot) => {
+                    // No paid slots - use manual hero slots
+                    // FILTER: Only show Welcome Slot (1) OR Slots with an assigned Event
+                    // This prevents empty slots from rendering as "Upcoming Event" placeholders
+                    const validSlots = manualData.filter((s: HeroSlot) => s.position === 1 || (s.event && s.event.title));
+
+                    const sortedData = [...validSlots].sort((a: HeroSlot, b: HeroSlot) => {
                         if (a.type === 'welcome') return -1;
                         if (b.type === 'welcome') return 1;
                         return 0;
@@ -49,7 +53,10 @@ export default function HeroSection() {
                 // Fall back to manual slots on error
                 try {
                     const data = await heroAPI.list(true);
-                    const sortedData = [...data].sort((a: HeroSlot, b: HeroSlot) => {
+                    // Apply same filter to fallback data
+                    const validSlots = data.filter((s: HeroSlot) => s.position === 1 || (s.event && s.event.title));
+
+                    const sortedData = [...validSlots].sort((a: HeroSlot, b: HeroSlot) => {
                         if (a.type === 'welcome') return -1;
                         if (b.type === 'welcome') return 1;
                         return 0;
