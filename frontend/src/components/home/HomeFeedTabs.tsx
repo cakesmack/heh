@@ -23,6 +23,9 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
     const [magazineBookingEvents, setMagazineBookingEvents] = useState<EventResponse[]>([]);
     const [heroEventIds, setHeroEventIds] = useState<Set<string>>(new Set());
 
+    // Helper to normalize IDs (handle dash vs no-dash UUIDs)
+    const normalizeId = (id: string) => id.replace(/-/g, '');
+
     // Fetch magazine_carousel AND hero_home bookings on mount
     useEffect(() => {
         const fetchBookings = async () => {
@@ -40,9 +43,8 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                 const events = (await Promise.all(eventPromises)).filter(Boolean) as EventResponse[];
                 setMagazineBookingEvents(events);
 
-                // 2. Setup Hero IDs for Exclusion
-                const heroIds = new Set(heroBookings.map(b => b.event_id));
-                console.log('[HomeFeedTabs] Hero IDs to exclude:', Array.from(heroIds));
+                // 2. Setup Hero IDs for Exclusion (Normalized)
+                const heroIds = new Set(heroBookings.map(b => normalizeId(b.event_id)));
                 setHeroEventIds(heroIds);
 
             } catch (err) {
@@ -55,20 +57,18 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
     // Merge magazine booking events with latest events (bookings first)
     // STRICT SEPARATION: Filter out any event that is currently in the Hero Carousel
     const mergedLatestEvents = React.useMemo(() => {
-        const magazineIds = new Set(magazineBookingEvents.map(e => e.id));
-
-        console.log('[HomeFeedTabs] Filtering Latest Events...');
-        console.log('[HomeFeedTabs] Magazine IDs:', Array.from(magazineIds));
-        console.log('[HomeFeedTabs] Hero IDs:', Array.from(heroEventIds));
+        // Normalize Magazine IDs for dedup
+        const magazineIds = new Set(
+            magazineBookingEvents.map(e => normalizeId(e.id))
+        );
 
         // Filter latestEvents:
         // 1. Must not be already in magazineBookingEvents (deduplication)
         // 2. Must not be a Hero Event (strict separation)
         const nonBookingLatest = latestEvents.filter(e => {
-            const isHero = heroEventIds.has(e.id);
-            const isMagazine = magazineIds.has(e.id);
-            if (isHero) console.log(`[HomeFeedTabs] Excluding Hero Event from Feed: ${e.title} (${e.id})`);
-            return !isMagazine && !isHero;
+            const nId = normalizeId(e.id);
+            // Strict check using normalized IDs
+            return !magazineIds.has(nId) && !heroEventIds.has(nId);
         });
 
         return [...magazineBookingEvents, ...nonBookingLatest];
