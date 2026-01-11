@@ -82,7 +82,7 @@ export default function FeaturedVenues() {
                                     alt={venue.name}
                                     fill
                                     className="object-cover"
-                                    sizes="112px"
+                                    sizes="(max-width: 768px) 256px, 320px"
                                 />
                             ) : (
                                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
