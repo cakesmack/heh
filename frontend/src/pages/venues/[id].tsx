@@ -204,7 +204,7 @@ export default function VenueDetailPage() {
               <img
                 src={venue.image_url}
                 alt={venue.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-top"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
