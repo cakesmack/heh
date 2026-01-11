@@ -281,7 +281,9 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
             </div>
 
             <div className="flex items-center gap-4 w-full md:w-auto">
+              {/* Ticket Button Logic */}
               {event.ticket_url ? (
+                /* Scenario A: Main Link Exists */
                 <a
                   href={event.ticket_url}
                   target="_blank"
@@ -291,11 +293,25 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 >
                   Get Tickets
                 </a>
-              ) : (
-                <div className="flex-1 md:flex-none px-8 py-3 bg-white/5 text-white/50 font-bold rounded-full border border-white/10 text-center cursor-default">
-                  No Tickets Needed
-                </div>
-              )}
+              ) : (event.showtimes && event.showtimes.length > 0) ? (
+                /* Scenario B: Multi-Date / No Main Link -> Scroll to Sidebar */
+                <button
+                  onClick={() => {
+                    const sidebar = document.getElementById('dates-sidebar');
+                    if (sidebar) {
+                      sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      // Trigger Pulse Animation
+                      sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                      setTimeout(() => {
+                        sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                      }, 1000);
+                    }
+                  }}
+                  className="flex-1 md:flex-none px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center"
+                >
+                  Get Tickets
+                </button>
+              ) : null /* Scenario C: No Links -> Render Nothing */}
 
               <BookmarkButton
                 eventId={event.id}
@@ -345,7 +361,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
               </div>
             </div>
             <div className="mt-4 flex flex-col gap-2">
-              {event.ticket_url ? (
+              {event.ticket_url && (
                 <a
                   href={event.ticket_url}
                   target="_blank"
@@ -355,10 +371,6 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 >
                   Get Tickets
                 </a>
-              ) : (
-                <div className="w-full px-6 py-3 bg-gray-100 text-gray-500 font-medium rounded-lg text-center">
-                  No Tickets Needed
-                </div>
               )}
               <AddToCalendar event={event} className="w-full" />
             </div>
@@ -583,87 +595,89 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
           <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24 space-y-6">
               {/* Time & Date Sidebar Card */}
-              <Card>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {event.showtimes && event.showtimes.length > 0 ? 'Dates + Times' : 'When'}
-                </h3>
-                <div className="space-y-4">
-                  {/* Show showtimes table if available */}
-                  {event.showtimes && event.showtimes.length > 0 ? (
-                    <div className="divide-y divide-gray-100">
-                      {event.showtimes.map((st: any, index: number) => {
-                        const stDate = new Date(st.start_time);
-                        const stEndDate = st.end_time ? new Date(st.end_time) : null;
-                        return (
-                          <div key={st.id || index} className="flex items-center justify-between py-3 first:pt-0">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                                <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                                  {stDate.toLocaleDateString('en-GB', { weekday: 'short' })}
-                                </span>
-                                <span className="text-lg font-bold text-emerald-900 leading-none">
-                                  {stDate.getDate()}
-                                </span>
+              <div id="dates-sidebar" className="transition-all duration-1000">
+                <Card>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    {event.showtimes && event.showtimes.length > 0 ? 'Dates + Times' : 'When'}
+                  </h3>
+                  <div className="space-y-4">
+                    {/* Show showtimes table if available */}
+                    {event.showtimes && event.showtimes.length > 0 ? (
+                      <div className="divide-y divide-gray-100">
+                        {event.showtimes.map((st: any, index: number) => {
+                          const stDate = new Date(st.start_time);
+                          const stEndDate = st.end_time ? new Date(st.end_time) : null;
+                          return (
+                            <div key={st.id || index} className="flex items-center justify-between py-3 first:pt-0">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
+                                  <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                                    {stDate.toLocaleDateString('en-GB', { weekday: 'short' })}
+                                  </span>
+                                  <span className="text-lg font-bold text-emerald-900 leading-none">
+                                    {stDate.getDate()}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {stDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {stDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                    {stEndDate && ` - ${stEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
+                                  </p>
+                                  {st.notes && (
+                                    <p className="text-xs text-amber-600 font-medium mt-0.5">{st.notes}</p>
+                                  )}
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {stDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {stDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                  {stEndDate && ` - ${stEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
-                                </p>
-                                {st.notes && (
-                                  <p className="text-xs text-amber-600 font-medium mt-0.5">{st.notes}</p>
-                                )}
-                              </div>
+                              <a
+                                href={st.ticket_url || event.ticket_url || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => trackTicketClick(event.id)}
+                                className={`px-3 py-1.5 text-xs font-semibold rounded-full ${st.ticket_url || event.ticket_url
+                                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  }`}
+                              >
+                                Buy Tickets
+                              </a>
                             </div>
-                            <a
-                              href={st.ticket_url || event.ticket_url || '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() => trackTicketClick(event.id)}
-                              className={`px-3 py-1.5 text-xs font-semibold rounded-full ${st.ticket_url || event.ticket_url
-                                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                }`}
-                            >
-                              Buy Tickets
-                            </a>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    /* Standard single date display */
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                        <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                          {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
-                        </span>
-                        <span className="text-lg font-bold text-emerald-900 leading-none">
-                          {new Date(event.date_start).getDate()}
-                        </span>
+                          );
+                        })}
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
-                        <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
+                    ) : (
+                      /* Standard single date display */
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                            {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
+                          </span>
+                          <span className="text-lg font-bold text-emerald-900 leading-none">
+                            {new Date(event.date_start).getDate()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
+                          <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <AddToCalendar event={event} className="w-full" />
+                    <AddToCalendar event={event} className="w-full" />
 
-                  {event.is_recurring && (
-                    <div className="p-3 bg-emerald-50 rounded-lg flex items-start gap-2">
-                      <svg className="w-4 h-4 text-emerald-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <p className="text-xs text-emerald-800">This event repeats weekly. Check the calendar for more dates.</p>
-                    </div>
-                  )}
-                </div>
-              </Card>
+                    {event.is_recurring && (
+                      <div className="p-3 bg-emerald-50 rounded-lg flex items-start gap-2">
+                        <svg className="w-4 h-4 text-emerald-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <p className="text-xs text-emerald-800">This event repeats weekly. Check the calendar for more dates.</p>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
 
               {/* Event Stats Sidebar Card */}
               <Card>
