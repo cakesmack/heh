@@ -537,7 +537,7 @@ export default function AdminEvents() {
                         {/* Show Promote button only if not already promoted */}
                         {!activePromotions[event.id]?.length && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); setPromotingEvent(event); setPromoteModalOpen(true); }}
+                            onClick={(e) => { e.stopPropagation(); setPromotingEvent(event); setPromoteSlotType('hero_home'); setPromoteModalOpen(true); }}
                             className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
                           >
                             Promote
@@ -927,17 +927,54 @@ export default function AdminEvents() {
               Promote this event. The promotion will run until the event ends or you stop it.
             </p>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Placement Type</label>
-              <select
-                value={promoteSlotType}
-                onChange={(e) => setPromoteSlotType(e.target.value as any)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="magazine_carousel">Magazine Carousel</option>
-                <option value="global_pinned">Homepage Pinned (Top of Events)</option>
-                <option value="hero_home">Hero Carousel</option>
-              </select>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Where should this appear?
+              </label>
+
+              <div className="flex flex-col gap-3">
+                {/* Option 1: Hero Carousel */}
+                <label className={`relative border rounded-lg p-4 cursor-pointer transition-all ${promoteSlotType === 'hero_home'
+                  ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500'
+                  : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="slotType"
+                      value="hero_home"
+                      checked={promoteSlotType === 'hero_home'}
+                      onChange={(e) => setPromoteSlotType(e.target.value as any)}
+                      className="h-4 w-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                    />
+                    <div>
+                      <span className="block text-sm font-medium text-gray-900">Hero Carousel</span>
+                      <span className="block text-xs text-gray-500">Big slide at the top (Max 4 slots)</span>
+                    </div>
+                  </div>
+                </label>
+
+                {/* Option 2: Magazine Carousel */}
+                <label className={`relative border rounded-lg p-4 cursor-pointer transition-all ${promoteSlotType === 'magazine_carousel'
+                  ? 'border-purple-500 bg-purple-50 ring-1 ring-purple-500'
+                  : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="slotType"
+                      value="magazine_carousel"
+                      checked={promoteSlotType === 'magazine_carousel'}
+                      onChange={(e) => setPromoteSlotType(e.target.value as any)}
+                      className="h-4 w-4 text-purple-600 border-gray-300 focus:ring-purple-500"
+                    />
+                    <div>
+                      <span className="block text-sm font-medium text-gray-900">Magazine Carousel</span>
+                      <span className="block text-xs text-gray-500">Grid feature (Max 3 slots)</span>
+                    </div>
+                  </div>
+                </label>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
