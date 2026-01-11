@@ -361,31 +361,84 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               {event.showtimes && event.showtimes.length > 0 ? 'Dates + Times' : 'When'}
             </h3>
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                  {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
-                </span>
-                <span className="text-lg font-bold text-emerald-900 leading-none">
-                  {new Date(event.date_start).getDate()}
-                </span>
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
-                <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-col gap-2">
-              {event.ticket_url && (
-                <a
-                  href={event.ticket_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackTicketClick(event.id)}
-                  className="w-full px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-lg text-center transition-colors"
-                >
-                  Get Tickets
-                </a>
+            <div className="space-y-4">
+              {/* Show showtimes table if available */}
+              {event.showtimes && event.showtimes.length > 0 ? (
+                <div className="divide-y divide-gray-100">
+                  {event.showtimes.map((st: any, index: number) => {
+                    const stDate = new Date(st.start_time);
+                    const stEndDate = st.end_time ? new Date(st.end_time) : null;
+                    return (
+                      <div key={st.id || index} className="flex items-center justify-between py-3 first:pt-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
+                            <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                              {stDate.toLocaleDateString('en-GB', { weekday: 'short' })}
+                            </span>
+                            <span className="text-lg font-bold text-emerald-900 leading-none">
+                              {stDate.getDate()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {stDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {stDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                              {stEndDate && ` - ${stEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
+                            </p>
+                            {st.notes && (
+                              <p className="text-xs text-amber-600 font-medium mt-0.5">{st.notes}</p>
+                            )}
+                          </div>
+                        </div>
+                        <a
+                          href={st.ticket_url || event.ticket_url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => trackTicketClick(event.id)}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-full ${st.ticket_url || event.ticket_url
+                            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                          Buy Tickets
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Standard single date display */
+                <div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                        {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
+                      </span>
+                      <span className="text-lg font-bold text-emerald-900 leading-none">
+                        {new Date(event.date_start).getDate()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
+                      <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
+                    </div>
+                  </div>
+                  {event.ticket_url && (
+                    <div className="mt-4">
+                      <a
+                        href={event.ticket_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackTicketClick(event.id)}
+                        className="w-full block px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-lg text-center transition-colors"
+                      >
+                        Get Tickets
+                      </a>
+                    </div>
+                  )}
+                </div>
               )}
               <AddToCalendar event={event} className="w-full" />
             </div>
