@@ -1477,6 +1477,9 @@ export const api = {
   },
 
   // Generic methods
+  get: async <T>(endpoint: string): Promise<T> => {
+    return apiFetch<T>(endpoint);
+  },
   post: async <T>(endpoint: string, data: any): Promise<T> => {
     return apiFetch<T>(endpoint, {
       method: 'POST',

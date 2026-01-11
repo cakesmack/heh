@@ -38,7 +38,7 @@ export default function HeroCarousel() {
             try {
                 // 1. Fetch the Static Welcome Slide (Slot 1)
                 // We still check the slots API just to get the configurable Welcome slide
-                const slotsData = await api.get('/hero-slots');
+                const slotsData = await api.get<HeroSlot[]>('/hero-slots');
                 const welcomeSlide = slotsData.find((s: HeroSlot) => s.slot_number === 1);
 
                 // 2. Fetch the Paid "Hero Carousel" Bookings DIRECTLY
