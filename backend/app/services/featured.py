@@ -78,6 +78,7 @@ def check_availability(
     ]
 
     # STRICT FILTER: Only count bookings for THIS EXACT slot_type
+    print(f"[DEBUG CHECK_AVAILABILITY] Checking for slot_type: {slot_type}")
     query = select(FeaturedBooking).where(
         and_(
             FeaturedBooking.slot_type == slot_type,
@@ -90,6 +91,7 @@ def check_availability(
     if target_id:
         query = query.where(FeaturedBooking.target_id == target_id)
     elif slot_type == SlotType.CATEGORY_PINNED:
+        # For category pinned without target_id, return error
         return {
             "available": False,
             "error": "target_id required for CATEGORY_PINNED",
@@ -100,6 +102,9 @@ def check_availability(
         }
 
     existing_bookings = session.exec(query).all()
+    print(f"[DEBUG CHECK_AVAILABILITY] Found {len(existing_bookings)} existing bookings for {slot_type}")
+    for b in existing_bookings:
+        print(f"  - Booking {b.id}: slot={b.slot_type}, status={b.status}, dates={b.start_date} to {b.end_date}")
 
     # Check each date in range
     unavailable_dates = []

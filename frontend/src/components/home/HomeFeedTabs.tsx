@@ -21,35 +21,50 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
 
     // Magazine Carousel: Paid bookings take priority
     const [magazineBookingEvents, setMagazineBookingEvents] = useState<EventResponse[]>([]);
+    const [heroEventIds, setHeroEventIds] = useState<Set<string>>(new Set());
 
-    // Fetch magazine_carousel bookings on mount
-    // Fetch magazine_carousel bookings on mount
+    // Fetch magazine_carousel AND hero_home bookings on mount
     useEffect(() => {
-        const fetchMagazineBookings = async () => {
+        const fetchBookings = async () => {
             try {
-                // STRICT MODE: Use the shared API helper
-                const bookings = await api.featured.getActive('magazine_carousel');
+                // Parallel fetch: Magazine (for display) nad Hero (for exclusion)
+                const [magazineBookings, heroBookings] = await Promise.all([
+                    api.featured.getActive('magazine_carousel'),
+                    api.featured.getActive('hero_home').catch(() => [])
+                ]);
 
-                // Fetch full event details for each booking
-                const eventPromises = bookings.map((b) =>
+                // 1. Setup Magazine Events
+                const eventPromises = magazineBookings.map((b) =>
                     eventsAPI.get(b.event_id).catch(() => null)
                 );
-
                 const events = (await Promise.all(eventPromises)).filter(Boolean) as EventResponse[];
                 setMagazineBookingEvents(events);
+
+                // 2. Setup Hero IDs for Exclusion
+                const heroIds = new Set(heroBookings.map(b => b.event_id));
+                setHeroEventIds(heroIds);
+
             } catch (err) {
-                console.error('Error fetching magazine bookings:', err);
+                console.error('Error fetching bookings:', err);
             }
         };
-        fetchMagazineBookings();
+        fetchBookings();
     }, []);
 
     // Merge magazine booking events with latest events (bookings first)
+    // STRICT SEPARATION: Filter out any event that is currently in the Hero Carousel
     const mergedLatestEvents = React.useMemo(() => {
-        const bookingIds = new Set(magazineBookingEvents.map(e => e.id));
-        const nonBookingLatest = latestEvents.filter(e => !bookingIds.has(e.id));
+        const magazineIds = new Set(magazineBookingEvents.map(e => e.id));
+
+        // Filter latestEvents:
+        // 1. Must not be already in magazineBookingEvents (deduplication)
+        // 2. Must not be a Hero Event (strict separation)
+        const nonBookingLatest = latestEvents.filter(e =>
+            !magazineIds.has(e.id) && !heroEventIds.has(e.id)
+        );
+
         return [...magazineBookingEvents, ...nonBookingLatest];
-    }, [magazineBookingEvents, latestEvents]);
+    }, [magazineBookingEvents, latestEvents, heroEventIds]);
 
     // Fetch Tonight events when tab is clicked
     useEffect(() => {
