@@ -300,7 +300,9 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 /* Scenario B: Multi-Date / No Main Link -> Scroll to Sidebar */
                 <button
                   onClick={() => {
-                    const sidebar = document.getElementById('dates-sidebar') || document.getElementById('mobile-dates-sidebar');
+                    const mobileSidebar = document.getElementById('mobile-dates-sidebar');
+                    const desktopSidebar = document.getElementById('dates-sidebar');
+                    const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
                     if (sidebar) {
                       sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       // Trigger Pulse Animation
