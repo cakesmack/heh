@@ -11,7 +11,7 @@ import { api } from '@/lib/api'; // Ensure this path matches your project struct
 // Simple types based on your setup
 interface HeroSlot {
     id: number;
-    slot_number: number;
+    position: number;
     title?: string;
     subtitle?: string;
     image_url?: string;
@@ -39,7 +39,7 @@ export default function HeroCarousel() {
             let welcomeSlide = null;
             try {
                 const slotsData = await api.get<HeroSlot[]>('/api/hero');
-                welcomeSlide = slotsData.find((s: HeroSlot) => s.slot_number === 1);
+                welcomeSlide = slotsData.find((s: HeroSlot) => s.position === 1);
             } catch (err) {
                 console.warn("Failed to fetch welcome slide:", err);
             }
