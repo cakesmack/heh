@@ -235,19 +235,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
           Back to Events
         </Link>
 
-        {/* Floating Actions */}
-        <div className="absolute top-8 right-8 flex items-center gap-3 z-20">
-          <BookmarkButton eventId={event.id} size="lg" className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white" />
-          <button
-            onClick={() => setReportModalOpen(true)}
-            className="w-12 h-12 rounded-full bg-white/10 hover:bg-red-500/20 backdrop-blur-md border border-white/10 text-white/70 hover:text-red-400 flex items-center justify-center transition-all"
-            title="Report Event"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </button>
-        </div>
+
       </div>
 
       {/* Info Ribbon */}
