@@ -300,7 +300,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 /* Scenario B: Multi-Date / No Main Link -> Scroll to Sidebar */
                 <button
                   onClick={() => {
-                    const sidebar = document.getElementById('dates-sidebar');
+                    const sidebar = document.getElementById('dates-sidebar') || document.getElementById('mobile-dates-sidebar');
                     if (sidebar) {
                       sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       // Trigger Pulse Animation
@@ -343,7 +343,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
       {/* Main Content - Wider Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Mobile: Sidebar content appears first */}
-        <div className="lg:hidden mb-8 space-y-6">
+        <div id="mobile-dates-sidebar" className="lg:hidden mb-8 space-y-6 transition-all duration-1000">
           {/* Mobile Date/Time Card */}
           <Card>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
