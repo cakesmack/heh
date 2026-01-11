@@ -187,7 +187,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
         </div>
 
         {/* Sharp Centered Image - Now Full Container Width */}
-        <div className="absolute inset-0 flex items-center justify-center px-4 pb-20">
+        <div className="absolute inset-0 flex items-center justify-center px-4 pt-24">
           <div
             className={`relative w-full max-w-7xl aspect-[21/9] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 ${event.image_url ? 'cursor-pointer group' : ''}`}
             onClick={() => event.image_url && setImageLightboxOpen(true)}

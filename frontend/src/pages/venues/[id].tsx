@@ -198,7 +198,7 @@ export default function VenueDetailPage() {
         </div>
 
         {/* Sharp Centered Image */}
-        <div className="absolute inset-0 flex items-center justify-center px-4 pb-20">
+        <div className="absolute inset-0 flex items-center justify-center px-4 pt-24">
           <div className="relative w-full max-w-3xl aspect-[16/9] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10">
             {venue.image_url ? (
               <img
