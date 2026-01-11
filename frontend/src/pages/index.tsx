@@ -36,6 +36,12 @@ interface HomePageProps {
 export default function HomePage({ socialImage }: HomePageProps) {
   const { coordinates } = useGeolocation();
   const { user } = useAuth();
+
+  // Create optimized OG image URL for WhatsApp/Socials
+  // Inject Cloudinary transformations if it's a Cloudinary URL
+  const optimizedOgImage = socialImage && socialImage.includes('cloudinary') && !socialImage.includes('w_')
+    ? socialImage.replace('/upload/', '/upload/w_1200,h_630,c_fill,q_auto/')
+    : socialImage;
   const [page, setPage] = useState(1);
   const EVENTS_PER_PAGE = 9;
 
@@ -225,7 +231,7 @@ export default function HomePage({ socialImage }: HomePageProps) {
         <meta property="og:url" content={SITE_URL} />
         <meta property="og:title" content="Highland Events Hub" />
         <meta property="og:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." />
-        <meta property="og:image" content={socialImage} />
+        <meta property="og:image" content={optimizedOgImage} key="og-image" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:site_name" content="Highland Events Hub" />
@@ -235,7 +241,7 @@ export default function HomePage({ socialImage }: HomePageProps) {
         <meta name="twitter:site" content="@HighlandEvents" />
         <meta name="twitter:title" content="Highland Events Hub" />
         <meta name="twitter:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." />
-        <meta name="twitter:image" content={socialImage} />
+        <meta name="twitter:image" content={optimizedOgImage} key="twitter-image" />
       </Head>
 
       {/* Hero Section */}
