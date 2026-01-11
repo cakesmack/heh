@@ -111,12 +111,10 @@ export default function HeroCarousel() {
                         <div className="relative w-full h-full">
                             {/* Background Image */}
                             {slide.image && (
-                                <Image
+                                <img
                                     src={slide.image}
                                     alt={slide.title}
-                                    fill
-                                    className="object-cover"
-                                    priority
+                                    className="absolute inset-0 w-full h-full object-cover"
                                 />
                             )}
 
