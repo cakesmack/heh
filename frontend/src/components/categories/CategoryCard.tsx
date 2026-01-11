@@ -40,14 +40,7 @@ export default function CategoryCard({ category }: CategoryCardProps) {
                 >
                     {category.name}
                 </h3>
-                {category.event_count !== undefined && category.event_count > 0 && (
-                    <p
-                        className="text-[10px] md:text-sm font-medium text-gray-300 hidden sm:block"
-                        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-                    >
-                        {category.event_count} event{category.event_count !== 1 ? 's' : ''}
-                    </p>
-                )}
+
             </div>
         </Link>
     );
