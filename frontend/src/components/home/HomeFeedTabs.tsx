@@ -42,6 +42,7 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
 
                 // 2. Setup Hero IDs for Exclusion
                 const heroIds = new Set(heroBookings.map(b => b.event_id));
+                console.log('[HomeFeedTabs] Hero IDs to exclude:', Array.from(heroIds));
                 setHeroEventIds(heroIds);
 
             } catch (err) {
@@ -56,12 +57,19 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
     const mergedLatestEvents = React.useMemo(() => {
         const magazineIds = new Set(magazineBookingEvents.map(e => e.id));
 
+        console.log('[HomeFeedTabs] Filtering Latest Events...');
+        console.log('[HomeFeedTabs] Magazine IDs:', Array.from(magazineIds));
+        console.log('[HomeFeedTabs] Hero IDs:', Array.from(heroEventIds));
+
         // Filter latestEvents:
         // 1. Must not be already in magazineBookingEvents (deduplication)
         // 2. Must not be a Hero Event (strict separation)
-        const nonBookingLatest = latestEvents.filter(e =>
-            !magazineIds.has(e.id) && !heroEventIds.has(e.id)
-        );
+        const nonBookingLatest = latestEvents.filter(e => {
+            const isHero = heroEventIds.has(e.id);
+            const isMagazine = magazineIds.has(e.id);
+            if (isHero) console.log(`[HomeFeedTabs] Excluding Hero Event from Feed: ${e.title} (${e.id})`);
+            return !isMagazine && !isHero;
+        });
 
         return [...magazineBookingEvents, ...nonBookingLatest];
     }, [magazineBookingEvents, latestEvents, heroEventIds]);
