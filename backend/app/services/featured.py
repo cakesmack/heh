@@ -131,6 +131,14 @@ def check_availability(
         remaining = max_slots - count
         slots_remaining[current.isoformat()] = remaining
 
+        if remaining <= 0:
+            unavailable_dates.append(current.isoformat())
+
+        current += timedelta(days=1)
+
+    available = len(unavailable_dates) == 0
+    price_quote = num_days * price_per_day if available else 0
+
     return {
         "available": available,
         "unavailable_dates": unavailable_dates,
