@@ -43,7 +43,7 @@ export default function HeroCarousel() {
 
                 // 2. Fetch the Paid "Hero Carousel" Bookings DIRECTLY
                 // We ignore the 'slots' table for this and go straight to the receipts
-                const paidBookings = await api.featured.getActive('HERO_HOME');
+                const paidBookings = await api.featured.getActive('hero_home');
 
                 // 3. Build the Master List
                 const finalSlides = [];
@@ -65,14 +65,15 @@ export default function HeroCarousel() {
                 if (paidBookings && paidBookings.length > 0) {
                     const eventSlides = paidBookings.map((booking: any) => {
                         // Handle structure variations (depending on if API returns 'event' object nested)
+                        // ActiveFeaturedResponse is flat: { event_title, event_image_url, event_id ... }
                         const evt = booking.event || booking;
                         return {
                             type: 'event',
                             id: evt.id,
-                            image: evt.image_url || evt.main_image_url, // Adjust to your data model
-                            title: evt.title,
-                            subtitle: evt.venue?.name || 'Featured Event',
-                            link: `/events/${evt.slug}`,
+                            image: evt.event_image_url || evt.image_url || evt.main_image_url,
+                            title: evt.event_title || evt.title,
+                            subtitle: evt.custom_subtitle || evt.venue?.name || 'Featured Event',
+                            link: `/events/${evt.event_id || evt.slug || evt.id}`,
                             date: evt.start_date
                         };
                     });
