@@ -24,7 +24,12 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
     const [heroEventIds, setHeroEventIds] = useState<Set<string>>(new Set());
 
     // Helper to normalize IDs (handle dash vs no-dash UUIDs)
-    const normalizeId = (id: string) => id.replace(/-/g, '');
+    const normalizeId = (id: string) => {
+        if (!id) return '';
+        // 1. Split by underscore to remove date suffix (abc-123_2025... -> abc-123)
+        // 2. Remove dashes to normalize UUID (abc-123 -> abc123)
+        return id.split('_')[0].replace(/-/g, '');
+    };
 
     // Fetch magazine_carousel AND hero_home bookings on mount
     useEffect(() => {
@@ -44,7 +49,14 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                 setMagazineBookingEvents(events);
 
                 // 2. Setup Hero IDs for Exclusion (Normalized)
-                const heroIds = new Set(heroBookings.map(b => normalizeId(b.event_id)));
+
+                // Update this block inside your useEffect
+                const heroIds = new Set(heroBookings.map(b => {
+                    // Check event_id first (per your JSON), fallback to target_id
+                    const id = b.event_id || b.target_id;
+                    return id ? normalizeId(id) : null;
+                }).filter(Boolean) as string[]);
+
                 setHeroEventIds(heroIds);
 
             } catch (err) {
