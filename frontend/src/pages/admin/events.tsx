@@ -53,7 +53,7 @@ export default function AdminEvents() {
   // Admin Promote Modal State
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [promotingEvent, setPromotingEvent] = useState<EventResponse | null>(null);
-  const [promoteSlotType, setPromoteSlotType] = useState<'hero_home' | 'global_pinned' | 'magazine_carousel'>('magazine_carousel');
+  const [promoteSlotType, setPromoteSlotType] = useState<'hero_home' | 'global_pinned' | 'magazine_carousel'>('hero_home');
   const [promoteLoading, setPromoteLoading] = useState(false);
 
   // Track active promotions for each event: { eventId: [{id, slot_type},...] }

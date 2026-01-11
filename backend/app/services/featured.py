@@ -261,34 +261,45 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
         session.add(event)
         print(f"[CHECKOUT COMPLETED] Set event.featured = True, until {event.featured_until}")
     
-    # CHANGE 2: Auto-assign HERO_HOME bookings to an empty HeroSlot
-    if booking.slot_type == SlotType.HERO_HOME:
-        print(f"[CHECKOUT COMPLETED] HERO_HOME booking - looking for empty slot")
-        
-        # Find the first empty slot (Skipping Slot 1 which is the Welcome Slide)
-        # We look for ANY slot > 1 that has no event_id, regardless of 'is_active' status.
-        target_slot = session.exec(
-            select(HeroSlot)
-            .where(HeroSlot.position > 1)
-            .where(HeroSlot.event_id == None)
-            .order_by(HeroSlot.position)
-        ).first()
-        
-        if target_slot:
-            print(f"[CHECKOUT COMPLETED] ✅ Found Empty Slot: {target_slot.position}. Assigning event...")
-            target_slot.event_id = booking.event_id
-            target_slot.is_active = True  # Force it to wake up
-            target_slot.type = "spotlight_event" # Ensure type is correct
-            session.add(target_slot)
-            # No commit here, it happens at end of function
+        if assign_hero_slot(session, booking.event_id):
+            print(f"[CHECKOUT COMPLETED] Successfully assigned event to Hero Slot")
         else:
-            print("[CHECKOUT COMPLETED] ⚠️ WARNING: All Hero Slots (2-5) are full! Event is paid but not displayed in Hero Carousel.")
+            print(f"[CHECKOUT COMPLETED] All HeroSlots full - event will display via FeaturedBooking API only")
 
     booking.updated_at = datetime.utcnow()
     session.add(booking)
     print(f"[CHECKOUT COMPLETED] Calling session.commit()")
     session.commit()
     print(f"[CHECKOUT COMPLETED] Committed successfully, final status: {booking.status}")
+
+
+def assign_hero_slot(session: Session, event_id: str) -> bool:
+    """
+    Finds the first available Hero Slot (position > 1) and assigns the event to it.
+    Forces the slot to be active.
+    Returns True if assigned, False if no slots available.
+    """
+    from app.models.hero import HeroSlot
+    
+    # 1. Find the first empty slot (Skipping Slot 1 which is the Welcome Slide)
+    # We look for ANY slot > 1 that has no event_id, regardless of 'is_active' status.
+    target_slot = session.exec(
+        select(HeroSlot)
+        .where(HeroSlot.position > 1)
+        .where(HeroSlot.event_id == None)
+        .order_by(HeroSlot.position)
+    ).first()
+    
+    if target_slot:
+        print(f"[HERO ASSIGNMENT] ✅ Found Empty Slot: {target_slot.position}. Assigning event...")
+        target_slot.event_id = event_id
+        target_slot.is_active = True  # Force it to wake up
+        target_slot.type = "spotlight_event" # Ensure type is correct
+        session.add(target_slot)
+        return True
+    
+    print("[HERO ASSIGNMENT] ⚠️ WARNING: All Hero Slots (2-5) are full!")
+    return False
 
 
 def handle_checkout_expired(session: Session, stripe_session: dict) -> None:

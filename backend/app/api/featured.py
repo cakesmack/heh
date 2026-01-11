@@ -23,7 +23,8 @@ from app.services.featured import (
     handle_checkout_completed,
     handle_checkout_expired,
     get_active_featured,
-    get_slot_pricing
+    get_slot_pricing,
+    assign_hero_slot
 )
 
 router = APIRouter(tags=["Featured"])
@@ -503,6 +504,10 @@ def admin_create_featured(
     event.featured = True
     event.featured_until = datetime.combine(end, datetime.max.time())
     session.add(event)
+    
+    # If HERO_HOME, try to assign to a Hero Slot
+    if request.slot_type == SlotType.HERO_HOME:
+        assign_hero_slot(session, event_id)
     
     session.commit()
     
