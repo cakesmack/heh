@@ -62,6 +62,15 @@ def check_availability(
     """
     config = get_slot_pricing(session, slot_type)
     max_slots = config["max"]
+    
+    # EXCLUSION LOGIC: 
+    # If checking availability for HERO_HOME, we must remember that 
+    # Slot 1 is the "Welcome Slide" and is NOT stored in FeaturedBooking.
+    # The max_slots logic below purely counts FeaturedBooking rows.
+    # Since we set max=4 for HERO_HOME (Slides 2-5), and we are counting
+    # paid slots only, if we find < 4 paid slots, it is available.
+    # We do NOT subtract 1 for the Welcome Slide because the limit of 4
+    # already accounts for that (Total 5 - 1 Welcome = 4 Paid).
     price_per_day = config["price_per_day"]
     min_days = config["min_days"]
 
@@ -122,14 +131,6 @@ def check_availability(
         remaining = max_slots - count
         slots_remaining[current.isoformat()] = remaining
 
-        if remaining <= 0:
-            unavailable_dates.append(current.isoformat())
-
-        current += timedelta(days=1)
-
-    available = len(unavailable_dates) == 0
-    price_quote = num_days * price_per_day if available else 0
-
     return {
         "available": available,
         "unavailable_dates": unavailable_dates,
@@ -137,6 +138,43 @@ def check_availability(
         "price_quote": price_quote,
         "num_days": num_days
     }
+
+
+def get_active_featured(
+    session: Session,
+    slot_type: SlotType,
+    target_id: Optional[str] = None
+) -> list[FeaturedBooking]:
+    """
+    Get currently active featured bookings for display.
+    STRICT FILTERING: Uses an Allowlist approach.
+    """
+    today = date.today()
+
+    # Base query for ACTIVE bookings in date range
+    query = select(FeaturedBooking).where(
+        and_(
+            FeaturedBooking.status == BookingStatus.ACTIVE,
+            FeaturedBooking.start_date <= today,
+            FeaturedBooking.end_date >= today
+        )
+    )
+
+    # STRICT ALLOWLIST:
+    # Only return bookings that EXACTLY match the requested slot_type.
+    # This prevents "HERO_HOME" events from leaking into "MAGAZINE_CAROUSEL"
+    if slot_type == SlotType.MAGAZINE_CAROUSEL:
+        query = query.where(FeaturedBooking.slot_type == SlotType.MAGAZINE_CAROUSEL)
+    elif slot_type == SlotType.HERO_HOME:
+        query = query.where(FeaturedBooking.slot_type == SlotType.HERO_HOME)
+    else:
+        # Generic strict filter for other types
+        query = query.where(FeaturedBooking.slot_type == slot_type)
+
+    if target_id:
+        query = query.where(FeaturedBooking.target_id == target_id)
+
+    return list(session.exec(query).all())
 
 
 def create_checkout_session(
@@ -322,26 +360,4 @@ def handle_checkout_expired(session: Session, stripe_session: dict) -> None:
         session.commit()
 
 
-def get_active_featured(
-    session: Session,
-    slot_type: SlotType,
-    target_id: Optional[str] = None
-) -> list[FeaturedBooking]:
-    """
-    Get currently active featured bookings for display.
-    """
-    today = date.today()
 
-    query = select(FeaturedBooking).where(
-        and_(
-            FeaturedBooking.slot_type == slot_type,
-            FeaturedBooking.status == BookingStatus.ACTIVE,
-            FeaturedBooking.start_date <= today,
-            FeaturedBooking.end_date >= today
-        )
-    )
-
-    if target_id:
-        query = query.where(FeaturedBooking.target_id == target_id)
-
-    return list(session.exec(query).all())
