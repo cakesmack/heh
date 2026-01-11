@@ -41,14 +41,14 @@ export default function App({ Component, pageProps }: AppProps) {
           <AnalyticsProvider>
             {/* Default OG tags (overridden by individual pages) */}
             <Head>
-              <meta property="og:type" content="website" />
-              <meta property="og:site_name" content="Highland Events Hub" />
-              <meta property="og:image" content={defaultOgImage} />
-              <meta property="og:image:width" content="1200" />
-              <meta property="og:image:height" content="630" />
-              <meta name="twitter:card" content="summary_large_image" />
-              <meta name="twitter:site" content="@HighlandEvents" />
-              <meta name="twitter:image" content={defaultOgImage} />
+              <meta property="og:type" content="website" key="og-type" />
+              <meta property="og:site_name" content="Highland Events Hub" key="og-site-name" />
+              <meta property="og:image" content={defaultOgImage} key="og-image" />
+              <meta property="og:image:width" content="1200" key="og-image-width" />
+              <meta property="og:image:height" content="630" key="og-image-height" />
+              <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
+              <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
+              <meta name="twitter:image" content={defaultOgImage} key="twitter-image" />
             </Head>
 
             <div className={`${inter.variable} font-sans flex flex-col min-h-screen`}>

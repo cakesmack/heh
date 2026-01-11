@@ -227,20 +227,20 @@ export default function HomePage({ socialImage }: HomePageProps) {
         <link rel="canonical" href={SITE_URL} />
 
         {/* Open Graph / Facebook / WhatsApp */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={SITE_URL} />
-        <meta property="og:title" content="Highland Events Hub" />
-        <meta property="og:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." />
+        <meta property="og:type" content="website" key="og-type" />
+        <meta property="og:url" content={SITE_URL} key="og-url" />
+        <meta property="og:title" content="Highland Events Hub" key="og-title" />
+        <meta property="og:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." key="og-description" />
         <meta property="og:image" content={optimizedOgImage} key="og-image" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:site_name" content="Highland Events Hub" />
+        <meta property="og:image:width" content="1200" key="og-image-width" />
+        <meta property="og:image:height" content="630" key="og-image-height" />
+        <meta property="og:site_name" content="Highland Events Hub" key="og-site-name" />
 
         {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@HighlandEvents" />
-        <meta name="twitter:title" content="Highland Events Hub" />
-        <meta name="twitter:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." />
+        <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
+        <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
+        <meta name="twitter:title" content="Highland Events Hub" key="twitter-title" />
+        <meta name="twitter:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." key="twitter-description" />
         <meta name="twitter:image" content={optimizedOgImage} key="twitter-image" />
       </Head>
 
