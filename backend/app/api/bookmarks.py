@@ -36,17 +36,18 @@ def toggle_bookmark(
             detail="Event not found"
         )
 
-    # Check if bookmark exists
-    bookmark = session.exec(
+    # Check if bookmark(s) exist - fetch ALL to handle potential duplicates
+    bookmarks = session.exec(
         select(Bookmark).where(
             Bookmark.user_id == current_user.id,
             Bookmark.event_id == normalized_event_id
         )
-    ).first()
+    ).all()
 
-    if bookmark:
-        # Remove bookmark
-        session.delete(bookmark)
+    if bookmarks:
+        # Remove bookmark(s) - handle potential duplicates by deleting all
+        for bookmark in bookmarks:
+            session.delete(bookmark)
         session.commit()
         return {"bookmarked": False, "message": "Event removed from bookmarks"}
     else:
