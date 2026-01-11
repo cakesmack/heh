@@ -34,52 +34,54 @@ const defaultOgImage = 'https://res.cloudinary.com/dakq1xwn1/image/upload/w_1200
 
 export default function App({ Component, pageProps }: AppProps) {
   const content = (
-    <ConsentProvider>
-      <GoogleAnalytics />
-      <AuthProvider>
-        <SearchProvider>
-          <AnalyticsProvider>
-            {/* Default OG tags (overridden by individual pages) */}
-            <Head>
-              <meta property="og:type" content="website" key="og-type" />
-              <meta property="og:site_name" content="Highland Events Hub" key="og-site-name" />
-              <meta property="og:image" content={defaultOgImage} key="og-image" />
-              <meta property="og:image:width" content="1200" key="og-image-width" />
-              <meta property="og:image:height" content="630" key="og-image-height" />
-              <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
-              <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
-              <meta name="twitter:image" content={defaultOgImage} key="twitter-image" />
-            </Head>
+    <>
+      <Head>
+        <meta property="og:type" content="website" key="og-type" />
+        <meta property="og:site_name" content="Highland Events Hub" key="og-site-name" />
+        <meta property="og:image" content={defaultOgImage} key="og-image" />
+        <meta property="og:image:width" content="1200" key="og-image-width" />
+        <meta property="og:image:height" content="630" key="og-image-height" />
+        <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
+        <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
+        <meta name="twitter:image" content={defaultOgImage} key="twitter-image" />
+      </Head>
+      <ConsentProvider>
+        <GoogleAnalytics />
+        <AuthProvider>
+          <SearchProvider>
+            <AnalyticsProvider>
 
-            <div className={`${inter.variable} font-sans flex flex-col min-h-screen`}>
-              {/* Header */}
-              <Header />
 
-              {/* Main Content */}
-              <main className="flex-1">
-                <Component {...pageProps} />
-              </main>
+              <div className={`${inter.variable} font-sans flex flex-col min-h-screen`}>
+                {/* Header */}
+                <Header />
 
-              {/* Footer - Hidden on mobile */}
-              <div className="hidden md:block">
-                <Footer />
+                {/* Main Content */}
+                <main className="flex-1">
+                  <Component {...pageProps} />
+                </main>
+
+                {/* Footer - Hidden on mobile */}
+                <div className="hidden md:block">
+                  <Footer />
+                </div>
+
+                {/* Bottom Navigation Bar - Mobile only */}
+                <div className="md:hidden">
+                  <BottomNavBar />
+                </div>
+
+                <ScrollToTop />
+                <UsernameBlockerModal />
+
+                {/* Cookie Consent Banner */}
+                <CookieBanner />
               </div>
-
-              {/* Bottom Navigation Bar - Mobile only */}
-              <div className="md:hidden">
-                <BottomNavBar />
-              </div>
-
-              <ScrollToTop />
-              <UsernameBlockerModal />
-
-              {/* Cookie Consent Banner */}
-              <CookieBanner />
-            </div>
-          </AnalyticsProvider>
-        </SearchProvider>
-      </AuthProvider>
-    </ConsentProvider>
+            </AnalyticsProvider>
+          </SearchProvider>
+        </AuthProvider>
+      </ConsentProvider>
+    </>
   );
 
   // Wrap with providers
