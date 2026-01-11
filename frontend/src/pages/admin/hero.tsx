@@ -1,300 +1,277 @@
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
-import { heroAPI, eventsAPI } from '@/lib/api';
-import { HeroSlot, EventResponse } from '@/types';
+import { heroAPI } from '@/lib/api';
+import { HeroSlot } from '@/types';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
 import ImageUpload from '@/components/common/ImageUpload';
 
+/**
+ * Hero Manager - Simplified
+ * 
+ * Design Philosophy:
+ * - Slot 1: Welcome slide, fully editable by admin
+ * - Slots 2-5: Auto-managed by payments, read-only display here
+ * 
+ * The webhook auto-assigns paid HERO_HOME bookings to empty slots.
+ * Admins can clear a slot if needed, but assignment is automatic.
+ */
 export default function HeroManager() {
     const [slots, setSlots] = useState<HeroSlot[]>([]);
-    const [events, setEvents] = useState<EventResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [editingSlot, setEditingSlot] = useState<HeroSlot | null>(null);
+    const [editingWelcome, setEditingWelcome] = useState<HeroSlot | null>(null);
+    const [clearing, setClearing] = useState<number | null>(null);
 
     useEffect(() => {
-        fetchData();
+        fetchSlots();
     }, []);
 
-    const fetchData = async () => {
+    const fetchSlots = async () => {
         try {
-            const [slotsData, eventsData] = await Promise.all([
-                heroAPI.list(),
-                eventsAPI.list({ limit: 100, date_from: new Date().toISOString() }) // Get upcoming events
-            ]);
-            setSlots(slotsData);
-            setEvents(eventsData.events);
+            const data = await heroAPI.list();
+            setSlots(data);
         } catch (err) {
-            console.error('Failed to fetch data:', err);
+            console.error('Failed to fetch slots:', err);
             setError('Failed to load hero slots');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleToggleActive = async (slot: HeroSlot) => {
-        try {
-            await heroAPI.update(slot.id, { is_active: !slot.is_active });
-            fetchData();
-        } catch (err) {
-            console.error('Failed to update slot:', err);
-            alert('Failed to update slot status');
-        }
-    };
-
-    const handleSaveSlot = async (e: React.FormEvent) => {
+    const handleSaveWelcome = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!editingSlot) return;
+        if (!editingWelcome) return;
 
         try {
-            // Build update payload, excluding undefined values
-            const updatePayload: any = {
-                type: editingSlot.type,
-                overlay_style: editingSlot.overlay_style,
-            };
-
-            if (editingSlot.type === 'spotlight_event') {
-                // Remove dashes from event_id to match database format (UUIDs stored without dashes)
-                const cleanEventId = editingSlot.event_id?.replace(/-/g, '') || null;
-                updatePayload.event_id = cleanEventId;
-                // Clear welcome-specific fields
-                updatePayload.image_override = null;
-                updatePayload.title_override = null;
-                updatePayload.cta_override = null;
-            } else {
-                // Welcome slide
-                updatePayload.image_override = editingSlot.image_override || null;
-                updatePayload.title_override = editingSlot.title_override || null;
-                updatePayload.cta_override = editingSlot.cta_override || null;
-                // Clear event-specific fields
-                updatePayload.event_id = null;
-            }
-
-            console.log('Saving hero slot:', editingSlot.id, 'with payload:', updatePayload);
-            const response = await heroAPI.update(editingSlot.id, updatePayload);
-            console.log('Save response:', response);
-
-            setEditingSlot(null);
-            await fetchData();
-            console.log('Data refetched after save');
+            await heroAPI.update(editingWelcome.id, {
+                type: 'welcome',
+                image_override: editingWelcome.image_override || null,
+                title_override: editingWelcome.title_override || null,
+                cta_override: editingWelcome.cta_override || null,
+            });
+            setEditingWelcome(null);
+            await fetchSlots();
         } catch (err) {
-            console.error('Failed to save slot:', err);
-            alert('Failed to save slot');
+            console.error('Failed to save:', err);
+            alert('Failed to save welcome slide');
         }
     };
 
-    if (loading) return <AdminGuard><AdminLayout title="Hero Manager"><Spinner /></AdminLayout></AdminGuard>;
+    const handleClearSlot = async (slot: HeroSlot) => {
+        if (!confirm(`Clear slot ${slot.position}? The event "${slot.event?.title}" will be removed from the carousel.`)) return;
+
+        setClearing(slot.position);
+        try {
+            await heroAPI.update(slot.id, { event_id: null });
+            await fetchSlots();
+        } catch (err) {
+            console.error('Failed to clear slot:', err);
+            alert('Failed to clear slot');
+        } finally {
+            setClearing(null);
+        }
+    };
+
+    if (loading) {
+        return (
+            <AdminGuard>
+                <AdminLayout title="Hero Manager">
+                    <div className="flex justify-center py-12"><Spinner /></div>
+                </AdminLayout>
+            </AdminGuard>
+        );
+    }
+
+    const welcomeSlot = slots.find(s => s.position === 1);
+    const eventSlots = [2, 3, 4, 5].map(pos => slots.find(s => s.position === pos));
 
     return (
         <AdminGuard>
             <AdminLayout title="Hero Manager">
-                <div className="mb-6">
-                    <p className="text-gray-600">Manage the 5 slots on the homepage hero carousel.</p>
+                {/* Header */}
+                <div className="mb-8">
+                    <p className="text-gray-600">
+                        Manage the homepage hero carousel. Slot 1 is the Welcome slide.
+                        Slots 2-5 are <strong>automatically filled</strong> when users purchase Hero placements.
+                    </p>
                 </div>
 
                 {error && <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
 
-                <div className="grid gap-6">
-                    {/* Create slots if they don't exist (1-5) */}
-                    {[1, 2, 3, 4, 5].map((position) => {
-                        const slot = slots.find(s => s.position === position);
+                {/* Slot 1: Welcome Slide (Editable) */}
+                <div className="mb-8">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">1</span>
+                        Welcome Slide
+                    </h2>
 
-                        if (!slot) {
-                            return (
-                                <Card key={position} className="flex items-center justify-between p-4">
-                                    <div className="flex items-center gap-4">
-                                        <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">
-                                            {position}
-                                        </span>
-                                        <span className="text-gray-500 italic">Empty Slot</span>
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        onClick={async () => {
-                                            await heroAPI.create({ position, type: position === 1 ? 'welcome' : 'spotlight_event' });
-                                            fetchData();
-                                        }}
-                                    >
-                                        Initialize Slot
-                                    </Button>
-                                </Card>
-                            );
-                        }
-
-                        const isEditing = editingSlot?.id === slot.id;
-
-                        if (isEditing) {
-                            return (
-                                <Card key={slot.id} className="p-6 border-2 border-emerald-500">
-                                    <form onSubmit={handleSaveSlot} className="space-y-4">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="font-bold text-lg">Editing Slot {position}</h3>
-                                            <Button variant="outline" size="sm" onClick={() => setEditingSlot(null)}>Cancel</Button>
+                    {editingWelcome ? (
+                        <Card className="p-6 border-2 border-emerald-500">
+                            <form onSubmit={handleSaveWelcome} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Background Image</label>
+                                    <ImageUpload
+                                        folder="events"
+                                        currentImageUrl={editingWelcome.image_override}
+                                        onUpload={(result) => setEditingWelcome({ ...editingWelcome, image_override: result.url })}
+                                        onRemove={() => setEditingWelcome({ ...editingWelcome, image_override: undefined })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Title</label>
+                                    <input
+                                        type="text"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                                        value={editingWelcome.title_override || ''}
+                                        onChange={e => setEditingWelcome({ ...editingWelcome, title_override: e.target.value })}
+                                        placeholder="Discover the Highlands"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Button Text</label>
+                                    <input
+                                        type="text"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                                        value={editingWelcome.cta_override || ''}
+                                        onChange={e => setEditingWelcome({ ...editingWelcome, cta_override: e.target.value })}
+                                        placeholder="Explore Events"
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2 pt-4">
+                                    <Button variant="outline" onClick={() => setEditingWelcome(null)}>Cancel</Button>
+                                    <Button type="submit">Save Changes</Button>
+                                </div>
+                            </form>
+                        </Card>
+                    ) : (
+                        <Card className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    {welcomeSlot?.image_override ? (
+                                        <img
+                                            src={welcomeSlot.image_override}
+                                            alt="Welcome"
+                                            className="w-24 h-14 object-cover rounded"
+                                        />
+                                    ) : (
+                                        <div className="w-24 h-14 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                                            Default
                                         </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Type</label>
-                                                <select
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                                    value={editingSlot.type}
-                                                    onChange={e => setEditingSlot({ ...editingSlot, type: e.target.value as any })}
-                                                    disabled={position === 1} // Slide 1 is always Welcome
-                                                >
-                                                    <option value="welcome">Welcome Slide</option>
-                                                    <option value="spotlight_event">Spotlight Event</option>
-                                                </select>
-                                                {position === 1 && <p className="text-xs text-gray-500 mt-1">Slide 1 is always a Welcome slide.</p>}
-                                            </div>
-
-                                            {editingSlot.type === 'spotlight_event' ? (
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">Event</label>
-                                                    <select
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                                        value={editingSlot.event_id || ''}
-                                                        onChange={e => setEditingSlot({ ...editingSlot, event_id: e.target.value })}
-                                                        required
-                                                    >
-                                                        <option value="">Select an event...</option>
-                                                        {events.map(event => (
-                                                            <option key={event.id} value={event.id}>{event.title}</option>
-                                                        ))}
-                                                    </select>
-                                                    <p className="text-xs text-gray-500 mt-1">Image, title, and details will be pulled from the event.</p>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="md:col-span-2">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Background Image</label>
-                                                        <ImageUpload
-                                                            folder="events"
-                                                            currentImageUrl={editingSlot.image_override}
-                                                            onUpload={(result) => setEditingSlot({ ...editingSlot, image_override: result.url })}
-                                                            onRemove={() => setEditingSlot({ ...editingSlot, image_override: undefined })}
-                                                        />
-                                                    </div>
-                                                    <div className="md:col-span-2">
-                                                        <label className="block text-sm font-medium text-gray-700">Title Text</label>
-                                                        <input
-                                                            type="text"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                                            value={editingSlot.title_override || ''}
-                                                            onChange={e => setEditingSlot({ ...editingSlot, title_override: e.target.value })}
-                                                            placeholder="Welcome to Highland Events"
-                                                        />
-                                                    </div>
-                                                    <div className="md:col-span-2">
-                                                        <label className="block text-sm font-medium text-gray-700">Subtitle</label>
-                                                        <input
-                                                            type="text"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                                            value={(editingSlot as any).subtitle || ''}
-                                                            onChange={e => setEditingSlot({ ...editingSlot, subtitle: e.target.value } as any)}
-                                                            placeholder="Discover amazing events across the Highlands"
-                                                        />
-                                                    </div>
-
-                                                    {/* Primary CTA */}
-                                                    <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg">
-                                                        <h4 className="text-sm font-medium text-gray-900 mb-3">Primary Call-to-Action</h4>
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-600 mb-1">Button Text</label>
-                                                                <input
-                                                                    type="text"
-                                                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
-                                                                    value={editingSlot.cta_override || ''}
-                                                                    onChange={e => setEditingSlot({ ...editingSlot, cta_override: e.target.value })}
-                                                                    placeholder="Explore Events"
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-600 mb-1">Link URL</label>
-                                                                <input
-                                                                    type="text"
-                                                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
-                                                                    value={(editingSlot as any).cta_link || ''}
-                                                                    onChange={e => setEditingSlot({ ...editingSlot, cta_link: e.target.value } as any)}
-                                                                    placeholder="/events"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Secondary CTA */}
-                                                    <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg">
-                                                        <h4 className="text-sm font-medium text-gray-900 mb-3">Secondary Call-to-Action (Optional)</h4>
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-600 mb-1">Button Text</label>
-                                                                <input
-                                                                    type="text"
-                                                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
-                                                                    value={(editingSlot as any).secondary_cta_text || ''}
-                                                                    onChange={e => setEditingSlot({ ...editingSlot, secondary_cta_text: e.target.value } as any)}
-                                                                    placeholder="View Map"
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-600 mb-1">Link URL</label>
-                                                                <input
-                                                                    type="text"
-                                                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
-                                                                    value={(editingSlot as any).secondary_cta_link || ''}
-                                                                    onChange={e => setEditingSlot({ ...editingSlot, secondary_cta_link: e.target.value } as any)}
-                                                                    placeholder="/map"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        <div className="flex justify-end gap-2 pt-4">
-                                            <Button type="submit">Save Changes</Button>
-                                        </div>
-                                    </form>
-                                </Card>
-                            );
-                        }
-
-                        return (
-                            <Card key={slot.id} className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 ${!slot.is_active ? 'opacity-60 bg-gray-50' : ''}`}>
-                                <div className="flex items-center gap-4 mb-4 md:mb-0">
-                                    <span className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                                        {position}
-                                    </span>
+                                    )}
                                     <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-gray-900">
-                                                {slot.type === 'welcome' ? 'Welcome Slide' : (slot.event?.title || 'No Event Selected')}
-                                            </h3>
-                                            {!slot.is_active && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Inactive</span>}
-                                        </div>
+                                        <h3 className="font-semibold text-gray-900">
+                                            {welcomeSlot?.title_override || 'Discover the Highlands'}
+                                        </h3>
                                         <p className="text-sm text-gray-500">
-                                            {slot.type === 'welcome'
-                                                ? (slot.title_override || 'Default Welcome')
-                                                : (slot.event ? `${new Date(slot.event.date_start).toLocaleDateString()} • ${slot.event.venue_name || 'Unknown Venue'}` : 'Select an event')}
+                                            Button: {welcomeSlot?.cta_override || 'Find an Event'}
                                         </p>
                                     </div>
                                 </div>
+                                <Button size="sm" onClick={() => welcomeSlot && setEditingWelcome(welcomeSlot)}>
+                                    Edit
+                                </Button>
+                            </div>
+                        </Card>
+                    )}
+                </div>
 
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => handleToggleActive(slot)}>
-                                        {slot.is_active ? 'Deactivate' : 'Activate'}
-                                    </Button>
-                                    <Button size="sm" onClick={() => setEditingSlot(slot)}>
-                                        Edit
-                                    </Button>
-                                </div>
-                            </Card>
-                        );
-                    })}
+                {/* Slots 2-5: Featured Events (Read-Only) */}
+                <div>
+                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        Featured Event Slots
+                        <span className="text-sm font-normal text-gray-500">(Auto-managed by payments)</span>
+                    </h2>
+
+                    <div className="grid gap-4">
+                        {eventSlots.map((slot, index) => {
+                            const position = index + 2;
+                            const hasEvent = slot?.event_id && slot?.event;
+                            const isClearing = clearing === position;
+
+                            return (
+                                <Card key={position} className={`p-4 ${!hasEvent ? 'bg-gray-50 border-dashed' : ''}`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${hasEvent ? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-500'
+                                                }`}>
+                                                {position}
+                                            </span>
+
+                                            {hasEvent && slot?.event ? (
+                                                <>
+                                                    {slot.event.image_url ? (
+                                                        <img
+                                                            src={slot.event.image_url}
+                                                            alt={slot.event.title}
+                                                            className="w-24 h-14 object-cover rounded"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-24 h-14 bg-gray-200 rounded" />
+                                                    )}
+                                                    <div>
+                                                        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                                            {slot.event.title}
+                                                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                                                                ⭐ Featured
+                                                            </span>
+                                                        </h3>
+                                                        <p className="text-sm text-gray-500">
+                                                            {new Date(slot.event.date_start).toLocaleDateString('en-GB', {
+                                                                weekday: 'short', day: 'numeric', month: 'short'
+                                                            })}
+                                                            {slot.event.venue_name && ` • ${slot.event.venue_name}`}
+                                                        </p>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-gray-500">
+                                                    <p className="font-medium">Empty Slot</p>
+                                                    <p className="text-sm">Available for purchase</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {hasEvent && slot && (
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={`/events/${slot.event_id}`}
+                                                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                                                >
+                                                    View Event →
+                                                </Link>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleClearSlot(slot)}
+                                                    disabled={isClearing}
+                                                >
+                                                    {isClearing ? 'Clearing...' : 'Clear'}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Help Text */}
+                <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <h3 className="font-semibold text-blue-900 mb-2">How Featured Slots Work</h3>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                        <li>• Users purchase <strong>Hero Carousel</strong> placement from the Promote page</li>
+                        <li>• Payment automatically assigns their event to the first empty slot (2-5)</li>
+                        <li>• Use <strong>Clear</strong> to remove an event and free up a slot</li>
+                        <li>• Events also display via FeaturedBooking system, so clearing here doesn't cancel their paid booking</li>
+                    </ul>
                 </div>
             </AdminLayout>
         </AdminGuard>

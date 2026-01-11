@@ -279,20 +279,9 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
             session.add(empty_slot)
             print(f"[CHECKOUT COMPLETED] Assigned event to HeroSlot position {empty_slot.position}")
         else:
-            # All slots full - find the oldest spotlight slot and replace it
-            oldest_slot = session.exec(
-                select(HeroSlot)
-                .where(HeroSlot.is_active == True)
-                .where(HeroSlot.type == "spotlight_event")
-                .order_by(HeroSlot.position.desc())  # Take highest position (usually last filled)
-            ).first()
-            
-            if oldest_slot:
-                oldest_slot.event_id = booking.event_id
-                session.add(oldest_slot)
-                print(f"[CHECKOUT COMPLETED] All slots full - replaced HeroSlot position {oldest_slot.position}")
-            else:
-                print(f"[CHECKOUT COMPLETED] WARNING: No HeroSlots configured in database")
+            # All slots full - do NOT overwrite existing slots
+            # The FeaturedBooking is still ACTIVE, so it will display via the paid slots API
+            print(f"[CHECKOUT COMPLETED] All HeroSlots full - event will display via FeaturedBooking API only")
 
     booking.updated_at = datetime.utcnow()
     session.add(booking)
