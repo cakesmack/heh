@@ -9,6 +9,7 @@ import { EventList } from '@/components/events/EventList';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
 import { Category, EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
+import { Badge } from '@/components/common/Badge';
 
 export default function CategoryPage() {
     const router = useRouter();
@@ -37,11 +38,11 @@ export default function CategoryPage() {
 
                 // Initialize filters for this category
                 const filters = {
-                    category: data.slug as any, // Cast to any to satisfy EventCategory enum if needed, or string
+                    category: data.slug as any,
                 };
                 setInitialFilters(filters);
 
-                // Fetch events for this category
+                // Fetch normal events for this category
                 fetchEvents(filters);
             } catch (err) {
                 console.error('Failed to fetch category:', err);
@@ -78,12 +79,16 @@ export default function CategoryPage() {
                 );
                 if (res.ok) {
                     const bookings = await res.json();
+
                     // Fetch full event details for each booking
                     const eventPromises = bookings.map((b: { event_id: string }) =>
                         eventsAPI.get(b.event_id).catch(() => null)
                     );
+
                     const events = (await Promise.all(eventPromises)).filter(Boolean) as EventResponse[];
-                    setPinnedEvents(events);
+
+                    // Strict limit: Max 3 pinned events
+                    setPinnedEvents(events.slice(0, 3));
                 }
             } catch (err) {
                 console.error('Error fetching pinned events:', err);
@@ -142,7 +147,7 @@ export default function CategoryPage() {
             delete searchFilters.dateTo;
         }
 
-        // Update URL params shallowly to reflect search state (optional but good for UX)
+        // Update URL params shallowly to reflect search state
         const query: Record<string, string> = { slug: slug as string };
         if (filters.q) query.q = filters.q;
         if (filters.location) query.location = filters.location;
@@ -257,43 +262,44 @@ export default function CategoryPage() {
 
                 {/* Pinned Events (Paid Featured) */}
                 {pinnedEvents.length > 0 && (
-                    <div className="mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <span className="bg-amber-400 text-amber-900 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                                Featured
-                            </span>
-                            Top Picks in {category?.name}
-                        </h2>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mb-10">
+                        <div className="flex items-center gap-3 mb-4">
+                            <h2 className="text-2xl font-bold text-gray-900">Featured in {category.name}</h2>
+                            <Badge variant="warning" className="animate-pulse">Sponsored</Badge>
+                        </div>
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {pinnedEvents.map((event) => (
                                 <Link
                                     key={event.id}
                                     href={`/events/${event.id}`}
-                                    className="group relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow border border-gray-100"
+                                    className="group relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
                                 >
-                                    <div className="aspect-[16/9] relative">
+                                    <div className="aspect-[16/9] relative overflow-hidden">
                                         <img
                                             src={event.image_url || '/images/event-placeholder.jpg'}
                                             alt={event.title}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                         />
-                                        <div className="absolute top-2 left-2">
-                                            <span className="bg-amber-400 text-amber-900 text-xs font-bold px-2 py-1 rounded-full">
-                                                ⭐ Featured
+                                        <div className="absolute top-3 left-3">
+                                            <span className="bg-amber-400 text-amber-900 text-xs font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wider">
+                                                Featured
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="p-4">
-                                        <h3 className="font-bold text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-1">
+                                    <div className="p-5">
+                                        <div className="text-emerald-600 font-bold text-xs uppercase tracking-wide mb-2">
+                                            {new Date(event.date_start).toLocaleDateString('en-GB', {
+                                                weekday: 'long', day: 'numeric', month: 'long'
+                                            })}
+                                        </div>
+                                        <h3 className="font-bold text-xl text-gray-900 group-hover:text-emerald-700 transition-colors line-clamp-2 mb-2">
                                             {event.title}
                                         </h3>
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            {new Date(event.date_start).toLocaleDateString('en-GB', {
-                                                weekday: 'short',
-                                                day: 'numeric',
-                                                month: 'short'
-                                            })}
-                                            {event.venue_name && ` • ${event.venue_name}`}
+                                        <p className="text-sm text-gray-500 flex items-center">
+                                            <svg className="w-4 h-4 mr-1 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            </svg>
+                                            {event.venue_name || 'Location TBA'}
                                         </p>
                                     </div>
                                 </Link>

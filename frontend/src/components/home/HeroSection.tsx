@@ -2,111 +2,84 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { HeroSlot, ActiveFeatured } from '@/types';
 import { heroAPI, api } from '@/lib/api';
-import { stripHtml } from '@/lib/stringUtils';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 
 export default function HeroSection() {
-    const [slots, setSlots] = useState<HeroSlot[]>([]);
-    const [paidSlots, setPaidSlots] = useState<ActiveFeatured[]>([]);
+    const [slides, setSlides] = useState<(HeroSlot | ActiveFeatured)[]>([]);
+    const [welcomeSlot, setWelcomeSlot] = useState<HeroSlot | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [hasPaidSlots, setHasPaidSlots] = useState(false);
 
     useEffect(() => {
-        const fetchSlots = async () => {
+        const fetchSlides = async () => {
             try {
-                // Fetch both manual slots and paid slots in parallel
+                // Parallel fetch: Welcome Slot (Static) + Paid Slots (Dynamic)
                 const [manualData, paidData] = await Promise.all([
-                    heroAPI.list(true),
+                    heroAPI.list(true), // active_only=true
                     api.featured.getActive('hero_home').catch(() => [])
                 ]);
 
-                // Find the welcome slot from manual slots
-                const welcomeSlot = manualData.find((s: HeroSlot) => s.type === 'welcome');
+                // 1. Get Welcome Slide (admin managed, position 1)
+                const welcome = manualData.find((s: HeroSlot) => s.position === 1 || s.type === 'welcome');
+                setWelcomeSlot(welcome || null);
 
-                if (paidData && paidData.length > 0) {
-                    // Option B: Welcome first + paid slots
-                    setPaidSlots(paidData);
-                    setHasPaidSlots(true);
-                    // Keep welcome slot in manual slots for display
-                    if (welcomeSlot) {
-                        setSlots([welcomeSlot]);
-                    }
-                } else {
-                    // No paid slots - use full manual hero slot system
-                    const sortedData = [...manualData].sort((a: HeroSlot, b: HeroSlot) => {
-                        if (a.type === 'welcome') return -1;
-                        if (b.type === 'welcome') return 1;
-                        return 0;
-                    });
-                    setSlots(sortedData);
-                    setHasPaidSlots(false);
-                }
+                // 2. Get Paid Bookings (max 4)
+                const paidSlides = paidData.slice(0, 4);
+
+                // 3. Merge: [Welcome, ...Paid]
+                const mergedSlides: (HeroSlot | ActiveFeatured)[] = [];
+                if (welcome) mergedSlides.push(welcome);
+                mergedSlides.push(...paidSlides);
+
+                setSlides(mergedSlides);
             } catch (err) {
-                console.error('Failed to load hero slots:', err);
-                // Fall back to manual slots on error
-                try {
-                    const data = await heroAPI.list(true);
-                    const sortedData = [...data].sort((a: HeroSlot, b: HeroSlot) => {
-                        if (a.type === 'welcome') return -1;
-                        if (b.type === 'welcome') return 1;
-                        return 0;
-                    });
-                    setSlots(sortedData);
-                } catch (e) {
-                    console.error('Failed to load fallback hero slots:', e);
-                }
+                console.error('Failed to load hero slides:', err);
+                // Fallback: Try to show at least welcome slide if available in cache/stale data
             } finally {
                 setLoading(false);
             }
         };
-        fetchSlots();
+
+        fetchSlides();
     }, []);
 
-    // Calculate total display length:
-    // - If hasPaidSlots: welcome (if exists) + paid slots
-    // - Otherwise: just manual slots
-    const displayLength = hasPaidSlots
-        ? (slots.length + paidSlots.length)  // slots contains only welcome when hasPaidSlots
-        : slots.length;
-
     const nextSlide = useCallback(() => {
-        if (displayLength === 0) return;
-        setCurrentIndex((prev) => (prev + 1) % displayLength);
-    }, [displayLength]);
+        if (slides.length === 0) return;
+        setCurrentIndex((prev) => (prev + 1) % slides.length);
+    }, [slides.length]);
 
     const prevSlide = useCallback(() => {
-        if (displayLength === 0) return;
-        setCurrentIndex((prev) => (prev - 1 + displayLength) % displayLength);
-    }, [displayLength]);
+        if (slides.length === 0) return;
+        setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
+    }, [slides.length]);
 
     useEffect(() => {
-        if (displayLength <= 1 || isPaused) return;
-
+        if (slides.length <= 1 || isPaused) return;
         const timer = setInterval(nextSlide, 5000);
         return () => clearInterval(timer);
-    }, [displayLength, isPaused, nextSlide]);
+    }, [slides.length, isPaused, nextSlide]);
+
+    // Helper to check type
+    const isWelcomeSlide = (slide: HeroSlot | ActiveFeatured): slide is HeroSlot => {
+        return (slide as HeroSlot).type === 'welcome' || (slide as HeroSlot).position === 1;
+    };
 
     if (loading) {
         return <div className="h-[80vh] min-h-[600px] bg-stone-dark animate-pulse" />;
     }
 
-    if (displayLength === 0) {
-        // Fallback if no slots are configured
+    if (slides.length === 0) {
+        // Fallback default view
         return (
             <section className="relative h-[70vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-stone-dark">
                 <div className="absolute inset-0 bg-[url('/images/hero-bg.jpg')] bg-cover bg-center opacity-50" />
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-dark via-stone-dark/40 to-transparent" />
-
                 <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
                     <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
                         Discover the <span className="text-gradient">Highlands</span>
                     </h1>
-                    <p className="text-xl md:text-2xl text-gray-200 mb-8 max-w-2xl mx-auto font-light">
-                        Experience the best events, culture, and adventures in the heart of Scotland.
-                    </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <Link href="/events">
                             <Button variant="white" size="lg" className="shadow-lg shadow-white/10">
@@ -119,58 +92,25 @@ export default function HeroSection() {
         );
     }
 
-    // Get current content based on whether we're showing paid or manual slots
-    let title: string;
-    let image: string;
-    let ctaText: string;
-    let ctaLink: string;
-    let isWelcome = false;
-    let isPaidFeatured = false;
-    let subtitle: string | undefined;
+    const currentSlide = slides[currentIndex];
+    const isWelcome = isWelcomeSlide(currentSlide);
 
-    if (hasPaidSlots) {
-        // Option B: Index 0 = welcome slot, Index 1+ = paid slots
-        const welcomeCount = slots.length; // Usually 1 (the welcome slot)
+    // Extract display data based on type
+    const title = isWelcome
+        ? (currentSlide.title_override || 'Discover the Highlands')
+        : (currentSlide as ActiveFeatured).event_title;
 
-        if (currentIndex < welcomeCount && slots[currentIndex]) {
-            // Showing welcome slot
-            const currentSlot = slots[currentIndex];
-            isWelcome = currentSlot.type === 'welcome';
-            title = currentSlot.title_override || 'Discover the Highlands';
-            image = currentSlot.image_override || '/images/hero-bg.jpg';
-            ctaText = currentSlot.cta_override || 'Find an Event';
-            ctaLink = '/events';
-        } else {
-            // Showing paid slot (adjust index to account for welcome slot)
-            const paidIndex = currentIndex - welcomeCount;
-            const currentPaidSlot = paidSlots[paidIndex];
-            title = currentPaidSlot.event_title;
-            image = currentPaidSlot.event_image_url || '/images/hero-bg.jpg';
-            ctaText = 'View Event Details';
-            ctaLink = `/events/${currentPaidSlot.event_id}`;
-            isPaidFeatured = true;
-            subtitle = currentPaidSlot.custom_subtitle;  // Use custom subtitle if provided
-        }
-    } else {
-        // Manual slots only (no paid slots)
-        const currentSlot = slots[currentIndex];
-        isWelcome = currentSlot?.type === 'welcome';
-        const event = currentSlot?.event;
+    const subtitle = isWelcome
+        ? "Experience the best events, culture, and adventures in the heart of Scotland."
+        : (currentSlide as ActiveFeatured).custom_subtitle || "Featured Event";
 
-        title = isWelcome
-            ? (currentSlot.title_override || 'Discover the Highlands')
-            : (event?.title || 'Upcoming Event');
+    const link = isWelcome
+        ? '/events'
+        : `/events/${(currentSlide as ActiveFeatured).event_id}`;
 
-        image = isWelcome
-            ? (currentSlot.image_override || '/images/hero-bg.jpg')
-            : (event?.image_url || '/images/hero-bg.jpg');
-
-        ctaText = isWelcome
-            ? (currentSlot.cta_override || 'Find an Event')
-            : 'View Event Details';
-
-        ctaLink = isWelcome ? '/events' : (event ? `/events/${event.id}` : '/events');
-    }
+    const ctaText = isWelcome
+        ? (currentSlide.cta_override || 'Find an Event')
+        : 'View Event Details';
 
     return (
         <section
@@ -178,60 +118,26 @@ export default function HeroSection() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Background Image */}
-            {hasPaidSlots ? (
-                // Option B: Render welcome slot(s) first, then paid slots
-                <>
-                    {/* Welcome slot background(s) */}
-                    {slots.map((slot, index) => {
-                        const slotImage = slot.type === 'welcome'
-                            ? (slot.image_override || '/images/hero-bg.jpg')
-                            : (slot.event?.image_url || '/images/hero-bg.jpg');
-                        return (
-                            <div
-                                key={`welcome-${slot.id}`}
-                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-                                style={{ backgroundImage: `url(${slotImage})` }}
-                            />
-                        );
-                    })}
-                    {/* Paid slot backgrounds */}
-                    {paidSlots.map((slot, index) => {
-                        const adjustedIndex = slots.length + index;
-                        return (
-                            <div
-                                key={`paid-${slot.id}`}
-                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${adjustedIndex === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-                                style={{ backgroundImage: `url(${slot.event_image_url || '/images/hero-bg.jpg'})` }}
-                            />
-                        );
-                    })}
-                </>
-            ) : (
-                slots.map((slot, index) => {
-                    const slotImage = slot.type === 'welcome'
-                        ? (slot.image_override || '/images/hero-bg.jpg')
-                        : (slot.event?.image_url || '/images/hero-bg.jpg');
+            {/* Background Images with Crossfade */}
+            {slides.map((slide, index) => {
+                const img = isWelcomeSlide(slide)
+                    ? (slide.image_override || '/images/hero-bg.jpg')
+                    : (slide.event_image_url || '/images/hero-bg.jpg');
 
-                    return (
-                        <div
-                            key={slot.id}
-                            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'
-                                }`}
-                            style={{ backgroundImage: `url(${slotImage})` }}
-                        />
-                    );
-                })
-            )}
+                return (
+                    <div
+                        key={isWelcomeSlide(slide) ? `welcome-${slide.id}` : `paid-${slide.id}`}
+                        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                        style={{ backgroundImage: `url(${img})` }}
+                    />
+                );
+            })}
 
             {/* Gradient Overlay */}
-            <div className={`absolute inset-0 transition-colors duration-1000 ${(!hasPaidSlots && slots[currentIndex]?.overlay_style === 'light')
-                ? 'bg-white/30'
-                : 'bg-gradient-to-t from-stone-dark via-stone-dark/60 to-transparent'
-                }`} />
+            <div className="absolute inset-0 bg-gradient-to-t from-stone-dark via-stone-dark/60 to-transparent" />
 
             {/* Navigation Buttons */}
-            {displayLength > 1 && (
+            {slides.length > 1 && (
                 <>
                     <button
                         onClick={prevSlide}
@@ -258,14 +164,9 @@ export default function HeroSection() {
             <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-3xl animate-slide-up">
                     <div className="flex items-center gap-3 mb-4">
-                        {(isPaidFeatured || (!isWelcome && !hasPaidSlots)) && (
+                        {!isWelcome && (
                             <Badge variant="warning" className="bg-yellow-500/90 text-white border-none backdrop-blur-sm shadow-lg">
                                 Featured Event
-                            </Badge>
-                        )}
-                        {!hasPaidSlots && slots[currentIndex]?.event?.category && !isWelcome && (
-                            <Badge variant="default" className="bg-white/20 text-white border-none backdrop-blur-sm shadow-lg">
-                                {slots[currentIndex].event!.category!.name}
                             </Badge>
                         )}
                     </div>
@@ -279,25 +180,11 @@ export default function HeroSection() {
                     </h1>
 
                     <p className="text-lg md:text-xl text-gray-100 mb-8 line-clamp-2 font-light drop-shadow-md max-w-2xl">
-                        {isWelcome ? (
-                            "Experience the best events, culture, and adventures in the heart of Scotland."
-                        ) : isPaidFeatured ? (
-                            subtitle || "Don't miss this featured event."
-                        ) : (
-                            <>
-                                {slots[currentIndex]?.event?.date_start && (
-                                    <span className="block font-medium mb-1">
-                                        {new Date(slots[currentIndex].event!.date_start).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                                        {slots[currentIndex].event!.venue_name && ` • ${slots[currentIndex].event!.venue_name}`}
-                                    </span>
-                                )}
-                                {stripHtml(slots[currentIndex]?.event?.description || "Join us for this amazing event.")}
-                            </>
-                        )}
+                        {subtitle}
                     </p>
 
                     <div className="flex flex-wrap gap-4">
-                        <Link href={ctaLink}>
+                        <Link href={link}>
                             <Button variant="white" size="lg" className="shadow-lg shadow-white/10 border-none">
                                 {ctaText}
                             </Button>
@@ -317,17 +204,16 @@ export default function HeroSection() {
                 </div>
             </div>
 
-            {/* Progress Bar Indicators - positioned at bottom of section */}
-            {displayLength > 1 && (
+            {/* Progress Bar Indicators */}
+            {slides.length > 1 && (
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 sm:gap-3 z-30">
-                    {Array.from({ length: displayLength }).map((_, index) => (
+                    {slides.map((_, index) => (
                         <button
                             key={index}
                             onClick={() => setCurrentIndex(index)}
                             className="relative h-1 w-8 sm:w-12 md:w-16 rounded-full bg-white/30 overflow-hidden cursor-pointer hover:bg-white/40 transition-colors"
                             aria-label={`Go to slide ${index + 1}`}
                         >
-                            {/* Progress fill - animates when this slide is active */}
                             <div
                                 key={`progress-${index}-${currentIndex}`}
                                 className={`absolute inset-0 rounded-full ${index === currentIndex
