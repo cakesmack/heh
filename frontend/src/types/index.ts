@@ -331,9 +331,9 @@ export interface EventUpdate {
   description?: string;
   date_start?: string;
   date_end?: string;
-  venue_id?: string;
+  venue_id?: string | null;  // Allow null to clear venue
   category_id?: string;
-  price?: number;
+  price?: number | string;
   image_url?: string;
   featured?: boolean;
   featured_until?: string;
@@ -341,12 +341,16 @@ export interface EventUpdate {
   // Phase 2.10 additions
   ticket_url?: string;
   age_restriction?: string;
-  location_name?: string;
+  location_name?: string | null;
   // Phase 2.3 additions
   organizer_profile_id?: string;
   recurrence_rule?: string;
   is_recurring?: boolean;
+  frequency?: string;
+  recurrence_end_date?: string;
   participating_venue_ids?: string[];
+  latitude?: number | null;
+  longitude?: number | null;
   showtimes?: ShowtimeCreate[];
 }
 

@@ -15,6 +15,10 @@ import TagInput from '@/components/tags/TagInput';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import RichTextEditor from '@/components/common/RichTextEditor';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
+import LocationPickerMap from '@/components/maps/LocationPickerMap';
+import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
+import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';
+import { ShowtimeCreate } from '@/types';
 
 export default function EditEventPage() {
     const router = useRouter();
@@ -49,7 +53,14 @@ export default function EditEventPage() {
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [useManualLocation, setUseManualLocation] = useState(false);
+
+    // New State for Advanced Form Features
+    const [locationTab, setLocationTab] = useState<'main' | 'multi'>('main');
+    const [locationMode, setLocationMode] = useState<'venue' | 'custom'>('venue');
+    const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
+    const [isMultiSession, setIsMultiSession] = useState(false);
+    const [noEndTime, setNoEndTime] = useState(false);
+    const [isLocationValid, setIsLocationValid] = useState(true);
 
     // Fetch initial data
     useEffect(() => {
@@ -104,12 +115,30 @@ export default function EditEventPage() {
                 // Hydrate participating venues
                 if (eventData.participating_venues && eventData.participating_venues.length > 0) {
                     setParticipatingVenues(eventData.participating_venues);
+                    setLocationTab('multi');
+                } else if (eventData.location_name && !eventData.venue_id) {
+                    // Manual location
+                    setLocationMode('custom');
+                    setLocationTab('main');
+                } else {
+                    // Venue location (default)
+                    setLocationMode('venue');
+                    setLocationTab('main');
                 }
 
-                // Set manual location mode if event has no venue but has location_name
-                if (eventData.location_name && !eventData.venue_id) {
-                    setUseManualLocation(true);
+                // Showtimes / Multi-Session
+                if (eventData.showtimes && eventData.showtimes.length > 0) {
+                    setShowtimes(eventData.showtimes);
+                    setIsMultiSession(true);
+                } else {
+                    setIsMultiSession(false);
                 }
+
+                if (eventData.tags) {
+                    setSelectedTags(eventData.tags.map((t: any) => t.name));
+                }
+
+                // Permission check: only organizer or admin can edit
 
                 if (eventData.tags) {
                     setSelectedTags(eventData.tags.map((t: any) => t.name));
@@ -141,12 +170,44 @@ export default function EditEventPage() {
     };
 
     const handleVenueChange = (venueId: string, venue: VenueResponse | null) => {
-        setFormData((prev) => ({
+        setFormData(prev => ({
             ...prev,
             venue_id: venueId,
-            location_name: venue?.name || '',
         }));
         setSelectedVenue(venue);
+    };
+
+    const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
+        if (place.geometry?.location) {
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+
+            // Extract postcode from address_components
+            let postcode = '';
+            if (place.address_components) {
+                const postcodeComponent = place.address_components.find(
+                    comp => comp.types.includes('postal_code')
+                );
+                postcode = postcodeComponent?.long_name || '';
+            }
+
+            // Validate region
+            const isValid = postcode
+                ? isHIERegion(postcode)
+                : isPointInHighlands(lat, lng);
+            setIsLocationValid(isValid);
+
+            setFormData(prev => ({
+                ...prev,
+                location_name: place.name || place.formatted_address || '',
+                latitude: lat,
+                longitude: lng,
+            }));
+        }
+    };
+
+    const handleLocationChange = (lat: number, lng: number) => {
+        setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
     };
 
     const handleImageUpload = (urls: { url: string; thumbnail_url: string; medium_url: string }) => {
@@ -163,24 +224,72 @@ export default function EditEventPage() {
         setError(null);
 
         try {
-            // Validate
-            if (!useManualLocation && !formData.venue_id) {
-                throw new Error('Please select a venue');
+            // Validate required fields based on location tab
+            if (locationTab === 'main') {
+                if (locationMode === 'venue' && !formData.venue_id) {
+                    throw new Error('Please select a venue');
+                }
+                if (locationMode === 'custom') {
+                    if (!formData.location_name) {
+                        throw new Error('Please enter a location name');
+                    }
+                    if (!isLocationValid) {
+                        throw new Error('Events must be located within the Scottish Highlands.');
+                    }
+                }
+            } else {
+                // Multi-venue tab
+                if (participatingVenues.length === 0) {
+                    throw new Error('Please add at least one participating venue');
+                }
             }
-            if (useManualLocation && !formData.location_name) {
-                throw new Error('Please enter a location name');
-            }
-            if (new Date(formData.date_end) <= new Date(formData.date_start)) {
+
+            if (!formData.category_id) throw new Error('Please select a category');
+
+            // Date Validation
+            if (new Date(formData.date_end) <= new Date(formData.date_start) && !noEndTime) {
                 throw new Error('End date must be after start date');
             }
 
-            // Build payload - CRITICAL: send null (not undefined) when clearing venue_id
-            const eventData: Record<string, any> = {
+            // Calculate dates based on mode
+            let calculatedDateStart = formData.date_start;
+            let calculatedDateEnd = formData.date_end;
+            let showtimesPayload: ShowtimeCreate[] | undefined = undefined;
+
+            if (isMultiSession && showtimes.length > 0) {
+                // Multi-session: calculate from showtimes
+                const startTimes = showtimes.map(st => new Date(st.start_time).getTime());
+                const endTimes = showtimes.map(st => st.end_time ? new Date(st.end_time).getTime() : new Date(st.start_time).getTime());
+                calculatedDateStart = new Date(Math.min(...startTimes)).toISOString();
+                calculatedDateEnd = new Date(Math.max(...endTimes)).toISOString();
+                showtimesPayload = showtimes;
+            } else if (isMultiSession && showtimes.length === 0) {
+                throw new Error('Please add at least one showtime');
+            } else {
+                // Single session: use form dates
+                showtimesPayload = undefined;
+                calculatedDateStart = new Date(formData.date_start).toISOString();
+
+                // If no specific end time, calculate as start + 4 hours
+                if (noEndTime) {
+                    const startDate = new Date(formData.date_start);
+                    calculatedDateEnd = new Date(startDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+                } else {
+                    calculatedDateEnd = new Date(formData.date_end).toISOString();
+                }
+            }
+
+            // Build payload
+            const eventData = {
                 title: formData.title,
                 description: formData.description || undefined,
                 category_id: formData.category_id,
-                date_start: new Date(formData.date_start).toISOString(),
-                date_end: new Date(formData.date_end).toISOString(),
+                venue_id: locationTab === 'main' && locationMode === 'venue' ? formData.venue_id : null,
+                location_name: locationTab === 'main' && locationMode === 'custom' ? formData.location_name : null,
+                latitude: locationTab === 'main' && locationMode === 'custom' ? formData.latitude : null,
+                longitude: locationTab === 'main' && locationMode === 'custom' ? formData.longitude : null,
+                date_start: calculatedDateStart,
+                date_end: calculatedDateEnd,
                 price: formData.price,
                 image_url: formData.image_url || undefined,
                 ticket_url: formData.ticket_url || undefined,
@@ -188,23 +297,11 @@ export default function EditEventPage() {
                 tags: selectedTags.length > 0 ? selectedTags : undefined,
                 organizer_profile_id: formData.organizer_profile_id || undefined,
                 is_recurring: formData.is_recurring,
+                frequency: formData.is_recurring ? formData.frequency : undefined,
+                recurrence_end_date: (formData.is_recurring && formData.ends_on === 'date') ? new Date(formData.recurrence_end_date).toISOString() : undefined,
                 participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined,
+                showtimes: showtimesPayload,
             };
-
-            // Handle venue/location based on mode
-            if (useManualLocation) {
-                eventData.venue_id = null; // Explicitly null to clear the venue
-                eventData.location_name = formData.location_name;
-                eventData.latitude = formData.latitude;
-                eventData.longitude = formData.longitude;
-            } else {
-                eventData.venue_id = formData.venue_id;
-                eventData.location_name = undefined;
-                eventData.latitude = undefined;
-                eventData.longitude = undefined;
-            }
-
-            console.log('Submitting event update:', eventData); // Debug log
 
             await api.events.update(id as string, eventData);
 
@@ -359,97 +456,357 @@ export default function EditEventPage() {
                         />
 
                         {/* Venue or Location */}
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="block text-sm font-medium text-gray-700">
-                                    {useManualLocation ? 'Location Name *' : 'Venue *'}
-                                </label>
+                        {/* LOCATION SECTION - Tab Split */}
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
+                            <label className="block text-sm font-medium text-gray-900">Event Location *</label>
+
+                            {/* Main Tabs: Main Location vs Multi-Venue */}
+                            <div className="flex border-b border-gray-200 mb-4">
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setUseManualLocation(!useManualLocation);
+                                        setLocationTab('main');
+                                        setParticipatingVenues([]);
+                                    }}
+                                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationTab === 'main'
+                                        ? 'border-emerald-600 text-emerald-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                        }`}
+                                >
+                                    📍 Main Location
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setLocationTab('multi');
                                         setFormData(prev => ({ ...prev, venue_id: '', location_name: '' }));
                                         setSelectedVenue(null);
                                     }}
-                                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationTab === 'multi'
+                                        ? 'border-emerald-600 text-emerald-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                        }`}
                                 >
-                                    {useManualLocation ? 'Select existing venue' : 'Enter location manually'}
+                                    🎪 Multi-Venue Event
                                 </button>
                             </div>
 
-                            {useManualLocation ? (
-                                <Input
-                                    id="location_name"
-                                    name="location_name"
-                                    type="text"
-                                    required
-                                    value={formData.location_name}
-                                    onChange={handleChange}
-                                    placeholder="e.g., Inverness Castle Grounds"
-                                    disabled={isLoading}
-                                />
+                            {/* Tab Content */}
+                            {locationTab === 'main' ? (
+                                <div className="space-y-4">
+                                    {/* Sub-tabs: Venue vs Custom */}
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setLocationMode('venue')}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'venue'
+                                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                                : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            Select Venue
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setLocationMode('custom')}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'custom'
+                                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                                : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            Custom Location
+                                        </button>
+                                    </div>
+
+                                    {locationMode === 'venue' ? (
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-500 mb-1">Search for a venue</label>
+                                            <VenueTypeahead
+                                                value={formData.venue_id}
+                                                onChange={handleVenueChange}
+                                                placeholder="e.g. The Ironworks"
+                                            />
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                <Link href="/venues" className="text-emerald-600 hover:underline">Can't find it? Add a new venue.</Link>
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Location Name *</label>
+                                                <GooglePlacesAutocomplete
+                                                    placeholder="e.g. Belladrum Estate, High Street, etc."
+                                                    defaultValue={formData.location_name}
+                                                    onPlaceSelect={handlePlaceSelect}
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Pin Location</label>
+                                                <LocationPickerMap
+                                                    latitude={formData.latitude}
+                                                    longitude={formData.longitude}
+                                                    onLocationChange={handleLocationChange}
+                                                />
+                                            </div>
+
+                                            {/* Geofencing Warning */}
+                                            {!isLocationValid && formData.location_name && (
+                                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                                                    <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                    </svg>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-red-800">Location outside the Scottish Highlands</p>
+                                                        <p className="text-xs text-red-600 mt-1">Events must be located within the Scottish Highlands (IV, HS, KW, ZE, or qualifying PH/PA/AB/KA postcodes).</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
-                                <>
-                                    <VenueTypeahead
-                                        value={formData.venue_id}
-                                        onChange={handleVenueChange}
-                                        placeholder="Search for a venue..."
+                                <div className="space-y-3">
+                                    <p className="text-sm text-gray-600">
+                                        For festivals, pub crawls, or multi-venue events. Add all participating venues below.
+                                    </p>
+                                    <MultiVenueSelector
+                                        selectedVenues={participatingVenues}
+                                        onChange={setParticipatingVenues}
                                         disabled={isLoading}
                                     />
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        <Link href="/venues" className="text-emerald-600 hover:text-emerald-700">
-                                            Don't see your venue? Add it here →
-                                        </Link>
-                                    </p>
-                                </>
+                                    {participatingVenues.length === 0 && (
+                                        <p className="text-xs text-amber-600">Please add at least one participating venue.</p>
+                                    )}
+                                </div>
                             )}
                         </div>
 
-                        {/* Participating Venues (Multi-Venue Events) */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Participating Venues
-                                <span className="text-gray-400 font-normal ml-1">(Optional)</span>
+                        {/* Event Type Toggle */}
+                        <div className="border border-gray-200 rounded-lg p-4">
+                            <label className="block text-sm font-medium text-gray-900 mb-3">
+                                Event Type
                             </label>
-                            <p className="text-sm text-gray-500 mb-3">
-                                For multi-venue events like festivals or bar crawls, add all participating venues here.
-                            </p>
-                            <MultiVenueSelector
-                                selectedVenues={participatingVenues}
-                                onChange={setParticipatingVenues}
-                                disabled={isLoading}
-                            />
-                        </div>
+                            <div className="flex gap-4">
+                                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${!isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                                    }`}>
+                                    <input
+                                        type="radio"
+                                        name="eventType"
+                                        checked={!isMultiSession}
+                                        onChange={() => {
+                                            setIsMultiSession(false);
+                                            setShowtimes([]);
+                                        }}
+                                        className="text-emerald-600"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-medium text-gray-900">Single Event</span>
+                                        <p className="text-xs text-gray-500">One start and end time</p>
+                                    </div>
+                                </label>
+                                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                                    }`}>
+                                    <input
+                                        type="radio"
+                                        name="eventType"
+                                        checked={isMultiSession}
+                                        onChange={() => {
+                                            // Push current dates to first showtime when switching
+                                            if (formData.date_start) {
+                                                setShowtimes([{
+                                                    start_time: new Date(formData.date_start).toISOString(),
+                                                    end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
+                                                }]);
+                                            }
+                                            setIsMultiSession(true);
+                                        }}
+                                        className="text-emerald-600"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-medium text-gray-900">Multiple Showings</span>
+                                        <p className="text-xs text-gray-500">Theatre, cinema-style</p>
+                                    </div>
+                                </label>
+                            </div>
 
-                        {/* Date & Time */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label htmlFor="date_start" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Start Date & Time *
-                                </label>
-                                <DateTimePicker
-                                    id="date_start"
-                                    name="date_start"
-                                    required
-                                    value={formData.date_start}
-                                    onChange={(value) => setFormData({ ...formData, date_start: value })}
-                                    disabled={isLoading}
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="date_end" className="block text-sm font-medium text-gray-700 mb-2">
-                                    End Date & Time *
-                                </label>
-                                <DateTimePicker
-                                    id="date_end"
-                                    name="date_end"
-                                    required
-                                    value={formData.date_end}
-                                    onChange={(value) => setFormData({ ...formData, date_end: value })}
-                                    min={formData.date_start}
-                                    disabled={isLoading}
-                                />
-                            </div>
+                            {/* Single Event Date Inputs */}
+                            {!isMultiSession && (
+                                <div className="mt-4 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
+                                            <DateTimePicker
+                                                id="date_start"
+                                                name="date_start"
+                                                required
+                                                value={formData.date_start}
+                                                onChange={(val) => {
+                                                    // Smart Date Sync: Update end date when start date changes
+                                                    const oldStartDate = formData.date_start ? formData.date_start.split('T')[0] : '';
+                                                    const newStartDate = val.split('T')[0];
+                                                    const currentEndDate = formData.date_end ? formData.date_end.split('T')[0] : '';
+
+                                                    // Sync end date if: empty, matches old start, or is before new start
+                                                    if (!formData.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
+                                                        // Keep the time from end date if it exists, otherwise use start time + 2 hours
+                                                        const endTime = formData.date_end ? formData.date_end.split('T')[1] : val.split('T')[1];
+                                                        setFormData({
+                                                            ...formData,
+                                                            date_start: val,
+                                                            date_end: `${newStartDate}T${endTime || '18:00'}`
+                                                        });
+                                                    } else {
+                                                        setFormData({ ...formData, date_start: val });
+                                                    }
+                                                }}
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                        {!noEndTime && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
+                                                <DateTimePicker
+                                                    id="date_end"
+                                                    name="date_end"
+                                                    required
+                                                    value={formData.date_end}
+                                                    onChange={(val) => setFormData({ ...formData, date_end: val })}
+                                                    min={formData.date_start}
+                                                    disabled={isLoading}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={noEndTime}
+                                            onChange={(e) => setNoEndTime(e.target.checked)}
+                                            className="rounded text-emerald-600 focus:ring-emerald-500"
+                                            disabled={isLoading}
+                                        />
+                                        <span className="text-sm text-gray-600">No specific end time</span>
+                                    </label>
+                                    {noEndTime && (
+                                        <p className="text-xs text-gray-500">End time will be set to 4 hours after start time.</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Multiple Showtimes Manager */}
+                            {isMultiSession && (
+                                <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-lg">
+                                    <p className="text-sm text-gray-500">
+                                        Add performance times. The event's main dates will be calculated automatically.
+                                    </p>
+
+                                    {showtimes.map((st: ShowtimeCreate, index: number) => {
+                                        const startValue = st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : '';
+                                        const endValue = st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : '';
+
+                                        return (
+                                            <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 mb-1 block">Start *</label>
+                                                            <DateTimePicker
+                                                                id={`showtime_start_${index}`}
+                                                                name={`showtime_start_${index}`}
+                                                                value={startValue}
+                                                                onChange={(value) => {
+                                                                    const updated = [...showtimes];
+                                                                    updated[index] = { ...updated[index], start_time: new Date(value).toISOString() };
+                                                                    setShowtimes(updated);
+                                                                }}
+                                                                required
+                                                                disabled={isLoading}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 mb-1 block">End *</label>
+                                                            <DateTimePicker
+                                                                id={`showtime_end_${index}`}
+                                                                name={`showtime_end_${index}`}
+                                                                value={endValue}
+                                                                onChange={(value) => {
+                                                                    const updated = [...showtimes];
+                                                                    updated[index] = { ...updated[index], end_time: new Date(value).toISOString() };
+                                                                    setShowtimes(updated);
+                                                                }}
+                                                                min={startValue}
+                                                                required
+                                                                disabled={isLoading}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 mb-1 block">Ticket URL (optional)</label>
+                                                            <input
+                                                                type="url"
+                                                                value={st.ticket_url || ''}
+                                                                onChange={(e) => {
+                                                                    const updated = [...showtimes];
+                                                                    updated[index] = { ...updated[index], ticket_url: e.target.value || undefined };
+                                                                    setShowtimes(updated);
+                                                                }}
+                                                                className="w-full px-2 py-1 text-sm border rounded"
+                                                                placeholder="https://..."
+                                                                disabled={isLoading}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs text-gray-500 mb-1 block">Notes (optional)</label>
+                                                            <input
+                                                                type="text"
+                                                                maxLength={255}
+                                                                value={st.notes || ''}
+                                                                onChange={(e) => {
+                                                                    const updated = [...showtimes];
+                                                                    updated[index] = { ...updated[index], notes: e.target.value || undefined };
+                                                                    setShowtimes(updated);
+                                                                }}
+                                                                className="w-full px-2 py-1 text-sm border rounded"
+                                                                placeholder="e.g. Phone only, Sold Out"
+                                                                disabled={isLoading}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowtimes(showtimes.filter((_, i) => i !== index))}
+                                                    className="text-red-500 hover:text-red-700 p-1"
+                                                    title="Remove"
+                                                    disabled={isLoading}
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const now = new Date();
+                                            setShowtimes([...showtimes, {
+                                                start_time: now.toISOString(),
+                                                end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                                            }]);
+                                        }}
+                                        className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
+                                        disabled={isLoading}
+                                    >
+                                        + Add Another Performance
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Price */}
