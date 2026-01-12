@@ -433,6 +433,38 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
               <AddToCalendar event={event} className="w-full" />
             </div>
           </Card>
+
+          {/* Sponsor Card (Mobile) */}
+          <Card className="mt-4 border-amber-200 bg-amber-50/50">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Event" : "Sponsor Event"}
+              </h3>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
+                Featured
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              {user && (event.organizer_id === user.id || user.is_admin)
+                ? "Boost visibility by featuring this event on the homepage."
+                : "Support this event by featuring it on the homepage."}
+            </p>
+            <button
+              onClick={() => {
+                if (!isAuthenticated) {
+                  router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+                  return;
+                }
+                router.push(`/events/${event.id}/promote`);
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Now" : "Sponsor Event"}
+            </button>
+          </Card>
         </div>
 
         {/* Desktop: 70/30 Grid */}
@@ -737,6 +769,38 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 </Card>
               </div>
 
+              {/* Sponsor Card (Desktop) - Visible to everyone */}
+              <Card className="border-amber-200 bg-amber-50/50">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Event" : "Sponsor Event"}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
+                    Featured
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 mb-4">
+                  {user && (event.organizer_id === user.id || user.is_admin)
+                    ? "Boost visibility by featuring this event on the homepage."
+                    : "Support this event by featuring it on the homepage."}
+                </p>
+                <button
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+                      return;
+                    }
+                    router.push(`/events/${event.id}/promote`);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                  {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Now" : "Sponsor Event"}
+                </button>
+              </Card>
+
 
 
               {/* Owner Actions */}
@@ -757,24 +821,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                       </Link>
                     )}
 
-                    {/* Promote / Sponsor Button - Visible to everyone */}
-                    <button
-                      onClick={() => {
-                        if (!isAuthenticated) {
-                          // Redirect to login with return URL
-                          router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
-                          return;
-                        }
-                        // Navigate to promote page
-                        router.push(`/events/${event.id}/promote`);
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                      </svg>
-                      {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Event" : "Sponsor this Event"}
-                    </button>
+
 
 
                     {event.is_recurring && (
