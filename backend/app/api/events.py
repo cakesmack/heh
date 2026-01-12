@@ -1060,8 +1060,8 @@ def update_event(
             detail="Not authorized to update this event"
         )
 
-    # Update fields (exclude tags and participating_venue_ids for special handling)
-    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids"})
+    # Update fields (exclude tags, participating_venue_ids, and showtimes for special handling)
+    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes"})
 
     # Validate category if being updated
     if "category_id" in update_data:
@@ -1085,6 +1085,25 @@ def update_event(
         age_restriction_str, min_age = parse_age_input(update_data["age_restriction"])
         update_data["age_restriction"] = age_restriction_str  # Keep legacy field
         update_data["min_age"] = min_age
+
+    # Update Showtimes if provided
+    if event_data.showtimes is not None:
+        # Clear existing showtimes
+        stmt = select(EventShowtime).where(EventShowtime.event_id == event.id)
+        existing_showtimes = session.exec(stmt).all()
+        for st in existing_showtimes:
+            session.delete(st)
+        
+        # Add new showtimes
+        for st_data in event_data.showtimes:
+            new_showtime = EventShowtime(
+                event_id=event.id,
+                start_time=st_data.start_time,
+                end_time=st_data.end_time,
+                ticket_url=st_data.ticket_url,
+                notes=st_data.notes
+            )
+            session.add(new_showtime)
 
     for field, value in update_data.items():
         if field in ("venue_id", "organizer_profile_id") and value is not None:
