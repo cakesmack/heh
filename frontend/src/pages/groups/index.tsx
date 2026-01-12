@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
+import { MobileDirectoryNav } from '@/components/common/MobileDirectoryNav';
 
 interface Organizer {
     id: string;
@@ -53,6 +54,7 @@ export default function GroupsPage() {
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <MobileDirectoryNav />
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>

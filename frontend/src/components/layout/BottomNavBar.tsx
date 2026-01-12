@@ -19,6 +19,7 @@ export function BottomNavBar() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => router.pathname === path;
+  const isDiscoverActive = router.pathname.startsWith('/venues') || router.pathname.startsWith('/groups');
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -176,10 +177,10 @@ export function BottomNavBar() {
             <span className="text-[10px] font-medium text-emerald-600">Create</span>
           </Link>
 
-          {/* Venues */}
+          {/* Discover (Venues & Groups) */}
           <Link
             href="/venues"
-            className={`flex flex-col items-center justify-center space-y-1 transition-colors ${isActive('/venues') ? 'text-emerald-600' : 'text-gray-600'
+            className={`flex flex-col items-center justify-center space-y-1 transition-colors ${isDiscoverActive ? 'text-emerald-600' : 'text-gray-600'
               }`}
           >
             <svg
@@ -192,10 +193,10 @@ export function BottomNavBar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            <span className="text-[10px] font-medium">Venues</span>
+            <span className="text-[10px] font-medium">Discover</span>
           </Link>
 
           {/* Account / Login */}
