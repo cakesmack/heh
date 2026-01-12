@@ -18,15 +18,17 @@ export function getOptimizedImage(url: string, width: number): string {
         return url;
     }
 
-    // Check if parameters already exist (basic check to avoid double injection)
-    // We look for the '/upload/' segment which is standard in Cloudinary URLs
-    if (url.includes('/upload/') && !url.includes('/upload/f_auto')) {
+    // Check if parameters already exist to avoid breaking existing transforms
+    // We check for 'f_auto' or 'w_' which indicate existing params
+    if (url.includes('/upload/') && !url.includes('/upload/f_auto') && !url.includes('/upload/w_')) {
         // Inject params:
         // f_auto: Auto format (WebP/AVIF)
         // q_auto: Auto quality
         // w_{width}: Resize to width
-        // c_limit: Limit size (don't upscale)
-        const params = `f_auto,q_auto,w_${width},c_limit`;
+        // Note: Removed c_limit to ensure images fill the requested width (upscaling if necessary)
+        // helping to avoid "small image in big container" layout shifts/gaps, 
+        // though native resolution is always best.
+        const params = `f_auto,q_auto,w_${width}`;
         return url.replace('/upload/', `/upload/${params}/`);
     }
 

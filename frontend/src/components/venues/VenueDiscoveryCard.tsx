@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { VenueResponse } from '@/types';
+import { getOptimizedImage } from '@/lib/images';
 
 interface VenueDiscoveryCardProps {
     venue: VenueResponse;
@@ -17,7 +18,7 @@ export function VenueDiscoveryCard({ venue }: VenueDiscoveryCardProps) {
                 <div className="relative h-48 w-full bg-gray-100 overflow-hidden">
                     {venue.image_url ? (
                         <img
-                            src={imageSrc}
+                            src={getOptimizedImage(imageSrc, 400)}
                             alt={venue.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />

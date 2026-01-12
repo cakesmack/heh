@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { venuesAPI } from '@/lib/api';
 import { VenueResponse } from '@/types';
+import { getOptimizedImage } from '@/lib/images';
 
 export default function FeaturedVenues() {
     const [venues, setVenues] = useState<VenueResponse[]>([]);
@@ -78,11 +79,11 @@ export default function FeaturedVenues() {
                         <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden bg-white shadow-lg border-4 border-white group-hover:border-emerald-200 group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
                             {venue.image_url ? (
                                 <Image
-                                    src={venue.image_url}
+                                    src={getOptimizedImage(venue.image_url, 400)}
                                     alt={venue.name}
                                     fill
                                     className="object-cover"
-                                    sizes="(max-width: 768px) 256px, 320px"
+                                    sizes="400px"
                                 />
                             ) : (
                                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">

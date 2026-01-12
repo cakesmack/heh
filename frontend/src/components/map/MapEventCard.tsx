@@ -2,6 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { EventResponse } from '@/types';
+import { getOptimizedImage } from '@/lib/images';
 
 interface MapEventCardProps {
     event: EventResponse;
@@ -33,7 +34,7 @@ export default function MapEventCard({
             <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
                 {event.image_url ? (
                     <Image
-                        src={event.image_url}
+                        src={getOptimizedImage(event.image_url, 200)}
                         alt={event.title}
                         fill
                         className="object-cover"

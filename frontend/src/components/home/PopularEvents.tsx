@@ -9,6 +9,7 @@ import { EventResponse } from '@/types';
 import EventCardSkeleton from '@/components/events/EventCardSkeleton';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getOptimizedImage } from '@/lib/images';
 
 // Helper: Format event date with multi-day support
 function formatEventDate(event: EventResponse): string {
@@ -109,11 +110,11 @@ export default function PopularEvents() {
                         <div className="relative aspect-[2/3] rounded-xl md:rounded-none overflow-hidden bg-stone-800 shadow-2xl border border-white/5 group-hover:border-white/20 transition-all duration-500">
                             {event.image_url ? (
                                 <Image
-                                    src={event.image_url}
+                                    src={getOptimizedImage(event.image_url, 500)}
                                     alt={event.title}
                                     fill
                                     className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out opacity-80 group-hover:opacity-100"
-                                    sizes="256px"
+                                    sizes="500px"
                                 />
                             ) : (
                                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-emerald-900 opacity-60" />

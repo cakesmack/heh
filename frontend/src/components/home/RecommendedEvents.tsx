@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { recommendationsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
+import { getOptimizedImage } from '@/lib/images';
 
 // Compact card variant for recommended events - image and title only
 function CompactEventCard({ event }: { event: EventResponse }) {
@@ -11,7 +12,7 @@ function CompactEventCard({ event }: { event: EventResponse }) {
             <div className="relative overflow-hidden rounded-xl md:rounded-none">
                 <div className="aspect-[4/3] overflow-hidden">
                     <img
-                        src={event.image_url || '/images/event-placeholder.jpg'}
+                        src={getOptimizedImage(event.image_url || '/images/event-placeholder.jpg', 400)}
                         alt={event.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
