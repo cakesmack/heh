@@ -155,16 +155,7 @@ export default function PromoteEventPage() {
     );
   }
 
-  if (!isOwner) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">You can only promote your own events</p>
-          <Link href={`/events/${id}`} className="text-emerald-600 hover:underline">Back to event</Link>
-        </div>
-      </div>
-    );
-  }
+  // REMOVED isOwner restriction block to allow universal promotion
 
   return (
     <>
@@ -179,7 +170,10 @@ export default function PromoteEventPage() {
             <Link href={`/events/${id}`} className="text-emerald-600 hover:underline text-sm mb-2 inline-block">
               &larr; Back to event
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Promote Your Event</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isOwner ? "Promote Your Event" : "Sponsor This Event"}
+            </h1>
+
             <p className="text-gray-600 mt-1">{event.title}</p>
           </div>
 

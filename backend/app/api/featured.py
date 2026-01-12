@@ -172,13 +172,14 @@ def create_featured_checkout(
     # Normalize event ID (remove dashes if present)
     event_id = request.event_id.replace("-", "") if "-" in request.event_id else request.event_id
 
-    # Verify event exists and user owns it
+    # Verify event exists
     event = session.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    if event.organizer_id != current_user.id and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Not your event")
+    # Allow any logged-in user to promote/sponsor an event
+    # The payer will be recorded in the Booking via current_user.id
+
 
     try:
         result = create_checkout_session(
