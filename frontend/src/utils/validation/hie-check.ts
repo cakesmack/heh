@@ -6,45 +6,63 @@
 export function isHIERegion(postcode: string): boolean {
     if (!postcode) return false;
 
-    // Normalize: remove spaces and uppercase
-    const cleanPostcode = postcode.replace(/\s+/g, '').toUpperCase();
+    // 1. Clean and Isolate Outward Code
+    // We want the "Area" and "District" (e.g., "PH22").
+    // UK Postcodes are usually "Outward Inward" (e.g., "PH22 1RH").
+    const upper = postcode.toUpperCase().trim();
+    let outwardCode = '';
 
-    // Extract prefix (letters) and district (first set of numbers)
-    // Example: IV1 1AA -> IV1 -> Prefix: IV, District: 1
-    // Example: PH33 6SA -> PH33 -> Prefix: PH, District: 33
-    // Example: ZE1 0AA -> ZE1 -> Prefix: ZE, District: 1
+    if (upper.includes(' ')) {
+        // Best case: User/Google provided a space. "PH22 1RH" -> "PH22"
+        outwardCode = upper.split(' ')[0];
+    } else {
+        // Fallback: No space. "PH221RH".
+        // The "Inward Code" is always the last 3 chars (Digit, Letter, Letter).
+        // If length > 3, we slice off the last 3.
+        // If length <= 4 (e.g., "IV1"), it might just be the outward code being typed.
+        if (upper.length > 4) {
+            outwardCode = upper.slice(0, -3);
+        } else {
+            outwardCode = upper;
+        }
+    }
 
-    const match = cleanPostcode.match(/^([A-Z]{1,2})(\d+)/);
+    // 2. Parse Area and District
+    // Matches: "PH" (Area) and "22" (District) from "PH22"
+    const match = outwardCode.match(/^([A-Z]{1,2})(\d{1,2})/);
     if (!match) return false;
 
-    const prefix = match[1];
-    const district = parseInt(match[2], 10);
+    const prefix = match[1]; // e.g., "PH"
+    const district = parseInt(match[2], 10); // e.g., 22
 
-    // 1. Allow All: Prefixes IV, HS, KW, ZE
-    const allowedPrefixes = ['IV', 'HS', 'KW', 'ZE'];
-    if (allowedPrefixes.includes(prefix)) {
+    // 3. Validation Logic (Strict List)
+
+    // Group 1: Whole Areas
+    // IV (Inverness), KW (Wick/Thurso), HS (Hebrides), ZE (Shetland)
+    const allowedAll = ['IV', 'HS', 'KW', 'ZE'];
+    if (allowedAll.includes(prefix)) {
         return true;
     }
 
-    // 2. PH (Perth/Highland): Allow Districts 19 - 50
+    // Group 2: PH (Perth/Highlands)
+    // Allowed: PH19-26, PH30-41
     if (prefix === 'PH') {
-        return district >= 19 && district <= 50;
+        if (district >= 19 && district <= 26) return true;
+        if (district >= 30 && district <= 41) return true;
+        return false;
     }
 
-    // 3. PA (Argyll/Isles): Allow Districts 20 - 78
+    // Group 3: PA (Argyll/Isles)
+    // Allowed: PA20-78 (Includes PA20-40 and PA41-78)
     if (prefix === 'PA') {
         return district >= 20 && district <= 78;
     }
 
-    // 4. AB (Moray/Speyside): Allow Districts 37, 38, 44, 45, 51-56
-    if (prefix === 'AB') {
-        const allowedAB = [37, 38, 44, 45, 51, 52, 53, 54, 55, 56];
-        return allowedAB.includes(district);
-    }
-
-    // 5. KA (Islands): Allow Districts 27 (Arran) and 28 (Cumbrae)
+    // Group 4: KA (Arran/Cumbrae)
+    // Allowed: KA27 only (Arran)
+    // Note: User prompt "Optional: KA27". Including it as requested.
     if (prefix === 'KA') {
-        return district === 27 || district === 28;
+        return district === 27;
     }
 
     return false;
