@@ -4,6 +4,7 @@ import { EventResponse } from '@/types';
 import { Button } from '@/components/common/Button';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 import { stripHtml } from '@/lib/stringUtils';
+import { getOptimizedImage } from '@/lib/images';
 
 // Helper: Format event date with multi-day support
 function formatEventDate(event: EventResponse, options?: { long?: boolean }): string {
@@ -145,7 +146,7 @@ export default function MagazineGrid({
                         <div className="relative h-48 rounded-xl overflow-hidden shadow-sm bg-stone-800 group hover:scale-[1.02] transition-transform duration-300">
                             {/* Background Image */}
                             <img
-                                src={event.image_url || '/images/event-placeholder.jpg'}
+                                src={getOptimizedImage(event.image_url || '/images/event-placeholder.jpg', 800)}
                                 alt={event.title}
                                 className="absolute inset-0 w-full h-full object-cover"
                             />
@@ -203,7 +204,7 @@ export default function MagazineGrid({
                             >
                                 <Link href={`/events/${event.id}`} className="block w-full h-full relative">
                                     <img
-                                        src={event.image_url || '/images/event-placeholder.jpg'}
+                                        src={getOptimizedImage(event.image_url || '/images/event-placeholder.jpg', 800)}
                                         alt={event.title}
                                         className="w-full h-full object-cover transition-transform duration-1000 ease-in-out group-hover:scale-105"
                                     />
@@ -291,7 +292,7 @@ export default function MagazineGrid({
                     <div key={event.id} className="relative group h-[300px] rounded-xl md:rounded-none overflow-hidden col-span-1 hover:scale-[1.02] transition-transform duration-300">
                         <Link href={`/events/${event.id}`} className="block w-full h-full relative z-10">
                             <img
-                                src={event.image_url || '/images/event-placeholder.jpg'}
+                                src={getOptimizedImage(event.image_url || '/images/event-placeholder.jpg', 500)}
                                 alt={event.title}
                                 className="w-full h-full object-cover transition-transform duration-1000 ease-in-out group-hover:scale-110"
                             />

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { EventResponse } from '@/types';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
+import { getOptimizedImage } from '@/lib/images';
 
 interface SmallEventCardProps {
     event: EventResponse;
@@ -27,7 +28,7 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
                 {/* Image Background */}
                 {event.image_url ? (
                     <Image
-                        src={event.image_url}
+                        src={getOptimizedImage(event.image_url, 400)}
                         alt={event.title}
                         fill
                         className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"

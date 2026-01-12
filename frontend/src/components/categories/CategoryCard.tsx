@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Category } from '@/types';
+import { getOptimizedImage } from '@/lib/images';
 
 interface CategoryCardProps {
     category: Category;
@@ -19,7 +20,7 @@ export default function CategoryCard({ category }: CategoryCardProps) {
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-in-out group-hover:scale-110"
                 style={{
                     backgroundImage: category.image_url
-                        ? `url(${category.image_url})`
+                        ? `url(${getOptimizedImage(category.image_url, 400)})`
                         : 'url(/images/category-placeholder.jpg)',
                 }}
             />

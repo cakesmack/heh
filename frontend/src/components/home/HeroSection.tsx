@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { HeroSlot, ActiveFeatured } from '@/types';
 import { heroAPI, api } from '@/lib/api';
+import { getOptimizedImage } from '@/lib/images';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 
@@ -97,7 +98,6 @@ export default function HeroSection() {
     const currentSlide = slides[currentIndex];
     const isWelcome = isWelcomeSlide(currentSlide);
 
-    // Extract display data based on type
     const title = isWelcome
         ? (currentSlide.title_override || 'Discover the Highlands')
         : (currentSlide as ActiveFeatured).event_title;
@@ -122,9 +122,11 @@ export default function HeroSection() {
         >
             {/* Background Images with Crossfade */}
             {slides.map((slide, index) => {
-                const img = isWelcomeSlide(slide)
-                    ? (slide.image_override || '/images/hero-bg.jpg')
-                    : (slide.event_image_url || '/images/hero-bg.jpg');
+                const rawImg = isWelcomeSlide(slide)
+                    ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
+                    : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
+
+                const img = getOptimizedImage(rawImg, 1280);
 
                 return (
                     <div

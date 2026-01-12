@@ -11,6 +11,7 @@ import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 import { stripHtml } from '@/lib/stringUtils';
+import { getOptimizedImage } from '@/lib/images';
 
 interface EventCardProps {
   event: EventResponse;
@@ -56,7 +57,7 @@ export function EventCard({ event }: EventCardProps) {
         {event.image_url && (
           <div className="relative h-48 bg-gray-200">
             <img
-              src={event.image_url}
+              src={getOptimizedImage(event.image_url, 400)}
               alt={event.title}
               className="w-full h-full object-cover"
             />
