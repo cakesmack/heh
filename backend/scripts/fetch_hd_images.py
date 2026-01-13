@@ -127,29 +127,46 @@ def fetch_hd_images():
 
                 soup = BeautifulSoup(resp.content, 'html.parser')
                 
-                # 1. Extraction Logic: itemprop='image'
-                img_tag = soup.find('img', attrs={'itemprop': 'image'})
+                # 1. Extraction Logic: Prioritize Parent Container
+                # "o-grid__item o-grid__item--full o-grid__item--first"
                 high_res_url = None
                 
-                if img_tag:
-                    high_res_url = img_tag.get('src')
-                    logger.info("  Found via itemprop='image'")
+                parent_container = soup.find('div', class_='o-grid__item o-grid__item--full o-grid__item--first')
+                if parent_container:
+                    img_tag = parent_container.find('img')
+                    if img_tag:
+                         high_res_url = img_tag.get('src')
+                         logger.info("  Found via Parent Container")
                 
-                # Fallback: og:image
+                # 2. Fallback: itemprop='image'
+                if not high_res_url:
+                    img_tag = soup.find('img', attrs={'itemprop': 'image'})
+                    if img_tag:
+                        high_res_url = img_tag.get('src')
+                        logger.info("  Found via Fallback (itemprop)")
+                
+                # 3. Fallback: og:image (Previous safety net)
                 if not high_res_url:
                      meta_tag = soup.find('meta', property='og:image')
                      if meta_tag:
                          high_res_url = meta_tag.get('content')
-                         logger.info("  Found via meta og:image")
+                         logger.info("  Found via Fallback (og:image)")
 
                 if not high_res_url:
-                    logger.warning("  ⚠️ No HD image found (checked itemprop and og:image).")
+                    logger.warning("  ⚠️ No HD image found (checked parent, itemprop, and og:image).")
                     error_count += 1
                     continue
                 
                 # Handle relative URLs
                 if high_res_url.startswith('/'):
                     high_res_url = f"https://eden-court.co.uk{high_res_url}"
+                
+                # 4. Blacklist Check (Generic Placeholders)
+                # Ignore images with "380_PR_SIX" or "Pamela-Raith"
+                if "380_PR_SIX" in high_res_url or "Pamela-Raith" in high_res_url:
+                     logger.warning(f"  ⚠️ Skipped Blacklisted Image: {high_res_url.split('/')[-1]}")
+                     skipped_count += 1
+                     continue
                 
                 # 2. Duplicate Guard
                 if last_image_url and high_res_url == last_image_url:
