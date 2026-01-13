@@ -34,13 +34,13 @@ const features = [
 ];
 
 const FeatureCard = ({ icon, title, subtitle, description }: typeof features[0]) => (
-    <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm">
+    <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm h-full w-full">
         <div className="bg-emerald-50 p-4 rounded-2xl mb-6">
             {icon}
         </div>
         <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">{title}</h3>
         <p className="text-emerald-700 font-medium mb-4">{subtitle}</p>
-        <p className="text-gray-600 leading-relaxed text-sm md:text-base">
+        <p className="text-gray-600 leading-relaxed text-sm md:text-base whitespace-normal">
             {description}
         </p>
     </div>
@@ -86,7 +86,7 @@ const Features = () => {
                         {features.map((feature, idx) => (
                             <div
                                 key={idx}
-                                className="min-w-[85vw] snap-center flex-shrink-0"
+                                className="w-[85vw] snap-center flex-shrink-0"
                             >
                                 <FeatureCard {...feature} />
                             </div>
@@ -109,8 +109,8 @@ const Features = () => {
                                     }
                                 }}
                                 className={`w-2 h-2 rounded-full transition-colors ${idx === activeIndex
-                                        ? 'bg-emerald-600'
-                                        : 'bg-gray-300 hover:bg-gray-400'
+                                    ? 'bg-emerald-600'
+                                    : 'bg-gray-300 hover:bg-gray-400'
                                     }`}
                                 aria-label={`Go to slide ${idx + 1}`}
                             />
