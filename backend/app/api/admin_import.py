@@ -32,7 +32,8 @@ class SingleEventImportRequest(BaseModel):
     price_display: str
     min_price: float
     min_age: int
-    venue_id: str
+    venue_id: Optional[str] = None
+    location_name: Optional[str] = None
     category_id: str
     raw_showtimes: List[str] = []
 
@@ -92,16 +93,27 @@ def import_single_event(
         raise HTTPException(status_code=403, detail="Admin access required")
 
     # 1. Duplicate Check
-    # Check if Title + Venue + StartDate already exists
-    normalized_venue_id = normalize_uuid(req.venue_id)
+    # Check based on venue_id or location_name
+    normalized_venue_id = normalize_uuid(req.venue_id) if req.venue_id else None
     
-    existing = session.exec(
-        select(Event).where(
-            Event.venue_id == normalized_venue_id,
-            Event.title == req.title,
-            Event.date_start == req.date_start
-        )
-    ).first()
+    if normalized_venue_id:
+        # Venue-based duplicate check
+        existing = session.exec(
+            select(Event).where(
+                Event.venue_id == normalized_venue_id,
+                Event.title == req.title,
+                Event.date_start == req.date_start
+            )
+        ).first()
+    else:
+        # Location-based duplicate check (custom location)
+        existing = session.exec(
+            select(Event).where(
+                Event.location_name == req.location_name,
+                Event.title == req.title,
+                Event.date_start == req.date_start
+            )
+        ).first()
     
     if existing:
         return {"skipped": True, "reason": "duplicate", "event_id": existing.id}
@@ -137,7 +149,8 @@ def import_single_event(
         description=req.description,
         date_start=req.date_start,
         date_end=req.date_end,
-        venue_id=normalized_venue_id,
+        venue_id=normalized_venue_id,  # Will be None for custom locations
+        location_name=req.location_name if not normalized_venue_id else None,
         category_id=normalize_uuid(req.category_id),
         image_url=final_image_url,
         ticket_url=req.ticket_url,
@@ -145,7 +158,7 @@ def import_single_event(
         min_price=req.min_price,
         min_age=req.min_age,
         organizer_id=current_user.id,
-        status="published" # Admin imports are auto-published
+        status="published"  # Admin imports are auto-published
     )
     
     session.add(new_event)
