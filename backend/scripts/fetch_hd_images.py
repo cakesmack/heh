@@ -91,6 +91,8 @@ def fetch_hd_images():
         # Or Just query one by one to avoid stale data if script runs long?
         # Let's query one by one for simplicity and safety.
 
+        last_image_url = None
+
         for i, item in enumerate(source_data):
             progress = f"{i+1}/{total_items}"
             title = item.get('title')
@@ -101,14 +103,9 @@ def fetch_hd_images():
                 continue
                 
             # Find event in DB
-            # Note: Titles might not match exactly if there were encoding differences, but user implies 1:1 match.
-            # Using simple exact match for now.
             event = session.exec(select(Event).where(Event.title == title)).first()
             
             if not event:
-                 # Try approximate match or skip? User said "match title".
-                 # Optional: Log debug
-                 # logger.debug(f"[{progress}] Skipped: Event '{title}' not found in DB")
                  skipped_count += 1
                  continue
 
@@ -121,7 +118,6 @@ def fetch_hd_images():
             
             try:
                 # Scrape Content
-                logger.info(f"  Fetching: {event_url}")
                 resp = requests.get(event_url, headers=headers, timeout=10)
                 
                 if resp.status_code != 200:
@@ -131,34 +127,49 @@ def fetch_hd_images():
 
                 soup = BeautifulSoup(resp.content, 'html.parser')
                 
-                # Find img with class 'o-image__full'
-                img_tag = soup.find('img', class_='o-image__full')
+                # 1. Extraction Logic: itemprop='image'
+                img_tag = soup.find('img', attrs={'itemprop': 'image'})
+                high_res_url = None
                 
-                if not img_tag:
-                    logger.warning("  No 'o-image__full' tag found on page.")
-                    # Fallback? No, user specified this class specifically.
-                    error_count += 1
-                    continue
+                if img_tag:
+                    high_res_url = img_tag.get('src')
+                    logger.info("  Found via itemprop='image'")
                 
-                # Extract SRC
-                # Check 'src' or 'data-src' or 'srcset'
-                # Usually standard img tag has src.
-                high_res_url = img_tag.get('src')
-                
+                # Fallback: og:image
                 if not high_res_url:
-                    logger.warning("  Image tag found but no 'src' attribute.")
+                     meta_tag = soup.find('meta', property='og:image')
+                     if meta_tag:
+                         high_res_url = meta_tag.get('content')
+                         logger.info("  Found via meta og:image")
+
+                if not high_res_url:
+                    logger.warning("  ⚠️ No HD image found (checked itemprop and og:image).")
                     error_count += 1
                     continue
                 
-                # Handle relative URLs if any (though usually Cloudfront/CDN are absolute)
+                # Handle relative URLs
                 if high_res_url.startswith('/'):
-                    # Eden Court domain
                     high_res_url = f"https://eden-court.co.uk{high_res_url}"
                 
-                logger.info(f"  Found HD Image: {high_res_url}")
+                # 2. Duplicate Guard
+                if last_image_url and high_res_url == last_image_url:
+                    logger.warning("  ⚠️ Skipped generic duplicate image.")
+                    # Do not update last_image_url to break the chain if it was a generic one? 
+                    # Actually, if we hit a run of generics, we want to skip all of them.
+                    # So comparing to the *immediately previous* one is correct.
+                    # But if the first one was valid, and the second one is the same, we skip the second.
+                    # If the third one is ALSO the same, we skip it.
+                    # So yes, logic holds.
+                    skipped_count += 1
+                    continue
+
+                last_image_url = high_res_url
+                
+                # 3. Enhanced Logging
+                filename = high_res_url.split('/')[-1]
+                logger.info(f"  Found: {filename}")
                 
                 # Upload to Cloudinary
-                # Crucial: NO transformations
                 upload_start = time.time()
                 upload_result = cloudinary.uploader.upload(
                     high_res_url,
