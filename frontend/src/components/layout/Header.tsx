@@ -56,9 +56,9 @@ export function Header() {
     <header className={`bg-highland-green border-b border-stone-dark/20 sticky top-0 z-50 shadow-soft transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-warm-white/20 group-hover:border-golden-heather transition-colors">
+          {/* Logo + Title (grouped) */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-warm-white/20 group-hover:border-golden-heather transition-colors flex-shrink-0">
               <Image
                 src="/logo_knot.jpg"
                 alt="Highland Events Hub"
@@ -67,7 +67,7 @@ export function Header() {
                 sizes="40px"
               />
             </div>
-            <span className="text-xl font-bold text-warm-white hidden sm:block">
+            <span className="text-lg sm:text-xl font-bold text-warm-white">
               Highland Events Hub
             </span>
           </Link>
@@ -190,14 +190,8 @@ export function Header() {
             )}
           </nav>
 
-          {/* Mobile Header Row - Logo, Brand, Search, Notifications */}
+          {/* Mobile Right Side Icons */}
           <div className="md:hidden flex items-center gap-2">
-            {/* Brand Name - visible on mobile */}
-            <span className="text-white font-bold text-sm">Highland Events Hub</span>
-
-            {/* Spacer */}
-            <div className="flex-grow" />
-
             {/* Search Icon */}
             <button
               onClick={openMobileSearch}
