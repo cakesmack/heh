@@ -44,6 +44,7 @@ export default function EditEventPage() {
         frequency: 'WEEKLY',
         ends_on: 'never', // 'never' | 'date'
         recurrence_end_date: '',
+        weekdays: [] as number[],  // 0=Mon, 1=Tue, ... 6=Sun
     });
 
     const [categories, setCategories] = useState<Category[]>([]);
@@ -61,6 +62,7 @@ export default function EditEventPage() {
     const [isMultiSession, setIsMultiSession] = useState(false);
     const [noEndTime, setNoEndTime] = useState(false);
     const [isLocationValid, setIsLocationValid] = useState(true);
+    const [originalIsRecurring, setOriginalIsRecurring] = useState(false);  // Track if event was originally recurring
 
     // Fetch initial data
     useEffect(() => {
@@ -110,7 +112,11 @@ export default function EditEventPage() {
                     frequency: 'WEEKLY',
                     ends_on: 'never',
                     recurrence_end_date: '',
+                    weekdays: [],  // Existing events don't have weekdays stored, default to empty
                 });
+
+                // Track original recurring status for UI logic
+                setOriginalIsRecurring(eventData.is_recurring || false);
 
                 // Hydrate participating venues
                 if (eventData.participating_venues && eventData.participating_venues.length > 0) {
@@ -861,8 +867,80 @@ export default function EditEventPage() {
                             <p className="mt-1 text-sm text-gray-500">Enter 0 for All Ages, or minimum age required.</p>
                         </div>
 
-                        {/* Stop Recurring Series */}
-                        {formData.is_recurring && (
+                        {/* Recurring Event Options */}
+                        {!formData.is_recurring && (
+                            <div className="space-y-4">
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        id="is_recurring"
+                                        checked={formData.is_recurring}
+                                        onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                                        className="rounded text-emerald-600"
+                                    />
+                                    <label htmlFor="is_recurring" className="text-sm">Make this a recurring event</label>
+                                </div>
+                            </div>
+                        )}
+
+                        {formData.is_recurring && !originalIsRecurring && (
+                            <div className="pl-6 border-l-2 border-emerald-100 space-y-4">
+                                <select
+                                    name="frequency"
+                                    value={formData.frequency}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                >
+                                    <option value="WEEKLY">Weekly</option>
+                                    <option value="BIWEEKLY">Bi-Weekly</option>
+                                    <option value="MONTHLY">Monthly</option>
+                                </select>
+
+                                {/* Weekday Selector */}
+                                {(formData.frequency === 'WEEKLY' || formData.frequency === 'BIWEEKLY') && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Repeat on these days:</label>
+                                        <div className="flex gap-2">
+                                            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newWeekdays = formData.weekdays.includes(idx)
+                                                            ? formData.weekdays.filter(d => d !== idx)
+                                                            : [...formData.weekdays, idx];
+                                                        setFormData({ ...formData, weekdays: newWeekdays });
+                                                    }}
+                                                    className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${formData.weekdays.includes(idx)
+                                                        ? 'bg-emerald-600 text-white'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    {day}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">Select one or more days</p>
+                                    </div>
+                                )}
+
+                                {/* Ends On Logic */}
+                                <div className="space-y-2">
+                                    <label className="flex items-center">
+                                        <input type="radio" value="never" checked={formData.ends_on === 'never'} onChange={() => setFormData({ ...formData, ends_on: 'never' })} className="mr-2" /> Never (90 days)
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input type="radio" value="date" checked={formData.ends_on === 'date'} onChange={() => setFormData({ ...formData, ends_on: 'date' })} className="mr-2" /> On Date
+                                    </label>
+                                    {formData.ends_on === 'date' && (
+                                        <Input type="date" name="recurrence_end_date" value={formData.recurrence_end_date} onChange={handleChange} />
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Stop Recurring Series - for existing recurring events */}
+                        {formData.is_recurring && originalIsRecurring && (
                             <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                                 <h3 className="text-sm font-medium text-purple-800 mb-2">Recurring Event</h3>
                                 <p className="text-sm text-purple-600 mb-3">
