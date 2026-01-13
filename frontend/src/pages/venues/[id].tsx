@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
+import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { VenueResponse, EventResponse, PromotionResponse, VenueStaffResponse } from '@/types';
 import ReportModal from '@/components/common/ReportModal';
 import { Card } from '@/components/common/Card';
@@ -42,6 +43,11 @@ export default function VenueDetailPage() {
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'events' | 'promotions' | 'about' | 'staff'>('events');
+
+  // Pagination State
+  const [hasMoreEvents, setHasMoreEvents] = useState(true);
+  const [isLoadingMoreEvents, setIsLoadingMoreEvents] = useState(false);
+  const { ref: observerRef, isIntersecting } = useIntersectionObserver({ threshold: 0.1 });
 
   const isOwner = currentUser && (venue?.owner_id === currentUser.id || currentUser.is_admin);
 
@@ -108,8 +114,9 @@ export default function VenueDetailPage() {
 
         // Fetch events at this venue
         try {
-          const eventsData = await api.events.list({ venue_id: id as string });
+          const eventsData = await api.events.list({ venue_id: id as string, limit: 20 });
           setEvents(eventsData.events);
+          setHasMoreEvents(eventsData.events.length >= 20);
         } catch (err) {
           console.error('Error fetching events:', err);
         }
@@ -130,6 +137,33 @@ export default function VenueDetailPage() {
 
     fetchVenueData();
   }, [id]);
+
+  // Infinite Scroll Handler
+  useEffect(() => {
+    if (isIntersecting && hasMoreEvents && !isLoadingMoreEvents && !isLoading && activeTab === 'events') {
+      loadMoreEvents();
+    }
+  }, [isIntersecting, hasMoreEvents, isLoadingMoreEvents, isLoading, activeTab]);
+
+  const loadMoreEvents = async () => {
+    if (!id || isLoadingMoreEvents) return;
+    setIsLoadingMoreEvents(true);
+    try {
+      const skip = events.length;
+      const res = await api.events.list({ venue_id: id as string, skip, limit: 20 });
+
+      if (res.events.length > 0) {
+        setEvents(prev => [...prev, ...res.events]);
+        if (res.events.length < 20) setHasMoreEvents(false);
+      } else {
+        setHasMoreEvents(false);
+      }
+    } catch (err) {
+      console.error('Error loading more events:', err);
+    } finally {
+      setIsLoadingMoreEvents(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -323,6 +357,13 @@ export default function VenueDetailPage() {
                   ) : (
                     <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
                       <p className="text-gray-500">No upcoming events scheduled.</p>
+                    </div>
+                  )}
+
+                  {/* Infinite Scroll Trigger */}
+                  {(hasMoreEvents || isLoadingMoreEvents) && events.length > 0 && (
+                    <div ref={observerRef} className="py-8 flex justify-center h-20">
+                      {isLoadingMoreEvents && <Spinner />}
                     </div>
                   )}
                 </div>

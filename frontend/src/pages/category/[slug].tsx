@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -20,8 +21,26 @@ export default function CategoryPage() {
     const [error, setError] = useState<string | null>(null);
 
     // Event fetching
-    const { events, total, isLoading: isLoadingEvents, error: eventsError, fetchEvents } = useEvents({ autoFetch: false });
+    const {
+        events,
+        total,
+        isLoading: isLoadingEvents,
+        isLoadingMore,
+        hasMore,
+        error: eventsError,
+        fetchEvents,
+        loadMore
+    } = useEvents({ autoFetch: false, limit: 20 });
     const [initialFilters, setInitialFilters] = useState<Partial<EventFilter>>({});
+
+    // Infinite Scroll
+    const { ref, isIntersecting } = useIntersectionObserver({ threshold: 0.1 });
+
+    useEffect(() => {
+        if (isIntersecting && hasMore && !isLoadingMore && !isLoadingEvents) {
+            loadMore();
+        }
+    }, [isIntersecting, hasMore, isLoadingMore, isLoadingEvents, loadMore]);
 
     // Category Pinned Events (paid featured)
     const [pinnedEvents, setPinnedEvents] = useState<EventResponse[]>([]);
@@ -320,6 +339,15 @@ export default function CategoryPage() {
                     </div>
 
                     <EventList events={events} isLoading={isLoadingEvents} error={eventsError} />
+
+                    {/* Infinite Scroll Trigger */}
+                    {!isLoadingEvents && !eventsError && (
+                        <div ref={ref} className="py-8 flex justify-center h-20">
+                            {isLoadingMore && (
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
