@@ -186,7 +186,7 @@ def list_events(
     venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
     include_past: bool = Query(False, description="Include past events"),
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=20, ge=1, le=1000),
     session: Session = Depends(get_session)
 ):
     """
