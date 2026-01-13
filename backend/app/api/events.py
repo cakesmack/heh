@@ -751,6 +751,8 @@ def create_event(
         organizer_profile_id=organizer_profile_id_normalized,
         recurrence_rule=recurrence_rule,
         is_recurring=event_data.is_recurring if event_data.is_recurring is not None else False,
+        # For recurring events, set recurrence_group_id to own ID (will be shared with children)
+        recurrence_group_id=normalize_uuid(uuid4()) if (event_data.is_recurring if event_data.is_recurring is not None else False) else None,
         # Status will be set below based on trust evaluation
         status="pending"
     )

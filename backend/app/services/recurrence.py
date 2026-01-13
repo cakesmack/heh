@@ -80,7 +80,8 @@ def generate_recurring_instances(
             # Recurrence linkage
             is_recurring=True,
             recurrence_rule=parent_event.recurrence_rule,
-            parent_event_id=parent_event.id
+            parent_event_id=parent_event.id,
+            recurrence_group_id=parent_event.recurrence_group_id or parent_event.id  # Share the group ID
         )
         
         session.add(instance)

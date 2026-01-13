@@ -149,6 +149,23 @@ def moderate_event(
         if event.organizer:
             event.organizer.trust_level = (event.organizer.trust_level or 0) + 1
             session.add(event.organizer)
+        
+        # If this event has a recurrence_group_id, approve ALL events in the group
+        if event.recurrence_group_id:
+            from sqlalchemy import and_
+            sibling_events = session.exec(
+                select(Event).where(
+                    and_(
+                        Event.recurrence_group_id == event.recurrence_group_id,
+                        Event.id != event.id,
+                        Event.status == "pending"
+                    )
+                )
+            ).all()
+            for sibling in sibling_events:
+                sibling.status = "published"
+                session.add(sibling)
+            logger.info(f"Approved {len(sibling_events)} sibling events in recurrence group {event.recurrence_group_id}")
     elif action == "reject":
         event.status = "rejected"
     else:
