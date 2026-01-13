@@ -103,6 +103,12 @@ async def lifespan(app: FastAPI):
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='receive_interest_notifications') THEN
                         ALTER TABLE users ADD COLUMN receive_interest_notifications BOOLEAN DEFAULT TRUE;
                     END IF;
+                    
+                    -- Recurring Event Group ID for linking recurring series
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='recurrence_group_id') THEN
+                        ALTER TABLE events ADD COLUMN recurrence_group_id VARCHAR(255);
+                        CREATE INDEX IF NOT EXISTS ix_events_recurrence_group_id ON events(recurrence_group_id);
+                    END IF;
                 END $$;
             """))
             conn.commit()
