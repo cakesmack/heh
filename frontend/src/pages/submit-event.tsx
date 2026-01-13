@@ -56,6 +56,7 @@ export default function SubmitEventPage() {
     frequency: 'WEEKLY',
     recurrence_end_date: '',
     ends_on: 'never',
+    weekdays: [] as number[],  // 0=Mon, 1=Tue, ... 6=Sun
     postcode: '',
     address: ''
   });
@@ -248,6 +249,7 @@ export default function SubmitEventPage() {
         is_recurring: formData.is_recurring,
         frequency: formData.is_recurring ? formData.frequency : undefined,
         recurrence_end_date: (formData.is_recurring && formData.ends_on === 'date') ? new Date(formData.recurrence_end_date).toISOString() : undefined,
+        weekdays: formData.is_recurring && formData.weekdays.length > 0 ? formData.weekdays : undefined,
         participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined,
         showtimes: showtimesPayload,
       };
@@ -686,9 +688,38 @@ export default function SubmitEventPage() {
                   <option value="BIWEEKLY">Bi-Weekly</option>
                   <option value="MONTHLY">Monthly</option>
                 </select>
+
+                {/* Weekday Selector - shown for Weekly/Bi-Weekly */}
+                {(formData.frequency === 'WEEKLY' || formData.frequency === 'BIWEEKLY') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Repeat on these days:</label>
+                    <div className="flex gap-2">
+                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const newWeekdays = formData.weekdays.includes(idx)
+                              ? formData.weekdays.filter(d => d !== idx)
+                              : [...formData.weekdays, idx];
+                            setFormData({ ...formData, weekdays: newWeekdays });
+                          }}
+                          className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${formData.weekdays.includes(idx)
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Select one or more days</p>
+                  </div>
+                )}
+
                 {/* Ends On Logic */}
                 <div className="space-y-2">
-                  <label className="flex items-center"><input type="radio" value="never" checked={formData.ends_on === 'never'} onChange={() => setFormData({ ...formData, ends_on: 'never' })} className="mr-2" /> Never</label>
+                  <label className="flex items-center"><input type="radio" value="never" checked={formData.ends_on === 'never'} onChange={() => setFormData({ ...formData, ends_on: 'never' })} className="mr-2" /> Never (90 days)</label>
                   <label className="flex items-center"><input type="radio" value="date" checked={formData.ends_on === 'date'} onChange={() => setFormData({ ...formData, ends_on: 'date' })} className="mr-2" /> On Date</label>
                   {formData.ends_on === 'date' && <Input type="date" name="recurrence_end_date" value={formData.recurrence_end_date} onChange={handleChange} />}
                 </div>

@@ -55,6 +55,7 @@ class EventCreate(BaseModel):
     is_recurring: Optional[bool] = False
     frequency: Optional[str] = Field(None, description="WEEKLY, BIWEEKLY, MONTHLY")
     recurrence_end_date: Optional[datetime] = None
+    weekdays: Optional[List[int]] = Field(None, description="Days of the week for recurring events (0=Mon, 6=Sun)")
     # recurrence_rule is now internal/derived, but we can keep it for flexibility if needed, 
     # though the user request implies the backend handles the translation. 
     # Let's keep it optional but prioritize frequency.

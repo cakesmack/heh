@@ -845,14 +845,74 @@ def create_event(
     session.commit()
     session.refresh(new_event)
 
-    # Generate initial instances if recurring
-    if new_event.is_recurring and new_event.recurrence_rule:
+    # Generate recurring event instances based on weekdays selection
+    if new_event.is_recurring and event_data.weekdays and len(event_data.weekdays) > 0:
+        try:
+            from datetime import timedelta
+            
+            # Determine the end date for recurrence generation
+            end_date = event_data.recurrence_end_date
+            if not end_date:
+                # Default to 90 days from start if no end date specified
+                end_date = event_data.date_start + timedelta(days=90)
+            
+            # Calculate event duration
+            duration = event_data.date_end - event_data.date_start
+            
+            # The parent event's recurrence_group_id (set during creation)
+            group_id = new_event.recurrence_group_id
+            
+            # Iterate through each day in the range
+            current_date = event_data.date_start + timedelta(days=1)  # Start from next day
+            child_events = []
+            
+            while current_date <= end_date:
+                # Check if this day's weekday is in selected weekdays
+                if current_date.weekday() in event_data.weekdays:
+                    # Create child event for this date
+                    child_event = Event(
+                        id=normalize_uuid(uuid4()),
+                        title=new_event.title,
+                        description=new_event.description,
+                        date_start=current_date,
+                        date_end=current_date + duration,
+                        venue_id=new_event.venue_id,
+                        location_name=new_event.location_name,
+                        latitude=new_event.latitude,
+                        longitude=new_event.longitude,
+                        geohash=new_event.geohash,
+                        category_id=new_event.category_id,
+                        price=new_event.price,
+                        price_display=new_event.price_display,
+                        min_price=new_event.min_price,
+                        image_url=new_event.image_url,
+                        ticket_url=new_event.ticket_url,
+                        age_restriction=new_event.age_restriction,
+                        min_age=new_event.min_age,
+                        organizer_id=new_event.organizer_id,
+                        organizer_profile_id=new_event.organizer_profile_id,
+                        status=new_event.status,  # Inherit status (pending/published)
+                        is_recurring=True,
+                        parent_event_id=new_event.id,
+                        recurrence_group_id=group_id,
+                    )
+                    session.add(child_event)
+                    child_events.append(child_event)
+                
+                current_date += timedelta(days=1)
+            
+            if child_events:
+                session.commit()
+                logger.info(f"Generated {len(child_events)} recurring instances for event {new_event.id}")
+        except Exception as e:
+            logger.error(f"Error generating recurring instances for {new_event.id}: {e}")
+            # Don't fail the request, just log it
+    elif new_event.is_recurring and new_event.recurrence_rule:
+        # Fallback to old RRULE-based generation if weekdays not provided
         try:
             generate_recurring_instances(session, new_event, window_days=90)
         except Exception as e:
             print(f"Error generating instances for {new_event.id}: {e}")
-            # Don't fail the request, just log it.
-            # The cron job can pick it up later or user can retry.
 
     # Send appropriate notifications based on approval status
     if current_user.email:
