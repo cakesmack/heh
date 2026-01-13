@@ -148,7 +148,7 @@ def import_single_event(
         title=req.title,
         description=req.description,
         date_start=req.date_start,
-        date_end=req.date_end,
+        date_end=req.date_end or req.date_start,  # Default to date_start (no specific end time)
         venue_id=normalized_venue_id,  # Will be None for custom locations
         location_name=req.location_name if not normalized_venue_id else None,
         category_id=normalize_uuid(req.category_id),
