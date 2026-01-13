@@ -29,9 +29,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Config
-# Note: User says file is "c:\Users\Craig\Desktop\projects\antigrav\heh\eden_court_full_dump.json"
-# So relative to backend/scripts (where this file is), it is ../../eden_court_full_dump.json
-JSON_FILE = backend_dir.parent / "eden_court_full_dump.json"
+# File is now located in the same directory as the script
+JSON_FILE = current_dir / "eden_court_full_dump.json"
 
 def is_cloudinary_configured() -> bool:
     """Check if Cloudinary is configured via Env vars."""

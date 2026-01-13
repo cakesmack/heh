@@ -1,0 +1,3079 @@
+[
+  {
+    "title": "RSNO Viennese Gala",
+    "url": "https://eden-court.co.uk/event/rsno-viennese-gala",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/523869/Viennese_Gala_25_26-1920x1080px_e41b1fc38f40fc2da3c0519111bcf629.jpg",
+    "start_time_iso": "2026-01-18T15:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sun 18 Jan",
+    "categories": [
+      "Classical"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 18 Jan at 3:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=193E90E5-555A-464C-9BE8-71D821F24558&returnTo",
+    "scraped_at": "2026-01-12 21:23:31"
+  },
+  {
+    "title": "Carlos Acosta’s Nutcracker in Havana",
+    "url": "https://eden-court.co.uk/event/carlos-acostas-nutcracker-in-havana",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/502687/NIH-Inverness-Web-image_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-01-20T19:30:00+00:00",
+    "end_time_iso": "2026-01-21T19:30:00+00:00",
+    "date_display": "Tue 20 – Wed 21 Jan",
+    "categories": [
+      "Dance"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 20 Jan at 7:30",
+      "Wed 21 Jan at 2:30",
+      "Wed 21 Jan at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=902BFD5B-AB18-46A8-8DF0-BCA880CDDCD2&returnTo",
+    "scraped_at": "2026-01-12 21:23:34"
+  },
+  {
+    "title": "Connor Burns: Gallus",
+    "url": "https://eden-court.co.uk/event/connor-burns-gallus",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/518951/2025-Connor-Burns-SOCIALS-ADMAT-1440x580_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-01-20T20:00:00+00:00",
+    "end_time_iso": "2026-01-23T20:00:00+00:00",
+    "date_display": "Tue 20 – Fri 23 Jan",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 20 Jan at 8:00",
+      "Wed 21 Jan at 8:00",
+      "Thu 22 Jan at 8:00",
+      "Fri 23 Jan at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=086D10D3-C197-47E9-9997-252D15342CCC&returnTo",
+    "scraped_at": "2026-01-12 21:23:38"
+  },
+  {
+    "title": "Hamza Yassin – My Life Behind The Lens",
+    "url": "https://eden-court.co.uk/event/hamza-yassin-my-life-behind-the-lens",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/513373/Hamza-Yassin-Image_ada2ab928ba714897ee18452bb1a00a0.jpg",
+    "start_time_iso": "2026-01-24T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 24 Jan",
+    "categories": [
+      "Talks / Special Events"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 24 Jan at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=E3A3ED5A-2DD8-4063-8164-B7D1F07C23F1&returnTo",
+    "scraped_at": "2026-01-12 21:23:41"
+  },
+  {
+    "title": "Craig Hill: Wait ‘Til You See My Entrance!",
+    "url": "https://eden-court.co.uk/event/craig-hill-wait-til-you-see-my-entrance-1",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/515895/2025-Craig-Hill.-Photo-by-Steve-Ullathorne.LANDSCAPE.MAIN_ffe56838374c7a75583e3d9da391c5f5.jpg",
+    "start_time_iso": "2026-01-24T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 24 Jan",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 24 Jan at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=887C6A8E-4F7A-48D8-A806-7D9E69B095C8&returnTo",
+    "scraped_at": "2026-01-12 21:23:45"
+  },
+  {
+    "title": "The Snow Queen",
+    "url": "https://eden-court.co.uk/event/the-snow-queen",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/478537/The-Snow-Queen-snip_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-01-28T19:30:00+00:00",
+    "end_time_iso": "2026-01-31T19:30:00+00:00",
+    "date_display": "Wed 28 – Sat 31 Jan",
+    "categories": [
+      "Talks / Special Events",
+      "Dance"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 28 Jan at 7:30",
+      "Thu 29 Jan at 2:30",
+      "Thu 29 Jan at 7:30",
+      "Fri 30 Jan at 6:30",
+      "Fri 30 Jan at 7:30",
+      "Sat 31 Jan at 1:00",
+      "Sat 31 Jan at 2:30",
+      "Sat 31 Jan at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=4C4B480C-C288-425A-9056-E897828AFE2A&returnTo",
+    "scraped_at": "2026-01-12 21:23:48"
+  },
+  {
+    "title": "Mark Black – Horrible Family",
+    "url": "https://eden-court.co.uk/event/mark-black-horrible-family",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/516925/Mark-Black-Horrible-Family_afd1853ac727aaf5a35b1cd350d6e4e4.jpeg",
+    "start_time_iso": "2026-01-31T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 31 Jan",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 31 Jan at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=1E884D42-19FA-4296-8F5D-1B468C586381&returnTo",
+    "scraped_at": "2026-01-12 21:23:50"
+  },
+  {
+    "title": "Money For Nothing Dire Straits Tribute",
+    "url": "https://eden-court.co.uk/event/money-for-nothing-dire-straits-tribute",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/518635/Facebook-banner-1_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-04T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Wed 4 Feb",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 4 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=61766FA9-0B05-4006-A142-E449088D8C13&returnTo",
+    "scraped_at": "2026-01-12 21:23:54"
+  },
+  {
+    "title": "LEO HOULDING: EXPOSED",
+    "url": "https://eden-court.co.uk/event/leo-houlding-exposed",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/522443/LH-EXPOSED-IMAGE_01d3cffb1e6bac2d9e12f674b864cc15.jpg",
+    "start_time_iso": "2026-02-04T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Wed 4 Feb",
+    "categories": [
+      "Talks / Special Events"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 4 Feb at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=157454FF-8FAC-41FF-A24A-76A4883F854C&returnTo",
+    "scraped_at": "2026-01-12 21:23:57"
+  },
+  {
+    "title": "The Magic of the Bee Gees",
+    "url": "https://eden-court.co.uk/event/the-magic-of-the-bee-gees",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/523873/TheMagicOfTheBeeGees-1920x1080_c0fe387310d35b87a12f3039f53da6da.jpg",
+    "start_time_iso": "2026-02-05T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Thu 5 Feb",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 5 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=82F77C56-14E4-4B11-84E7-C107798B2E90&returnTo",
+    "scraped_at": "2026-01-12 21:24:01"
+  },
+  {
+    "title": "Girls Night Oot 2! Heartbreaks and Promises",
+    "url": "https://eden-court.co.uk/event/girls-night-oot-2-heartbreaks-and-promises",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/525921/GNO2-Wide-image_5a6fd6b50c0f36b2b706f1f517743d56.png",
+    "start_time_iso": "2026-02-06T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Fri 6 Feb",
+    "categories": [
+      "Comedy",
+      "Musicals"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 6 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=18E263D1-1A15-4D06-94D2-CE9A0D3A64F8&returnTo",
+    "scraped_at": "2026-01-12 21:24:05"
+  },
+  {
+    "title": "Cocktails and Cabaret",
+    "url": "https://eden-court.co.uk/event/cocktails-and-cabaret",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/537181/COCKTAILS-AND-CABARET-Scarlet-Diamonte-1-Credit-Michael-Carver_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-06T19:30:00+00:00",
+    "end_time_iso": "2026-02-07T19:30:00+00:00",
+    "date_display": "Fri 6 – Sat 7 Feb",
+    "categories": [
+      "Talks / Special Events"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 6 Feb at 7:30",
+      "Sat 7 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/seatSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=0F490758-E2A1-4389-8283-1EF8A4C4C54F&returnTo",
+    "scraped_at": "2026-01-12 21:24:08"
+  },
+  {
+    "title": "The Little Wander Comedy Gala",
+    "url": "https://eden-court.co.uk/event/the-little-wander-comedy-gala",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/571719/Ticket-Page_62b0b63254f709dbb19617a1cf1d90dc.jpg",
+    "start_time_iso": "2026-02-07T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 7 Feb",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 7 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=9BFD94CD-EBEE-49CA-8082-F7FF08035FAF&returnTo",
+    "scraped_at": "2026-01-12 21:24:12"
+  },
+  {
+    "title": "An Evening with Jeff Stelling hosted by Bianca Westwood",
+    "url": "https://eden-court.co.uk/event/an-evening-with-jeff-stelling-hosted-by-bianca-westwood",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/522019/1200-x-565-Main-Show-Image-1_8a50371aa79f1bbb32236c2d4f8a9117.jpg",
+    "start_time_iso": "2026-02-11T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Wed 11 Feb",
+    "categories": [
+      "Talks / Special Events"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 11 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=65A1A4EF-5242-45F3-BD14-8AADCBDFF6EB&returnTo",
+    "scraped_at": "2026-01-12 21:24:18"
+  },
+  {
+    "title": "The Ultimate Boyband Party Show",
+    "url": "https://eden-court.co.uk/event/the-ultimate-boyband-party-show",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/506497/The-Ultimate-Boyband-Party-Show_97ad865a02989ba785009719837e605f.jpg",
+    "start_time_iso": "2026-02-12T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Thu 12 Feb",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 12 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=371A561C-2C61-4EB9-9317-EADB807C1E12&returnTo",
+    "scraped_at": "2026-01-12 21:24:21"
+  },
+  {
+    "title": "Heidi Talbot",
+    "url": "https://eden-court.co.uk/event/heidi-talbot",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/525995/Heidi-Talbot-1_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-13T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Fri 13 Feb",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 13 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=18ACB469-233B-49BF-AB19-D550EC8D4118&returnTo",
+    "scraped_at": "2026-01-12 21:24:25"
+  },
+  {
+    "title": "Stuart Mitchell: Tips Not Included",
+    "url": "https://eden-court.co.uk/event/stuart-mitchell-tips-not-included",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/479185/Stuart-Mitchell-Main-Image_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-13T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Fri 13 Feb",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 13 Feb at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=D3FAC75E-0391-41D4-8A3A-3D586FE6FF81&returnTo",
+    "scraped_at": "2026-01-12 21:24:29"
+  },
+  {
+    "title": "The Brandon McPhee Show",
+    "url": "https://eden-court.co.uk/event/the-brandon-mcphee-show",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/513835/Eden-Court_997798207bbe2f5050fc03208babfb30.jpg",
+    "start_time_iso": "2026-02-14T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 14 Feb",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 14 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=9514426B-EA3D-44E7-AC19-5B21FB13BD18&returnTo",
+    "scraped_at": "2026-01-12 21:24:35"
+  },
+  {
+    "title": "Legally Blonde The Musical JR",
+    "url": "https://eden-court.co.uk/event/legally-blonde-jr",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/526025/Legally-Blonde-JR_b9132b58712153bb9a325b169a374b6a.png",
+    "start_time_iso": "2026-02-15T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sun 15 Feb",
+    "categories": [
+      "Local / Showcase"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 15 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=05698335-7157-44A6-A426-D2B25F6A9B83&returnTo",
+    "scraped_at": "2026-01-12 21:24:39"
+  },
+  {
+    "title": "Macbeth",
+    "url": "https://eden-court.co.uk/event/macbeth",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/522001/Michael-Lynch-17_5a8c99943a2520329e2f8da210c11622.jpg",
+    "start_time_iso": "2026-02-17T19:00:00+00:00",
+    "end_time_iso": "2026-02-18T19:00:00+00:00",
+    "date_display": "Tue 17 – Wed 18 Feb",
+    "categories": [
+      "Drama"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 17 Feb at 7:00",
+      "Wed 18 Feb at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=CF594541-F59F-41B6-98FD-7195702282EB&returnTo",
+    "scraped_at": "2026-01-12 21:24:48"
+  },
+  {
+    "title": "Hello Again - The Neil Diamond Songbook",
+    "url": "https://eden-court.co.uk/event/hello-again-the-neil-diamond-songbook",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/556613/Alternative_Chris-Smile_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-17T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Tue 17 Feb",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 17 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=06660186-5954-4526-B1FF-6CDB90F89A5D&returnTo",
+    "scraped_at": "2026-01-12 21:24:51"
+  },
+  {
+    "title": "Michael McGoldrick, John McCusker and John Doyle",
+    "url": "https://eden-court.co.uk/event/michael-mcgoldrick-john-mccusker-and-john-doyle",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/517089/McGoldrick-McCusker-and-Doyle_ea4c47094fe14593ebb826ddf5a03a05.jpg",
+    "start_time_iso": "2026-02-19T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Thu 19 Feb",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 19 Feb at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=F61F6305-ECF8-4580-AE4C-18710EEF0585&returnTo",
+    "scraped_at": "2026-01-12 21:24:55"
+  },
+  {
+    "title": "Kings of the Blues",
+    "url": "https://eden-court.co.uk/event/kings-of-the-blues",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/382263/Main-Street-Blues-2024-Eden-Court_37cb80d72a119b38c038a39a69ff8c87.jpg",
+    "start_time_iso": "2026-02-20T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Fri 20 Feb",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 20 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=4812226E-FCF1-4D16-A758-D450A92C3429&returnTo",
+    "scraped_at": "2026-01-12 21:25:00"
+  },
+  {
+    "title": "Lets PARTY!",
+    "url": "https://eden-court.co.uk/event/lets-party",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/525931/Lets-Party_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-21T16:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 21 Feb",
+    "categories": [
+      "Local / Showcase"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 21 Feb at 4:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A0A278F7-7C86-421C-A7E8-99E2287E2A86&returnTo",
+    "scraped_at": "2026-01-12 21:25:04"
+  },
+  {
+    "title": "Ray Bradshaw: CODA",
+    "url": "https://eden-court.co.uk/event/ray-bradshaw-coda",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/505119/RayBradshawCODA_7fd02740520604141c89db9860d8dfad.jpg",
+    "start_time_iso": "2026-02-21T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 21 Feb",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 21 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=FE7CBDF5-685F-464C-A68D-CF18629C989B&returnTo",
+    "scraped_at": "2026-01-12 21:25:07"
+  },
+  {
+    "title": "MÁM",
+    "url": "https://eden-court.co.uk/event/mam",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/524141/MÁM-Dublin-Theatre-Festival-2019-Ros-Kavanagh-4_cd004cc4a1930617ef98e0c1139bd335.jpg",
+    "start_time_iso": "2026-02-24T19:30:00+00:00",
+    "end_time_iso": "2026-02-25T19:30:00+00:00",
+    "date_display": "Tue 24 – Wed 25 Feb",
+    "categories": [
+      "Dance"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 24 Feb at 7:30",
+      "Wed 25 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=70D5FDE4-21C2-4E1C-B81F-1F83F7231982&returnTo",
+    "scraped_at": "2026-01-12 21:25:11"
+  },
+  {
+    "title": "Ideas Jukebox",
+    "url": "https://eden-court.co.uk/event/ideas-jukebox",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/526739/IAP-Fay-Guiffo-HazelDarwin-Clements-and-Mamoru-Iriguchi-in-Ideas-Jukebox-image-by-Mamoru-Iriguchi-landscape-HR_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-26T11:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Thu 26 Feb",
+    "categories": [
+      "Family"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 26 Feb at 11:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/seatSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=D83EF66E-9038-47A3-A099-B24ED0FA46E1&returnTo",
+    "scraped_at": "2026-01-12 21:25:15"
+  },
+  {
+    "title": "Maya and the Whale",
+    "url": "https://eden-court.co.uk/event/maya-and-the-whale",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/568655/IAP-HazelDarwin-Clements-in-MayaAndTheWhale-photo-by-AndrewPerry-letterbpx-LR_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-26T16:30:00+00:00",
+    "end_time_iso": "2026-02-27T11:00:00+00:00",
+    "date_display": "Thu 26 – Fri 27 Feb",
+    "categories": [
+      "Family"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 26 Feb at 4:30",
+      "Fri 27 Feb at 11:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=5B005D5B-CEC0-44CE-88BA-4EA736E1F6D9&returnTo",
+    "scraped_at": "2026-01-12 21:25:18"
+  },
+  {
+    "title": "DANIEL SLOSS: BITTER",
+    "url": "https://eden-court.co.uk/event/daniel-sloss-bitter",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/543225/Daniel-Sloss-Bitter-1920x1080px_51c80894f5577470d524f001fa20ed26.jpg",
+    "start_time_iso": "2026-02-26T19:30:00+00:00",
+    "end_time_iso": "2026-10-02T20:30:00+01:00",
+    "date_display": "Thu 26 Feb – Fri 2 Oct",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 26 Feb at 7:30",
+      "Fri 2 Oct at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=4BF485B4-984C-4A0F-92D7-25AEBE43997A&returnTo",
+    "scraped_at": "2026-01-12 21:25:23"
+  },
+  {
+    "title": "Gary Innes & Ewen Henderson: The 20-Year Road Trip",
+    "url": "https://eden-court.co.uk/event/gary-innes-ewen-henderson-the-20-year-road-trip",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/526567/kesiak-manran-mar25-122-Edit_79ef50cc5327aa3bf8693284b7e4e897.jpg",
+    "start_time_iso": "2026-02-27T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Fri 27 Feb",
+    "categories": [
+      "Music",
+      "Gaelic"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 27 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=FFBB69C7-8388-4146-9C5E-AE1ABF042FAE&returnTo",
+    "scraped_at": "2026-01-12 21:25:27"
+  },
+  {
+    "title": "Benedetti Plays Mendelssohn",
+    "url": "https://eden-court.co.uk/event/benedetti-plays-mendelssohn",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/512495/Benedetti-Plays-Mendelssohn-Web-Size-Template_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-02-28T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 28 Feb",
+    "categories": [
+      "Classical"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 28 Feb at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=06695F9B-B68E-4D71-B0A7-FBAD64AC22E5&returnTo",
+    "scraped_at": "2026-01-12 21:25:30"
+  },
+  {
+    "title": "The Rocket Man - A Tribute to Elton John",
+    "url": "https://eden-court.co.uk/event/the-rocket-man-a-tribute-to-elton-john",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/517241/TheRocketMan-1920x1080-entertainers_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-01T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sun 1 Mar",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 1 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=75D958D8-4DF7-43B1-9192-024E5D1CFB4A&returnTo",
+    "scraped_at": "2026-01-12 21:25:33"
+  },
+  {
+    "title": "LIONS and TIGERS and BEARS with Gordon Buchanan",
+    "url": "https://eden-court.co.uk/event/lions-and-tigers-and-bears-with-gordon-buchanan",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/378819/GB_Generic_1920x1080_NoUrl_73203dc170515c0629e51ca5d3a8154e.jpg",
+    "start_time_iso": "2026-03-03T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Tue 3 Mar",
+    "categories": [
+      "Talks / Special Events"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 3 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=E4FD7555-03A4-46E7-8B80-18AA29DD08B9&returnTo",
+    "scraped_at": "2026-01-12 21:25:38"
+  },
+  {
+    "title": "Hannah Rarity",
+    "url": "https://eden-court.co.uk/event/hannah-rarity",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/196837/Hannah_Rarity_by_Elly_Lucas__9_cc4876c3f4f4c4176bd476e5a34d5b47.jpg",
+    "start_time_iso": "2026-03-04T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Wed 4 Mar",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 4 Mar at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=76C9E4F7-2A07-4BD9-927F-72D6650A2119&returnTo",
+    "scraped_at": "2026-01-12 21:25:42"
+  },
+  {
+    "title": "Live at Eden Court - Milton Jones and Friends",
+    "url": "https://eden-court.co.uk/event/live-at-eden-court-milton-jones-and-friends",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/522529/Milton-Jones_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-05T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Thu 5 Mar",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 5 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=47C63DAD-90B4-4A54-95FA-FB5B951577DE&returnTo",
+    "scraped_at": "2026-01-12 21:25:46"
+  },
+  {
+    "title": "A Giant on the Bridge",
+    "url": "https://eden-court.co.uk/event/a-giant-on-the-bridge",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/556521/A-Giant-on-the-Bridge_722dfe712f10c48049c3edf05b5ffd04.jpeg",
+    "start_time_iso": "2026-03-05T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Thu 5 Mar",
+    "categories": [
+      "Drama"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 5 Mar at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=BD9F2996-A21F-4C6C-91FC-E36FE4739B3E&returnTo",
+    "scraped_at": "2026-01-12 21:25:49"
+  },
+  {
+    "title": "Calum MacPhail and his band",
+    "url": "https://eden-court.co.uk/event/calum-macphail-and-his-band",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/490767/Calum-MacPhail-2026_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-06T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Fri 6 Mar",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 6 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=53B6B2AB-2869-4905-8A6C-59813C2B9E13&returnTo",
+    "scraped_at": "2026-01-12 21:25:53"
+  },
+  {
+    "title": "Highland Young Musician Concerts Festival 2026",
+    "url": "https://eden-court.co.uk/event/highland-young-musician-concerts-festival-2026",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/534465/Highland-Young-Musicians-2026_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-07T15:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 7 Mar",
+    "categories": [
+      "Music",
+      "Classical"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 7 Mar at 3:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=52976843-F69D-4FAD-A728-E71AE46BBA22&returnTo",
+    "scraped_at": "2026-01-12 21:25:58"
+  },
+  {
+    "title": "Mark Nelson: Liquid Gold",
+    "url": "https://eden-court.co.uk/event/mark-nelson-liquid-gold",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/530061/MN-FACEBOOK-EVENT-COVER_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-03-07T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 7 Mar",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 7 Mar at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=40AD6679-66BA-46BA-BF8C-D899A8B8C6C0&returnTo",
+    "scraped_at": "2026-01-12 21:26:02"
+  },
+  {
+    "title": "Between Light and Shadow",
+    "url": "https://eden-court.co.uk/event/between-light-and-shadow",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/525981/Between-Light-and-Shadow_11c04fbd58a3ab2355e570e5dabe414b.jpg",
+    "start_time_iso": "2026-03-10T19:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Tue 10 Mar",
+    "categories": [
+      "Classical"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 10 Mar at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=F91E858C-AAB2-4B51-8686-F22E5091499D&returnTo",
+    "scraped_at": "2026-01-12 21:26:06"
+  },
+  {
+    "title": "Live Forever – The Rise of Britain’s Greatest Rock ‘n’ Roll Band",
+    "url": "https://eden-court.co.uk/event/live-forever",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/507591/LiveF-fb-cover_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-10T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Tue 10 Mar",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 10 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=455B5590-BB8E-4DAC-8677-763B259FDF41&returnTo",
+    "scraped_at": "2026-01-12 21:26:10"
+  },
+  {
+    "title": "Ben Portsmouth: This is Elvis",
+    "url": "https://eden-court.co.uk/event/ben-portsmouth-this-is-elvis",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/482563/TCE-Elvis-World-Tour-2023-Poster-05-Leathers-Acoustic-A3-Landscape-Clean-16bit-300dpi-v6.7_1a918492f927ffa56377c592ac62741a.jpg",
+    "start_time_iso": "2026-03-11T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Wed 11 Mar",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 11 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=54DA61D8-5AE1-489A-A3C0-EE7CCADB31D8&returnTo",
+    "scraped_at": "2026-01-12 21:26:13"
+  },
+  {
+    "title": "QUEENZ: Drag Me to the Disco!",
+    "url": "https://eden-court.co.uk/event/queenz-drag-me-to-the-disco",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/497795/Queenz-Eden-Court-2500x1500-Template-No-Quotes_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-12T19:30:00+00:00",
+    "end_time_iso": "2026-03-13T19:30:00+00:00",
+    "date_display": "Thu 12 – Fri 13 Mar",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 12 Mar at 7:30",
+      "Fri 13 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=FB49DBEB-C44F-406A-BD9F-9EE5AD33F9E2&returnTo",
+    "scraped_at": "2026-01-12 21:26:17"
+  },
+  {
+    "title": "Paul Merton and Suki Webster's Improv Show",
+    "url": "https://eden-court.co.uk/event/paul-merton-and-suki-websters-improv-show",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/484275/PMSW_ImprovShow_Clean_IMAGE_8ee833a283c7602602165add5c37b201.jpg",
+    "start_time_iso": "2026-03-14T20:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 14 Mar",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 14 Mar at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=97803216-246B-4A28-95E2-BB1562A44036&returnTo",
+    "scraped_at": "2026-01-12 21:26:20"
+  },
+  {
+    "title": "Out of this World",
+    "url": "https://eden-court.co.uk/event/out-of-this-world",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/526571/Out-of-this-World-2500x1500_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-03-15T15:00:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sun 15 Mar",
+    "categories": [
+      "Family",
+      "Classical"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 15 Mar at 3:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=0AECED55-2A3E-4084-B0A7-6608471B0C00&returnTo",
+    "scraped_at": "2026-01-12 21:26:24"
+  },
+  {
+    "title": "What's Love Got to Do With It? The Ultimate Tribute to Tina Turner",
+    "url": "https://eden-court.co.uk/event/whats-love-got-to-do-with-it-the-ultimate-tribute-to-tina-turner",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/507891/1080x1080_NEW-TINA-2023_09705fbcca55688f6f90fb95939a7c4e.jpg",
+    "start_time_iso": "2026-03-18T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Wed 18 Mar",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 18 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A99DC39E-105B-4C89-A0F3-E57DBAFC8D12&returnTo",
+    "scraped_at": "2026-01-12 21:26:27"
+  },
+  {
+    "title": "Seven Drunken Nights - The Story of the Dubliners",
+    "url": "https://eden-court.co.uk/event/seven-drunken-nights-the-story-of-the-dubliners",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/521975/SDN-26-fb-1200x628_08b09aaf862b3e15c666075069219626.jpg",
+    "start_time_iso": "2026-03-19T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Thu 19 Mar",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 19 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=ADA8CF44-3C75-4904-B59F-084C28DFFAFF&returnTo",
+    "scraped_at": "2026-01-12 21:26:31"
+  },
+  {
+    "title": "Flora",
+    "url": "https://eden-court.co.uk/event/flora",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/559123/MH_Flora_1200x600_title_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-20T19:00:00+00:00",
+    "end_time_iso": "2026-03-21T19:00:00+00:00",
+    "date_display": "Fri 20 – Sat 21 Mar",
+    "categories": [
+      "Musicals"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 20 Mar at 7:00",
+      "Sat 21 Mar at 2:30",
+      "Sat 21 Mar at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=D3D58B10-2CD2-4629-B308-DCEA730959D8&returnTo",
+    "scraped_at": "2026-01-12 21:26:36"
+  },
+  {
+    "title": "THE ETERNAL SHAME OF SUE PERKINS",
+    "url": "https://eden-court.co.uk/event/the-eternal-shame-of-sue-perkins",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/490127/THE-ETERNAL-SHAME-OF-SUE-PERKINS-2026-Tour-photo-by-Steve-Ullathorne_3a7aa9608d1d66cef400c7f11a848168.jpg",
+    "start_time_iso": "2026-03-20T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Fri 20 Mar",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 20 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A1FC8E6D-B279-4A7B-81E7-2C20AC466BA0&returnTo",
+    "scraped_at": "2026-01-12 21:26:41"
+  },
+  {
+    "title": "Inverness Fiddlers' Rally 2026",
+    "url": "https://eden-court.co.uk/event/inverness-fiddlers-rally-2026",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/512391/Inverness-Fiddlers-Rally-2026_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-21T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Sat 21 Mar",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 21 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=AF7CCC63-18F2-4E9F-9256-2FEC2E5A1E88&returnTo",
+    "scraped_at": "2026-01-12 21:26:44"
+  },
+  {
+    "title": "Anything Goes",
+    "url": "https://eden-court.co.uk/event/anything-goes",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/540655/AG-Eden-Court-Web-Banner-2_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-25T19:30:00+00:00",
+    "end_time_iso": "2026-03-28T19:30:00+00:00",
+    "date_display": "Wed 25 – Sat 28 Mar",
+    "categories": [
+      "Local / Showcase"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 25 Mar at 7:30",
+      "Thu 26 Mar at 7:30",
+      "Fri 27 Mar at 7:30",
+      "Sat 28 Mar at 2:30",
+      "Sat 28 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=F88E80F0-51B7-4007-BB2E-B0E6F7C3C901&returnTo",
+    "scraped_at": "2026-01-12 21:26:47"
+  },
+  {
+    "title": "The Shoop Shoop Show – The Cher Collection",
+    "url": "https://eden-court.co.uk/event/the-shoop-shoop-show-the-cher-collection",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/499547/Shoop-fbevent-1920_23f0bb2ae7ac2657b1f35b2498bc1b64.jpg",
+    "start_time_iso": "2026-03-30T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Mon 30 Mar",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Mon 30 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=2EE572A1-CDB7-42C9-AEF7-703D875DF182&returnTo",
+    "scraped_at": "2026-01-12 21:26:50"
+  },
+  {
+    "title": "SCOTS - The Musical",
+    "url": "https://eden-court.co.uk/event/scots",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/571673/SCOTSECWEBcorrect_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-03-31T19:00:00+01:00",
+    "end_time_iso": "2026-04-01T20:00:00+01:00",
+    "date_display": "Tue 31 Mar – Wed 1 Apr",
+    "categories": [
+      "Musicals"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 31 Mar at 7:00",
+      "Wed 1 Apr at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=EA7A859D-FC2F-4DBD-9AAC-B9EB643C63AA&returnTo",
+    "scraped_at": "2026-01-12 21:26:54"
+  },
+  {
+    "title": "Spirit of the Highlands and Islands",
+    "url": "https://eden-court.co.uk/event/spirit-of-the-highlands-and-islands",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/526595/Spirit-of-the-Highlands-and-Islands_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-03-31T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Tue 31 Mar",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 31 Mar at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=C78F29AE-26BB-4222-9FFB-889BBDE5C967&returnTo",
+    "scraped_at": "2026-01-12 21:26:58"
+  },
+  {
+    "title": "Taylormania",
+    "url": "https://eden-court.co.uk/event/taylormania",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/518641/Taylormania-1920-X-1080_161ea492822deed601eafe6e958b75fd.jpg",
+    "start_time_iso": "2026-04-02T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 2 Apr",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 2 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=E8318902-BD69-45EA-AC4E-0EE1D8978E38&returnTo",
+    "scraped_at": "2026-01-12 21:27:01"
+  },
+  {
+    "title": "An evening with Tam Cowan hosted by Graham Spiers",
+    "url": "https://eden-court.co.uk/event/an-evening-with-tam-cowan-hosted-by-graham-spiers",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562051/Tam-Cowan_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-04-02T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 2 Apr",
+    "categories": [
+      "Talks / Special Events"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 2 Apr at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=378DF4C6-9360-4CC2-B365-5903326CAE74&returnTo",
+    "scraped_at": "2026-01-12 21:27:05"
+  },
+  {
+    "title": "The ELO Tribute Show",
+    "url": "https://eden-court.co.uk/event/the-elo-tribute-show",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/388347/TheELO-Social-media_240722_141225_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-04-03T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 3 Apr",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 3 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=C2973F68-4EC1-44E0-97AB-E8EA47F96320&returnTo",
+    "scraped_at": "2026-01-12 21:27:09"
+  },
+  {
+    "title": "Jack Docherty In The Chief - No Apologies",
+    "url": "https://eden-court.co.uk/event/jack-docherty-in-the-chief-no-apologies",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/556417/JD26-Tour-1920x1080-notext_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-04-04T14:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 4 Apr",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 4 Apr at 2:30",
+      "Sat 4 Apr at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=59CAC270-299E-4D5D-A305-2938CF67B16A&returnTo",
+    "scraped_at": "2026-01-12 21:27:12"
+  },
+  {
+    "title": "Eden Court at 50 - An Evening with RSNO featuring Scottish Opera",
+    "url": "https://eden-court.co.uk/event/eden-court-at-50",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/570123/RSNO-Full-Orchestra_799d08c54026c35cb89656df0323d339.jpg",
+    "start_time_iso": "2026-04-04T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 4 Apr",
+    "categories": [
+      "Classical"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 4 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/login.asp?targetPage=mapSelect.asp%3FdoWork%3A%3AWSmap%3A%3AloadMap%3DLoad%26createBO%3A%3AWSmap%3D1%26BOparam%3A%3AWSmap%3A%3AloadMap%3A%3Aperformance_ids%3D7AFCCEFB-1C6B-4D91-83DB-5490D34647DD%26returnTo",
+    "scraped_at": "2026-01-12 21:27:15"
+  },
+  {
+    "title": "Country by Candlelight",
+    "url": "https://eden-court.co.uk/event/country-by-candlelight",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567361/FACEBOOK-HEADER_a62b20189d72138a6788273009d72f09.png",
+    "start_time_iso": "2026-04-08T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 8 Apr",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 8 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A1DE5594-F5AA-4768-B0E7-DE9401BD664C&returnTo",
+    "scraped_at": "2026-01-12 21:27:20"
+  },
+  {
+    "title": "Nick Cope Family Show 2026",
+    "url": "https://eden-court.co.uk/event/nick-cope-family-show-2026",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/548219/new-logo-banner_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-04-09T11:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 9 Apr",
+    "categories": [
+      "Family"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 9 Apr at 11:30",
+      "Thu 9 Apr at 2:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=AE1B56BD-758B-4EFD-B009-9DA864E70F8C&returnTo",
+    "scraped_at": "2026-01-12 21:27:22"
+  },
+  {
+    "title": "Susie McCabe: Best Behaviour",
+    "url": "https://eden-court.co.uk/event/susie-mccabe-best-behaviour",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/535919/Susie-McCabe-2160x1080_d1e92575b7c64e6e5e791ee435039fe1.jpg",
+    "start_time_iso": "2026-04-10T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 10 Apr",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 10 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=2CA1928A-A6FD-4FAD-9B06-95B2CFDCA7EF&returnTo",
+    "scraped_at": "2026-01-12 21:27:26"
+  },
+  {
+    "title": "Cally Beaton - Namaste Motherf*ckers",
+    "url": "https://eden-court.co.uk/event/cally-beaton-namaste-motherf-ckers",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/508313/1600x900-cally_7ad545c1ecfd0a241c98fd3cb5490d42.png",
+    "start_time_iso": "2026-04-10T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 10 Apr",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 10 Apr at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=5D968ACA-D6F6-4CAC-92CF-563AF8F4CBAE&returnTo",
+    "scraped_at": "2026-01-12 21:27:31"
+  },
+  {
+    "title": "Medea",
+    "url": "https://eden-court.co.uk/event/medea",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/556255/eden-court-2500x1500px_1daab7a2bf000482ce744c343a6a6f67.jpg",
+    "start_time_iso": "2026-04-11T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 11 Apr",
+    "categories": [
+      "Drama"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 11 Apr at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=D6ED31E1-F0AD-4BF8-86F9-14F4F207DD4C&returnTo",
+    "scraped_at": "2026-01-12 21:27:35"
+  },
+  {
+    "title": "Cruinn Còmhla: Acoustic Gaelic Night with Laura Wilkie and Ian Carr",
+    "url": "https://eden-court.co.uk/event/cruinn-comhla-acoustic-gaelic-night-with-laura-wilkie-and-ian-carr",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567375/Laura-Wilkie-and-Ian-Carr_a938926bd4879da16ea1839a07d4de75.jpg",
+    "start_time_iso": "2026-04-12T14:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sun 12 Apr",
+    "categories": [
+      "Music",
+      "Gaelic"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 12 Apr at 2:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=CD5355DD-5437-4D3D-A2D4-431DF520D195&returnTo",
+    "scraped_at": "2026-01-12 21:27:39"
+  },
+  {
+    "title": "World's Evolution",
+    "url": "https://eden-court.co.uk/event/worlds-evolution",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/556527/Worlds-Evolution-by-THREE60-2500-x-1500-px_Eden-Court_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-04-14T19:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Tue 14 Apr",
+    "categories": [
+      "Dance"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 14 Apr at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=8FDADB66-61F2-425B-ACE6-057E53CAEC67&returnTo",
+    "scraped_at": "2026-01-12 21:27:44"
+  },
+  {
+    "title": "Kris Drever",
+    "url": "https://eden-court.co.uk/event/kris-drever",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/522011/kesiak-drever-analog-may25-026-Edit_81693d1a87742a0e531a1e9d54bc98ec.jpg",
+    "start_time_iso": "2026-04-15T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 15 Apr",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 15 Apr at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=528E7A81-CB6D-4A98-B98C-60ED177D68E0&returnTo",
+    "scraped_at": "2026-01-12 21:27:48"
+  },
+  {
+    "title": "LINDISFARNE",
+    "url": "https://eden-court.co.uk/event/lindisfarne",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562655/PREFFERED-PRESS-PHOTO-20252026-credit-Chris-Maynard_f3a8a0c1484c0073af1bdeef4f9de3c7.jpg",
+    "start_time_iso": "2026-04-16T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 16 Apr",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 16 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=C81CAF5A-181E-4C61-B494-4BD305E979FD&returnTo",
+    "scraped_at": "2026-01-12 21:27:53"
+  },
+  {
+    "title": "Henning Wehn - Acid Wehn",
+    "url": "https://eden-court.co.uk/event/henning-wehn-acid-wehn",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/507181/Henning-Wehn-1920x1080_0ab802d503b31135c8302e541b7b6e20.jpg",
+    "start_time_iso": "2026-04-17T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 17 Apr",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 17 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=EF908BE2-84B2-4B95-91BE-D042A50322AD&returnTo",
+    "scraped_at": "2026-01-12 21:27:57"
+  },
+  {
+    "title": "Session A9 Still Alive @ 25",
+    "url": "https://eden-court.co.uk/event/session-a9-still-alive-25",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/541237/Session-A9-close-up-2024_c6fea396213226b383a8a338bf531389.jpg",
+    "start_time_iso": "2026-04-17T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 17 Apr",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 17 Apr at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=E4C26D16-6AC9-4E52-8038-FEB5118747CC&returnTo",
+    "scraped_at": "2026-01-12 21:28:01"
+  },
+  {
+    "title": "Eddi Reader",
+    "url": "https://eden-court.co.uk/event/eddi-reader",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/530157/Eddi-Reader-2025_1920x1005-©-Genevieve-Stevenson_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-04-18T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 18 Apr",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 18 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=FEA010F9-90A2-4F3A-8FE9-468CCEE154C9&returnTo",
+    "scraped_at": "2026-01-12 21:28:06"
+  },
+  {
+    "title": "Starstruck",
+    "url": "https://eden-court.co.uk/event/starstruck",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/515507/Starstruck25_Inverness-2500x1500_4245e8a3ca02834393b1a8a5382087e8.jpg",
+    "start_time_iso": "2026-04-24T18:30:00+01:00",
+    "end_time_iso": "2026-04-25T20:30:00+01:00",
+    "date_display": "Fri 24 – Sat 25 Apr",
+    "categories": [
+      "Film",
+      "Dance"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 24 Apr at 6:30",
+      "Fri 24 Apr at 7:30",
+      "Sat 25 Apr at 2:30",
+      "Sat 25 Apr at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=0D66FCB1-691B-4882-AEA5-4EEC5EC02F68&returnTo",
+    "scraped_at": "2026-01-12 21:28:09"
+  },
+  {
+    "title": "The High Life",
+    "url": "https://eden-court.co.uk/event/the-high-life",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/518923/High-Life-Final-72dpi_6b51984a2a9d23ece22f88d55f9b6803.jpg",
+    "start_time_iso": "2026-04-29T19:30:00+01:00",
+    "end_time_iso": "2026-05-02T20:30:00+01:00",
+    "date_display": "Wed 29 Apr – Sat 2 May",
+    "categories": [
+      "Musicals"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 29 Apr at 7:30",
+      "Thu 30 Apr at 2:30",
+      "Thu 30 Apr at 7:30",
+      "Fri 1 May at 7:30",
+      "Sat 2 May at 1:30",
+      "Sat 2 May at 2:30",
+      "Sat 2 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=467BBE65-E898-4127-B238-5877965423CC&returnTo",
+    "scraped_at": "2026-01-12 21:28:12"
+  },
+  {
+    "title": "General Medical Emergency Ward 10",
+    "url": "https://eden-court.co.uk/event/general-medical-emergency-ward-10",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/537255/General-Medical-Emergency-Ward-10_b2946f86e66e0ad911c6254e963e6c35.jpg",
+    "start_time_iso": "2026-04-30T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 30 Apr",
+    "categories": [
+      "Comedy",
+      "Drama"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 30 Apr at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=8EE8F04F-3947-467C-8717-33EEED7ACCAA&returnTo",
+    "scraped_at": "2026-01-12 21:28:16"
+  },
+  {
+    "title": "Josh Widdicombe: Not My Cup of Tea",
+    "url": "https://eden-court.co.uk/event/josh-widdicombe-not-my-cup-of-tea",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/413417/JW_NotMyCupOfTea_1920x1080_PLAIN_b5c64ede9a74bf759b41892fe9c4d96d.jpg",
+    "start_time_iso": "2026-05-04T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Mon 4 May",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Mon 4 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=3767728A-9BD7-4909-8BA8-A566B3DE3DA0&returnTo",
+    "scraped_at": "2026-01-12 21:28:19"
+  },
+  {
+    "title": "An Evening with Barbara Dickson",
+    "url": "https://eden-court.co.uk/event/an-evening-with-barbara-dickson",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567405/Barbara-Dickcon_475d8d31d85759c1b9656778fd9e1485.jpg",
+    "start_time_iso": "2026-05-05T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Tue 5 May",
+    "categories": [
+      "Talks / Special Events"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 5 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=3772E68C-CB6C-4A82-8D52-496AF1841FA3&returnTo",
+    "scraped_at": "2026-01-12 21:28:23"
+  },
+  {
+    "title": "Windblown",
+    "url": "https://eden-court.co.uk/event/windblown",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/546683/Windblown2500x1500EC_f425b1ff47ec88d58e61582fac487432.jpg",
+    "start_time_iso": "2026-05-06T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 6 May",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 6 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=F866F4A1-8572-4B8B-9EC7-0D5D95C8414C&returnTo",
+    "scraped_at": "2026-01-12 21:28:26"
+  },
+  {
+    "title": "In The Air Tonight",
+    "url": "https://eden-court.co.uk/event/in-the-air-tonight",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567407/In-The-Air-Tonight-SuperLandscape-entertainers_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-05-09T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 9 May",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 9 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=DE0F634E-D355-433E-BB56-AFD5C8FA741C&returnTo",
+    "scraped_at": "2026-01-12 21:28:30"
+  },
+  {
+    "title": "Cruinn Còmhla: Acoustic Gaelic Night with Sgo",
+    "url": "https://eden-court.co.uk/event/cruinn-comhla-acoustic-gaelic-night-with-sgo",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567391/2_Sgo_Image-Credit-Jonny-Ashworth_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-05-11T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Mon 11 May",
+    "categories": [
+      "Music",
+      "Gaelic"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Mon 11 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=32E34306-5A15-4290-A70D-FF352ABFED42&returnTo",
+    "scraped_at": "2026-01-12 21:28:34"
+  },
+  {
+    "title": "Sunny Afternoon",
+    "url": "https://eden-court.co.uk/event/sunny-afternoon",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/560103/SUNAFTT25_Q3_022_NewSocialAssets_KeyArt_1920x1080_V2_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-05-12T19:30:00+01:00",
+    "end_time_iso": "2026-05-16T20:30:00+01:00",
+    "date_display": "Tue 12 – Sat 16 May",
+    "categories": [
+      "Musicals"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 12 May at 7:30",
+      "Wed 13 May at 7:30",
+      "Thu 14 May at 2:30",
+      "Thu 14 May at 7:30",
+      "Fri 15 May at 7:30",
+      "Sat 16 May at 2:30",
+      "Sat 16 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=352CEBD0-D1A7-4220-9923-D53B1D5A884E&returnTo",
+    "scraped_at": "2026-01-12 21:28:37"
+  },
+  {
+    "title": "Tom Stade - Naughty By Nature",
+    "url": "https://eden-court.co.uk/event/tom-stade-naughty-by-nature",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/496893/Tom-Stade-Tour-2025-FacebookBanner_158e093c4c7853930abea9dd4b9acd67.jpg",
+    "start_time_iso": "2026-05-14T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 14 May",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 14 May at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=CF56241D-DEE1-48F9-BAF0-6F15A1909836&returnTo",
+    "scraped_at": "2026-01-12 21:28:41"
+  },
+  {
+    "title": "NEIL BRAND's 'Centenary Laurel & Hardy Show'",
+    "url": "https://eden-court.co.uk/event/neil-brands-centenary-laurel-hardy-show",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/535823/LAURELHARDY_100-YEAR-VISUALS-FINAL-01.05.25-THEATRE-AD4_8d268dcd962873bc86c9b1e2459f67df.jpg",
+    "start_time_iso": "2026-05-15T19:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 15 May",
+    "categories": [
+      "Comedy",
+      "Film",
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 15 May at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=5C00EB56-2FB6-4879-B308-9AEA11A1AAA9&returnTo",
+    "scraped_at": "2026-01-12 21:28:45"
+  },
+  {
+    "title": "An Acoustic Evening with Wet Wet Wet",
+    "url": "https://eden-court.co.uk/event/an-acoustic-evening-with-wet-wet-wet",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/522037/WWW-Acoustic-2026_Ticketmaster_2426x1365_6f7de2b97fbd2054f22b4482a14b3200.jpg",
+    "start_time_iso": "2026-05-19T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Tue 19 May",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 19 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=C4833F50-953C-4A50-A9C1-83BF29EB5B76&returnTo",
+    "scraped_at": "2026-01-12 21:28:48"
+  },
+  {
+    "title": "The Drifters In Concert",
+    "url": "https://eden-court.co.uk/event/the-drifters-in-concert",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/537185/Main-Image-logo_d885c347bf32e4b83d519a6ac47d6f9d.jpg",
+    "start_time_iso": "2026-05-20T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 20 May",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 20 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=48569E42-738A-47BC-9C40-4753BF377C69&returnTo",
+    "scraped_at": "2026-01-12 21:28:52"
+  },
+  {
+    "title": "RUMOURS OF FLEETWOOD MAC 2026",
+    "url": "https://eden-court.co.uk/event/rumours-of-fleetwood-mac-2026",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/537189/RFM_1920x1080_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-05-21T19:30:00+01:00",
+    "end_time_iso": "2026-05-22T20:30:00+01:00",
+    "date_display": "Thu 21 – Fri 22 May",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 21 May at 7:30",
+      "Fri 22 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=2A0A8100-6AD6-4CF2-8E2E-64B083F746C0&returnTo",
+    "scraped_at": "2026-01-12 21:28:56"
+  },
+  {
+    "title": "The Tumbling Paddies",
+    "url": "https://eden-court.co.uk/event/the-tumbling-paddies",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/561277/PHOTO-2025-11-12-21-33-53_8467a66a720daf2c1e8865ff6c0ce4f8.jpg",
+    "start_time_iso": "2026-05-23T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 23 May",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 23 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=07FDF0D3-A003-4202-B788-85049BEBBD65&returnTo",
+    "scraped_at": "2026-01-12 21:29:00"
+  },
+  {
+    "title": "Richard Thompson",
+    "url": "https://eden-court.co.uk/event/richard-thompson",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/553543/2500-985-Rich-Thompon_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-05-27T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 27 May",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 27 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=CE1A0AF3-472D-48A9-BA6A-32629962A5CD&returnTo",
+    "scraped_at": "2026-01-12 21:29:05"
+  },
+  {
+    "title": "The Big Comedy Roadshow",
+    "url": "https://eden-court.co.uk/event/the-big-comedy-roadshow",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562659/BCRS-Generic-Gfx-16-9_5ed56d4977417f996a07f7e1444d4767.jpg",
+    "start_time_iso": "2026-05-28T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 28 May",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 28 May at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=80ADFC7E-A71D-4A4B-93BD-FA8240A1D6BD&returnTo",
+    "scraped_at": "2026-01-12 21:29:10"
+  },
+  {
+    "title": "After All",
+    "url": "https://eden-court.co.uk/event/after-all",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/526757/AFTER-ALL-by-Solene-Weinachter-credit-Genevieve-Reeves-5_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-05-29T19:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 29 May",
+    "categories": [
+      "Dance"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 29 May at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A7130838-749B-4B4A-A039-BE4069C193A2&returnTo",
+    "scraped_at": "2026-01-12 21:29:14"
+  },
+  {
+    "title": "Showstopper! The Improvised Musical",
+    "url": "https://eden-court.co.uk/event/showstopper-the-improvised-musical",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/565255/ST-Key-Art-1920-x-1080-RGB_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-05-29T19:30:00+01:00",
+    "end_time_iso": "2026-05-30T20:30:00+01:00",
+    "date_display": "Fri 29 – Sat 30 May",
+    "categories": [
+      "Musicals"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 29 May at 7:30",
+      "Sat 30 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=E93D50B0-EC84-4AA4-846B-496B729AA798&returnTo",
+    "scraped_at": "2026-01-12 21:29:16"
+  },
+  {
+    "title": "Ivo Graham: Orange Crush",
+    "url": "https://eden-court.co.uk/event/ivo-graham-orange-crush",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/564071/IG-OC-2000X1000-TT-V02_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-05-30T19:45:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 30 May",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 30 May at 7:45"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A660B648-85DE-4F95-A746-9573FBAFA2F6&returnTo",
+    "scraped_at": "2026-01-12 21:29:20"
+  },
+  {
+    "title": "The Simon & Garfunkel Story",
+    "url": "https://eden-court.co.uk/event/the-simon-garfunkel-story",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/545937/1920x1080_251007_114230_1c1a8f1b9a58371f4e143d86af9f759f.jpg",
+    "start_time_iso": "2026-05-31T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sun 31 May",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 31 May at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=1CEEE94D-CAC8-481C-80EC-C5811CAB8941&returnTo",
+    "scraped_at": "2026-01-12 21:29:23"
+  },
+  {
+    "title": "Gnoss",
+    "url": "https://eden-court.co.uk/event/gnoss",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567425/Promo-2-Stretching-Skyward-Gnoss-Elly-Lucas_7ac2075e8fe832fef1f37454cd5a5019.jpg",
+    "start_time_iso": "2026-05-31T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sun 31 May",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 31 May at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=FE3491E8-6477-49D6-8278-C50785957333&returnTo",
+    "scraped_at": "2026-01-12 21:29:27"
+  },
+  {
+    "title": "STAND & DELIVER: THE LEE JEANS SIT-IN",
+    "url": "https://eden-court.co.uk/event/stand-deliver-the-lee-jeans-sit-in",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562665/StandDeliver-Lee_8c9a7c85a713858dbdc594e9ccb17a74.jpg",
+    "start_time_iso": "2026-06-02T19:00:00+01:00",
+    "end_time_iso": "2026-06-03T20:00:00+01:00",
+    "date_display": "Tue 2 – Wed 3 Jun",
+    "categories": [
+      "Musicals"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 2 Jun at 7:00",
+      "Wed 3 Jun at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A9B57620-6C0F-4DF6-B87E-4430E666358B&returnTo",
+    "scraped_at": "2026-01-12 21:29:31"
+  },
+  {
+    "title": "Danny Bhoy: Dear World…",
+    "url": "https://eden-court.co.uk/event/danny-bhoy-dear-world",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/559125/Danny-Bhoy-1920x1080_a92dd78dcd833f2c06931b76fa7fc4d5.png",
+    "start_time_iso": "2026-06-03T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 3 Jun",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 3 Jun at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=BCDBC9AA-62A8-42E8-96CC-C778AC252CFB&returnTo",
+    "scraped_at": "2026-01-12 21:29:34"
+  },
+  {
+    "title": "An Evening with Julie Fowlis",
+    "url": "https://eden-court.co.uk/event/an-evening-with-julie-fowlis",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/559151/Julie-Fowlis-111125-Poster-photo-1_0a5f8a1ebf47d7ef7682d4490d5ec2f6.jpeg",
+    "start_time_iso": "2026-06-05T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 5 Jun",
+    "categories": [
+      "Music",
+      "Gaelic"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 5 Jun at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=53462E66-6BB2-4D24-B5DA-3D5D2A53449A&returnTo",
+    "scraped_at": "2026-01-12 21:29:37"
+  },
+  {
+    "title": "Coldplace",
+    "url": "https://eden-court.co.uk/event/coldplace",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/529323/COLDPLACE-2025_3f3e1bc401aa1f84771ec885f1c36556.jpeg",
+    "start_time_iso": "2026-06-10T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 10 Jun",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 10 Jun at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A441501D-9A1B-4077-B737-D42F5B22FC80&returnTo",
+    "scraped_at": "2026-01-12 21:29:42"
+  },
+  {
+    "title": "Paul Black – Cash Cow",
+    "url": "https://eden-court.co.uk/event/paul-black-cash-cow",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/565391/Paul-Black-Cash-Cow-2026_cf929c44f8eec27874a92a34304ecac1.png",
+    "start_time_iso": "2026-06-13T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 13 Jun",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 13 Jun at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=AABF5E84-2362-4311-A69D-5EA24C76E198&returnTo",
+    "scraped_at": "2026-01-12 21:29:46"
+  },
+  {
+    "title": "When Toys Come to Life",
+    "url": "https://eden-court.co.uk/event/when-toys-come-to-life",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567429/When-Toys-come-to-Life-2026-A4-2500-x-985-px_e7c7a2f19878a250e657a4e55d2464d1.png",
+    "start_time_iso": "2026-06-14T11:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sun 14 Jun",
+    "categories": [
+      "Local / Showcase"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 14 Jun at 11:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=7C60C82C-0CCF-4A90-9067-49D0B147F608&returnTo",
+    "scraped_at": "2026-01-12 21:29:50"
+  },
+  {
+    "title": "Magic at the Movies",
+    "url": "https://eden-court.co.uk/event/magic-at-the-movies",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567427/Magic-at-the-Movies-2026-show-2500-x-985-px_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-06-14T18:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sun 14 Jun",
+    "categories": [
+      "Local / Showcase"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 14 Jun at 6:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=F9484D22-B59A-4093-95B6-EAD50C5CE31F&returnTo",
+    "scraped_at": "2026-01-12 21:29:53"
+  },
+  {
+    "title": "The Marriage of Figaro",
+    "url": "https://eden-court.co.uk/event/the-marriage-of-figaro",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/508785/The-Marriage-of-Figaro-Website-Image-Eden-Court-Inverness-2500x1500px_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-06-18T19:15:00+01:00",
+    "end_time_iso": "2026-06-20T20:15:00+01:00",
+    "date_display": "Thu 18 – Sat 20 Jun",
+    "categories": [
+      "Opera"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 18 Jun at 7:15",
+      "Sat 20 Jun at 6:00",
+      "Sat 20 Jun at 6:00",
+      "Sat 20 Jun at 7:15"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=5EB76660-3057-460B-B442-38A53976F980&returnTo",
+    "scraped_at": "2026-01-12 21:29:56"
+  },
+  {
+    "title": "Moving Pictures - RUSH Tribute",
+    "url": "https://eden-court.co.uk/event/moving-pictures-rush-tribute",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/553811/MOVING-PICTURES-2026-band-2500-x-985-px_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-06-26T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 26 Jun",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 26 Jun at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=B8AF7443-A7A0-4CDE-855F-4D236BB282E4&returnTo",
+    "scraped_at": "2026-01-12 21:30:00"
+  },
+  {
+    "title": "Tom Gates Epic Stage Show",
+    "url": "https://eden-court.co.uk/event/tom-gates-epic-stage-show",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567435/TomGateslandscape_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-06-27T12:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 27 Jun",
+    "categories": [
+      "Family"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 27 Jun at 12:30",
+      "Sat 27 Jun at 3:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=51A940E7-1B75-405E-8DD3-F71D146DC6A4&returnTo",
+    "scraped_at": "2026-01-12 21:30:04"
+  },
+  {
+    "title": "Burn the Floor: Nikita Kuzmin – Supernova",
+    "url": "https://eden-court.co.uk/event/nikita-kuzmin-supernova",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/538215/BTF-Nikita-Brighton-onsale-1920x1080_1ac86feddfe8dce29084f21f5a9b8b69.jpg",
+    "start_time_iso": "2026-07-08T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 8 Jul",
+    "categories": [
+      "Dance"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 8 Jul at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=BD2B2C30-5E51-4DDB-8F7F-509177B886EF&returnTo",
+    "scraped_at": "2026-01-12 21:30:08"
+  },
+  {
+    "title": "Queen of the Night – A Tribute to Whitney Houston",
+    "url": "https://eden-court.co.uk/event/queen-of-the-night-a-tribute-to-whitney-houston",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/507897/CT-1024x432-no-text_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-07-09T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 9 Jul",
+    "categories": [
+      "Music",
+      "Tribute"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 9 Jul at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=F40A2AA3-E958-41A1-A6DE-D9A7CD2F1811&returnTo",
+    "scraped_at": "2026-01-12 21:30:13"
+  },
+  {
+    "title": "Yourythmics",
+    "url": "https://eden-court.co.uk/event/yourythmics",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562553/Dave-and-Annie-Banner-2500x985-web-image_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-07-10T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 10 Jul",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 10 Jul at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=AD41FE52-DAA2-4F78-98BD-408274BAFD8A&returnTo",
+    "scraped_at": "2026-01-12 21:30:17"
+  },
+  {
+    "title": "Rude Science",
+    "url": "https://eden-court.co.uk/event/rude-science",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/537229/1600x600-Website-wide-hero-NO-treatment-02_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-07-15T11:30:00+01:00",
+    "end_time_iso": "2026-07-16T12:30:00+01:00",
+    "date_display": "Wed 15 – Thu 16 Jul",
+    "categories": [
+      "Family"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 15 Jul at 11:30",
+      "Wed 15 Jul at 3:00",
+      "Thu 16 Jul at 11:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=3DB7EC85-18A4-4DE7-A949-3066EE63FF43&returnTo",
+    "scraped_at": "2026-01-12 21:30:22"
+  },
+  {
+    "title": "Stewart Lee vs The Man-Wulf",
+    "url": "https://eden-court.co.uk/event/stewart-lee-vs-the-man-wulf",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/535819/Stewart-Lee-vs-The-Man-Wulf-2026-Tour-brochure-web-image-landscape-title-treatment_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-07-17T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 17 Jul",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 17 Jul at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=4647FDFD-A3CA-410E-BCC7-091D010D55E7&returnTo",
+    "scraped_at": "2026-01-12 21:30:26"
+  },
+  {
+    "title": "K-Pop All Stars",
+    "url": "https://eden-court.co.uk/event/k-pop-all-stars",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/556531/Kpop-All-Stars-1920x1080-entertainers_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-07-19T15:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sun 19 Jul",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 19 Jul at 3:00",
+      "Sun 19 Jul at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=504E1F61-C2FA-4BA5-965B-78F28B9869F4&returnTo",
+    "scraped_at": "2026-01-12 21:30:30"
+  },
+  {
+    "title": "Bowie Experience",
+    "url": "https://eden-court.co.uk/event/bowie-experience",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/540235/BOWIE_1200x628_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-07-22T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 22 Jul",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 22 Jul at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=B68025C9-F2E5-41C9-972C-483CD1FFDCAB&returnTo",
+    "scraped_at": "2026-01-12 21:30:35"
+  },
+  {
+    "title": "A Country Night in Nashville",
+    "url": "https://eden-court.co.uk/event/a-country-night-in-nashville",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/537233/1920x1080_250909_132340_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-07-24T19:30:00+01:00",
+    "end_time_iso": "2026-07-25T20:30:00+01:00",
+    "date_display": "Fri 24 – Sat 25 Jul",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 24 Jul at 7:30",
+      "Sat 25 Jul at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=BDC3EEE1-72C2-48A2-A330-7113FA035203&returnTo",
+    "scraped_at": "2026-01-12 21:30:38"
+  },
+  {
+    "title": "THE SIGNATURES NORTHERN SOUL LIVE with special guest Original Northern Soul Artist LORRAINE SILVER",
+    "url": "https://eden-court.co.uk/event/the-signatures-northern-soul",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/529333/thumbnail_The-Signatures-FB-EVENTS-Banner_ca828a7e88d497d9ed50aab78d4dc51e.png",
+    "start_time_iso": "2026-07-30T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 30 Jul",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 30 Jul at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=CF639812-0CE2-4BC6-B9E9-B4C159CF25BA&returnTo",
+    "scraped_at": "2026-01-12 21:30:43"
+  },
+  {
+    "title": "Roy Orbison and the Traveling Wilburys Experience",
+    "url": "https://eden-court.co.uk/event/roy-orbison-and-the-traveling-wilburys-experience",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/560507/Wilbury-Promo2_e3ab5cca73b1c338f3c193b943583328.jpg",
+    "start_time_iso": "2026-08-07T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 7 Aug",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 7 Aug at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=9FCBE5BC-75C8-4498-8166-3C385E659DDB&returnTo",
+    "scraped_at": "2026-01-12 21:30:47"
+  },
+  {
+    "title": "The Tiger Who Came to Tea",
+    "url": "https://eden-court.co.uk/event/the-tiger-who-came-to-tea",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567647/Tiger-Stars-1920x1080_d4c194581270bfda190db97077959fb4.jpg",
+    "start_time_iso": "2026-08-14T11:00:00+01:00",
+    "end_time_iso": "2026-08-15T15:00:00+01:00",
+    "date_display": "Fri 14 – Sat 15 Aug",
+    "categories": [
+      "Family"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 14 Aug at 11:00",
+      "Sat 15 Aug at 11:00",
+      "Sat 15 Aug at 2:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=031738BB-46F4-4F9E-81A7-3AE57D2AB58F&returnTo",
+    "scraped_at": "2026-01-12 21:30:52"
+  },
+  {
+    "title": "Gary Faulds: Panic at the Midlife Disco",
+    "url": "https://eden-court.co.uk/event/gary-faulds-panic-at-the-midlife-disco",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/565263/Panic-at-the-Midlife-Disco-Gary-Faulds-Poster_afd1853ac727aaf5a35b1cd350d6e4e4.jpeg",
+    "start_time_iso": "2026-08-15T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 15 Aug",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 15 Aug at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=E2DBAD73-4C1D-45FB-8900-3673AED54716&returnTo",
+    "scraped_at": "2026-01-12 21:30:55"
+  },
+  {
+    "title": "We Will Rock You",
+    "url": "https://eden-court.co.uk/event/we-will-rock-you",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/529663/Edited-Landscape_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-08-19T19:30:00+01:00",
+    "end_time_iso": "2026-08-22T20:30:00+01:00",
+    "date_display": "Wed 19 – Sat 22 Aug",
+    "categories": [
+      "Local / Showcase",
+      "Musical Theatre"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 19 Aug at 7:30",
+      "Thu 20 Aug at 7:30",
+      "Fri 21 Aug at 7:30",
+      "Sat 22 Aug at 2:30",
+      "Sat 22 Aug at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=E263F048-8E44-4EB5-9B04-74114EFA4761&returnTo",
+    "scraped_at": "2026-01-12 21:31:01"
+  },
+  {
+    "title": "Billy & Tim Widescreen Edition",
+    "url": "https://eden-court.co.uk/event/billy-tim-widescreen-edition",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/560511/BillyTim26_Poster_Generic_2500x1500_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-08-28T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 28 Aug",
+    "categories": [
+      "Drama"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 28 Aug at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=5BEB37F7-BD3F-40BB-B0F1-0D143FFABB87&returnTo",
+    "scraped_at": "2026-01-12 21:31:05"
+  },
+  {
+    "title": "Chisholm, McGoldrick, O’Connor and Byrne",
+    "url": "https://eden-court.co.uk/event/chisholm-mcgoldrick-oconnor-and-byrne",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/570103/Web-image_260107_163503_a19c933270cf4ab49fe3d815631956c6.png",
+    "start_time_iso": "2026-08-30T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sun 30 Aug",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 30 Aug at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=381FD9C1-9420-4002-A535-9917105D78CC&returnTo",
+    "scraped_at": "2026-01-12 21:31:10"
+  },
+  {
+    "title": "New Dawn Fades – A Play About Joy Division And Manchester",
+    "url": "https://eden-court.co.uk/event/new-dawn-fades",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/565245/NDF-Landscape-back_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-09-02T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 2 Sep",
+    "categories": [
+      "Drama"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 2 Sep at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=6C34FA5D-3D42-49BC-9589-7C1570C5516D&returnTo",
+    "scraped_at": "2026-01-12 21:31:15"
+  },
+  {
+    "title": "Mànran",
+    "url": "https://eden-court.co.uk/event/manran",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/565257/Photo-12-06-2022-12-18-47_251217_133444_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-09-05T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 5 Sep",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 5 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=A9260607-CB5D-42DA-9B56-2C213810366B&returnTo",
+    "scraped_at": "2026-01-12 21:31:19"
+  },
+  {
+    "title": "Banff Mountain Film Festival World Tour",
+    "url": "https://eden-court.co.uk/event/banff-mountain-film-festival-world-tour",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/548249/Banff-2026-Tour-Image-1_270a2209a48b862cf63c58918cb2e1eb.jpg",
+    "start_time_iso": "2026-09-06T19:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sun 6 Sep",
+    "categories": [
+      "Talks / Special Events"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sun 6 Sep at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=B31B948A-E038-4AC9-80A2-95A7388A29A5&returnTo",
+    "scraped_at": "2026-01-12 21:31:23"
+  },
+  {
+    "title": "Stuart Mitchell and Friends: On the Road",
+    "url": "https://eden-court.co.uk/event/stuart-mitchell-and-friends-on-the-road",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/553579/SMFOTR-holder-1920x1080_bcc29d587bb7722fb9d93d5f00dac88e.jpg",
+    "start_time_iso": "2026-09-09T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Wed 9 Sep",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 9 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=9AC07B8C-2139-4374-93ED-7A66B56596C0&returnTo",
+    "scraped_at": "2026-01-12 21:31:27"
+  },
+  {
+    "title": "Endless Love The Show – A Tribute to Diana Ross and Lionel Richie",
+    "url": "https://eden-court.co.uk/event/endless-love-the-show-a-tribute-to-diana-ross-and-lionel-richie",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/553559/1098x628_IMAGEONLY_EndlessLove_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-09-10T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 10 Sep",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 10 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=C1E85D67-CFC4-42ED-ACB6-99925DC31A5D&returnTo",
+    "scraped_at": "2026-01-12 21:31:31"
+  },
+  {
+    "title": "Susan Calman: Tall Tales",
+    "url": "https://eden-court.co.uk/event/susan-calman-tall-tales",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/560515/Susan-Calman-blank-2026-1920x1080_8822ca6afe4d853ef9f7a38926c23c22.jpg",
+    "start_time_iso": "2026-09-11T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 11 Sep",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 11 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=FD311AB3-A5BF-421F-8F16-1FBF0D259C5E&returnTo",
+    "scraped_at": "2026-01-12 21:31:36"
+  },
+  {
+    "title": "Irvine Welsh's PORNO",
+    "url": "https://eden-court.co.uk/event/irvine-welshs-porno",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/553583/PORNO_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-09-12T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 12 Sep",
+    "categories": [
+      "Drama"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 12 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=9BEA1FBE-41B9-4BBD-8AE1-88E7145D6A01&returnTo",
+    "scraped_at": "2026-01-12 21:31:40"
+  },
+  {
+    "title": "Nathan Carter and his Band Live 2026",
+    "url": "https://eden-court.co.uk/event/nathan-carter-and-his-band-2026",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/535811/Nathan-Carter_250902_110540_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-09-16T19:30:00+01:00",
+    "end_time_iso": "2026-09-19T20:30:00+01:00",
+    "date_display": "Wed 16 – Sat 19 Sep",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 16 Sep at 7:30",
+      "Thu 17 Sep at 7:30",
+      "Fri 18 Sep at 7:30",
+      "Sat 19 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=B54EB178-735D-442B-B237-66C62762FA21&returnTo",
+    "scraped_at": "2026-01-12 21:31:43"
+  },
+  {
+    "title": "Budapest Café Orchestra",
+    "url": "https://eden-court.co.uk/event/budapest-cafe-orchestra",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567661/Budapest-Cafe-Orchestra_baccbf3c8fa32a6de2dbe88f6cb97361.jpg",
+    "start_time_iso": "2026-09-18T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 18 Sep",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 18 Sep at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=BC6CB92C-4000-4902-B9DC-F129D9EC64AE&returnTo",
+    "scraped_at": "2026-01-12 21:31:48"
+  },
+  {
+    "title": "ATTENTION ALL SHIPPING A Celebration of the Shipping Forecast With Charlie Connelly",
+    "url": "https://eden-court.co.uk/event/attention-all-shipping",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/556571/CC2_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-09-19T19:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 19 Sep",
+    "categories": [
+      "Comedy",
+      "Drama"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 19 Sep at 7:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=939DD076-6FF7-4791-9779-A7BFBAB29C1A&returnTo",
+    "scraped_at": "2026-01-12 21:31:51"
+  },
+  {
+    "title": "The Illegal Eagles – Hotel California Tour",
+    "url": "https://eden-court.co.uk/event/the-illegal-eagles-hotel-california-tour",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/556589/IE26_1920x650_7a705e504281aa9fdccb6cbbedeede61.jpg",
+    "start_time_iso": "2026-09-21T19:30:00+01:00",
+    "end_time_iso": "2026-09-22T20:30:00+01:00",
+    "date_display": "Mon 21 – Tue 22 Sep",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Mon 21 Sep at 7:30",
+      "Tue 22 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=D2A6FD46-65C8-492C-B561-673A23C17724&returnTo",
+    "scraped_at": "2026-01-12 21:31:55"
+  },
+  {
+    "title": "Derek Ryan Live In Concert",
+    "url": "https://eden-court.co.uk/event/derek-ryan-live-in-concert",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562697/Derek-Ryan-Web-Image_afd1853ac727aaf5a35b1cd350d6e4e4.png",
+    "start_time_iso": "2026-09-25T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 25 Sep",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 25 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=73713197-7D56-4C39-AF54-16298694C7B1&returnTo",
+    "scraped_at": "2026-01-12 21:31:59"
+  },
+  {
+    "title": "Fred MacAulay - Good Evening!",
+    "url": "https://eden-court.co.uk/event/fred-macaulay-good-evening",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562743/Fred-MacAulay-Andrew-Cawley_aa314bb36a2b40afc7dad0471637376b.jpg",
+    "start_time_iso": "2026-09-25T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 25 Sep",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 25 Sep at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=23FDC5E2-C61F-4988-9751-B86BDFF01066&returnTo",
+    "scraped_at": "2026-01-12 21:32:03"
+  },
+  {
+    "title": "UK Pink Floyd Experience",
+    "url": "https://eden-court.co.uk/event/uk-pink-floyd-experience-1",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/545943/UKPF-23-fbevent-1920x1080_251007_114756_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-09-26T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Sat 26 Sep",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Sat 26 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=9A1E280A-FF02-47EE-A5D6-A17877E5C609&returnTo",
+    "scraped_at": "2026-01-12 21:32:07"
+  },
+  {
+    "title": "The Sound of Springsteen",
+    "url": "https://eden-court.co.uk/event/the-sound-of-springsteen",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567415/Sound-of-Springsteen-2025_777cc5e826f74807e4f86846bdefdbb9.jpg",
+    "start_time_iso": "2026-09-29T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Tue 29 Sep",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 29 Sep at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=63D6BA61-5DDB-40AC-A347-ED59D00216BB&returnTo",
+    "scraped_at": "2026-01-12 21:32:10"
+  },
+  {
+    "title": "LAURA LEXX: YO-YO",
+    "url": "https://eden-court.co.uk/event/laura-lexx-yo-yo",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/538223/Laura-Lexx-2025_c60b25c9c875674441085b76a4cf8a30.jpg",
+    "start_time_iso": "2026-10-02T20:00:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Fri 2 Oct",
+    "categories": [
+      "Comedy"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Fri 2 Oct at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=DE090EF6-9E60-460F-B41C-5E9F917DD99E&returnTo",
+    "scraped_at": "2026-01-12 21:32:14"
+  },
+  {
+    "title": "SIX",
+    "url": "https://eden-court.co.uk/event/six",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562607/SIXT25158_2500x985pxls_INVERNESS-WEBPAGE_afd1853ac727aaf5a35b1cd350d6e4e4.jpg",
+    "start_time_iso": "2026-10-06T20:00:00+01:00",
+    "end_time_iso": "2026-10-10T21:00:00+01:00",
+    "date_display": "Tue 6 – Sat 10 Oct",
+    "categories": [
+      "Musicals"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Tue 6 Oct at 8:00",
+      "Wed 7 Oct at 6:00",
+      "Wed 7 Oct at 8:30",
+      "Thu 8 Oct at 8:00",
+      "Fri 9 Oct at 6:00",
+      "Fri 9 Oct at 8:30",
+      "Sat 10 Oct at 4:00",
+      "Sat 10 Oct at 8:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=046B4EA7-F500-46B0-BB85-EE5CB42B3AF2&returnTo",
+    "scraped_at": "2026-01-12 21:32:19"
+  },
+  {
+    "title": "Grease",
+    "url": "https://eden-court.co.uk/event/grease",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/545125/Grease-ECT-Cover-Image_afd1853ac727aaf5a35b1cd350d6e4e4.jpeg",
+    "start_time_iso": "2026-10-15T19:30:00+01:00",
+    "end_time_iso": "2026-10-18T14:00:00+01:00",
+    "date_display": "Thu 15 – Sun 18 Oct",
+    "categories": [
+      "Musicals",
+      "Local / Showcase"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 15 Oct at 7:30",
+      "Fri 16 Oct at 8:30",
+      "Sat 17 Oct at 2:30",
+      "Sat 17 Oct at 7:30",
+      "Sun 18 Oct at 1:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=7613228A-E5FD-498C-91D3-D025E3F7F605&returnTo",
+    "scraped_at": "2026-01-12 21:32:23"
+  },
+  {
+    "title": "Hue and Cry",
+    "url": "https://eden-court.co.uk/event/hue-and-cry",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/552695/Hue-and-Cry_57c7e3546daab2800f27fa9a2af9b95b.jpg",
+    "start_time_iso": "2026-10-22T19:30:00+01:00",
+    "end_time_iso": null,
+    "date_display": "Thu 22 Oct",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 22 Oct at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=9159DE78-879F-4E4F-BC9D-904F29626B10&returnTo",
+    "scraped_at": "2026-01-12 21:32:27"
+  },
+  {
+    "title": "Claudia Buckley: The Galway Girl",
+    "url": "https://eden-court.co.uk/event/claudia-buckley-the-galway-girl",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/567419/Claudia-Buckley-Tour-2026-The-Galway-Girl-IMAGE-1_9e0faef3c8ea0faac496450b73bfdd67.jpeg",
+    "start_time_iso": "2026-11-19T19:30:00+00:00",
+    "end_time_iso": null,
+    "date_display": "Thu 19 Nov",
+    "categories": [
+      "Music"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Thu 19 Nov at 7:30"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=7007D6CF-6C18-470E-9D3B-543503588CC3&returnTo",
+    "scraped_at": "2026-01-12 21:32:31"
+  },
+  {
+    "title": "Cinderella",
+    "url": "https://eden-court.co.uk/event/cinderella",
+    "image_url": "https://d1k3q0ugxih2r.cloudfront.net/_imager/files/562049/Cinderella-Title-A4-2020-Mix-Purple_8329634f944132f82f9f94ee3ceffd37.jpg",
+    "start_time_iso": "2026-12-02T19:00:00+00:00",
+    "end_time_iso": "2027-01-03T17:00:00+00:00",
+    "date_display": "Wed 2 Dec 2026 – Sun 3 Jan 2027",
+    "categories": [
+      "Family"
+    ],
+    "venue": "Eden Court",
+    "source": "eden_court_scraper",
+    "description": "",
+    "age_restriction": "All Ages",
+    "showtimes": [
+      "Wed 2 Dec at 7:00",
+      "Thu 3 Dec at 1:30",
+      "Thu 3 Dec at 7:00",
+      "Fri 4 Dec at 1:30",
+      "Fri 4 Dec at 7:00",
+      "Sat 5 Dec at 1:00",
+      "Sat 5 Dec at 5:00",
+      "Sun 6 Dec at 1:00",
+      "Sun 6 Dec at 5:00",
+      "Wed 9 Dec at 1:30",
+      "Wed 9 Dec at 7:00",
+      "Thu 10 Dec at 11:00",
+      "Thu 10 Dec at 7:00",
+      "Fri 11 Dec at 11:00",
+      "Fri 11 Dec at 7:00",
+      "Sat 12 Dec at 12:00",
+      "Sat 12 Dec at 1:00",
+      "Sat 12 Dec at 5:00",
+      "Sun 13 Dec at 1:00",
+      "Sun 13 Dec at 5:00",
+      "Tue 15 Dec at 1:30",
+      "Tue 15 Dec at 7:00",
+      "Wed 16 Dec at 1:30",
+      "Wed 16 Dec at 7:00",
+      "Thu 17 Dec at 1:30",
+      "Thu 17 Dec at 7:00",
+      "Fri 18 Dec at 1:30",
+      "Fri 18 Dec at 7:00",
+      "Sat 19 Dec at 1:00",
+      "Sat 19 Dec at 5:00",
+      "Sun 20 Dec at 1:00",
+      "Sun 20 Dec at 5:00",
+      "Tue 22 Dec at 1:30",
+      "Tue 22 Dec at 7:00",
+      "Wed 23 Dec at 1:00",
+      "Wed 23 Dec at 5:00",
+      "Thu 24 Dec at 1:00",
+      "Thu 24 Dec at 5:00",
+      "Sat 26 Dec at 2:30",
+      "Sat 26 Dec at 7:00",
+      "Sun 27 Dec at 1:00",
+      "Sun 27 Dec at 5:00",
+      "Mon 28 Dec at 2:30",
+      "Mon 28 Dec at 7:00",
+      "Tue 29 Dec at 2:30",
+      "Tue 29 Dec at 7:00",
+      "Wed 30 Dec at 1:00",
+      "Wed 30 Dec at 5:00",
+      "Thu 31 Dec at 1:00",
+      "Thu 31 Dec at 5:00",
+      "Sat 2 Jan 2027 at 2:30",
+      "Sat 2 Jan 2027 at 7:00",
+      "Sun 3 Jan 2027 at 1:00",
+      "Sun 3 Jan 2027 at 5:00"
+    ],
+    "price_text": "Check site",
+    "ticket_url": "https://tickets.eden-court.co.uk/Online/mapSelect.asp?doWork::WSmap::loadMap=Load&createBO::WSmap=1&BOparam::WSmap::loadMap::performance_ids=95C02A83-79D1-412C-A43E-0CD17E1B4A7F&returnTo",
+    "scraped_at": "2026-01-12 21:32:34"
+  }
+]
