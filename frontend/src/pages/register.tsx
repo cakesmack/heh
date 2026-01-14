@@ -34,11 +34,13 @@ export default function RegisterPage() {
   }>({});
 
   // Redirect if already authenticated
+  // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/account');
+    if (isAuthenticated && router.isReady) {
+      const returnTo = (router.query.returnTo as string) || '/account';
+      router.push(returnTo);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router.isReady, router.query, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -341,7 +343,10 @@ export default function RegisterPage() {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link href="/login" className="font-medium text-emerald-600 hover:text-emerald-700">
+              <Link
+                href={`/login${router.query.returnTo ? `?returnTo=${encodeURIComponent(router.query.returnTo as string)}` : ''}`}
+                className="font-medium text-emerald-600 hover:text-emerald-700"
+              >
                 Sign in
               </Link>
             </p>

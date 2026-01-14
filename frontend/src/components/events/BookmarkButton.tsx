@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'react-hot-toast';
@@ -20,6 +21,7 @@ export function BookmarkButton({
     showLabel = false,
     onToggle,
 }: BookmarkButtonProps) {
+    const router = useRouter();
     const { isAuthenticated } = useAuth();
     const [isBookmarked, setIsBookmarked] = useState(initialBookmarked);
     const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +49,8 @@ export function BookmarkButton({
         e.stopPropagation();
 
         if (!isAuthenticated) {
-            toast.error('Please sign in to bookmark events');
+            // Redirect to login with returnTo param
+            router.push(`/login?returnTo=${encodeURIComponent(router.asPath)}`);
             return;
         }
 

@@ -797,7 +797,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 <button
                   onClick={() => {
                     if (!isAuthenticated) {
-                      router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+                      router.push(`/login?returnTo=${encodeURIComponent(router.asPath)}`);
                       return;
                     }
                     router.push(`/events/${event.id}/promote`);
@@ -906,47 +906,51 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
         <SimilarEvents eventId={event.id} />
       </div>
 
-      {event && (
-        <ReportModal
-          isOpen={reportModalOpen}
-          onClose={() => setReportModalOpen(false)}
-          targetType="event"
-          targetId={event.id}
-          targetName={event.title}
-        />
-      )}
+      {
+        event && (
+          <ReportModal
+            isOpen={reportModalOpen}
+            onClose={() => setReportModalOpen(false)}
+            targetType="event"
+            targetId={event.id}
+            targetName={event.title}
+          />
+        )
+      }
 
       {/* Image Lightbox Modal */}
-      {imageLightboxOpen && event?.image_url && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setImageLightboxOpen(false)}
-        >
-          {/* Close button */}
-          <button
+      {
+        imageLightboxOpen && event?.image_url && (
+          <div
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
             onClick={() => setImageLightboxOpen(false)}
-            className="absolute top-4 right-4 z-10 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            {/* Close button */}
+            <button
+              onClick={() => setImageLightboxOpen(false)}
+              className="absolute top-4 right-4 z-10 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
 
-          {/* Full Image */}
-          <img
-            src={event.image_url}
-            alt={event.title}
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+            {/* Full Image */}
+            <img
+              src={event.image_url}
+              alt={event.title}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
 
-          {/* Caption */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-full text-sm">
-            Click anywhere to close
+            {/* Caption */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-full text-sm">
+              Click anywhere to close
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
 
