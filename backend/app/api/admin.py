@@ -3,7 +3,7 @@ Admin API routes.
 Dashboard stats, user management, and moderation endpoints.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, or_
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -206,7 +206,16 @@ def list_admin_events(
         query = query.where(Event.parent_event_id == None)
 
     if not include_past:
-        query = query.where(Event.date_end >= now)
+        # Show event if it is in future OR if it is a parent of a future event (active series)
+        # This handles the case where the "Series Parent" is past, but the series has future instances.
+        future_child_parents = select(Event.parent_event_id).where(Event.date_end >= now).where(Event.parent_event_id != None)
+        
+        query = query.where(
+            or_(
+                Event.date_end >= now,
+                Event.id.in_(future_child_parents)
+            )
+        )
     
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
