@@ -11,7 +11,7 @@ export function OrganizerBadge({ organizer, className = '' }: OrganizerBadgeProp
 
     return (
         <Link
-            href={`/organizers/${organizer.slug}`}
+            href={`/groups/${organizer.slug}`}
             className={`group flex items-center gap-3 transition-colors hover:bg-gray-50 rounded-lg p-2 -ml-2 ${className}`}
         >
             {/* Avatar */}
