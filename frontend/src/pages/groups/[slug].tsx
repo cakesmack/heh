@@ -6,6 +6,8 @@ import { Organizer, EventResponse } from '@/types';
 import { Spinner } from '@/components/common/Spinner';
 import { EventCard } from '@/components/events/EventCard';
 import { FollowButton } from '@/components/common/FollowButton';
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 
 import { useAuth } from '@/hooks/useAuth';
 import { GroupRole } from '@/types';
@@ -68,6 +70,31 @@ export default function OrganizerProfilePage() {
     const [canEdit, setCanEdit] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Invite Modal State
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [isInviting, setIsInviting] = useState(false);
+    const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    const handleSendInvite = async () => {
+        if (!organizer?.id) return;
+
+        setIsInviting(true);
+        setInviteMessage(null);
+
+        try {
+            await api.groups.createInvite(organizer.id, inviteEmail);
+            setInviteMessage({ type: 'success', text: `Invitation sent to ${inviteEmail}` });
+            setInviteEmail('');
+            // Close after delay? Or let user see success message
+        } catch (err) {
+            console.error('Failed to send invite:', err);
+            setInviteMessage({ type: 'error', text: 'Failed to send invitation. Please try again.' });
+        } finally {
+            setIsInviting(false);
+        }
+    };
 
     useEffect(() => {
         if (!slug) return;
@@ -201,13 +228,13 @@ export default function OrganizerProfilePage() {
                                         <PencilIcon className="w-4 h-4 mr-2" />
                                         Edit Profile
                                     </Link>
-                                    <Link
-                                        href={`/account/organizers/${organizer.id}/edit?tab=team`}
+                                    <button
+                                        onClick={() => setIsInviteModalOpen(true)}
                                         className="inline-flex items-center px-4 py-2 border border-emerald-600 shadow-sm text-sm font-medium rounded-md text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none"
                                     >
                                         <UsersIcon className="w-4 h-4 mr-2" />
                                         Invite
-                                    </Link>
+                                    </button>
                                 </>
                             )}
                             <FollowButton targetId={organizer.id} targetType="group" />
@@ -243,13 +270,13 @@ export default function OrganizerProfilePage() {
                                 >
                                     <PencilIcon className="w-4 h-4" />
                                 </Link>
-                                <Link
-                                    href={`/account/organizers/${organizer.id}/edit?tab=team`}
+                                <button
+                                    onClick={() => setIsInviteModalOpen(true)}
                                     className="inline-flex items-center p-2 border border-emerald-600 shadow-sm text-sm font-medium rounded-md text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none"
                                     title="Invite Members"
                                 >
                                     <UsersIcon className="w-4 h-4" />
-                                </Link>
+                                </button>
                             </>
                         )}
                         <FollowButton targetId={organizer.id} targetType="group" />
@@ -361,6 +388,75 @@ export default function OrganizerProfilePage() {
                     )}
                 </div>
             </div>
+            {/* Invite Modal */}
+            {isInviteModalOpen && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        {/* Background overlay */}
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setIsInviteModalOpen(false)}></div>
+
+                        {/* Modal panel */}
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                            <div>
+                                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100">
+                                    <UsersIcon className="h-6 w-6 text-emerald-600" />
+                                </div>
+                                <div className="mt-3 text-center sm:mt-5">
+                                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                        Invite Member
+                                    </h3>
+                                    <div className="mt-2">
+                                        <p className="text-sm text-gray-500">
+                                            Enter an email address to invite someone to this group. They will receive an email with a link to join.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 space-y-4">
+                                <Input
+                                    label="Email Address"
+                                    type="email"
+                                    placeholder="new.member@example.com"
+                                    value={inviteEmail}
+                                    onChange={(e) => setInviteEmail(e.target.value)}
+                                    disabled={isInviting}
+                                />
+
+                                {inviteMessage && (
+                                    <div className={`text-sm p-3 rounded-md ${inviteMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                        {inviteMessage.text}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                                <Button
+                                    variant="primary"
+                                    className="w-full sm:col-start-2"
+                                    onClick={handleSendInvite}
+                                    isLoading={isInviting}
+                                    disabled={!inviteEmail}
+                                >
+                                    Send Invite
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="mt-3 w-full sm:mt-0 sm:col-start-1"
+                                    onClick={() => {
+                                        setIsInviteModalOpen(false);
+                                        setInviteMessage(null);
+                                        setInviteEmail('');
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
