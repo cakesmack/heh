@@ -28,18 +28,18 @@ export function getOptimizedImage(url: string, width: number, height?: number): 
 
     // Check if parameters already exist to avoid breaking existing transforms
     if (url.includes('/upload/') && !url.includes('/upload/f_auto') && !url.includes('/upload/w_')) {
-        // RETINA SUPPORT: Request 2x density
+        // RETINA SUPPORT: Request 2x density for sharpness (or even 3x if needed)
         const targetWidth = width * 2;
         const targetHeight = height ? height * 2 : undefined;
 
         // Build Params:
         // f_auto: Auto format (WebP/AVIF)
         // q_auto:best: Max quality for retina screens
-        // c_limit: Resize but don't upscale if original is smaller (alternatively c_fill if enforcing aspect ratio)
+        // c_fill: Ensure image fills the box perfectly without distortion
         // w_{width}: Resize width
         // h_{height}: Resize height (if provided)
 
-        let params = `f_auto,q_auto:best,c_limit,w_${targetWidth}`;
+        let params = `f_auto,q_auto:best,c_fill,w_${targetWidth}`;
 
         if (targetHeight) {
             params += `,h_${targetHeight}`;

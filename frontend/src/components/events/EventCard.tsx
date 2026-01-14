@@ -59,6 +59,7 @@ export function EventCard({ event }: EventCardProps) {
             <img
               src={getOptimizedImage(event.image_url, 400)}
               alt={event.title}
+              loading="lazy"
               className="w-full h-full object-cover"
             />
             {event.featured && (
