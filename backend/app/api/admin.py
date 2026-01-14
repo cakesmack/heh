@@ -75,6 +75,15 @@ class AdminUserListResponse(BaseModel):
     limit: int
 
 
+class UserEventSummary(BaseModel):
+    id: str
+    title: str
+    date_start: datetime
+    status: str
+    image_url: Optional[str]
+    is_recurring: bool
+
+
 # ============================================================
 # DASHBOARD STATS
 # ============================================================
@@ -360,44 +369,72 @@ def list_users(
     )
 
 
-@router.get("/users/{user_id}", response_model=AdminUserResponse)
-def get_user(
+@router.post("/users/{user_id}/trusted", response_model=AdminUserResponse)
+def toggle_trusted_organizer(
     user_id: str,
+    trusted: bool = Query(...),
     admin: User = Depends(require_admin),
     session: Session = Depends(get_session)
 ):
-    """Get user details by ID."""
-    # Normalize user_id by removing hyphens if present
-    normalized_id = user_id.replace("-", "") if "-" in user_id else user_id
-
-    user = session.get(User, normalized_id)
+    """Toggle trusted organizer status."""
+    user = session.get(User, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-
-    # Count events
-    event_count = session.exec(
-        select(func.count(Event.id)).where(Event.organizer_id == user.id)
-    ).one() or 0
-
-    # Count check-ins
-    checkin_count = session.exec(
-        select(func.count(CheckIn.id)).where(CheckIn.user_id == user.id)
-    ).one() or 0
-
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user.is_trusted_organizer = trusted
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    
+    # Calculate stats for response
+    event_count = session.exec(select(func.count(Event.id)).where(Event.organizer_id == user.id)).one() or 0
+    checkin_count = session.exec(select(func.count(CheckIn.id)).where(CheckIn.user_id == user.id)).one() or 0
+    
     return AdminUserResponse(
         id=str(user.id),
         email=user.email,
         is_admin=user.is_admin,
         is_trusted_organizer=user.is_trusted_organizer,
         is_active=user.is_active,
-        has_password=user.password_hash is not None,
+        has_password=bool(user.password_hash),
         created_at=user.created_at,
         event_count=event_count,
-        checkin_count=checkin_count,
+        checkin_count=checkin_count
     )
+
+
+@router.get("/users/{user_id}/events", response_model=List[UserEventSummary])
+def get_user_events_history(
+    user_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Get event history for a user (de-duplicated for recurrence)."""
+    # Fetch all events for this user, ordered by start date
+    query = select(Event).where(Event.organizer_id == user_id).order_by(Event.date_start)
+    events = session.exec(query).all()
+    
+    results = []
+    seen_groups = set()
+    
+    for event in events:
+        # If part of a recurrence group
+        if event.recurrence_group_id:
+            if event.recurrence_group_id in seen_groups:
+                continue
+            seen_groups.add(event.recurrence_group_id)
+            
+        results.append(UserEventSummary(
+            id=event.id,
+            title=event.title,
+            date_start=event.date_start,
+            status=event.status or 'draft',
+            image_url=event.image_url,
+            is_recurring=event.is_recurring or False
+        ))
+        
+    return results
+
 
 
 @router.post("/users/{user_id}/toggle-admin", response_model=AdminUserResponse)

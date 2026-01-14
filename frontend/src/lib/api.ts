@@ -1079,6 +1079,15 @@ export interface AdminUserListResponse {
   limit: number;
 }
 
+export interface UserEventSummary {
+  id: string;
+  title: string;
+  date_start: string;
+  status: string;
+  image_url?: string;
+  is_recurring: boolean;
+}
+
 export const adminAPI = {
   /**
    * Get admin dashboard stats
@@ -1104,6 +1113,13 @@ export const adminAPI = {
    */
   getUser: async (userId: string): Promise<AdminUser> => {
     return apiFetch<AdminUser>(`/api/admin/users/${userId}`);
+  },
+
+  /**
+   * Get user event history
+   */
+  getUserEvents: async (userId: string): Promise<UserEventSummary[]> => {
+    return apiFetch<UserEventSummary[]>(`/api/admin/users/${userId}/events`);
   },
 
   /**
