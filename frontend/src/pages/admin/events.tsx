@@ -470,7 +470,7 @@ export default function AdminEvents() {
                 className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[200px]"
               >
                 <option value="">All Venues</option>
-                {venues.slice(0, 100).map(venue => (
+                {venues.map(venue => (
                   <option key={venue.id} value={venue.id}>{venue.name}</option>
                 ))}
               </select>

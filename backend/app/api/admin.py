@@ -199,6 +199,12 @@ def list_admin_events(
     if search:
         query = query.where(Event.title.ilike(f"%{search}%"))
     
+    # Filter out child events (show only parents/singles) for cleaner list
+    # Unless searching, we might want to see everything? 
+    # User requested: "recurring events only display the parent event here"
+    if not search:
+        query = query.where(Event.parent_event_id == None)
+
     if not include_past:
         query = query.where(Event.date_end >= now)
     
