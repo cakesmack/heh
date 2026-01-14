@@ -7,6 +7,7 @@ from sqlmodel import Session, select, func, or_
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
+import uuid
 
 from app.core.database import get_session
 from app.core.security import get_current_user
@@ -191,7 +192,12 @@ def list_admin_events(
         query = query.where(Event.category_id == category_id)
     
     if venue_id:
-        query = query.where(Event.venue_id == venue_id)
+        try:
+            # Handle potential dashed vs dashless mismatch in DB
+            u = uuid.UUID(venue_id)
+            query = query.where(Event.venue_id.in_([u.hex, str(u)]))
+        except ValueError:
+            query = query.where(Event.venue_id == venue_id)
     
     if status_filter:
         query = query.where(Event.status == status_filter.lower())
