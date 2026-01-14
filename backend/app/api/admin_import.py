@@ -36,6 +36,7 @@ class SingleEventImportRequest(BaseModel):
     location_name: Optional[str] = None
     category_id: str
     raw_showtimes: List[str] = []
+    organizer_profile_id: Optional[str] = None  # Optional Group/Organizer ID
 
     class Config:
         json_schema_extra = {
@@ -51,7 +52,8 @@ class SingleEventImportRequest(BaseModel):
                 "min_age": 12,
                 "venue_id": "uuid-...",
                 "category_id": "uuid-...",
-                "raw_showtimes": ["Mon 12 Jan at 7:30", "Tue 13 Jan at 7:30"]
+                "raw_showtimes": ["Mon 12 Jan at 7:30", "Tue 13 Jan at 7:30"],
+                "organizer_profile_id": "uuid-group-..." 
             }
         }
 
@@ -158,6 +160,7 @@ def import_single_event(
         min_price=req.min_price,
         min_age=req.min_age,
         organizer_id=current_user.id,
+        organizer_profile_id=normalize_uuid(req.organizer_profile_id) if req.organizer_profile_id else None,
         status="published"  # Admin imports are auto-published
     )
     

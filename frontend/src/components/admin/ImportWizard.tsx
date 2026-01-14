@@ -5,6 +5,7 @@ import { X, Trash2, Check, AlertTriangle, Image as ImageIcon } from 'lucide-reac
 interface ImportWizardProps {
     venues: Venue[];
     categories: Category[];
+    organizers?: any[];
 }
 
 interface StagedEvent {
@@ -30,8 +31,9 @@ interface StagedEvent {
 
 const STORAGE_KEY = 'import_wizard_session';
 
-export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories }) => {
+export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, organizers = [] }) => {
     const [stagedEvents, setStagedEvents] = useState<StagedEvent[]>([]);
+    const [selectedOrganizerId, setSelectedOrganizerId] = useState<string>('');
     const [bulkVenueId, setBulkVenueId] = useState<string>('');
     const [parseError, setParseError] = useState<string | null>(null);
     const [showResumePrompt, setShowResumePrompt] = useState(false);
@@ -229,7 +231,8 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories }
                 venue_id: event.selectedVenueId,
                 location_name: event.location_name,
                 category_id: event.selectedCategoryId || categories[0]?.id,
-                raw_showtimes: event.raw_showtimes || []
+                raw_showtimes: event.raw_showtimes || [],
+                organizer_profile_id: selectedOrganizerId || undefined
             };
 
             const token = localStorage.getItem('auth_token');
@@ -343,28 +346,49 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories }
                         {parseError && <p className="text-red-600 text-xs mt-2">{parseError}</p>}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            2. Bulk Set Venue (Optional)
-                        </label>
-                        <div className="flex gap-2">
+                    <div className="space-y-4 shadow-none">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                2. Select Organiser (Optional)
+                            </label>
                             <select
-                                value={bulkVenueId}
-                                onChange={(e) => setBulkVenueId(e.target.value)}
-                                className="block flex-1 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                value={selectedOrganizerId}
+                                onChange={(e) => setSelectedOrganizerId(e.target.value)}
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                             >
-                                <option value="">-- Choose Venue --</option>
-                                {venues.map(v => (
-                                    <option key={v.id} value={v.id}>{v.name}</option>
+                                <option value="">None (Post as Admin)</option>
+                                {organizers?.map((org: any) => (
+                                    <option key={org.id} value={org.id}>{org.name}</option>
                                 ))}
                             </select>
-                            <button
-                                onClick={applyBulkVenue}
-                                disabled={!bulkVenueId || stagedEvents.length === 0}
-                                className="px-4 py-2 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-                            >
-                                Apply to All
-                            </button>
+                            <p className="mt-1 text-xs text-gray-500">
+                                This will assign ALL imported events to this group.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                3. Bulk Set Venue (Optional)
+                            </label>
+                            <div className="flex gap-2">
+                                <select
+                                    value={bulkVenueId}
+                                    onChange={(e) => setBulkVenueId(e.target.value)}
+                                    className="block flex-1 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                >
+                                    <option value="">-- Choose Venue --</option>
+                                    {venues.map(v => (
+                                        <option key={v.id} value={v.id}>{v.name}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={applyBulkVenue}
+                                    disabled={!bulkVenueId || stagedEvents.length === 0}
+                                    className="px-4 py-2 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                                >
+                                    Apply
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

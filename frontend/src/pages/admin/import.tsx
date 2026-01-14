@@ -3,12 +3,13 @@ import Head from 'next/head';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import { ImportWizard } from '@/components/admin/ImportWizard';
-import { venuesAPI, categoriesAPI } from '@/lib/api';
+import { venuesAPI, categoriesAPI, api } from '@/lib/api';
 import { Venue, Category } from '@/types';
 
 export default function AdminImportPage() {
     const [venues, setVenues] = useState<Venue[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [organizers, setOrganizers] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     // Use a sensible default limit for venues to get a good list for dropdowns
@@ -19,13 +20,15 @@ export default function AdminImportPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [venuesRes, categoriesRes] = await Promise.all([
+                const [venuesRes, categoriesRes, organizersRes] = await Promise.all([
                     venuesAPI.list({ limit: 100 }), // Fetch up to 100 venues for the dropdown
-                    categoriesAPI.list()
+                    categoriesAPI.list(),
+                    api.organizers.list()
                 ]);
 
                 setVenues(venuesRes.venues);
                 setCategories(categoriesRes.categories);
+                setOrganizers(organizersRes.organizers || []);
             } catch (error) {
                 console.error("Failed to load import data:", error);
             } finally {
@@ -56,7 +59,11 @@ export default function AdminImportPage() {
                             </p>
                         </div>
 
-                        <ImportWizard venues={venues} categories={categories} />
+                        <ImportWizard
+                            venues={venues}
+                            categories={categories}
+                            organizers={organizers}
+                        />
                     </div>
                 )}
             </AdminLayout>
