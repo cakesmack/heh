@@ -300,6 +300,9 @@ def list_events(
         query = query.where(
             (Event.title.ilike(search_term)) | 
             (Event.description.ilike(search_term)) |
+            (Event.location_name.ilike(search_term)) |  # Custom location name
+            (Event.address_full.ilike(search_term)) |  # Custom location address
+            (Event.postcode.ilike(search_term)) |      # Custom location postcode
             (Venue.name.ilike(search_term)) |
             (Venue.address.ilike(search_term)) |
             (Venue.formatted_address.ilike(search_term)) |

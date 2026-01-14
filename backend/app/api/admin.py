@@ -203,7 +203,18 @@ def list_admin_events(
         query = query.where(Event.status == status_filter.lower())
     
     if search:
-        query = query.where(Event.title.ilike(f"%{search}%"))
+        search_term = f"%{search}%"
+        # Enable searching by venue name
+        query = query.outerjoin(Venue)
+        
+        query = query.where(
+            or_(
+                Event.title.ilike(search_term),
+                Event.description.ilike(search_term),
+                Event.location_name.ilike(search_term),
+                Venue.name.ilike(search_term)
+            )
+        )
     
     # Filter out child events (show only parents/singles) for cleaner list
     # Unless searching, we might want to see everything? 
