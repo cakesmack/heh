@@ -36,7 +36,8 @@ class SingleEventImportRequest(BaseModel):
     location_name: Optional[str] = None
     category_id: str
     raw_showtimes: List[str] = []
-    organizer_profile_id: Optional[str] = None  # Optional Group/Organizer ID
+    organizer_profile_id: Optional[str] = None
+    address: Optional[str] = None  # Full address string
 
     class Config:
         json_schema_extra = {
@@ -53,7 +54,8 @@ class SingleEventImportRequest(BaseModel):
                 "venue_id": "uuid-...",
                 "category_id": "uuid-...",
                 "raw_showtimes": ["Mon 12 Jan at 7:30", "Tue 13 Jan at 7:30"],
-                "organizer_profile_id": "uuid-group-..." 
+                "organizer_profile_id": "uuid-group-...",
+                "address": "123 High St, Inverness"
             }
         }
 
@@ -161,6 +163,7 @@ def import_single_event(
         min_age=req.min_age,
         organizer_id=current_user.id,
         organizer_profile_id=normalize_uuid(req.organizer_profile_id) if req.organizer_profile_id else None,
+        address_full=req.address, # Save address
         status="published"  # Admin imports are auto-published
     )
     

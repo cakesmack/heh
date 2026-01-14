@@ -27,6 +27,7 @@ interface StagedEvent {
     selectedCategoryId?: string;
     selectedVenueId: string | null;
     location_name: string;
+    address?: string; // Parsed from JSON
 }
 
 const STORAGE_KEY = 'import_wizard_session';
@@ -118,11 +119,13 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                         id: `${Date.now()}-${idx}`,
                         ...item,
                         title: item.title || "Untitled Event",
-                        description: item.description || "",
+                        description: item.description || '',
+                        location_name: item.location_name || item.venue || 'Unknown Location',
+                        address: item.address || '',
+                        raw_showtimes: typeof item.showtimes === 'string' ? [item.showtimes] : (item.showtimes || []),
                         status: 'pending' as const,
                         selectedCategoryId: matchedCategory?.id || '',
                         selectedVenueId: matchedVenue?.id || null,
-                        location_name: jsonVenueName,
                         venue_name: jsonVenueName
                     };
                 });
@@ -230,6 +233,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                 min_age: event.min_age || 0,
                 venue_id: event.selectedVenueId,
                 location_name: event.location_name,
+                address: event.address || undefined,
                 category_id: event.selectedCategoryId || categories[0]?.id,
                 raw_showtimes: event.raw_showtimes || [],
                 organizer_profile_id: selectedOrganizerId || undefined
