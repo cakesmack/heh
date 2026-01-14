@@ -5,6 +5,8 @@ from sqlmodel import Session, select, func
 from app.core.database import get_session
 from app.core.security import get_current_user
 from app.core.utils import normalize_uuid
+from app.core.config import settings
+from app.services.resend_email import resend_email_service
 from app.models.user import User
 from app.models.organizer import Organizer
 from app.models.group_member import GroupMember, GroupRole
@@ -12,7 +14,8 @@ from app.models.group_invite import GroupInvite
 from app.schemas.group_member import (
     GroupMemberResponse,
     GroupMemberRoleUpdate,
-    GroupInviteResponse
+    GroupInviteResponse,
+    GroupInviteCreate
 )
 
 router = APIRouter()
@@ -76,6 +79,7 @@ def require_group_role(
 @router.post("/{group_id}/invite", response_model=GroupInviteResponse)
 def create_invite(
     group_id: str,
+    invite_request: Optional[GroupInviteCreate] = None,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -99,6 +103,22 @@ def create_invite(
     session.add(invite)
     session.commit()
     session.refresh(invite)
+    
+    # Send email if requested
+    if invite_request and invite_request.email:
+        invite_url = f"{settings.FRONTEND_URL.rstrip('/')}/join/group/{invite.token}"
+        inviter_name = current_user.display_name or current_user.username or "A member"
+        group_name = group.name
+        
+        print(f"Sending invite for group '{group_name}' from user '{current_user.username}'")
+        
+        resend_email_service.send_group_invite(
+            to_email=invite_request.email,
+            inviter_name=inviter_name,
+            group_name=group_name,
+            invite_url=invite_url
+        )
+        
     return invite
 
 

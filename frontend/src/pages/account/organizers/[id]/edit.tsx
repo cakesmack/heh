@@ -56,6 +56,7 @@ export default function EditOrganizerPage() {
     // Team management state
     const [members, setMembers] = useState<GroupMember[]>([]);
     const [invites, setInvites] = useState<GroupInvite[]>([]);
+    const [inviteEmail, setInviteEmail] = useState(''); // New state
     const [userRole, setUserRole] = useState<GroupRole | null>(null);
     const [organizerUserId, setOrganizerUserId] = useState<string | null>(null);
 
@@ -204,16 +205,23 @@ export default function EditOrganizerPage() {
     // Team management handlers
     const handleGenerateInvite = async () => {
         try {
-            const invite = await api.groups.createInvite(id as string);
-            const inviteUrl = `${window.location.origin}/join/group/${invite.token}`;
-            navigator.clipboard.writeText(inviteUrl);
-            alert(`Invite link copied to clipboard!\n\n${inviteUrl}\n\nThis link expires in 7 days.`);
+            const invite = await api.groups.createInvite(id as string, inviteEmail);
+
+            if (inviteEmail) {
+                setSuccessMessage(`Invitation sent to ${inviteEmail}`);
+                setInviteEmail('');
+            } else {
+                const inviteUrl = `${window.location.origin}/join/group/${invite.token}`;
+                navigator.clipboard.writeText(inviteUrl);
+                alert(`Invite link copied to clipboard!\n\n${inviteUrl}\n\nThis link expires in 7 days.`);
+            }
+
             // Refresh invites
             const invitesData = await api.groups.listInvites(id as string);
             setInvites(invitesData || []);
         } catch (err) {
             console.error('Failed to generate invite:', err);
-            alert('Failed to generate invite link');
+            alert('Failed to send/generate invite');
         }
     };
 
@@ -636,15 +644,24 @@ export default function EditOrganizerPage() {
                         {canManageTeam && (
                             <Card>
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Invite New Members</h3>
-                                <div className="flex items-center gap-4">
+                                <div className="space-y-4">
                                     <div className="flex-1">
-                                        <p className="text-sm text-gray-600">
-                                            Generate an invite link to share with new team members. Links expire after 7 days.
+                                        <p className="text-sm text-gray-600 mb-2">
+                                            Enter an email address to send an invitation, or leave blank to generate a link.
                                         </p>
                                     </div>
-                                    <Button variant="primary" onClick={handleGenerateInvite}>
-                                        Generate Invite Link
-                                    </Button>
+                                    <div className="flex items-center gap-4">
+                                        <Input
+                                            placeholder="new.member@example.com (optional)"
+                                            type="email"
+                                            value={inviteEmail}
+                                            onChange={(e) => setInviteEmail(e.target.value)}
+                                            className="max-w-md"
+                                        />
+                                        <Button variant="primary" onClick={handleGenerateInvite}>
+                                            {inviteEmail ? 'Send Invite' : 'Generate Link'}
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 {/* Pending Invites */}

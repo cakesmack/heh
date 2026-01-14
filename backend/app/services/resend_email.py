@@ -919,4 +919,86 @@ class ResendEmailService:
 
 
 # Global instance
+    def send_group_invite(
+        self,
+        to_email: str,
+        inviter_name: str,
+        group_name: str,
+        invite_url: str
+    ) -> bool:
+        """
+        Send a personalized group invitation.
+        
+        Args:
+            to_email: Recipient's email
+            inviter_name: Name of the person inviting
+            group_name: Name of the group
+            invite_url: The unique invite link
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send group invite to {mask_email(to_email)}")
+            return True
+
+        site_url = settings.FRONTEND_URL.rstrip('/')
+        if "highlandeventshub.co.uk" in site_url and "www." not in site_url:
+            site_url = site_url.replace("highlandeventshub.co.uk", "www.highlandeventshub.co.uk")
+            
+        logo_url = f"{site_url}/icons/logo_knot.jpg"
+
+        subject = f"{inviter_name} invited you to join {group_name} on Highland Events Hub"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ padding: 40px 30px; background: #ffffff; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
+                .avatar {{ width: 60px; height: 60px; background: #d1fae5; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 30px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>You've been invited!</h1>
+                </div>
+                <div class="content">
+                    <div class="avatar">💌</div>
+                    <p>Hi!</p>
+                    <p><strong>{inviter_name}</strong> has invited you to become a member of <strong>{group_name}</strong> on Highland Events Hub.</p>
+                    <p>Join the team to verify events, manage listings, and help grow the community.</p>
+                    <p style="text-align: center;">
+                        <a href="{invite_url}" class="button">Accept Invitation</a>
+                    </p>
+                    <p style="text-align: center; color: #6b7280; font-size: 14px;">
+                        This link is valid for 7 days.
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            response = resend.Emails.send({
+                "from": self.from_address,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+            })
+            logger.info(f"Group invite sent to {mask_email(to_email)}, id: {response.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send group invite to {mask_email(to_email)}: {e}")
+            return False
+
+# Create global instance
 resend_email_service = ResendEmailService()

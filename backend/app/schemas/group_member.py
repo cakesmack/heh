@@ -24,6 +24,12 @@ class GroupMemberRoleUpdate(BaseModel):
     role: str  # 'admin' or 'editor' (cannot assign 'owner')
 
 
+class GroupInviteCreate(BaseModel):
+    """Schema for creating a group invite (optional email)."""
+    email: Optional[str] = None
+
+
+
 class GroupInviteResponse(BaseModel):
     """Response schema for group invite."""
     token: str

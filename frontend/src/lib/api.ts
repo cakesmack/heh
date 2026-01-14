@@ -1355,9 +1355,11 @@ export const notificationsAPI = {
 
 export const groupsAPI = {
   // Invite management
-  createInvite: async (groupId: string) => {
+  createInvite: async (groupId: string, email?: string) => {
     return apiFetch<any>(`/api/groups/${groupId}/invite`, {
       method: 'POST',
+      body: email ? JSON.stringify({ email }) : undefined,
+      headers: email ? { 'Content-Type': 'application/json' } : undefined,
     });
   },
 
