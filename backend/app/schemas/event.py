@@ -35,6 +35,17 @@ class ShowtimeResponse(BaseModel):
         from_attributes = True
 
 
+class OrganizerProfileResponse(BaseModel):
+    """Schema for organizer profile (group) response."""
+    id: UUID
+    name: str
+    slug: str
+    logo_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class EventCreate(BaseModel):
     """Schema for creating a new event."""
     title: str = Field(min_length=1, max_length=255)
@@ -138,6 +149,9 @@ class EventResponse(BaseModel):
     tags: Optional[List[TagResponse]] = None
     participating_venues: List[VenueResponse] = []
     showtimes: List[ShowtimeResponse] = []
+    
+    # Organizer Profile (Group)
+    organizer_profile: Optional[OrganizerProfileResponse] = None
 
     # Computed fields (populated by endpoint logic)
     venue_name: Optional[str] = None

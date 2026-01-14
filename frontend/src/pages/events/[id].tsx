@@ -22,6 +22,7 @@ import SimilarEvents from '@/components/events/SimilarEvents';
 import AgeRestrictionBadge from '@/components/events/AgeRestrictionBadge';
 import AddToCalendar from '@/components/events/AddToCalendar';
 import RichText from '@/components/ui/RichText';
+import { OrganizerBadge } from '@/components/events/OrganizerBadge';
 import { api } from '@/lib/api';
 import type { EventResponse } from '@/types';
 
@@ -344,6 +345,13 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
 
       {/* Main Content - Wider Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Mobile: Organizer Badge */}
+        <div className="lg:hidden mb-6">
+          {event.organizer_profile && (
+            <OrganizerBadge organizer={event.organizer_profile} />
+          )}
+        </div>
+
         {/* Mobile: Sidebar content appears first */}
         <div id="mobile-dates-sidebar" className="lg:hidden mb-8 space-y-6 transition-all duration-1000">
           {/* Mobile Date/Time Card */}
@@ -694,6 +702,14 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
           {/* Sticky Sidebar - 30% (3 cols) - Hidden on Mobile (shown above) */}
           <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24 space-y-6">
+
+              {/* Desktop: Organizer Badge */}
+              {event.organizer_profile && (
+                <Card className="border-l-4 border-l-emerald-500">
+                  <OrganizerBadge organizer={event.organizer_profile} />
+                </Card>
+              )}
+
               {/* Time & Date Sidebar Card */}
               <div id="dates-sidebar" className="transition-all duration-1000">
                 <Card>

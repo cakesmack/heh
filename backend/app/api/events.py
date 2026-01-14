@@ -26,7 +26,10 @@ from app.schemas.event import (
     EventUpdate,
     EventResponse,
     EventListResponse,
-    EventFilter
+    EventResponse,
+    EventListResponse,
+    EventFilter,
+    OrganizerProfileResponse
 )
 from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
@@ -159,6 +162,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
         response.organizer_email = event.organizer.email
     if event.organizer_profile:
         response.organizer_profile_name = event.organizer_profile.name
+        response.organizer_profile = OrganizerProfileResponse.model_validate(event.organizer_profile)
 
     return response
 

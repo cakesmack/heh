@@ -285,6 +285,13 @@ export interface Event {
   parent_event_id?: string;
 }
 
+export interface OrganizerProfileResponse {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string;
+}
+
 export interface EventResponse extends Event {
   venue_name?: string;
   distance_km?: number;
@@ -296,6 +303,7 @@ export interface EventResponse extends Event {
   tags?: Tag[];
   organizer_email?: string;
   organizer_profile_name?: string;
+  organizer_profile?: OrganizerProfileResponse;
   participating_venues?: VenueResponse[];
   showtimes?: Showtime[];
 }
