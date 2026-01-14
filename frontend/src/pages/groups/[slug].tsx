@@ -90,13 +90,18 @@ export default function OrganizerProfilePage() {
 
                     // Check permissions if logged in
                     if (isAuthenticated && user) {
-                        try {
-                            const membership = await api.groups.checkMembership(organizerData.id);
-                            if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
-                                setCanEdit(true);
+                        // Check if creator (robust fallback)
+                        if (organizerData.user_id === user.id) {
+                            setCanEdit(true);
+                        } else {
+                            try {
+                                const membership = await api.groups.checkMembership(organizerData.id);
+                                if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
+                                    setCanEdit(true);
+                                }
+                            } catch (err) {
+                                // Not a member or error checking - ignore
                             }
-                        } catch (err) {
-                            // Not a member or error checking - ignore
                         }
                     }
                 }
