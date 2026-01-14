@@ -63,6 +63,11 @@ export default function EditOrganizerPage() {
     useEffect(() => {
         if (!id || authLoading) return;
 
+        // Set initial tab from query
+        if (router.query.tab === 'team') {
+            setActiveTab('team');
+        }
+
         if (!isAuthenticated) {
             router.push(`/auth/login?redirect=/account/organizers/${id}/edit`);
             return;

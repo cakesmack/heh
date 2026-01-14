@@ -188,13 +188,22 @@ export default function OrganizerProfilePage() {
                         {/* Follow Button (desktop) */}
                         <div className="hidden md:flex items-center space-x-3 mt-4 md:mt-0">
                             {canEdit && (
-                                <Link
-                                    href={`/account/organizers/${organizer.id}/edit`}
-                                    className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-                                >
-                                    <PencilIcon className="w-4 h-4 mr-2" />
-                                    Edit Profile
-                                </Link>
+                                <>
+                                    <Link
+                                        href={`/account/organizers/${organizer.id}/edit`}
+                                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                                    >
+                                        <PencilIcon className="w-4 h-4 mr-2" />
+                                        Edit Profile
+                                    </Link>
+                                    <Link
+                                        href={`/account/organizers/${organizer.id}/edit?tab=team`}
+                                        className="inline-flex items-center px-4 py-2 border border-emerald-600 shadow-sm text-sm font-medium rounded-md text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none"
+                                    >
+                                        <UsersIcon className="w-4 h-4 mr-2" />
+                                        Invite
+                                    </Link>
+                                </>
                             )}
                             <FollowButton targetId={organizer.id} targetType="group" />
                         </div>
@@ -221,12 +230,22 @@ export default function OrganizerProfilePage() {
                     {/* Follow Button (mobile) */}
                     <div className="md:hidden ml-auto flex items-center space-x-3">
                         {canEdit && (
-                            <Link
-                                href={`/account/organizers/${organizer.id}/edit`}
-                                className="inline-flex items-center p-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-                            >
-                                <PencilIcon className="w-4 h-4" />
-                            </Link>
+                            <>
+                                <Link
+                                    href={`/account/organizers/${organizer.id}/edit`}
+                                    className="inline-flex items-center p-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                                    title="Edit Profile"
+                                >
+                                    <PencilIcon className="w-4 h-4" />
+                                </Link>
+                                <Link
+                                    href={`/account/organizers/${organizer.id}/edit?tab=team`}
+                                    className="inline-flex items-center p-2 border border-emerald-600 shadow-sm text-sm font-medium rounded-md text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none"
+                                    title="Invite Members"
+                                >
+                                    <UsersIcon className="w-4 h-4" />
+                                </Link>
+                            </>
                         )}
                         <FollowButton targetId={organizer.id} targetType="group" />
                     </div>
