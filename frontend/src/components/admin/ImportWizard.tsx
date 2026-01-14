@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Venue, Category } from '@/types';
 import { X, Trash2, Check, AlertTriangle, Image as ImageIcon } from 'lucide-react';
+import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
 
 interface ImportWizardProps {
     venues: Venue[];
@@ -28,6 +29,8 @@ interface StagedEvent {
     selectedVenueId: string | null;
     location_name: string;
     address?: string; // Parsed from JSON
+    latitude?: number;
+    longitude?: number;
 }
 
 const STORAGE_KEY = 'import_wizard_session';
@@ -112,7 +115,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                         c.slug === normalizedCatName
                     );
 
-                    const jsonVenueName = item.venue_name || item.location_name || '';
+                    const jsonVenueName = item.venue_name || item.location_name || item.venue || '';
                     const matchedVenue = findMatchingVenue(jsonVenueName);
 
                     return {
@@ -234,6 +237,8 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                 venue_id: event.selectedVenueId,
                 location_name: event.location_name,
                 address: event.address || undefined,
+                latitude: event.latitude || undefined,
+                longitude: event.longitude || undefined,
                 category_id: event.selectedCategoryId || categories[0]?.id,
                 raw_showtimes: event.raw_showtimes || [],
                 organizer_profile_id: selectedOrganizerId || undefined
@@ -562,6 +567,44 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                             ))}
                                         </select>
                                     </div>
+
+                                    {/* Custom Location Inputs - Only show if NO venue selected */}
+                                    {!currentEvent.selectedVenueId && (
+                                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Location Name (Custom)</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentEvent.location_name}
+                                                    onChange={e => updateCurrentEvent({ location_name: e.target.value })}
+                                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                                                    placeholder="e.g. Inverness Castle"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Address Search (Google Maps)</label>
+                                                <GooglePlacesAutocomplete
+                                                    defaultValue={currentEvent.address || currentEvent.location_name || ''}
+                                                    onPlaceSelect={(place) => {
+                                                        const lat = place.geometry?.location?.lat();
+                                                        const lng = place.geometry?.location?.lng();
+                                                        updateCurrentEvent({
+                                                            address: place.formatted_address || place.name || undefined,
+                                                            latitude: lat,
+                                                            longitude: lng,
+                                                            // Optional: also update location_name if it was generic
+                                                            // location_name: place.name || currentEvent.location_name 
+                                                        });
+                                                    }}
+                                                    placeholder="Search for address..."
+                                                    className="w-full"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Search and select to set address and map coordinates.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
