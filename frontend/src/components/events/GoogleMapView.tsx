@@ -118,6 +118,7 @@ export function GoogleMapView({
   const [infoWindowMarkerId, setInfoWindowMarkerId] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [currentUserLocation, setCurrentUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   // Get map instance for programmatic control
   const map = useMap();
@@ -225,23 +226,26 @@ export function GoogleMapView({
         onClick={handleMapClick}
         style={{ width: '100%', height: '100%' }}
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
+        onIdle={() => setMapReady(true)}
       >
         {/* Event Markers - Using MarkerClusterer for zoom-based clustering */}
-        <ClusteredEventMarkers
-          events={validEvents}
-          selectedMarkerId={selectedMarkerId}
-          hoveredEventId={hoveredEventId}
-          onEventClick={onEventClick}
-          onMarkerClick={(marker) => {
-            setInfoWindowMarkerId(marker.id);
-            onMarkerClick?.({
-              ...marker,
-              description: undefined,
-              category: undefined,
-            });
-          }}
-          isMobile={isMobile}
-        />
+        {mapReady && (
+          <ClusteredEventMarkers
+            events={validEvents}
+            selectedMarkerId={selectedMarkerId}
+            hoveredEventId={hoveredEventId}
+            onEventClick={onEventClick}
+            onMarkerClick={(marker) => {
+              setInfoWindowMarkerId(marker.id);
+              onMarkerClick?.({
+                ...marker,
+                description: undefined,
+                category: undefined,
+              });
+            }}
+            isMobile={isMobile}
+          />
+        )}
 
         {/* Venue Markers - Keep default Google marker */}
         {venueMarkers.map((marker) => (
