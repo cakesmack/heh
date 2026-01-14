@@ -11,7 +11,7 @@ import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Spinner } from '@/components/common/Spinner';
-import ImageUpload from '@/components/common/ImageUpload';
+import GroupForm, { GroupFormData } from '@/components/groups/GroupForm';
 import { GroupMember, GroupInvite, GroupRole } from '@/types';
 
 // Role badge colors
@@ -34,24 +34,7 @@ export default function EditOrganizerPage() {
     const [activeTab, setActiveTab] = useState<'profile' | 'team'>('profile');
 
     // Profile form data
-    const [formData, setFormData] = useState({
-        name: '',
-        bio: '',
-        website_url: '',
-        logo_url: '',
-        social_links: {} as Record<string, string>,
-        // New profile fields
-        cover_image_url: '',
-        city: '',
-        social_facebook: '',
-        social_instagram: '',
-        social_website: '',
-        public_email: '',
-        slug: '',
-    });
-
-    const [newSocialPlatform, setNewSocialPlatform] = useState('');
-    const [newSocialUrl, setNewSocialUrl] = useState('');
+    const [formData, setFormData] = useState<GroupFormData | undefined>(undefined);
 
     // Team management state
     const [members, setMembers] = useState<GroupMember[]>([]);
@@ -82,14 +65,13 @@ export default function EditOrganizerPage() {
                     website_url: org.website_url || '',
                     logo_url: org.logo_url || '',
                     social_links: org.social_links || {},
-                    // New profile fields
                     cover_image_url: org.cover_image_url || '',
                     city: org.city || '',
                     social_facebook: org.social_facebook || '',
                     social_instagram: org.social_instagram || '',
                     social_website: org.social_website || '',
                     public_email: org.public_email || '',
-                    slug: org.slug,
+                    social_linkedin: org.social_linkedin || '', // Added
                 });
                 setOrganizerUserId(org.user_id);
 
@@ -127,72 +109,37 @@ export default function EditOrganizerPage() {
         fetchData();
     }, [id, isAuthenticated, authLoading, router]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleAddSocialLink = () => {
-        if (newSocialPlatform && newSocialUrl) {
-            setFormData(prev => ({
-                ...prev,
-                social_links: {
-                    ...prev.social_links,
-                    [newSocialPlatform.toLowerCase()]: newSocialUrl,
-                },
-            }));
-            setNewSocialPlatform('');
-            setNewSocialUrl('');
-        }
-    };
-
-    const handleRemoveSocialLink = (platform: string) => {
-        setFormData(prev => {
-            const links = { ...prev.social_links };
-            delete links[platform];
-            return { ...prev, social_links: links };
-        });
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (data: GroupFormData) => {
         setIsSubmitting(true);
         setError(null);
 
         try {
-            const data = {
-                name: formData.name,
-                bio: formData.bio || undefined,
-                website_url: formData.website_url || undefined,
-                logo_url: formData.logo_url || undefined,
-                social_links: Object.keys(formData.social_links).length > 0 ? formData.social_links : undefined,
-                // New profile fields
-                cover_image_url: formData.cover_image_url || undefined,
-                city: formData.city || undefined,
-                social_facebook: formData.social_facebook || undefined,
-                social_instagram: formData.social_instagram || undefined,
-                social_website: formData.social_website || undefined,
-                public_email: formData.public_email || undefined,
+            const updateData = {
+                name: data.name,
+                bio: data.bio || undefined,
+                website_url: data.website_url || undefined,
+                logo_url: data.logo_url || undefined,
+                social_links: Object.keys(data.social_links).length > 0 ? data.social_links : undefined,
+                cover_image_url: data.cover_image_url || undefined,
+                city: data.city || undefined,
+                social_facebook: data.social_facebook || undefined,
+                social_instagram: data.social_instagram || undefined,
+                social_website: data.social_website || undefined,
+                social_linkedin: data.social_linkedin || undefined,
+                public_email: data.public_email || undefined,
             };
 
-            await api.organizers.update(id as string, data);
+            await api.organizers.update(id as string, updateData);
             setSuccessMessage('Profile updated successfully!');
-
-            // Redirect to public profile after short delay
-            setTimeout(() => {
-                if (formData.slug) {
-                    router.push(`/groups/${formData.slug}`);
-                } else {
-                    // Fallback if slug isn't in state (shouldn't happen for existing orgs)
-                    router.push('/account/profile');
-                }
-            }, 1000);
+            setTimeout(() => setSuccessMessage(null), 3000); // Clear message
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update organizer profile');
         } finally {
             setIsSubmitting(false);
         }
     };
+
+
 
     const handleDelete = async () => {
         if (!confirm('Are you sure you want to delete this organizer profile? This cannot be undone.')) {
@@ -336,245 +283,16 @@ export default function EditOrganizerPage() {
                 </div>
 
                 {/* Profile Tab */}
-                {activeTab === 'profile' && (
-                    <Card>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Organization Name *
-                                </label>
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    required
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    placeholder="e.g., Highland Music Society"
-                                    disabled={isSubmitting}
-                                />
-                            </div>
-
-                            <div>
-                                <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Bio / Description
-                                </label>
-                                <textarea
-                                    id="bio"
-                                    name="bio"
-                                    rows={4}
-                                    value={formData.bio}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                    placeholder="Tell people about your organization..."
-                                    disabled={isSubmitting}
-                                />
-                            </div>
-
-                            <div>
-                                <label htmlFor="website_url" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Website URL
-                                </label>
-                                <Input
-                                    id="website_url"
-                                    name="website_url"
-                                    type="url"
-                                    value={formData.website_url}
-                                    onChange={handleChange}
-                                    placeholder="https://example.com"
-                                    disabled={isSubmitting}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Logo
-                                </label>
-                                <div className="max-w-xs">
-                                    <ImageUpload
-                                        folder="organizers"
-                                        currentImageUrl={formData.logo_url}
-                                        onUpload={(urls) => setFormData(prev => ({ ...prev, logo_url: urls.url }))}
-                                        onRemove={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
-                                        aspectRatio="1/1"
-                                    />
-                                    <p className="mt-1 text-xs text-gray-500">Recommended: Square image (1:1), at least 200x200px</p>
-                                </div>
-                            </div>
-
-
-                            {/* Cover Image */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Cover Image
-                                </label>
-                                <div className="w-full">
-                                    <ImageUpload
-                                        folder="organizers"
-                                        currentImageUrl={formData.cover_image_url}
-                                        onUpload={(urls) => setFormData(prev => ({ ...prev, cover_image_url: urls.url }))}
-                                        onRemove={() => setFormData(prev => ({ ...prev, cover_image_url: '' }))}
-                                        aspectRatio="3/1"
-                                    />
-                                    <p className="mt-1 text-xs text-gray-500">Recommended: Landscape image (3:1 aspect ratio), e.g., 1200x400px</p>
-                                </div>
-                            </div>
-
-                            {/* City */}
-                            <div>
-                                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                                    City / Location
-                                </label>
-                                <Input
-                                    id="city"
-                                    name="city"
-                                    value={formData.city}
-                                    onChange={handleChange}
-                                    placeholder="e.g., Inverness"
-                                    disabled={isSubmitting}
-                                />
-                            </div>
-
-                            {/* Social Media Links */}
-                            <div className="pt-6 border-t border-gray-200">
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">Social & Contact</h3>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label htmlFor="social_facebook" className="block text-sm font-medium text-gray-700 mb-2">
-                                            Facebook URL
-                                        </label>
-                                        <Input
-                                            id="social_facebook"
-                                            name="social_facebook"
-                                            type="url"
-                                            value={formData.social_facebook}
-                                            onChange={handleChange}
-                                            placeholder="https://facebook.com/yourpage"
-                                            disabled={isSubmitting}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="social_instagram" className="block text-sm font-medium text-gray-700 mb-2">
-                                            Instagram URL
-                                        </label>
-                                        <Input
-                                            id="social_instagram"
-                                            name="social_instagram"
-                                            type="url"
-                                            value={formData.social_instagram}
-                                            onChange={handleChange}
-                                            placeholder="https://instagram.com/yourhandle"
-                                            disabled={isSubmitting}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="social_website" className="block text-sm font-medium text-gray-700 mb-2">
-                                            Website URL
-                                        </label>
-                                        <Input
-                                            id="social_website"
-                                            name="social_website"
-                                            type="url"
-                                            value={formData.social_website}
-                                            onChange={handleChange}
-                                            placeholder="https://yourwebsite.com"
-                                            disabled={isSubmitting}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="public_email" className="block text-sm font-medium text-gray-700 mb-2">
-                                            Public Contact Email
-                                            <span className="text-gray-500 font-normal ml-1">(visible on your profile)</span>
-                                        </label>
-                                        <Input
-                                            id="public_email"
-                                            name="public_email"
-                                            type="email"
-                                            value={formData.public_email}
-                                            onChange={handleChange}
-                                            placeholder="contact@yourorganization.com"
-                                            disabled={isSubmitting}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Additional Social Links (legacy) */}
-                            <div className="pt-6 border-t border-gray-200">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Other Social Links
-                                </label>
-
-                                {Object.entries(formData.social_links).length > 0 && (
-                                    <div className="space-y-2 mb-4">
-                                        {Object.entries(formData.social_links).map(([platform, url]) => (
-                                            <div key={platform} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
-                                                <span className="text-sm">
-                                                    <span className="font-medium capitalize">{platform}:</span> {url}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveSocialLink(platform)}
-                                                    className="text-red-600 hover:text-red-800 text-sm"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div className="flex gap-2">
-                                    <Input
-                                        placeholder="Platform (e.g., twitter)"
-                                        value={newSocialPlatform}
-                                        onChange={(e) => setNewSocialPlatform(e.target.value)}
-                                        disabled={isSubmitting}
-                                        className="flex-1"
-                                    />
-                                    <Input
-                                        placeholder="URL"
-                                        value={newSocialUrl}
-                                        onChange={(e) => setNewSocialUrl(e.target.value)}
-                                        disabled={isSubmitting}
-                                        className="flex-1"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        onClick={handleAddSocialLink}
-                                        disabled={isSubmitting || !newSocialPlatform || !newSocialUrl}
-                                    >
-                                        Add
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                                {isOwner && (
-                                    <button
-                                        type="button"
-                                        onClick={handleDelete}
-                                        className="text-sm text-red-600 hover:text-red-800"
-                                    >
-                                        Delete Profile
-                                    </button>
-                                )}
-                                <div className="flex gap-3 ml-auto">
-                                    <Link href="/account" className="text-sm text-gray-600 hover:text-emerald-600 py-2">
-                                        Cancel
-                                    </Link>
-                                    <Button type="submit" variant="primary" size="lg" disabled={isSubmitting}>
-                                        {isSubmitting ? 'Saving...' : 'Save Changes'}
-                                    </Button>
-                                </div>
-                            </div>
-                        </form>
-                    </Card>
+                {activeTab === 'profile' && formData && (
+                    <GroupForm
+                        initialData={formData}
+                        onSubmit={handleSubmit}
+                        isLoading={isSubmitting}
+                        mode="edit"
+                        onCancel={() => router.push('/account')}
+                        onDelete={handleDelete}
+                        isOwner={isOwner}
+                    />
                 )}
 
                 {/* Team Tab */}
