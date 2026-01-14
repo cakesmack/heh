@@ -11,19 +11,34 @@ import Modal from '@/components/admin/Modal';
 import ImageUpload from '@/components/common/ImageUpload';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
-import { eventsAPI, categoriesAPI } from '@/lib/api';
+import { eventsAPI, categoriesAPI, venuesAPI, adminEventsAPI, AdminEventItem } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 import RichTextEditor from '@/components/common/RichTextEditor';
 import type { EventResponse, VenueResponse, Category, ShowtimeCreate } from '@/types';
 
 export default function AdminEvents() {
   const router = useRouter();
-  const [events, setEvents] = useState<EventResponse[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<EventResponse[]>([]);
+  // Paginated events from admin API
+  const [events, setEvents] = useState<AdminEventItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [venues, setVenues] = useState<VenueResponse[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalEvents, setTotalEvents] = useState(0);
+
+  // Filter state
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [venueFilter, setVenueFilter] = useState<string>('');
+  const [includePast, setIncludePast] = useState(false);
+
+  // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventResponse | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<VenueResponse | null>(null);
@@ -45,67 +60,75 @@ export default function AdminEvents() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
-  const [includePast, setIncludePast] = useState(false);
   const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
   const [isMultiSession, setIsMultiSession] = useState(false);
   const [noEndTime, setNoEndTime] = useState(false);
 
   // Admin Promote Modal State
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
-  const [promotingEvent, setPromotingEvent] = useState<EventResponse | null>(null);
+  const [promotingEvent, setPromotingEvent] = useState<{ id: string; title: string } | null>(null);
   const [promoteSlotType, setPromoteSlotType] = useState<'hero_home' | 'global_pinned' | 'magazine_carousel'>('hero_home');
   const [promoteLoading, setPromoteLoading] = useState(false);
 
   // Track active promotions for each event: { eventId: [{id, slot_type},...] }
   const [activePromotions, setActivePromotions] = useState<Record<string, { id: string, slot_type: string }[]>>({});
 
-  const fetchData = useCallback(async () => {
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // Reset to page 1 on search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch events with pagination (server-side)
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
       const filters: any = {
-        limit: 200,
-        q: searchQuery || undefined
+        page: currentPage,
+        page_size: pageSize,
+        include_past: includePast,
       };
 
-      if (includePast) {
-        filters.date_from = new Date('2000-01-01').toISOString();
-        filters.include_past = true;
-      }
-      // If !includePast, we send nothing. Backend defaults to future events + recurrence deduplication.
+      if (debouncedSearch) filters.search = debouncedSearch;
+      if (statusFilter !== 'all') filters.status = statusFilter.toLowerCase();
+      if (categoryFilter) filters.category_id = categoryFilter;
+      if (venueFilter) filters.venue_id = venueFilter;
 
-      const [eventsRes, categoriesRes] = await Promise.all([
-        eventsAPI.list(filters),
-        categoriesAPI.list(true),
-      ]);
-      setEvents(eventsRes.events);
-      setFilteredEvents(eventsRes.events);
-      setCategories(categoriesRes.categories);
+      const res = await adminEventsAPI.list(filters);
+      setEvents(res.data);
+      setTotalPages(res.total_pages);
+      setTotalEvents(res.total);
     } catch (err) {
-      console.error('Failed to fetch data:', err);
+      console.error('Failed to fetch events:', err);
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, includePast]);
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, categoryFilter, venueFilter, includePast]);
 
-  // Debounced fetch
+  // Fetch categories and venues on mount
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchData();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [fetchData]);
+    const fetchMetadata = async () => {
+      try {
+        const [categoriesRes, venuesRes] = await Promise.all([
+          categoriesAPI.list(true),
+          venuesAPI.list({ limit: 500 }),
+        ]);
+        setCategories(categoriesRes.categories);
+        setVenues(venuesRes.venues);
+      } catch (err) {
+        console.error('Failed to fetch metadata:', err);
+      }
+    };
+    fetchMetadata();
+  }, []);
 
-  // Filter events based on status (client-side for now, search is server-side)
+  // Fetch events when filters/page change
   useEffect(() => {
-    let filtered = events;
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(e => e.status?.toUpperCase() === statusFilter);
-    }
-
-    setFilteredEvents(filtered);
-  }, [statusFilter, events]);
+    fetchEvents();
+  }, [fetchEvents]);
 
   const formatDateForInput = (dateString: string) => {
     const date = new Date(dateString);
@@ -138,43 +161,50 @@ export default function AdminEvents() {
     setModalOpen(true);
   };
 
-  const openEditModal = (event: EventResponse, e: React.MouseEvent) => {
+  const openEditModal = async (event: AdminEventItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditingEvent(event);
-    setSelectedVenue(null);
-    setFormData({
-      title: event.title,
-      description: event.description || '',
-      date_start: formatDateForInput(event.date_start),
-      date_end: formatDateForInput(event.date_end),
-      venue_id: event.venue_id || '',
-      location_name: event.location_name || '',
-      category_id: event.category_id || '',
-      price: event.price,
-      image_url: event.image_url || '',
-      ticket_url: event.ticket_url || '',
-      age_restriction: event.age_restriction || '',
-    });
-    setUseManualLocation(!event.venue_id && !!event.location_name);
-    // Load existing showtimes
-    if (event.showtimes && event.showtimes.length > 0) {
-      setShowtimes(event.showtimes.map(st => ({
-        start_time: st.start_time,
-        end_time: st.end_time,
-        ticket_url: st.ticket_url,
-        notes: st.notes
-      })));
-      setIsMultiSession(true);
-    } else {
-      setShowtimes([]);
-      setIsMultiSession(false);
+    try {
+      // Fetch full event data for editing
+      const fullEvent = await eventsAPI.get(event.id);
+      setEditingEvent(fullEvent);
+      setSelectedVenue(null);
+      setFormData({
+        title: fullEvent.title,
+        description: fullEvent.description || '',
+        date_start: formatDateForInput(fullEvent.date_start),
+        date_end: formatDateForInput(fullEvent.date_end),
+        venue_id: fullEvent.venue_id || '',
+        location_name: fullEvent.location_name || '',
+        category_id: fullEvent.category_id || '',
+        price: fullEvent.price,
+        image_url: fullEvent.image_url || '',
+        ticket_url: fullEvent.ticket_url || '',
+        age_restriction: fullEvent.age_restriction || '',
+      });
+      setUseManualLocation(!fullEvent.venue_id && !!fullEvent.location_name);
+      // Load existing showtimes
+      if (fullEvent.showtimes && fullEvent.showtimes.length > 0) {
+        setShowtimes(fullEvent.showtimes.map(st => ({
+          start_time: st.start_time,
+          end_time: st.end_time,
+          ticket_url: st.ticket_url,
+          notes: st.notes
+        })));
+        setIsMultiSession(true);
+      } else {
+        setShowtimes([]);
+        setIsMultiSession(false);
+      }
+      setError(null);
+      setDateError(null);
+      setModalOpen(true);
+    } catch (err: any) {
+      console.error('Failed to fetch event details:', err);
+      alert('Failed to load event for editing');
     }
-    setError(null);
-    setDateError(null);
-    setModalOpen(true);
   };
 
-  const handleRowClick = (event: EventResponse) => {
+  const handleRowClick = (event: AdminEventItem) => {
     window.open(`/events/${event.id}`, '_blank');
   };
 
@@ -289,7 +319,7 @@ export default function AdminEvents() {
         await eventsAPI.create(payload);
       }
       setModalOpen(false);
-      fetchData();
+      fetchEvents();
     } catch (err: any) {
       setError(err.message || 'Failed to save event');
     } finally {
@@ -297,13 +327,13 @@ export default function AdminEvents() {
     }
   };
 
-  const handleDelete = async (event: EventResponse, e: React.MouseEvent) => {
+  const handleDelete = async (event: AdminEventItem, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm(`Are you sure you want to delete "${event.title}"?`)) return;
 
     try {
       await eventsAPI.delete(event.id);
-      fetchData();
+      fetchEvents();
     } catch (err: any) {
       alert(err.message || 'Failed to delete event');
     }
@@ -328,7 +358,7 @@ export default function AdminEvents() {
       if (!res.ok) throw new Error('Failed to create featured booking');
       setPromoteModalOpen(false);
       setPromotingEvent(null);
-      fetchData();
+      fetchEvents();
       fetchPromotions();
     } catch (err: any) {
       alert(err.message || 'Failed to promote event');
@@ -373,7 +403,7 @@ export default function AdminEvents() {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
       if (!res.ok) throw new Error('Failed to stop promotion');
-      fetchData();
+      fetchEvents();
       fetchPromotions();
     } catch (err: any) {
       alert(err.message || 'Failed to stop promotion');
@@ -404,51 +434,100 @@ export default function AdminEvents() {
     <AdminGuard>
       <AdminLayout title="Events">
         {/* Search & Filters */}
-        <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative w-64">
-              <input
-                type="text"
-                placeholder="Search events..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Search */}
+              <div className="relative w-64">
+                <input
+                  type="text"
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              {/* Category Filter */}
+              <select
+                value={categoryFilter}
+                onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+
+              {/* Venue Filter */}
+              <select
+                value={venueFilter}
+                onChange={(e) => { setVenueFilter(e.target.value); setCurrentPage(1); }}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[200px]"
+              >
+                <option value="">All Venues</option>
+                {venues.slice(0, 100).map(venue => (
+                  <option key={venue.id} value={venue.id}>{venue.name}</option>
+                ))}
+              </select>
+
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="all">All Status</option>
+                <option value="published">Published</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+                <option value="draft">Draft</option>
+              </select>
+
+              {/* Include Past */}
+              <div className="flex items-center gap-2">
+                <input
+                  id="include-past"
+                  type="checkbox"
+                  checked={includePast}
+                  onChange={(e) => { setIncludePast(e.target.checked); setCurrentPage(1); }}
+                  className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                />
+                <label htmlFor="include-past" className="text-sm text-gray-700 select-none cursor-pointer">
+                  Past
+                </label>
+              </div>
+
+              {/* Reset Button */}
+              {(searchQuery || categoryFilter || venueFilter || statusFilter !== 'all' || includePast) && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCategoryFilter('');
+                    setVenueFilter('');
+                    setStatusFilter('all');
+                    setIncludePast(false);
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                >
+                  Reset
+                </button>
+              )}
+
+              <span className="text-sm text-gray-500">{totalEvents} events</span>
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <button
+              onClick={openCreateModal}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
             >
-              <option value="all">All Status</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="PENDING">Pending</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="DRAFT">Draft</option>
-            </select>
-            <div className="flex items-center gap-2">
-              <input
-                id="include-past"
-                type="checkbox"
-                checked={includePast}
-                onChange={(e) => setIncludePast(e.target.checked)}
-                className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-              />
-              <label htmlFor="include-past" className="text-sm text-gray-700 select-none cursor-pointer">
-                Include Past Events
-              </label>
-            </div>
-            <span className="text-sm text-gray-500">{filteredEvents.length} events</span>
+              Add Event
+            </button>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-          >
-            Add Event
-          </button>
         </div>
 
         {/* Events Table */}
@@ -457,7 +536,7 @@ export default function AdminEvents() {
             <div className="p-8 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
             </div>
-          ) : filteredEvents.length === 0 ? (
+          ) : events.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               {searchQuery ? `No events found matching "${searchQuery}"` : 'No events found'}
             </div>
@@ -474,7 +553,7 @@ export default function AdminEvents() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredEvents.map((event) => (
+                {events.map((event) => (
                   <tr
                     key={event.id}
                     onClick={() => handleRowClick(event)}
@@ -563,6 +642,34 @@ export default function AdminEvents() {
             </table>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow">
+            <div className="text-sm text-gray-500">
+              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalEvents)} of {totalEvents}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
 
         <Modal
           isOpen={modalOpen}

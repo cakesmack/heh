@@ -135,6 +135,139 @@ def get_admin_stats(
 
 
 # ============================================================
+# ADMIN EVENTS MANAGEMENT
+# ============================================================
+
+class AdminEventResponse(BaseModel):
+    """Simplified event response for admin list."""
+    id: str
+    title: str
+    status: Optional[str]
+    date_start: datetime
+    date_end: datetime
+    venue_name: Optional[str]
+    location_name: Optional[str]
+    category_id: Optional[str]
+    category_name: Optional[str]
+    image_url: Optional[str]
+    featured: bool
+    is_recurring: bool
+    parent_event_id: Optional[str]
+    organizer_email: Optional[str]
+    created_at: datetime
+
+
+class AdminEventsListResponse(BaseModel):
+    """Paginated admin events response."""
+    data: List[AdminEventResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+@router.get("/events", response_model=AdminEventsListResponse)
+def list_admin_events(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    category_id: Optional[str] = None,
+    venue_id: Optional[str] = None,
+    search: Optional[str] = None,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    include_past: bool = False,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """List events for admin with pagination and filters."""
+    from app.models.category import Category
+    
+    now = datetime.utcnow()
+    
+    # Base query
+    query = select(Event)
+    
+    # Apply filters
+    if category_id:
+        query = query.where(Event.category_id == category_id)
+    
+    if venue_id:
+        query = query.where(Event.venue_id == venue_id)
+    
+    if status_filter:
+        query = query.where(Event.status == status_filter.lower())
+    
+    if search:
+        query = query.where(Event.title.ilike(f"%{search}%"))
+    
+    if not include_past:
+        query = query.where(Event.date_end >= now)
+    
+    # Get total count
+    count_query = select(func.count()).select_from(query.subquery())
+    total = session.exec(count_query).one()
+    
+    # Calculate pagination
+    offset = (page - 1) * page_size
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+    
+    # Apply ordering and pagination
+    query = query.order_by(Event.date_start.asc())
+    query = query.offset(offset).limit(page_size)
+    
+    events = session.exec(query).all()
+    
+    # Build response
+    result = []
+    for event in events:
+        # Get category name
+        category_name = None
+        if event.category_id:
+            category = session.get(Category, event.category_id)
+            if category:
+                category_name = category.name
+        
+        # Get venue name
+        venue_name = None
+        if event.venue_id:
+            venue = session.get(Venue, event.venue_id)
+            if venue:
+                venue_name = venue.name
+        
+        # Get organizer email
+        organizer_email = None
+        if event.organizer_user_id:
+            user = session.get(User, event.organizer_user_id)
+            if user:
+                organizer_email = user.email
+        
+        result.append(AdminEventResponse(
+            id=event.id,
+            title=event.title,
+            status=event.status,
+            date_start=event.date_start,
+            date_end=event.date_end,
+            venue_name=venue_name,
+            location_name=event.location_name,
+            category_id=event.category_id,
+            category_name=category_name,
+            image_url=event.image_url,
+            featured=event.featured or False,
+            is_recurring=event.is_recurring or False,
+            parent_event_id=event.parent_event_id,
+            organizer_email=organizer_email,
+            created_at=event.created_at
+        ))
+    
+    return AdminEventsListResponse(
+        data=result,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages
+    )
+
+
+# ============================================================
 # USER MANAGEMENT
 # ============================================================
 

@@ -1604,3 +1604,53 @@ export const followsAPI = {
     return apiFetch<any>(`/api/categories/${categoryId}/follow`, { method: 'DELETE' });
   },
 };
+
+// ============================================================
+// ADMIN EVENTS API
+// ============================================================
+
+export interface AdminEventsFilter {
+  page?: number;
+  page_size?: number;
+  category_id?: string;
+  venue_id?: string;
+  search?: string;
+  status?: string;
+  include_past?: boolean;
+}
+
+export interface AdminEventItem {
+  id: string;
+  title: string;
+  status: string | null;
+  date_start: string;
+  date_end: string;
+  venue_name: string | null;
+  location_name: string | null;
+  category_id: string | null;
+  category_name: string | null;
+  image_url: string | null;
+  featured: boolean;
+  is_recurring: boolean;
+  parent_event_id: string | null;
+  organizer_email: string | null;
+  created_at: string;
+}
+
+export interface AdminEventsListResponse {
+  data: AdminEventItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export const adminEventsAPI = {
+  /**
+   * List events with pagination and filters (admin only)
+   */
+  list: async (filters?: AdminEventsFilter): Promise<AdminEventsListResponse> => {
+    const queryString = filters ? buildQueryString(filters) : '';
+    return apiFetch<AdminEventsListResponse>(`/api/admin/events${queryString}`);
+  },
+};
