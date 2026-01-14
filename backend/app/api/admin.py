@@ -235,8 +235,8 @@ def list_admin_events(
         
         # Get organizer email
         organizer_email = None
-        if event.organizer_user_id:
-            user = session.get(User, event.organizer_user_id)
+        if event.organizer_id:
+            user = session.get(User, event.organizer_id)
             if user:
                 organizer_email = user.email
         
