@@ -62,7 +62,7 @@ function EventMarkerWithRef({
                     style={{ backgroundColor: bgColor }}
                 >
                     <img
-                        src="/images/logo_knot.png"
+                        src="/images/logo.png"
                         alt="Logo"
                         className="w-full h-full object-contain p-0.5"
                     />
