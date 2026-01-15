@@ -97,28 +97,33 @@ export default function MapDateFilter({ selectedRangeId, onRangeSelect, currentD
     };
 
     return (
-        <div className="relative flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-            {/* Presets */}
-            {filters.map((filter) => (
-                <button
-                    key={filter.id}
-                    onClick={() => handlePresetClick(filter)}
-                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap border ${selectedRangeId === filter.id
+        <div className="flex items-center gap-2 -mx-4 px-4 md:mx-0 md:px-0 pb-2">
+            {/* Scrollable Presets Wrapper */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                {filters.map((filter) => (
+                    <button
+                        key={filter.id}
+                        onClick={() => handlePresetClick(filter)}
+                        className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap border ${selectedRangeId === filter.id
                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                        }`}
-                >
-                    {filter.label}
-                </button>
-            ))}
+                            }`}
+                    >
+                        {filter.label}
+                    </button>
+                ))}
+            </div>
 
-            {/* Custom Range Button */}
-            <div className="relative" ref={popoverRef}>
+            {/* Separator Line */}
+            <div className="h-6 w-px bg-gray-300 mx-1 flex-shrink-0 hidden md:block" />
+
+            {/* Custom Range Button - Outside scroll wrapper to prevent clipping */}
+            <div className="relative flex-shrink-0" ref={popoverRef}>
                 <button
                     onClick={handleCustomClick}
-                    className={`flex items-center gap-1.5 flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap border ${selectedRangeId === 'custom'
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap border ${selectedRangeId === 'custom'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                         }`}
                 >
                     <CalendarIcon className="w-3.5 h-3.5" />
@@ -143,7 +148,7 @@ export default function MapDateFilter({ selectedRangeId, onRangeSelect, currentD
 
                 {/* Date Picker Popover */}
                 {isCustomOpen && (
-                    <div className="absolute top-full right-0 mt-2 p-4 bg-white rounded-xl shadow-xl border border-gray-200 z-50 min-w-[300px]">
+                    <div className="absolute top-full right-0 mt-3 p-4 bg-white rounded-xl shadow-2xl border border-gray-200 z-[100] min-w-[320px]">
                         <DayPicker
                             mode="range"
                             selected={tempRange}
