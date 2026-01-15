@@ -57,10 +57,10 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsReturn {
     const filtersToUse = newFilters !== undefined ? newFilters : currentFilters;
 
     try {
-      // Always fetch first page (skip=0)
+      // Use skip from filters if provided, otherwise default to 0
       const response: EventListResponse = await api.events.list({
         ...filtersToUse,
-        skip: 0,
+        skip: filtersToUse?.skip || 0,
         limit
       });
 

@@ -225,8 +225,8 @@ export default function HomePage({ }: HomePageProps) {
       {/* Discovery System */}
       <DiscoveryBar onSearch={handleSearch} isLoading={isSearchLoading} />
 
-      {/* Features Section */}
-      <Features />
+      {/* Features Section - Only show when search is NOT active to reduce clutter */}
+      {!isSearchOpen && <Features />}
 
       <SearchResultsDrawer
         isOpen={isSearchOpen}
