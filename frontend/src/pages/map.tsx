@@ -42,9 +42,10 @@ export function MapPage() {
   const today = startOfDay(new Date());
 
   // Date Range State
+  // Explicitly default to Next 7 Days (Backend no longer does this automatically)
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
     start: today,
-    end: endOfDay(addDays(today, 6)) // Default: Next 7 Days
+    end: endOfDay(addDays(today, 7)) // Default: Next 7 Days
   });
   const [selectedRangeId, setSelectedRangeId] = useState<string>('week');
   const [customDate, setCustomDate] = useState<string>(''); // For custom date picker

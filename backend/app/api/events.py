@@ -208,14 +208,15 @@ def list_events(
     if category:
          print(f"[EVENTS_DEBUG] Filtering by category slug: {category}")
 
-    # Default to "Next 7 Days" if no specific date filter is provided AND not requesting past events
-    # This ensures the map isn't overwhelmed with every future event
-    if date_from is None and date_to is None and not include_past:
-        from datetime import timedelta
-        now = datetime.utcnow()
-        date_from = now
-        date_to = now + timedelta(days=7)
-        print(f"[EVENTS_DEBUG] No date filter provided. Defaulting to Next 7 Days: {date_from} to {date_to}")
+    # Default date_from to today if not provided AND not requesting past events
+    # This prevents loading past events by default
+    if date_from is None and not include_past:
+        from datetime import datetime
+        date_from = datetime.utcnow()
+        # Note: We do NOT default date_to here. 
+        # API clients (like the Map) must explicitly request a date range if they want to limit it at the backend level.
+        # This ensures pages like Homepage/Magazine Grid can fetch ALL future events paginated.
+        print(f"[EVENTS_DEBUG] No start date provided. Defaulting to Today: {date_from}")
 
     query = select(Event)
 
