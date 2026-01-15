@@ -58,13 +58,13 @@ function EventMarkerWithRef({
             >
                 {/* Pin Container */}
                 <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white"
+                    className="w-9 h-9 rounded-full flex items-center justify-center shadow-lg border-2 border-white overflow-hidden"
                     style={{ backgroundColor: bgColor }}
                 >
                     <img
-                        src="/logo_knot.jpg"
+                        src="/images/logo_knot.png"
                         alt="Logo"
-                        className="w-5 h-5 object-cover rounded-full"
+                        className="w-full h-full object-contain p-0.5"
                     />
                 </div>
                 {/* Pin tail */}
