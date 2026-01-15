@@ -118,13 +118,28 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                     const jsonVenueName = item.venue_name || item.location_name || item.venue || '';
                     const matchedVenue = findMatchingVenue(jsonVenueName);
 
+                    // Smart Address Logic: Combine Venue Name + Address if not already present
+                    // This gives Google Places a better search string (e.g. "Eden Court, Bishops Rd" vs just "Bishops Rd")
+                    const rawAddress = item.address || '';
+                    let smartAddress = rawAddress;
+
+                    if (jsonVenueName && rawAddress) {
+                        const venueInAddress = rawAddress.toLowerCase().includes(jsonVenueName.toLowerCase());
+                        if (!venueInAddress) {
+                            smartAddress = `${jsonVenueName}, ${rawAddress}`;
+                        }
+                    } else if (jsonVenueName && !rawAddress) {
+                        // If no address but we have a venue name, use that as the "address" for searching
+                        smartAddress = jsonVenueName;
+                    }
+
                     return {
                         id: `${Date.now()}-${idx}`,
                         ...item,
                         title: item.title || "Untitled Event",
                         description: item.description || '',
                         location_name: item.location_name || item.venue || 'Unknown Location',
-                        address: item.address || '',
+                        address: smartAddress, // Use smart address for search
                         raw_showtimes: typeof item.showtimes === 'string' ? [item.showtimes] : (item.showtimes || []),
                         status: 'pending' as const,
                         selectedCategoryId: matchedCategory?.id || '',
