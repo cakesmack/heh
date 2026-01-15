@@ -84,6 +84,7 @@ export default function HomePage({ }: HomePageProps) {
       limit: SEARCH_ITEMS_PER_PAGE,
       skip: 0
     },
+    limit: SEARCH_ITEMS_PER_PAGE, // Ensure API uses the exact same limit as UI
     autoFetch: false,
   });
 
@@ -234,6 +235,7 @@ export default function HomePage({ }: HomePageProps) {
         results={searchResults}
         total={totalSearchResults}
         page={searchPage}
+        itemsPerPage={SEARCH_ITEMS_PER_PAGE} // Pass the single source of truth
         onClose={() => setIsSearchOpen(false)}
         onPageChange={handleSearchPageChange}
         searchParams={activeFilters}

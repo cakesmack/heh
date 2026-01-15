@@ -19,6 +19,7 @@ interface SearchResultsDrawerProps {
     searchParams?: any;
     sort?: string;
     onSortChange?: (sort: string) => void;
+    itemsPerPage?: number;
 }
 
 export default function SearchResultsDrawer({
@@ -31,11 +32,11 @@ export default function SearchResultsDrawer({
     onPageChange,
     searchParams,
     sort = 'date_asc',
-    onSortChange
+    onSortChange,
+    itemsPerPage = 8
 }: SearchResultsDrawerProps) {
     const drawerRef = useRef<HTMLDivElement>(null);
-    const ITEMS_PER_PAGE = 8;
-    const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(total / itemsPerPage);
 
     // Smooth scroll to top of drawer when results change or drawer opens
     useEffect(() => {
