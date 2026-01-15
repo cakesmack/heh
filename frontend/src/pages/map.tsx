@@ -197,33 +197,17 @@ export function MapPage() {
               </div>
             </div>
 
-            {/* Custom Date Picker (Desktop: Right aligned, Mobile: Hidden/Integrated) */}
-            <div className="md:hidden">
-              <input
-                type="date"
-                value={customDate}
-                onChange={handleCustomDateChange}
-                className="text-xs border border-gray-300 rounded px-2 py-1 w-32"
-                placeholder="Custom Date"
-              />
-            </div>
+            {/* Mobile Title Spacer */}
+            <div className="md:hidden"></div>
           </div>
 
-          {/* Date Filter Pills */}
+          {/* Date Filter Pills & Custom Picker */}
           <div className="flex items-center gap-4">
             <MapDateFilter
               selectedRangeId={selectedRangeId}
               onRangeSelect={handleRangeSelect}
+              currentDateRange={dateRange}
             />
-            {/* Custom Date Picker (Desktop Only) */}
-            <div className="hidden md:block">
-              <input
-                type="date"
-                value={customDate}
-                onChange={handleCustomDateChange}
-                className={`text-sm border rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 hover:border-gray-400 transition-colors ${selectedRangeId === 'custom' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-300'}`}
-              />
-            </div>
           </div>
 
         </div>
