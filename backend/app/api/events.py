@@ -205,6 +205,18 @@ def list_events(
     - location: Search in venue name, address, postcode, and event location fields
     - age_restriction: Filter by age restriction
     """
+    if category:
+         print(f"[EVENTS_DEBUG] Filtering by category slug: {category}")
+
+    # Default to "Next 7 Days" if no specific date filter is provided AND not requesting past events
+    # This ensures the map isn't overwhelmed with every future event
+    if date_from is None and date_to is None and not include_past:
+        from datetime import timedelta
+        now = datetime.utcnow()
+        date_from = now
+        date_to = now + timedelta(days=7)
+        print(f"[EVENTS_DEBUG] No date filter provided. Defaulting to Next 7 Days: {date_from} to {date_to}")
+
     query = select(Event)
 
     # Status filter:

@@ -9,10 +9,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
-import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
+import { format, isSameDay, startOfDay, endOfDay, addDays, nextSaturday, nextSunday } from 'date-fns';
 import { eventsAPI, categoriesAPI } from '@/lib/api';
 import type { EventResponse, Category } from '@/types';
 import type { MapMarker } from '@/components/events/GoogleMapView';
+import MapDateFilter, { DateRange } from '@/components/map/MapDateFilter';
+import MapSidebar from '@/components/map/MapSidebar';
+import MapEventCard from '@/components/map/MapEventCard'; // For mobile modal
 
 // Dynamically import GoogleMapView to avoid SSR issues
 const GoogleMapView = dynamic(() => import('@/components/events/GoogleMapView'), {
@@ -33,10 +36,22 @@ export function MapPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filters
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const today = startOfDay(new Date());
+
+  // Date Range State
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
+    start: today,
+    end: endOfDay(addDays(today, 6)) // Default: Next 7 Days
+  });
+  const [selectedRangeId, setSelectedRangeId] = useState<string>('week');
+  const [customDate, setCustomDate] = useState<string>(''); // For custom date picker
+
+  // Map Interaction State
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | undefined>(undefined);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
 
   // Selected events for mobile modal (when tapping a marker)
   const [selectedEvents, setSelectedEvents] = useState<EventResponse[]>([]);
@@ -53,26 +68,37 @@ export function MapPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Handle Date Range Selection
+  const handleRangeSelect = (range: DateRange) => {
+    setSelectedRangeId(range.id);
+    setDateRange({ start: range.start, end: range.end });
+    setCustomDate(''); // Clear custom date picker
+  };
+
+  // Handle Custom Date Picker
+  const handleCustomDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCustomDate(val);
+    if (val) {
+      const date = startOfDay(new Date(val));
+      setDateRange({ start: date, end: endOfDay(date) });
+      setSelectedRangeId('custom');
+    }
+  };
+
   // Fetch events and categories
-  // Re-fetches when selectedDate changes to get correct recurring instances from backend
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       setError(null);
 
       try {
-        // Build filter params - pass date to backend for proper recurring event handling
+        // Build filter params
         const eventFilters: { limit: number; date_from?: string; date_to?: string } = {
           limit: 500,
+          date_from: dateRange.start.toISOString(),
+          date_to: dateRange.end.toISOString(),
         };
-
-        // When a date is selected, pass it to the API so backend can:
-        // - Skip deduplication of recurring events
-        // - Return all instances matching that date
-        if (selectedDate) {
-          eventFilters.date_from = startOfDay(selectedDate).toISOString();
-          eventFilters.date_to = endOfDay(selectedDate).toISOString();
-        }
 
         const [eventsResponse, categoriesResponse] = await Promise.all([
           eventsAPI.list(eventFilters),
@@ -90,41 +116,20 @@ export function MapPage() {
     }
 
     fetchData();
-  }, [selectedDate]);
+  }, [dateRange]); // Refetch when date range changes
 
-  // Clear selected event when date changes
+  // Clear selected event when date/category changes
   useEffect(() => {
     setSelectedEvents([]);
     setSelectedMarkerId(undefined);
-  }, [selectedDate]);
+  }, [dateRange, selectedCategory]);
 
-  // Filter events by category and date
+  // Filter events by category locally
+  // (Date filtering is handled by backend refetch for efficiency/correctness with recurrence)
   const filteredEvents = useMemo(() => {
-    return events.filter(event => {
-      // Category filter
-      if (selectedCategory && event.category?.id !== selectedCategory) return false;
-
-      // Date filter - check if selectedDate falls within the event's date range
-      if (selectedDate && event.date_start) {
-        const eventStart = startOfDay(new Date(event.date_start));
-        const eventEnd = event.date_end ? startOfDay(new Date(event.date_end)) : eventStart;
-        const targetDate = startOfDay(selectedDate);
-
-        // Case A: Check if selectedDate falls within [date_start, date_end] range (inclusive)
-        const isWithinDateRange = targetDate >= eventStart && targetDate <= eventEnd;
-
-        // Case B: Multi-day event with showtimes - check if any showtime falls on selectedDate
-        const hasShowtimeOnDate = event.showtimes?.some(showtime =>
-          showtime.start_time && isSameDay(new Date(showtime.start_time), selectedDate)
-        ) ?? false;
-
-        // Include event if EITHER within date range OR a showtime matches
-        return isWithinDateRange || hasShowtimeOnDate;
-      }
-
-      return true;
-    });
-  }, [events, selectedCategory, selectedDate]);
+    if (!selectedCategory) return events;
+    return events.filter(event => event.category?.id === selectedCategory);
+  }, [events, selectedCategory]);
 
   // Handle marker click
   const handleMarkerClick = (marker: MapMarker) => {
@@ -156,11 +161,6 @@ export function MapPage() {
     }
   };
 
-  // Handle event card click
-  const handleEventClick = (event: EventResponse) => {
-    router.push(`/events/${event.id}`);
-  };
-
   // Close mobile modal
   const closeMobileModal = () => {
     setSelectedEvents([]);
@@ -170,142 +170,81 @@ export function MapPage() {
   return (
     // Height: 100vh minus header (64px) minus bottom nav on mobile (64px)
     <div className="flex flex-col h-[calc(100vh-128px)] md:h-[calc(100vh-64px)] bg-white overflow-hidden">
-      {/* Header with Category Filter */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Event Map</h1>
-            <p className="text-sm text-gray-500">
-              {filteredEvents.length} events across the Scottish Highlands
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Date Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 hidden sm:inline text-nowrap">Date:</span>
-              <input
-                type="date"
-                value={format(selectedDate, 'yyyy-MM-dd')}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val) {
-                    setSelectedDate(startOfDay(new Date(val)));
-                  }
-                }}
-                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-              />
+      {/* Header with Filters */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 z-20 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+
+          {/* Top Row: Title + Category (Mobile optimized) */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-bold text-gray-900 hidden md:block">Event Map</h1>
+
+              {/* Category Filter */}
+              <div className="relative">
+                <select
+                  value={selectedCategory || ''}
+                  onChange={(e) => setSelectedCategory(e.target.value || null)}
+                  className="text-sm font-medium border-none bg-gray-100/50 rounded-full px-4 py-1.5 pr-8 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Category Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 hidden sm:inline text-nowrap">Filter:</span>
-              <select
-                value={selectedCategory || ''}
-                onChange={(e) => setSelectedCategory(e.target.value || null)}
-                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-              >
-                <option value="">All Categories</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+            {/* Custom Date Picker (Desktop: Right aligned, Mobile: Hidden/Integrated) */}
+            <div className="md:hidden">
+              <input
+                type="date"
+                value={customDate}
+                onChange={handleCustomDateChange}
+                className="text-xs border border-gray-300 rounded px-2 py-1 w-32"
+                placeholder="Custom Date"
+              />
             </div>
           </div>
+
+          {/* Date Filter Pills */}
+          <div className="flex items-center gap-4">
+            <MapDateFilter
+              selectedRangeId={selectedRangeId}
+              onRangeSelect={handleRangeSelect}
+            />
+            {/* Custom Date Picker (Desktop Only) */}
+            <div className="hidden md:block">
+              <input
+                type="date"
+                value={customDate}
+                onChange={handleCustomDateChange}
+                className={`text-sm border rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 hover:border-gray-400 transition-colors ${selectedRangeId === 'custom' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-300'}`}
+              />
+            </div>
+          </div>
+
         </div>
       </div>
 
       {/* Main Content - Split View (Desktop) / Map Only (Mobile) */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative h-full">
-        {/* Left Panel - Event List: Hidden on mobile/tablet, visible on desktop (lg+) */}
-        <aside className="hidden lg:flex lg:flex-col lg:w-[380px] xl:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200">
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mx-auto mb-4" />
-              <p className="text-gray-500">Loading events...</p>
-            </div>
-          ) : error ? (
-            <div className="p-8 text-center text-red-500">{error}</div>
-          ) : filteredEvents.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <p className="text-lg font-medium mb-2">No events found</p>
-              <p className="text-sm">Try selecting a different category.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredEvents.map((event) => (
-                <div
-                  key={event.id}
-                  id={`event-card-${event.id}`}
-                  className={`p-4 cursor-pointer transition-all duration-200 ${selectedMarkerId === event.id
-                    ? 'bg-emerald-50 border-l-4 border-emerald-500'
-                    : hoveredEventId === event.id
-                      ? 'bg-gray-100'
-                      : 'bg-white hover:bg-gray-50'
-                    }`}
-                  onClick={() => handleEventClick(event)}
-                  onMouseEnter={() => setHoveredEventId(event.id)}
-                  onMouseLeave={() => setHoveredEventId(null)}
-                >
-                  <div className="flex gap-3">
-                    {/* Event Image */}
-                    <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
-                      {event.image_url ? (
-                        <img
-                          src={event.image_url}
-                          alt={event.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* Event Details */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate">{event.title}</h3>
-                      {event.category && (
-                        <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 mt-1">
-                          {event.category.name}
-                        </span>
-                      )}
-                      <p className="text-sm text-gray-500 mt-1">
-                        {event.date_start ? format(new Date(event.date_start), 'EEE, MMM d') : 'Date TBD'}
-                      </p>
-                      {event.venue_name && (
-                        <p className="text-sm text-gray-500 truncate">{event.venue_name}</p>
-                      )}
-                    </div>
+        {/* Left Panel - Event List Sidebar */}
+        <MapSidebar
+          events={filteredEvents}
+          loading={loading}
+          error={error}
+          selectedMarkerId={selectedMarkerId}
+          hoveredEventId={hoveredEventId}
+          onEventClick={(event) => {
+            router.push(`/events/${event.id}`);
+          }}
+          onHover={(eventId) => setHoveredEventId(eventId)}
+        />
 
-                    {/* View on Map Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFocusEventId(event.id);
-                        setSelectedMarkerId(event.id);
-                      }}
-                      className="flex-shrink-0 p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                      title="View on map"
-                      aria-label="View on map"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </aside>
-
-        {/* Right Panel - Map: Full width on mobile, shares space on desktop */}
+        {/* Right Panel - Map */}
         <div className="flex-1 relative">
           <GoogleMapView
             events={filteredEvents}
@@ -324,7 +263,7 @@ export function MapPage() {
                   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
               } else {
-                // On mobile, find all events at this location/day (with coordinate safety check)
+                // On mobile, find all events at this location/day
                 const eventsAtLocation = filteredEvents.filter(e =>
                   e.latitude != null && e.longitude != null &&
                   event.latitude != null && event.longitude != null &&
@@ -346,7 +285,7 @@ export function MapPage() {
           {selectedEvents.length > 0 && isMobile && (
             <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-2xl z-30 md:hidden animate-in slide-in-from-bottom-10 fade-in duration-300 pb-safe max-h-[70vh] flex flex-col">
               {/* Header */}
-              <div className="p-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-xl">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-xl z-20">
                 <h3 className="font-bold text-gray-900">
                   {selectedEvents.length} {selectedEvents.length === 1 ? 'Event' : 'Events'} at this location
                 </h3>
@@ -361,57 +300,15 @@ export function MapPage() {
               </div>
 
               {/* Scrollable Event List */}
-              <div className="overflow-y-auto flex-1 p-2 space-y-2">
+              <div className="overflow-y-auto flex-1 p-2 space-y-1">
                 {selectedEvents.map((event) => (
-                  <div
+                  <MapEventCard
                     key={event.id}
+                    event={event}
                     onClick={() => router.push(`/events/${event.id}`)}
-                    className="flex gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-gray-100"
-                  >
-                    {/* Thumbnail */}
-                    <div className="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
-                      {event.image_url ? (
-                        <img src={event.image_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Basic Details */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <h4 className="font-semibold text-gray-900 text-sm truncate leading-snug">{event.title}</h4>
-                      <p className="text-xs text-emerald-600 font-medium mt-0.5">
-                        {event.date_start ? format(new Date(event.date_start), 'h:mm a') : 'Time TBD'}
-                      </p>
-                      {event.venue_name && (
-                        <p className="text-xs text-gray-500 truncate mt-0.5">{event.venue_name}</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center pr-1">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
-
-              {/* Footer action if single event */}
-              {selectedEvents.length === 1 && (
-                <div className="p-4 pt-2 border-t border-gray-50 bg-gray-50/50 rounded-b-xl">
-                  <button
-                    onClick={() => router.push(`/events/${selectedEvents[0].id}`)}
-                    className="w-full bg-emerald-600 text-white py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors text-sm"
-                  >
-                    View Details
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
