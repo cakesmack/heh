@@ -9,12 +9,13 @@ import { MarkerClusterer, type Marker, GridAlgorithm } from '@googlemaps/markerc
 import { format } from 'date-fns';
 import type { EventResponse } from '@/types';
 
-interface ClusteredEventMarkersProps {
+export interface ClusteredEventMarkersProps {
     events: EventResponse[];
     selectedMarkerId?: string;
     hoveredEventId?: string | null;
     onEventClick?: (event: EventResponse) => void;
     onMarkerClick?: (marker: { id: string; type: 'event'; longitude: number; latitude: number; title: string }) => void;
+    onClusterClick?: (events: EventResponse[]) => void;
     isMobile?: boolean;
 }
 
@@ -90,6 +91,7 @@ export function ClusteredEventMarkers({
     hoveredEventId,
     onEventClick,
     onMarkerClick,
+    onClusterClick,
     isMobile = false,
 }: ClusteredEventMarkersProps) {
     const [markers, setMarkers] = useState<{ [key: string]: Marker }>({});
@@ -133,37 +135,63 @@ export function ClusteredEventMarkers({
                 // Use GridAlgorithm with settings tuned for the map
                 algorithm: new GridAlgorithm({
                     gridSize: 60,  // Default grid size
-                    maxZoom: 15,   // Stop clustering at zoom 15 (street level)
+                    maxZoom: 16,   // Stop clustering at zoom 16 (street level)
                 }),
                 // Custom click handler to show popup or zoom
                 onClusterClick: (event, cluster, mapInstance) => {
-                    const currentZoom = mapInstance.getZoom() || 7;
                     const clusterMarkers = cluster.markers || [];
+                    const clusterPosition = cluster.position;
 
-                    // If we're at max zoom (15) or near it, show a popup with event list
-                    if (currentZoom >= 14) {
-                        // Get all events at this cluster location
-                        const clusterPosition = cluster.position;
-                        const eventsAtLocation = events.filter(e => {
-                            // Check if event is near the cluster center (within ~100m)
-                            const latDiff = Math.abs(e.latitude - clusterPosition.lat());
-                            const lngDiff = Math.abs(e.longitude - clusterPosition.lng());
-                            return latDiff < 0.001 && lngDiff < 0.001;
-                        });
+                    // Get events in this cluster
+                    const eventsInCluster = events.filter(e => {
+                        const latDiff = Math.abs(e.latitude - clusterPosition.lat());
+                        const lngDiff = Math.abs(e.longitude - clusterPosition.lng());
+                        return latDiff < 0.0001 && lngDiff < 0.0001; // Strict check for "events in this visual cluster"
+                    });
 
-                        if (eventsAtLocation.length > 0) {
+                    // Determine bounds of the cluster
+                    const bounds = new google.maps.LatLngBounds();
+                    clusterMarkers.forEach(m => {
+                        // Cast to AdvancedMarkerElement as that's what we are using
+                        const marker = m as google.maps.marker.AdvancedMarkerElement;
+                        if (marker.position) {
+                            // AdvancedMarker uses .position (LatLng | LatLngLiteral), not getPosition()
+                            // But wait, the markerClusterer library might wrap it?
+                            // Let's safe check. If it's AdvancedMarkerElement, it has position property.
+                            // If it's legacy Marker, it has getPosition().
+                            // The @vis.gl integration uses AdvancedMarker.
+                            if (marker.position) {
+                                bounds.extend(marker.position);
+                            }
+                        }
+                    });
+
+                    const currentZoom = mapInstance.getZoom() || 0;
+                    const isMaxZoom = currentZoom >= 15; // Max zoom for clustering is 16, so 15 is "near max"
+                    // Check if bounds are very tight (effectively same location)
+                    const ne = bounds.getNorthEast();
+                    const sw = bounds.getSouthWest();
+                    const isSameLocation =
+                        Math.abs(ne.lat() - sw.lat()) < 0.00005 &&
+                        Math.abs(ne.lng() - sw.lng()) < 0.00005;
+
+                    // ACTION: Show List (Mobile Sheet or Desktop Popup)
+                    if (isSameLocation || isMaxZoom) {
+                        if (isMobile && onClusterClick) {
+                            // On mobile, delegate to parent to show Bottom Sheet
+                            onClusterClick(eventsInCluster);
+                        } else {
+                            // On desktop, show internal popup
                             setClusterPopup({
                                 position: clusterPosition,
-                                events: eventsAtLocation,
+                                events: eventsInCluster,
                             });
-                            return; // Don't zoom
                         }
                     }
-
-                    // Otherwise, zoom in moderately
-                    const targetZoom = Math.min(currentZoom + 2, 15);
-                    mapInstance.panTo(cluster.position);
-                    mapInstance.setZoom(targetZoom);
+                    // ACTION: Zoom In
+                    else {
+                        mapInstance.fitBounds(bounds, 50); // 50px padding
+                    }
                 },
             });
 

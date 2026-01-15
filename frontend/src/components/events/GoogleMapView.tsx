@@ -96,6 +96,8 @@ interface GoogleMapViewProps {
   focusEventId?: string | null;
   /** Callback when focus is complete */
   onFocusComplete?: () => void;
+  /** Callback when a cluster is clicked. Only fired when it should show a list of events. */
+  onClusterClick?: (events: EventResponse[]) => void;
 }
 
 export function GoogleMapView({
@@ -114,6 +116,7 @@ export function GoogleMapView({
   isMobile = false,
   focusEventId,
   onFocusComplete,
+  onClusterClick,
 }: GoogleMapViewProps) {
   const [infoWindowMarkerId, setInfoWindowMarkerId] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -243,6 +246,7 @@ export function GoogleMapView({
                 category: undefined,
               });
             }}
+            onClusterClick={onClusterClick}
             isMobile={isMobile}
           />
         )}

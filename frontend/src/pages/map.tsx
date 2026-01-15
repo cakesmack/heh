@@ -263,6 +263,11 @@ export function MapPage() {
             isMobile={isMobile}
             focusEventId={focusEventId}
             onFocusComplete={() => setFocusEventId(null)}
+            onClusterClick={(clusterEvents) => {
+              if (isMobile) {
+                setSelectedEvents(clusterEvents);
+              }
+            }}
             className="absolute inset-0"
           />
 
