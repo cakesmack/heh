@@ -8,7 +8,7 @@ import { EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { eventsAPI } from '@/lib/api';
 
-const EVENTS_PER_PAGE = 50;
+const EVENTS_PER_PAGE = 12;
 
 export default function EventsPage() {
   const router = useRouter();
