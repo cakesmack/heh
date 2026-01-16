@@ -45,7 +45,7 @@ export default function HomePage({ }: HomePageProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
   const [searchSort, setSearchSort] = useState('date_asc');
-  const SEARCH_ITEMS_PER_PAGE = 8;
+  const SEARCH_ITEMS_PER_PAGE = 50;
   const [activeFilters, setActiveFilters] = useState<{
     q?: string;
     location?: string;

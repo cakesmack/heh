@@ -458,25 +458,21 @@ def list_events(
     if organizer_profile_id:
         query = query.where(Event.organizer_profile_id == normalize_uuid(organizer_profile_id))
 
-    # Conditional Deduplication for Recurring Events
-    # - Scenario A (Browsing/No Date Filter): Deduplicate to show only one instance per series
-    # - Scenario B (Date Filter Active): Show ALL instances matching the date filter
+    # Determine if we are performing a radius search (Near Me)
+    is_radius_search = latitude is not None and longitude is not None and radius_km is not None
+    
+    # Check if date filter is active
     has_date_filter = date_from is not None or date_to is not None
+
+    events = []
+    total = 0
 
     if has_date_filter:
         # Scenario B: User is filtering by date - show all matching instances
         # No deduplication, so they can find specific recurring event instances
         print(f"[EVENTS_DEBUG] Date filter active (date_from={date_from}, date_to={date_to}) - skipping deduplication")
 
-        # Get total count
-        from sqlalchemy import func as sa_func
-        count_query = select(sa_func.count()).select_from(query.subquery())
-        total = session.exec(count_query).one() or 0
-
-        # Apply ordering and pagination
-        # Tiered sorting: Pinned bookings first, then featured, then date
-        # Tiered sorting: Pinned bookings first, then featured, then date
-        # Use MIN() to aggregate potential multiple bookings (though unlikely) and satisfy Postgres GROUP BY rule
+        # Sort Order
         pinned_priority = sa_func.min(case(
             (FeaturedBooking.slot_type == SlotType.GLOBAL_PINNED, 1),
             (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 2),
@@ -484,28 +480,38 @@ def list_events(
             else_=4
         ))
         query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
-        if skip:
-            query = query.offset(skip)
-        if limit:
-            query = query.limit(limit)
+        
+        # Only apply DB pagination if NOT doing a radius search
+        if not is_radius_search:
+            # Get total count via query if pagination is handled by DB
+            from sqlalchemy import func as sa_func
+            count_query = select(sa_func.count()).select_from(query.subquery())
+            total = session.exec(count_query).one() or 0
+            
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
 
         events = list(session.exec(query).all())
+        
     else:
-        # Scenario A: No date filter - deduplicate recurring events (PostgreSQL-safe)
-        # Shows only one instance per recurring series (earliest upcoming)
+        # Scenario A: No date filter - deduplicate recurring events
+        # If Radius Search: Fetch ALL candidates (limit=None) to filter by distance in memory
+        # Else: Use standard DB pagination
         events, total = deduplicate_recurring_events(
             session=session,
             base_query=query,
-            limit=limit,
-            offset=skip,
+            limit=None if is_radius_search else limit,
+            offset=0 if is_radius_search else skip,
             order_by_featured=True
         )
 
-    print(f"[NEAR_ME_DEBUG] Events found after DB query: {len(events)} (Total: {total})")
+    print(f"[NEAR_ME_DEBUG] Events found after DB query: {len(events)} (Total from DB/Dedup: {total})")
 
     # Apply true Haversine distance filtering (bounding box is square, this refines to circle)
     # Also sort by distance when radius filtering is active
-    if latitude is not None and longitude is not None and radius_km is not None:
+    if is_radius_search:
         events_with_distance = []
         for event in events:
             # Get effective coordinates (event coords or fallback to venue coords)
@@ -518,7 +524,7 @@ def list_events(
                 (abs(event_lat) > 0.0001 or abs(event_lon) > 0.0001)
             )
             
-            print(f"[NEAR_ME_DEBUG] Event '{event.title}' (ID: {event.id}) - Has Event Coords: {has_event_coords} ({event_lat}, {event_lon})")
+            # print(f"[NEAR_ME_DEBUG] Event '{event.title}' (ID: {event.id}) - Has Event Coords: {has_event_coords}")
 
             if not has_event_coords:
                 if event.venue_id:
@@ -526,27 +532,29 @@ def list_events(
                     if venue:
                         event_lat = venue.latitude
                         event_lon = venue.longitude
-                        print(f"[NEAR_ME_DEBUG]   -> Using Venue Coords: ({event_lat}, {event_lon})")
-                    else:
-                        print(f"[NEAR_ME_DEBUG]   -> Venue ID {event.venue_id} not found!")
                 else:
-                    print(f"[NEAR_ME_DEBUG]   -> No Venue ID!")
+                    # Logic to fetch from attached venue if not joined? 
+                    # Usually already handled or venue_id is None
+                    pass
 
             # Calculate true distance and filter
             if event_lat is not None and event_lon is not None:
                 dist_km = haversine_distance(latitude, longitude, event_lat, event_lon)
-                dist_miles = dist_km / 1.60934  # Convert km to miles for logging
-                print(f"[NEAR_ME_DEBUG]   -> Distance: {dist_miles:.2f} miles (Limit: {radius_miles})")
+                # dist_miles = dist_km / 1.60934  
                 if dist_km <= radius_km:
                     events_with_distance.append((event, dist_km))
-            else:
-                print(f"[NEAR_ME_DEBUG]   -> Skipping (No valid coords)")
-
+        
         # Sort by distance (nearest first)
         events_with_distance.sort(key=lambda x: x[1])
-        events = [e[0] for e in events_with_distance]
-        total = len(events)  # Update total after filtering
+        
+        # Update events and total based on filtered results
+        filtered_events = [e[0] for e in events_with_distance]
+        total = len(filtered_events)
+        
         print(f"[NEAR_ME_DEBUG] Final count after Haversine: {total}")
+        
+        # Apply Pagination in Memory
+        events = filtered_events[skip : skip + limit]
 
     # Build responses
     event_responses = [
