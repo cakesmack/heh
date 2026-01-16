@@ -273,7 +273,8 @@ export default function EditEventPage() {
                 throw new Error('Please add at least one showtime');
             } else {
                 // Single session: use form dates
-                showtimesPayload = undefined;
+                // CRITICAL FIX: Explicitly send empty array to clear any existing showtimes in backend
+                showtimesPayload = [];
                 calculatedDateStart = new Date(formData.date_start).toISOString();
 
                 // If no specific end time, calculate as start + 4 hours
