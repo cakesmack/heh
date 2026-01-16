@@ -716,7 +716,7 @@ export default function EditEventPage() {
                                         return (
                                             <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
                                                 <div className="flex-1 space-y-2">
-                                                    <div className="grid grid-cols-2 gap-2">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>
                                                             <label className="text-xs text-gray-500 mb-1 block">Start *</label>
                                                             <DateTimePicker
@@ -749,7 +749,7 @@ export default function EditEventPage() {
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-2">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>
                                                             <label className="text-xs text-gray-500 mb-1 block">Ticket URL (optional)</label>
                                                             <input

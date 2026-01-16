@@ -581,7 +581,7 @@ export default function SubmitEventPage() {
                     return (
                       <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
                         <div className="flex-1 space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <label className="text-xs text-gray-500 mb-1 block">Start *</label>
                               <DateTimePicker
@@ -612,7 +612,7 @@ export default function SubmitEventPage() {
                               />
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <label className="text-xs text-gray-500 mb-1 block">Ticket URL (optional)</label>
                               <input
@@ -705,8 +705,8 @@ export default function SubmitEventPage() {
                             setFormData({ ...formData, weekdays: newWeekdays });
                           }}
                           className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${formData.weekdays.includes(idx)
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                         >
                           {day}
