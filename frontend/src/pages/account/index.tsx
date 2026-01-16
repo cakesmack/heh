@@ -231,6 +231,27 @@ export default function AccountPage() {
     fetchUserData();
   }, [isAuthenticated, user]);
 
+  const handleLoadMoreHosted = async () => {
+    if (!user || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = hostedPage + 1;
+      const eventsData = await api.events.list({
+        organizer_id: user.id,
+        include_past: true,
+        limit: 12,
+        skip: (nextPage - 1) * 12
+      });
+
+      setSubmittedEvents(prev => [...prev, ...(eventsData.events || [])]);
+      setHostedPage(nextPage);
+    } catch (err) {
+      console.error('Error loading more hosted events:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
   const handleStopRecurrence = async (eventId: string) => {
     if (!window.confirm('Are you sure you want to stop this recurring series? This will delete all future instances.')) {
       return;
