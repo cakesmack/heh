@@ -657,42 +657,236 @@ export default function AccountPage() {
 
               {eventsSubTab === 'hosting' ? (
                 submittedEvents.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {submittedEvents
-                      .filter(event => {
-                        if (eventFilter === 'all') return true;
-                        const now = new Date();
-                        const startDate = new Date(event.date_start);
-                        const endDate = new Date(event.date_end);
-                        if (eventFilter === 'upcoming') return startDate >= now;
-                        if (eventFilter === 'past') return endDate < now;
-                        if (eventFilter === 'rejected') return event.status === 'rejected';
-                        if (eventFilter === 'pending') return event.status === 'pending';
-                        return true;
-                      })
-                      .map((event) => (
-                        <div
-                          key={event.id}
-                          className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                          onClick={() => router.push(event.status === 'rejected' ? `/events/${event.id}/edit` : `/events/${event.id}`)}
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {submittedEvents
+                        .filter(event => {
+                          if (eventFilter === 'all') return true;
+                          const now = new Date();
+                          const startDate = new Date(event.date_start);
+                          const endDate = new Date(event.date_end);
+                          if (eventFilter === 'upcoming') return startDate >= now;
+                          if (eventFilter === 'past') return endDate < now;
+                          if (eventFilter === 'rejected') return event.status === 'rejected';
+                          if (eventFilter === 'pending') return event.status === 'pending';
+                          return true;
+                        })
+                        .map((event) => (
+                          <div
+                            key={event.id}
+                            className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
+                            onClick={() => router.push(event.status === 'rejected' ? `/events/${event.id}/edit` : `/events/${event.id}`)}
+                          >
+                            {/* Image */}
+                            {event.image_url ? (
+                              <img
+                                src={event.image_url}
+                                alt={event.title}
+                                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700" />
+                            )}
+
+                            {/* Gradient Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                            {/* Edit Button Overlay */}
+                            <Link
+                              href={`/events/${event.id}/edit`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                            >
+                              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </Link>
+
+                            {/* Status Badges */}
+                            <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-40px)]">
+                              {event.status === 'rejected' && (
+                                <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">
+                                  Rejected
+                                </span>
+                              )}
+                              {event.status === 'pending' && (
+                                <span className="px-1.5 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded uppercase">
+                                  Pending
+                                </span>
+                              )}
+                              {event.featured && (
+                                <span className="px-1.5 py-0.5 bg-blue-400 text-white text-[10px] font-bold rounded uppercase">
+                                  Featured
+                                </span>
+                              )}
+                              {event.is_recurring && (
+                                <span className="px-1.5 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded uppercase">
+                                  Series
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                              <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
+                                {event.title}
+                              </h3>
+                              <p className="text-white/70 text-[10px] mb-2">
+                                {formatDate(event.date_start)}
+                              </p>
+
+                              {/* Analytics Stats */}
+                              <div className="flex items-center space-x-3 pt-2 border-t border-white/10">
+                                <div className="flex items-center text-white/90 text-[10px]" title="Total Views">
+                                  <svg className="w-3 h-3 mr-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  {event.view_count || 0}
+                                </div>
+                                <div className="flex items-center text-white/90 text-[10px]" title="Going">
+                                  <svg className="w-3 h-3 mr-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  {event.save_count || 0}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Load More Button */}
+                    {submittedEvents.length < hostedTotal && (
+                      <div className="mt-8 flex justify-center">
+                        <button
+                          onClick={handleLoadMoreHosted}
+                          disabled={isLoadingMore}
+                          className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {/* Image */}
-                          {event.image_url ? (
-                            <img
-                              src={event.image_url}
-                              alt={event.title}
-                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
+                          {isLoadingMore ? (
+                            <span className="flex items-center">
+                              <Spinner size="sm" className="mr-2" />
+                              Loading...
+                            </span>
                           ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700" />
+                            'Load More Events'
                           )}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <p className="text-gray-500 mb-4">You haven't submitted any events yet.</p>
+                    <Link
+                      href="/submit-event"
+                      className="text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      Submit your first event
+                    </Link>
+                  </div>
+                )
+              ) : (
+                bookmarks.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {bookmarks.map((event) => (
+                      <div
+                        key={event.id}
+                        className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
+                        onClick={() => router.push(`/events/${event.id}`)}
+                      >
+                        {/* Image */}
+                        {event.image_url ? (
+                          <img
+                            src={event.image_url}
+                            alt={event.title}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-gray-500 to-gray-700" />
+                        )}
 
-                          {/* Gradient Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                          {/* Edit Button Overlay */}
+                        {/* Content */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
+                            {event.title}
+                          </h3>
+                          <p className="text-white/70 text-[10px]">
+                            {formatDate(event.date_start)}
+                          </p>
+                          <div className="flex items-center text-white/90 text-[10px] mt-1" title="Attending">
+                            <span className="bg-emerald-500/80 text-white px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">Going</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <p className="text-gray-500 mb-4">You aren't attending any events yet.</p>
+                    <Link
+                      href="/"
+                      className="text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      Browse events to attend
+                    </Link>
+                  </div>
+                )
+              )}
+            </Card>
+          </div>
+        )}
+
+        {/* Tab Content: Venues */}
+        {activeTab === 'venues' && (
+          <div className="space-y-8 animate-fade-in">
+            <Card>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  My Venue Claims ({myClaims.length})
+                </h2>
+                <Link
+                  href="/venues"
+                  className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
+                >
+                  Browse Venues
+                </Link>
+              </div>
+              {myClaims.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {myClaims.map((claim) => {
+                    const venue = (claim as any).venue;
+                    return (
+                      <div
+                        key={claim.id}
+                        className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
+                        onClick={() => router.push(`/venues/${claim.venue_id}`)}
+                      >
+                        {/* Image */}
+                        {venue?.image_url ? (
+                          <img
+                            src={venue.image_url}
+                            alt={venue.name}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700" />
+                        )}
+
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                        {/* Edit Button Overlay */}
+                        {claim.status === 'approved' && (
                           <Link
-                            href={`/events/${event.id}/edit`}
+                            href={`/venues/${claim.venue_id}/edit`}
                             onClick={(e) => e.stopPropagation()}
                             className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
                           >
@@ -700,249 +894,56 @@ export default function AccountPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
                           </Link>
+                        )}
 
-                          {/* Status Badges */}
-                          <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-40px)]">
-                            {event.status === 'rejected' && (
-                              <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">
-                                Rejected
-                              </span>
-                            )}
-                            {event.status === 'pending' && (
-                              <span className="px-1.5 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded uppercase">
-                                Pending
-                              </span>
-                            )}
-                            {event.featured && (
-                              <span className="px-1.5 py-0.5 bg-blue-400 text-white text-[10px] font-bold rounded uppercase">
-                                Featured
-                              </span>
-                            )}
-                            {event.is_recurring && (
-                              <span className="px-1.5 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded uppercase">
-                                Series
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Content */}
-                          <div className="absolute bottom-0 left-0 right-0 p-3">
-                            <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
-                              {event.title}
-                            </h3>
-                            <p className="text-white/70 text-[10px] mb-2">
-                              {formatDate(event.date_start)}
-                            </p>
-
-                            {/* Analytics Stats */}
-                            <div className="flex items-center space-x-3 pt-2 border-t border-white/10">
-                              <div className="flex items-center text-white/90 text-[10px]" title="Total Views">
-                                <svg className="w-3 h-3 mr-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                                {event.view_count || 0}
-                              </div>
-                              <div className="flex items-center text-white/90 text-[10px]" title="Going">
-                                <svg className="w-3 h-3 mr-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                                {event.save_count || 0}
-                              </div>
-                            </div>
-                          </div>
+                        {/* Status Badge */}
+                        <div className="absolute top-2 left-2">
+                          <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded uppercase ${claim.status === 'approved' ? 'bg-green-400 text-green-900' :
+                            claim.status === 'rejected' ? 'bg-red-400 text-red-900' :
+                              'bg-yellow-400 text-yellow-900'
+                            }`}>
+                            {claim.status}
+                          </span>
                         </div>
-                      ))}
-                  </div>
 
-                  {/* Load More Button */}
-              {submittedEvents.length < hostedTotal && (
-                <div className="mt-8 flex justify-center">
-                  <button
-                    onClick={handleLoadMoreHosted}
-                    disabled={isLoadingMore}
-                    className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        {/* Content */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
+                            {venue?.name || `Venue ${claim.venue_id.slice(0, 8)}...`}
+                          </h3>
+                          <p className="text-white/70 text-[10px] truncate">
+                            {venue?.address || 'Address not available'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-xl">
+                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <p className="text-gray-500 mb-4">No venue claims yet.</p>
+                  <Link
+                    href="/venues"
+                    className="text-emerald-600 hover:text-emerald-700 font-medium"
                   >
-                    {isLoadingMore ? (
-                      <span className="flex items-center">
-                        <Spinner size="sm" className="mr-2" />
-                        Loading...
-                      </span>
-                    ) : (
-                      'Load More Events'
-                    )}
-                  </button>
+                    Browse venues to claim ownership
+                  </Link>
                 </div>
               )}
-            </>
-            ) : (
-            <div className="text-center py-12 bg-gray-50 rounded-xl">
-              <p className="text-gray-500 mb-4">You haven't submitted any events yet.</p>
-              <Link
-                href="/submit-event"
-                className="text-emerald-600 hover:text-emerald-700 font-medium"
-              >
-                Submit your first event
-              </Link>
-            </div>
-            )
-            ) : (
-                bookmarks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {bookmarks.map((event) => (
-                <div
-                  key={event.id}
-                  className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                  onClick={() => router.push(`/events/${event.id}`)}
-                >
-                  {/* Image */}
-                  {event.image_url ? (
-                    <img
-                      src={event.image_url}
-                      alt={event.title}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-gray-500 to-gray-700" />
-                  )}
-
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                  {/* Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
-                      {event.title}
-                    </h3>
-                    <p className="text-white/70 text-[10px]">
-                      {formatDate(event.date_start)}
-                    </p>
-                    <div className="flex items-center text-white/90 text-[10px] mt-1" title="Attending">
-                      <span className="bg-emerald-500/80 text-white px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">Going</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            ) : (
-            <div className="text-center py-12 bg-gray-50 rounded-xl">
-              <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              <p className="text-gray-500 mb-4">You aren't attending any events yet.</p>
-              <Link
-                href="/"
-                className="text-emerald-600 hover:text-emerald-700 font-medium"
-              >
-                Browse events to attend
-              </Link>
-            </div>
-            )
-              )}
-          </Card>
+            </Card>
           </div>
         )}
 
-      {/* Tab Content: Venues */}
-      {activeTab === 'venues' && (
-        <div className="space-y-8 animate-fade-in">
-          <Card>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
-                My Venue Claims ({myClaims.length})
-              </h2>
-              <Link
-                href="/venues"
-                className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
-              >
-                Browse Venues
-              </Link>
-            </div>
-            {myClaims.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {myClaims.map((claim) => {
-                  const venue = (claim as any).venue;
-                  return (
-                    <div
-                      key={claim.id}
-                      className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                      onClick={() => router.push(`/venues/${claim.venue_id}`)}
-                    >
-                      {/* Image */}
-                      {venue?.image_url ? (
-                        <img
-                          src={venue.image_url}
-                          alt={venue.name}
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700" />
-                      )}
+        {/* Tab Content: Settings */}
+        {activeTab === 'settings' && (
+          <SettingsTab categories={categories} />
+        )}
 
-                      {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                      {/* Edit Button Overlay */}
-                      {claim.status === 'approved' && (
-                        <Link
-                          href={`/venues/${claim.venue_id}/edit`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                        >
-                          <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </Link>
-                      )}
-
-                      {/* Status Badge */}
-                      <div className="absolute top-2 left-2">
-                        <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded uppercase ${claim.status === 'approved' ? 'bg-green-400 text-green-900' :
-                          claim.status === 'rejected' ? 'bg-red-400 text-red-900' :
-                            'bg-yellow-400 text-yellow-900'
-                          }`}>
-                          {claim.status}
-                        </span>
-                      </div>
-
-                      {/* Content */}
-                      <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
-                          {venue?.name || `Venue ${claim.venue_id.slice(0, 8)}...`}
-                        </h3>
-                        <p className="text-white/70 text-[10px] truncate">
-                          {venue?.address || 'Address not available'}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-gray-50 rounded-xl">
-                <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <p className="text-gray-500 mb-4">No venue claims yet.</p>
-                <Link
-                  href="/venues"
-                  className="text-emerald-600 hover:text-emerald-700 font-medium"
-                >
-                  Browse venues to claim ownership
-                </Link>
-              </div>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {/* Tab Content: Settings */}
-      {activeTab === 'settings' && (
-        <SettingsTab categories={categories} />
-      )}
-
-    </div>
+      </div>
     </div >
   );
 }
