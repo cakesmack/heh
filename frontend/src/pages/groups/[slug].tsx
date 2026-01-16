@@ -66,6 +66,8 @@ export default function OrganizerProfilePage() {
     const { slug } = router.query;
     const [organizer, setOrganizer] = useState<Organizer | null>(null);
     const [events, setEvents] = useState<EventResponse[]>([]);
+    const [eventsTotal, setEventsTotal] = useState(0);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const { user, isAuthenticated } = useAuth();
     const [canEdit, setCanEdit] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -109,8 +111,9 @@ export default function OrganizerProfilePage() {
 
                 if (organizerData?.id) {
                     try {
-                        const eventsData = await api.events.list({ organizer_profile_id: organizerData.id });
+                        const eventsData = await api.events.list({ organizer_profile_id: organizerData.id, limit: 12, skip: 0 });
                         setEvents(eventsData.events);
+                        setEventsTotal(eventsData.total || 0);
                     } catch (err) {
                         console.error('Error fetching events:', err);
                     }
@@ -142,6 +145,27 @@ export default function OrganizerProfilePage() {
 
         fetchData();
     }, [slug]);
+
+    const handleLoadMore = async () => {
+        if (!organizer?.id || isLoadingMore) return;
+        setIsLoadingMore(true);
+        try {
+            const skip = events.length;
+            const res = await api.events.list({
+                organizer_profile_id: organizer.id,
+                skip,
+                limit: 12
+            });
+
+            if (res.events?.length > 0) {
+                setEvents(prev => [...prev, ...res.events]);
+            }
+        } catch (err) {
+            console.error('Error loading more events:', err);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -375,11 +399,25 @@ export default function OrganizerProfilePage() {
                     </div>
 
                     {events.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {events.map((event) => (
-                                <EventCard key={event.id} event={event} />
-                            ))}
-                        </div>
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {events.map((event) => (
+                                    <EventCard key={event.id} event={event} />
+                                ))}
+                            </div>
+
+                            {events.length < eventsTotal && (
+                                <div className="mt-8 flex justify-center">
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleLoadMore}
+                                        isLoading={isLoadingMore}
+                                    >
+                                        Load More Events
+                                    </Button>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
                             <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
