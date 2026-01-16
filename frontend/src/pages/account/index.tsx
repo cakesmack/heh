@@ -30,7 +30,7 @@ export default function AccountPage() {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'venues' | 'settings'>('overview');
   const [eventFilter, setEventFilter] = useState<'all' | 'upcoming' | 'pending' | 'rejected' | 'past'>('all');
-  const [eventsSubTab, setEventsSubTab] = useState<'hosting' | 'attending'>('hosting');
+  const [eventsSubTab, setEventsSubTab] = useState<'hosting' | 'attending'>('attending');
   const [featuredStatus, setFeaturedStatus] = useState<{ success?: boolean; message?: string } | null>(null);
 
   // Profile Editing State
@@ -38,6 +38,17 @@ export default function AccountPage() {
   const [editForm, setEditForm] = useState({ username: '' });
   const [editError, setEditError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Smart Default: If user has submitted events, default to 'hosting'
+  // Only run this once when submittedEvents are first loaded and we are on the default 'attending'
+  useEffect(() => {
+    if (submittedEvents.length > 0 && eventsSubTab === 'attending' && !isLoading) {
+      // We only auto-switch if the user hasn't manually interacted yet? 
+      // For now, let's just do it if we are loading fresh. 
+      // Actually, safely we can just set it if we detect they are an organizer on load.
+      setEventsSubTab('hosting');
+    }
+  }, [submittedEvents.length, isLoading]);
 
   const handleEditClick = () => {
     if (user) {
@@ -281,14 +292,28 @@ export default function AccountPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">My Account</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">My Account</h1>
               <p className="text-gray-600">Welcome back, {user?.username || user?.email}!</p>
+
+              {/* Compact Stats Row */}
+              {dashboardStats && (
+                <div className="flex items-center gap-4 mt-3">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Events Hosted: <span className="text-gray-900 font-bold">{dashboardStats.total_events}</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-pink-500"></span>
+                    Attending: <span className="text-gray-900 font-bold">{dashboardStats.total_saves}</span>
+                  </div>
+                </div>
+              )}
             </div>
             <button
               onClick={logout}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              className="self-start md:self-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
             >
               Sign Out
             </button>
@@ -326,7 +351,7 @@ export default function AccountPage() {
 
         {/* Tabs */}
         <div className="mb-8 border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-8 overflow-x-auto">
             <button
               onClick={() => setActiveTab('overview')}
               className={`${activeTab === 'overview'
@@ -345,15 +370,20 @@ export default function AccountPage() {
             >
               My Events
             </button>
-            <button
-              onClick={() => setActiveTab('venues')}
-              className={`${activeTab === 'venues'
-                ? 'border-emerald-500 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              My Venues
-            </button>
+
+            {/* Conditional "My Venues" Tab */}
+            {myClaims.length > 0 && (
+              <button
+                onClick={() => setActiveTab('venues')}
+                className={`${activeTab === 'venues'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                My Venues
+              </button>
+            )}
+
             <button
               onClick={() => setActiveTab('settings')}
               className={`${activeTab === 'settings'
@@ -369,67 +399,8 @@ export default function AccountPage() {
         {/* Tab Content: Overview */}
         {activeTab === 'overview' && (
           <div className="space-y-8 animate-fade-in">
-            {/* Stats Overview */}
-            {dashboardStats && (
-              <div className="space-y-6">
-                {/* Top Row: Event Counts */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <button
-                    onClick={() => { setActiveTab('events'); setEventFilter('all'); }}
-                    className={`text-left p-6 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${eventFilter === 'all' ? 'bg-white shadow-xl ring-2 ring-emerald-500' : 'bg-white shadow-md hover:shadow-lg'}`}
-                  >
-                    <p className="text-sm font-medium text-gray-500 mb-1">Total Events</p>
-                    <p className="text-3xl font-bold text-gray-900">{dashboardStats.total_events}</p>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('events'); setEventFilter('upcoming'); }}
-                    className={`text-left p-6 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${eventFilter === 'upcoming' ? 'bg-emerald-50 shadow-xl ring-2 ring-emerald-500' : 'bg-white shadow-md hover:shadow-lg'}`}
-                  >
-                    <p className="text-sm font-medium text-emerald-600 mb-1">Upcoming</p>
-                    <p className="text-3xl font-bold text-emerald-700">{dashboardStats.upcoming_events}</p>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('events'); setEventFilter('pending'); }}
-                    className={`text-left p-6 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${eventFilter === 'pending' ? 'bg-yellow-50 shadow-xl ring-2 ring-yellow-500' : 'bg-white shadow-md hover:shadow-lg'}`}
-                  >
-                    <p className="text-sm font-medium text-yellow-600 mb-1">Pending</p>
-                    <p className="text-3xl font-bold text-yellow-700">{dashboardStats.pending_events}</p>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('events'); setEventFilter('past'); }}
-                    className={`text-left p-6 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${eventFilter === 'past' ? 'bg-gray-50 shadow-xl ring-2 ring-gray-400' : 'bg-white shadow-md hover:shadow-lg'}`}
-                  >
-                    <p className="text-sm font-medium text-gray-500 mb-1">Past</p>
-                    <p className="text-3xl font-bold text-gray-700">{dashboardStats.past_events}</p>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('events'); setEventFilter('rejected'); }}
-                    className={`text-left p-6 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${eventFilter === 'rejected' ? 'bg-red-50 shadow-xl ring-2 ring-red-500' : 'bg-white shadow-md hover:shadow-lg'}`}
-                  >
-                    <p className="text-sm font-medium text-red-600 mb-1">Needs Attention</p>
-                    <p className="text-3xl font-bold text-red-700">
-                      {submittedEvents.filter(e => e.status === 'rejected').length}
-                    </p>
-                  </button>
-                </div>
 
-                {/* Bottom Row: Engagement Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-blue-50 p-6 rounded-2xl shadow-sm">
-                    <p className="text-sm font-medium text-blue-600 mb-1">Total Views</p>
-                    <p className="text-3xl font-bold text-blue-700">{dashboardStats.total_views}</p>
-                  </div>
-                  <div className="bg-pink-50 p-6 rounded-2xl shadow-sm">
-                    <p className="text-sm font-medium text-pink-600 mb-1">Attending</p>
-                    <p className="text-3xl font-bold text-pink-700">{dashboardStats.total_saves}</p>
-                  </div>
-                  <div className="bg-purple-50 p-6 rounded-2xl shadow-sm">
-                    <p className="text-sm font-medium text-purple-600 mb-1">Ticket Clicks</p>
-                    <p className="text-3xl font-bold text-purple-700">{dashboardStats.total_ticket_clicks}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Compact Mode: Stats are now in header, so we just show content */}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* User Info Card */}
