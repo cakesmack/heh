@@ -66,6 +66,7 @@ class AdminUserResponse(BaseModel):
     created_at: datetime
     event_count: int
     checkin_count: int
+    username: str
 
 
 class AdminUserListResponse(BaseModel):
@@ -359,6 +360,7 @@ def list_users(
             created_at=user.created_at,
             event_count=event_count,
             checkin_count=checkin_count,
+            username=user.username,
         ))
 
     return AdminUserListResponse(
@@ -399,7 +401,8 @@ def toggle_trusted_organizer(
         has_password=bool(user.password_hash),
         created_at=user.created_at,
         event_count=event_count,
-        checkin_count=checkin_count
+        checkin_count=checkin_count,
+        username=user.username,
     )
 
 
@@ -486,6 +489,7 @@ def toggle_user_admin(
         created_at=user.created_at,
         event_count=event_count,
         checkin_count=checkin_count,
+        username=user.username,
     )
 
 
@@ -548,6 +552,7 @@ def update_user(
         created_at=user.created_at,
         event_count=event_count,
         checkin_count=checkin_count,
+        username=user.username,
     )
 
 

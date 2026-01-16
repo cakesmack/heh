@@ -257,7 +257,7 @@ export default function AdminUsers() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {(user as any).username || user.email.split('@')[0]}
+                            {user.username || user.email.split('@')[0]}
                           </div>
                           <div className="text-xs text-gray-500">{user.email}</div>
                         </div>
@@ -374,7 +374,7 @@ export default function AdminUsers() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Username</label>
-                      <p className="text-sm font-medium text-gray-900">{(selectedUser as any).username || '—'}</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedUser.username || '—'}</p>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
@@ -527,8 +527,8 @@ export default function AdminUsers() {
                           {/* Status & Action */}
                           <div className="flex items-center gap-3">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${event.status === 'published' ? 'bg-green-100 text-green-800' :
-                                event.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
+                              event.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
                               }`}>
                               {event.status}
                             </span>

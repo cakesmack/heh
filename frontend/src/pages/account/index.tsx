@@ -492,10 +492,7 @@ export default function AccountPage() {
                       </div>
                     ) : (
                       <>
-                        <div>
-                          <p className="text-gray-600">Display Name</p>
-                          <p className="font-medium text-gray-900">{user?.username || 'N/A'}</p>
-                        </div>
+
                         <div>
                           <p className="text-gray-600">Username</p>
                           <p className="font-medium text-gray-900">@{user?.username || 'N/A'}</p>

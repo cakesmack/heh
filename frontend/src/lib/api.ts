@@ -1070,6 +1070,7 @@ export interface AdminUser {
   created_at: string;
   event_count: number;
   checkin_count: number;
+  username: string;
 }
 
 export interface AdminUserListResponse {
