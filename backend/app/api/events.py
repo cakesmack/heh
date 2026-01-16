@@ -472,6 +472,8 @@ def list_events(
         # No deduplication, so they can find specific recurring event instances
         print(f"[EVENTS_DEBUG] Date filter active (date_from={date_from}, date_to={date_to}) - skipping deduplication")
 
+        from sqlalchemy import func as sa_func
+
         # Sort Order
         pinned_priority = sa_func.min(case(
             (FeaturedBooking.slot_type == SlotType.GLOBAL_PINNED, 1),
