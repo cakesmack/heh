@@ -152,7 +152,7 @@ async def trigger_weekly_digest(
             background_tasks.add_task(
                 resend_email_service.send_weekly_digest,
                 to_email=user.email,
-                display_name=user.display_name or user.username or "There",
+                username=user.username or "There",
                 featured_events=featured_data,
                 personalized_events=personalized_data,
                 unsubscribe_token=unsub_token

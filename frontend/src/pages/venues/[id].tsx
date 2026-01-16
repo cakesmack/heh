@@ -478,7 +478,7 @@ export default function VenueDetailPage() {
                             {staff.map((s) => (
                               <tr key={s.id}>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">{s.user_display_name || 'User'}</div>
+                                  <div className="text-sm font-medium text-gray-900">{s.user_username || 'User'}</div>
                                   <div className="text-sm text-gray-500">{s.user_email}</div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">

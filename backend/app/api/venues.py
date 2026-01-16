@@ -721,7 +721,7 @@ def list_venue_staff(
             role=s.role,
             created_at=s.created_at,
             user_email=user.email if user else None,
-            user_display_name=user.display_name if user else None
+            user_username=user.username if user else None
         ))
     return responses
 
@@ -769,7 +769,7 @@ def add_venue_staff(
         role=new_staff.role,
         created_at=new_staff.created_at,
         user_email=user.email,
-        user_display_name=user.display_name
+        user_username=user.username
     )
 
 

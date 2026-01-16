@@ -118,7 +118,7 @@ async def get_current_user(
     # Remove hyphens from UUID to match SQLite storage format
     user_id_normalized = user_id_str.replace("-", "")
     from sqlalchemy import text as sql_text
-    statement = sql_text("SELECT id, email, password_hash, username, display_name, trust_level, is_admin, created_at FROM users WHERE id = :user_id")
+    statement = sql_text("SELECT id, email, password_hash, username, trust_level, is_admin, created_at FROM users WHERE id = :user_id")
     result = session.execute(statement, {"user_id": user_id_normalized})
     row = result.fetchone()
 
@@ -131,10 +131,9 @@ async def get_current_user(
         email=row[1],
         password_hash=row[2],
         username=row[3],
-        display_name=row[4],
-        trust_level=row[5],
-        is_admin=bool(row[6]),
-        created_at=row[7]
+        trust_level=row[4],
+        is_admin=bool(row[5]),
+        created_at=row[6]
     )
 
     return user
@@ -161,7 +160,7 @@ async def get_current_user_optional(
         # Fetch user from database using raw SQL to avoid UUID type processing issues with SQLite
         user_id_normalized = user_id_str.replace("-", "")
         from sqlalchemy import text as sql_text
-        statement = sql_text("SELECT id, email, password_hash, username, display_name, trust_level, is_admin, created_at FROM users WHERE id = :user_id")
+        statement = sql_text("SELECT id, email, password_hash, username, trust_level, is_admin, created_at FROM users WHERE id = :user_id")
         result = session.execute(statement, {"user_id": user_id_normalized})
         row = result.fetchone()
 
@@ -175,10 +174,9 @@ async def get_current_user_optional(
             email=row[1],
             password_hash=row[2],
             username=row[3],
-            display_name=row[4],
-            trust_level=row[5],
-            is_admin=bool(row[6]),
-            created_at=row[7]
+            trust_level=row[4],
+            is_admin=bool(row[5]),
+            created_at=row[6]
         )
         return user
 

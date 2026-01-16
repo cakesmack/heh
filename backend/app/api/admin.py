@@ -493,7 +493,6 @@ class AdminUserUpdate(BaseModel):
     """Schema for updating user fields."""
     email: Optional[str] = None
     username: Optional[str] = None
-    display_name: Optional[str] = None
     is_admin: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -769,6 +768,7 @@ def get_all_featured_bookings(
             "event_title": event.title if event else "Deleted Event",
             "organizer_id": booking.organizer_id,
             "organizer_email": organizer.email if organizer else None,
+            "organizer_username": organizer.username if organizer else None,
             "is_trusted": organizer.is_trusted_organizer if organizer else False,
             "slot_type": booking.slot_type.value,
             "target_id": booking.target_id,

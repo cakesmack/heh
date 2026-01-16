@@ -66,28 +66,32 @@ def register(
             detail=password_error
         )
 
-    # Check if user already exists (email or username)
+    # Check if user already exists (email)
     existing_user = session.exec(
-        select(User).where((User.email == user_data.email) | (User.username == user_data.username))
+        select(User).where(User.email == user_data.email)
     ).first()
 
     if existing_user:
-        if existing_user.email == user_data.email:
-            detail = "Email already registered"
-        else:
-            detail = "Username already taken"
-        
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=detail
+            detail="Email already registered"
         )
+    
+    # Generate username from email (before @)
+    base_username = user_data.email.split("@")[0]
+    username = base_username
+    counter = 1
+    
+    # Ensure username is unique
+    while session.exec(select(User).where(User.username == username)).first():
+        username = f"{base_username}_{secrets.token_hex(2)}"
+        counter += 1
 
     # Create new user
     hashed_password = hash_password(user_data.password)
     new_user = User(
         email=user_data.email,
-        username=user_data.username,
-        display_name=user_data.username,  # Default display name to username
+        username=username,
         password_hash=hashed_password
     )
 
@@ -104,7 +108,7 @@ def register(
     background_tasks.add_task(
         resend_email_service.send_welcome,
         new_user.email,
-        new_user.display_name
+        new_user.username
     )
     
     # Notify admin of new user signup
@@ -112,7 +116,7 @@ def register(
     background_tasks.add_task(
         send_new_user_notification,
         new_user.email,
-        new_user.display_name
+        new_user.username
     )
 
     # Create access token
@@ -228,16 +232,12 @@ async def google_login(
         
         # Ensure username is unique
         while session.exec(select(User).where(User.username == username)).first():
-            username = f"{base_username}{counter}"
+            username = f"{base_username}_{secrets.token_hex(2)}"
             counter += 1
-        
-        # Use Google name if available
-        display_name = google_user_info.get("name") or username
         
         user = User(
             email=email,
             username=username,
-            display_name=display_name,
             password_hash=None  # Google users don't have a password
         )
         session.add(user)
@@ -250,7 +250,7 @@ async def google_login(
         session.commit()
 
         # Send welcome email
-        resend_email_service.send_welcome(user.email, user.display_name)
+        resend_email_service.send_welcome(user.email, user.username)
 
     # Check if user is active (not banned)
     if not user.is_active:
@@ -286,7 +286,6 @@ def get_current_user_profile(
         id=current_user.id,
         email=current_user.email,
         username=current_user.username,
-        display_name=current_user.display_name,
         is_admin=current_user.is_admin,
         created_at=current_user.created_at,
         total_checkins=total_checkins,

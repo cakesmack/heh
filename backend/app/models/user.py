@@ -40,8 +40,7 @@ class User(SQLModel, table=True):
     password_hash: Optional[str] = Field(default=None, max_length=255)
 
     # Identity
-    username: Optional[str] = Field(default=None, unique=True, index=True, max_length=50)
-    display_name: Optional[str] = Field(default=None, max_length=100)
+    username: str = Field(unique=True, index=True, max_length=50)
     trust_level: int = Field(default=0, ge=0)
 
     # Admin flag

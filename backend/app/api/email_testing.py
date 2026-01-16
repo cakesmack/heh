@@ -167,12 +167,12 @@ def test_welcome_email(
     trending_data = [format_event_data(e, session) for e in trending_events]
     
     # Capitalize user name
-    display_name = capitalize_name(request.mock_user_name)
+    username = capitalize_name(request.mock_user_name)
     
     # Send email with new template
     success = resend_email_service.send_welcome_with_events(
         to_email=request.recipient_email,
-        display_name=display_name,
+        username=username,
         featured_events=featured_data,
         trending_events=trending_data
     )
@@ -256,12 +256,12 @@ def test_weekly_digest(
     unsubscribe_token = prefs.unsubscribe_token if prefs else "test-token"
     
     # Capitalize user name
-    display_name = capitalize_name(target_user.display_name or target_user.email.split('@')[0])
+    username = capitalize_name(target_user.username or target_user.email.split('@')[0])
 
     # Send digest email with featured + personalized
     success = resend_email_service.send_weekly_digest(
         to_email=request.send_to_email,
-        display_name=display_name,
+        username=username,
         featured_events=featured_data,
         personalized_events=personalized_data,
         unsubscribe_token=unsubscribe_token
@@ -269,7 +269,7 @@ def test_weekly_digest(
 
     return EmailTestResponse(
         success=success,
-        message=f"Weekly digest sent to {request.send_to_email} (simulating {target_user.display_name or target_user.email})" if success else "Failed to send email",
+        message=f"Weekly digest sent to {request.send_to_email} (simulating {target_user.username or target_user.email})" if success else "Failed to send email",
         events_count=len(featured_data) + len(personalized_data)
     )
 

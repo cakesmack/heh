@@ -314,11 +314,11 @@ export default function EditOrganizerPage() {
                                         >
                                             <div className="flex items-center">
                                                 <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold mr-3">
-                                                    {(member.user_display_name || member.user_email || '?').charAt(0).toUpperCase()}
+                                                    {(member.user_username || member.user_email || '?').charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-medium text-gray-900">
-                                                        {member.user_display_name || member.user_email || 'Unknown'}
+                                                        {member.user_username || member.user_email || 'Unknown'}
                                                         {isSelf && <span className="text-gray-500 ml-1">(you)</span>}
                                                     </p>
                                                     <p className="text-xs text-gray-500">{member.user_email}</p>

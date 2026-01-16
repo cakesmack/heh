@@ -11,7 +11,6 @@ from pydantic import BaseModel, EmailStr, Field
 class UserCreate(BaseModel):
     """Schema for user registration."""
     email: EmailStr
-    username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=8, max_length=100)
 
 
@@ -32,8 +31,7 @@ class UserResponse(BaseModel):
     """Schema for basic user information."""
     id: UUID
     email: str
-    username: Optional[str] = None
-    display_name: Optional[str] = None
+    username: str
     is_admin: bool
     created_at: datetime
 
@@ -45,8 +43,7 @@ class UserProfile(BaseModel):
     """Schema for detailed user profile."""
     id: UUID
     email: str
-    username: Optional[str] = None
-    display_name: Optional[str] = None
+    username: str
     is_admin: bool
     created_at: datetime
     total_checkins: int = 0
@@ -60,5 +57,4 @@ class UserUpdate(BaseModel):
     """Schema for updating user profile."""
     email: Optional[EmailStr] = None
     username: Optional[str] = Field(None, min_length=3, max_length=50)
-    display_name: Optional[str] = Field(None, max_length=100)
     password: Optional[str] = Field(None, min_length=8, max_length=100)

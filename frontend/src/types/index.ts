@@ -96,7 +96,6 @@ export interface User {
   id: string;
   email: string;
   username?: string;
-  display_name?: string;
   trust_level?: number;
   is_active: boolean;
   is_admin: boolean;
@@ -116,7 +115,6 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   email: string;
-  username: string;
   password: string;
 }
 
@@ -805,7 +803,7 @@ export interface GroupMember {
   role: GroupRole;
   joined_at: string;
   user_email?: string;
-  user_display_name?: string;
+  user_username?: string;
 }
 
 export interface GroupInvite {
@@ -830,7 +828,7 @@ export interface VenueStaffResponse {
   role: string;
   created_at: string;
   user_email?: string;
-  user_display_name?: string;
+  user_username?: string;
 }
 
 export interface VenueStaffCreate {

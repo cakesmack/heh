@@ -162,9 +162,6 @@ def update_me(
             )
         db_user.email = user_update.email
 
-    if user_update.display_name is not None:
-        db_user.display_name = user_update.display_name
-
     if user_update.password:
         db_user.password_hash = hash_password(user_update.password)
 
@@ -180,7 +177,6 @@ def update_me(
         id=db_user.id,
         email=db_user.email,
         username=db_user.username,
-        display_name=db_user.display_name,
         is_admin=db_user.is_admin,
         created_at=db_user.created_at,
 

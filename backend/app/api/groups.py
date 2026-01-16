@@ -107,7 +107,7 @@ def create_invite(
     # Send email if requested
     if invite_request and invite_request.email:
         invite_url = f"{settings.FRONTEND_URL.rstrip('/')}/join/group/{invite.token}"
-        inviter_name = current_user.display_name or current_user.username or "A member"
+        inviter_name = current_user.username or "A member"
         group_name = group.name
         
         print(f"Sending invite for group '{group_name}' from user '{current_user.username}'")
@@ -265,7 +265,7 @@ def list_members(
             role=member.role.value,
             joined_at=member.joined_at,
             user_email=user.email if user else None,
-            user_display_name=user.display_name if user else None
+            user_username=user.username if user else None
         ))
 
     # Also include the creator as OWNER if not already in members
@@ -279,7 +279,7 @@ def list_members(
                 role=GroupRole.OWNER.value,
                 joined_at=group.created_at,
                 user_email=creator.email,
-                user_display_name=creator.display_name
+                user_username=creator.username
             ))
 
     return result
@@ -407,7 +407,7 @@ def update_member_role(
         role=member.role.value,
         joined_at=member.joined_at,
         user_email=user.email if user else None,
-        user_display_name=user.display_name if user else None
+        user_username=user.username if user else None
     )
 
 

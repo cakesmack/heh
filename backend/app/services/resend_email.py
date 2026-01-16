@@ -25,13 +25,13 @@ class ResendEmailService:
             self.enabled = False
             logger.warning("RESEND_API_KEY not configured - emails disabled")
 
-    def send_welcome(self, to_email: str, display_name: Optional[str] = None) -> bool:
+    def send_welcome(self, to_email: str, username: str) -> bool:
         """
         Send welcome email to new user.
 
         Args:
             to_email: User's email address
-            display_name: User's display name (optional)
+            username: User's username
 
         Returns:
             True if sent successfully
@@ -40,7 +40,7 @@ class ResendEmailService:
             logger.info(f"[DRY RUN] Would send welcome email to {mask_email(to_email)}")
             return True
 
-        name = display_name or "there"
+        name = username or "there"
 
         html_content = f"""
         <!DOCTYPE html>
@@ -124,7 +124,7 @@ class ResendEmailService:
     def send_weekly_digest(
         self,
         to_email: str,
-        display_name: Optional[str],
+        username: str,
         featured_events: list,
         personalized_events: list,
         unsubscribe_token: str
@@ -134,7 +134,7 @@ class ResendEmailService:
 
         Args:
             to_email: User's email
-            display_name: User's name (capitalized)
+            username: User's username
             featured_events: 3 featured/top pick events
             personalized_events: User's personalized matches
             unsubscribe_token: Token for one-click unsubscribe
@@ -143,7 +143,7 @@ class ResendEmailService:
             logger.info(f"[DRY RUN] Would send weekly digest to {mask_email(to_email)}")
             return True
 
-        name = display_name or "there"
+        name = username or "there"
         # Ensure URLs have no trailing slashes consistency
         site_url = settings.FRONTEND_URL.rstrip('/')
         
@@ -306,7 +306,7 @@ class ResendEmailService:
     def send_organizer_alert(
         self,
         to_email: str,
-        display_name: Optional[str],
+        username: str,
         event_title: str,
         alert_type: str,
         unsubscribe_token: str
@@ -316,7 +316,7 @@ class ResendEmailService:
 
         Args:
             to_email: Organizer's email
-            display_name: Organizer's name
+            username: Organizer's username
             event_title: Name of the event
             alert_type: Type of alert (approved, rejected, etc)
             unsubscribe_token: Token for unsubscribe
@@ -328,7 +328,7 @@ class ResendEmailService:
             logger.info(f"[DRY RUN] Would send organizer alert to {mask_email(to_email)}")
             return True
 
-        name = display_name or "there"
+        name = username or "there"
         unsubscribe_url = f"{settings.FRONTEND_URL}/unsubscribe?token={unsubscribe_token}&type=organizer_alerts"
 
         if alert_type == "approved":
@@ -394,7 +394,7 @@ class ResendEmailService:
         to_email: str,
         event_title: str,
         event_id: str,
-        display_name: Optional[str] = None,
+        username: str = None,
         is_auto_approved: bool = False
     ) -> bool:
         """
@@ -404,7 +404,7 @@ class ResendEmailService:
             to_email: Organizer's email
             event_title: Name of the event
             event_id: Event ID for linking
-            display_name: Organizer's name (optional)
+            username: Organizer's username (optional)
             is_auto_approved: Whether this was auto-approved based on trust
 
         Returns:
@@ -414,7 +414,7 @@ class ResendEmailService:
             logger.info(f"[DRY RUN] Would send event approved email to {mask_email(to_email)}")
             return True
 
-        name = display_name or "there"
+        name = username or "there"
         event_url = f"{settings.FRONTEND_URL}/events/{event_id}"
 
         if is_auto_approved:
@@ -484,7 +484,7 @@ class ResendEmailService:
         event_title: str,
         event_id: str,
         rejection_reason: Optional[str] = None,
-        display_name: Optional[str] = None
+        username: Optional[str] = None
     ) -> bool:
         """
         Send notification when an event is rejected.
@@ -494,7 +494,7 @@ class ResendEmailService:
             event_title: Name of the event
             event_id: Event ID for editing
             rejection_reason: Reason for rejection (optional)
-            display_name: Organizer's name (optional)
+            username: Organizer's username (optional)
 
         Returns:
             True if sent successfully
@@ -503,7 +503,7 @@ class ResendEmailService:
             logger.info(f"[DRY RUN] Would send event rejected email to {mask_email(to_email)}")
             return True
 
-        name = display_name or "there"
+        name = username or "there"
         edit_url = f"{settings.FRONTEND_URL}/events/{event_id}/edit"
 
         reason_html = ""
@@ -573,7 +573,7 @@ class ResendEmailService:
     def send_welcome_with_events(
         self,
         to_email: str,
-        display_name: Optional[str] = None,
+        username: str = None,
         featured_events: list = None,
         trending_events: list = None
     ) -> bool:
@@ -582,7 +582,7 @@ class ResendEmailService:
 
         Args:
             to_email: User's email address
-            display_name: User's display name (capitalized)
+            username: User's username (capitalized)
             featured_events: 3 featured/top pick events
             trending_events: Trending events list
         """
@@ -590,7 +590,7 @@ class ResendEmailService:
             logger.info(f"[DRY RUN] Would send welcome email with events to {mask_email(to_email)}")
             return True
 
-        name = display_name or "there"
+        name = username or "there"
         featured_events = featured_events or []
         trending_events = trending_events or []
         

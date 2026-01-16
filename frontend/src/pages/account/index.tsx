@@ -35,14 +35,13 @@ export default function AccountPage() {
 
   // Profile Editing State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ display_name: '', username: '' });
+  const [editForm, setEditForm] = useState({ username: '' });
   const [editError, setEditError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const handleEditClick = () => {
     if (user) {
       setEditForm({
-        display_name: user.display_name || '',
         username: user.username || ''
       });
       setEditError(null);
@@ -74,7 +73,6 @@ export default function AccountPage() {
 
     try {
       await api.users.updateProfile({
-        display_name: editForm.display_name,
         username: editForm.username
       });
       // Refresh global auth state
@@ -286,7 +284,7 @@ export default function AccountPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">My Account</h1>
-              <p className="text-gray-600">Welcome back, {user?.display_name || user?.username || user?.email}!</p>
+              <p className="text-gray-600">Welcome back, {user?.username || user?.email}!</p>
             </div>
             <button
               onClick={logout}
@@ -459,16 +457,6 @@ export default function AccountPage() {
                     {isEditingProfile ? (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-gray-700 mb-1">Display Name</label>
-                          <input
-                            type="text"
-                            value={editForm.display_name}
-                            onChange={(e) => setEditForm({ ...editForm, display_name: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
-                            placeholder="Your Name"
-                          />
-                        </div>
-                        <div>
                           <label className="block text-gray-700 mb-1">Username</label>
                           <div className="flex">
                             <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
@@ -506,7 +494,7 @@ export default function AccountPage() {
                       <>
                         <div>
                           <p className="text-gray-600">Display Name</p>
-                          <p className="font-medium text-gray-900">{user?.display_name || user?.username || 'N/A'}</p>
+                          <p className="font-medium text-gray-900">{user?.username || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Username</p>

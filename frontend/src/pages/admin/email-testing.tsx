@@ -266,7 +266,7 @@ export default function AdminEmailTesting() {
                                                 className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 border-b last:border-b-0 ${selectedUserId === u.id ? 'bg-blue-50' : ''}`}
                                             >
                                                 <span className="font-medium">{u.email}</span>
-                                                {(u as any).display_name && <span className="text-gray-500 ml-2">({(u as any).display_name})</span>}
+                                                {(u as any).username && <span className="text-gray-500 ml-2">({(u as any).username})</span>}
                                             </button>
                                         ))}
                                     </div>

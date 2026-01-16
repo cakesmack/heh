@@ -169,7 +169,7 @@ class VenueStaffResponse(BaseModel):
     role: str
     created_at: datetime
     user_email: Optional[str] = None
-    user_display_name: Optional[str] = None
+    user_username: Optional[str] = None
 
     class Config:
         from_attributes = True

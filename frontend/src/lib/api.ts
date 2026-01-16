@@ -970,7 +970,7 @@ export const usersAPI = {
   /**
    * Update current user profile
    */
-  updateProfile: async (data: { username?: string; display_name?: string; email?: string; password?: string }): Promise<UserProfile> => {
+  updateProfile: async (data: { username?: string; email?: string; password?: string }): Promise<UserProfile> => {
     return apiFetch<UserProfile>('/api/users/me', {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -1134,7 +1134,7 @@ export const adminAPI = {
   /**
    * Update user details
    */
-  updateUser: async (userId: string, data: { email?: string; username?: string; display_name?: string; is_admin?: boolean; is_active?: boolean }): Promise<AdminUser> => {
+  updateUser: async (userId: string, data: { email?: string; username?: string; is_admin?: boolean; is_active?: boolean }): Promise<AdminUser> => {
     return apiFetch<AdminUser>(`/api/admin/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(data),

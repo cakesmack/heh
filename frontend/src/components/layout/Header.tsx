@@ -124,7 +124,7 @@ export function Header() {
                 <div className="relative group">
                   <button className="flex items-center space-x-2 bg-moss-green/20 px-3 py-1.5 rounded-full border border-moss-green/30 hover:bg-moss-green/30 transition-colors">
                     <span className="text-sm font-medium text-soft-sky">
-                      {user?.username || user?.display_name || user?.email?.split('@')[0]}
+                      {user?.username || user?.email?.split('@')[0]}
                     </span>
                     <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-bold">
                       {(user?.username || user?.email)?.[0].toUpperCase()}

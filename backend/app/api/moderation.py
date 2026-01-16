@@ -183,7 +183,7 @@ def moderate_event(
                     to_email=event.organizer.email,
                     event_title=event.title,
                     event_id=str(event.id),
-                    display_name=event.organizer.display_name,
+                    username=event.organizer.username,
                     is_auto_approved=False
                 )
                 logger.info(f"Approval email sent to {mask_email(event.organizer.email)} for event {event.id}")
@@ -193,7 +193,7 @@ def moderate_event(
                     event_title=event.title,
                     event_id=str(event.id),
                     rejection_reason=moderation.rejection_reason,
-                    display_name=event.organizer.display_name
+                    username=event.organizer.username
                 )
                 logger.info(f"Rejection email sent to {mask_email(event.organizer.email)} for event {event.id}")
         except Exception as e:

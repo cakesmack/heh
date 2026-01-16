@@ -22,5 +22,10 @@ COPY . .
 EXPOSE 8000
 
 # Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Copy startup script and make executable
+COPY start.sh .
+RUN chmod +x start.sh
+
+# Run the application via startup script
+CMD ["./start.sh"]
 

@@ -18,7 +18,6 @@ export default function RegisterPage() {
   const router = useRouter();
   const { register, loginWithGoogle, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -60,10 +59,7 @@ export default function RegisterPage() {
   const validateForm = (): boolean => {
     const errors: typeof validationErrors = {};
 
-    // Username validation
-    if (formData.username.length < 3) {
-      errors.username = 'Username must be at least 3 characters';
-    }
+
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -105,7 +101,6 @@ export default function RegisterPage() {
     try {
       await register({
         email: formData.email,
-        username: formData.username,
         password: formData.password
       });
       // Redirect handled by useEffect
@@ -213,26 +208,7 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {/* Username Field */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Username
-              </label>
-              <Input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                required
-                value={formData.username}
-                onChange={handleChange}
-                placeholder="Choose a username"
-                disabled={isLoading}
-              />
-              {validationErrors.username && (
-                <p className="mt-1 text-sm text-red-600">{validationErrors.username}</p>
-              )}
-            </div>
+
 
             {/* Email Field */}
             <div>
