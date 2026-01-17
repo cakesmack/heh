@@ -44,6 +44,7 @@ export default function AccountPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({ username: '' });
   const [editError, setEditError] = useState<string | null>(null);
+  const [claimError, setClaimError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Smart Default: If user has submitted events, default to 'hosting'
@@ -196,6 +197,7 @@ export default function AccountPage() {
           setMyClaims(claimsData);
         } catch (err) {
           console.error('Error fetching venue claims:', err);
+          setClaimError(err instanceof Error ? err.message : 'Failed to load claims');
         }
 
         // Fetch owned venues
@@ -412,7 +414,13 @@ export default function AccountPage() {
               My Events
             </button>
 
+            {/* Claim Error Debug */}
+            {claimError && (
+              <div className="text-red-500 text-xs px-2 py-1">! Claim Error: {claimError}</div>
+            )}
+
             {/* Conditional "My Venues" Tab */}
+            {/* Show if they have claims OR if they own venues */}
             {(myClaims.length > 0 || ownedVenues.length > 0) && (
               <button
                 onClick={() => setActiveTab('venues')}
