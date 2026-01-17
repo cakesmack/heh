@@ -209,6 +209,7 @@ export interface VenueUpdate {
 
 export interface VenueFilter {
   category_id?: string;
+  owner_id?: string;
   latitude?: number;
   longitude?: number;
   radius_km?: number;

@@ -13,6 +13,10 @@ from sqlmodel import SQLModel
 
 from app.core.config import settings
 from app.core.database import engine, check_db_connection
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from app.core.limiter import limiter
 from app.api import auth, events, venues, promotions, categories, tags, media, geocode, users, admin, hero, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, email_testing, cron, admin_import
 
 logger = logging.getLogger(__name__)
@@ -132,6 +136,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware - MUST be added first to handle preflight requests
 app.add_middleware(

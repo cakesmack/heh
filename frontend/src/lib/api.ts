@@ -1502,7 +1502,7 @@ export const api = {
     create: async (venueId: string, reason: string) => {
       return apiFetch<VenueClaim>(`/api/venues/${venueId}/claim`, {
         method: 'POST',
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ venue_id: venueId, reason }),
       });
     },
     my: async () => {

@@ -4,11 +4,12 @@ Handles venue CRUD operations and filtering.
 """
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlmodel import Session, select, func
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_session
+from app.core.limiter import limiter
 from app.core.security import get_current_user
 from app.core.utils import normalize_uuid
 from app.models.user import User
@@ -239,8 +240,11 @@ def search_venues(
 
 
 @router.get("", response_model=VenueListResponse)
+@limiter.limit("100/minute")
 def list_venues(
+    request: Request,
     category_id: Optional[str] = None,
+    owner_id: Optional[str] = None,
     latitude: Optional[float] = None,
     longitude: Optional[float] = None,
     radius_km: Optional[float] = None,
@@ -278,6 +282,10 @@ def list_venues(
     # Filter by category
     if category_id:
         query = query.where(Venue.category_id == category_id)
+
+    # Filter by owner
+    if owner_id:
+        query = query.where(Venue.owner_id == owner_id)
 
     # Filter by geographic proximity
     if latitude is not None and longitude is not None and radius_km is not None:

@@ -60,3 +60,7 @@ backend/static/uploads/*
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Data Dumps
+*.json
+*.csv

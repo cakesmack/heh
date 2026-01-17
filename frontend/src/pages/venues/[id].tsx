@@ -34,7 +34,7 @@ export default function VenueDetailPage() {
   const [promotions, setPromotions] = useState<PromotionResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
   const { trackVenueView } = useAnalytics();
   const [staff, setStaff] = useState<VenueStaffResponse[]>([]);
   const [isStaffLoading, setIsStaffLoading] = useState(false);
@@ -579,25 +579,28 @@ export default function VenueDetailPage() {
             )}
 
             {/* Claim Card */}
-            <div className="p-6 bg-stone-900 rounded-2xl text-white">
-              <h3 className="font-bold mb-2">Is this your venue?</h3>
-              <p className="text-sm text-stone-400 mb-4">Claim this listing to manage events, promotions, and more.</p>
-              <button
-                onClick={async () => {
-                  const reason = prompt("Why do you want to claim this venue?");
-                  if (!reason) return;
-                  try {
-                    await api.venueClaims.create(venue.id, reason);
-                    alert("Claim submitted successfully!");
-                  } catch (err) {
-                    alert("Failed to submit claim.");
-                  }
-                }}
-                className="w-full py-2 bg-white text-stone-950 rounded-lg text-sm font-bold hover:bg-stone-200 transition-colors"
-              >
-                Claim Venue
-              </button>
-            </div>
+            {!isOwner && (
+              <div className="p-6 bg-stone-900 rounded-2xl text-white">
+                <h3 className="font-bold mb-2">Is this your venue?</h3>
+                <p className="text-sm text-stone-400 mb-4">Claim this listing to manage events, promotions, and more.</p>
+                <button
+                  onClick={async () => {
+                    const reason = prompt("Why do you want to claim this venue?");
+                    if (!reason) return;
+                    try {
+                      await api.venueClaims.create(venue.id, reason);
+                      alert("Claim submitted successfully!");
+                      refreshUser(); // Refresh state to show "My Venues" tab if approved immediately (or just to sync)
+                    } catch (err) {
+                      alert("Failed to submit claim.");
+                    }
+                  }}
+                  className="w-full py-2 bg-white text-stone-950 rounded-lg text-sm font-bold hover:bg-stone-200 transition-colors"
+                >
+                  Claim Venue
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

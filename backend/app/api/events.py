@@ -5,8 +5,9 @@ Handles event CRUD operations, filtering, and search.
 from datetime import datetime
 from typing import Optional, List
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, Request
 from sqlmodel import Session, select, func
+from app.core.limiter import limiter
 from sqlalchemy import case
 
 from app.core.database import get_session
@@ -170,7 +171,9 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
 
 
 @router.get("", response_model=EventListResponse)
+@limiter.limit("100/minute")
 def list_events(
+    request: Request,
     category_id: Optional[str] = None,
     category: Optional[str] = Query(None, description="Category slug for filtering"),
     category_ids: Optional[str] = Query(None, description="Comma-separated category IDs"),

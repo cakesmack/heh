@@ -29,6 +29,7 @@ export default function AccountPage() {
   const [bookmarksTotal, setBookmarksTotal] = useState(0);
 
   const [myClaims, setMyClaims] = useState<VenueClaim[]>([]);
+  const [ownedVenues, setOwnedVenues] = useState<any[]>([]);
   const [myOrganizers, setMyOrganizers] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -195,6 +196,14 @@ export default function AccountPage() {
           setMyClaims(claimsData);
         } catch (err) {
           console.error('Error fetching venue claims:', err);
+        }
+
+        // Fetch owned venues
+        try {
+          const ownedData = await api.venues.list({ owner_id: user.id });
+          setOwnedVenues(ownedData.venues);
+        } catch (err) {
+          console.error('Error fetching owned venues:', err);
         }
 
         // Fetch bookmarks
@@ -404,7 +413,7 @@ export default function AccountPage() {
             </button>
 
             {/* Conditional "My Venues" Tab */}
-            {myClaims.length > 0 && (
+            {(myClaims.length > 0 || ownedVenues.length > 0) && (
               <button
                 onClick={() => setActiveTab('venues')}
                 className={`${activeTab === 'venues'
@@ -871,7 +880,7 @@ export default function AccountPage() {
             <Card>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  My Venue Claims ({myClaims.length})
+                  Managed Venues ({ownedVenues.length + myClaims.length})
                 </h2>
                 <Link
                   href="/venues"
@@ -880,18 +889,20 @@ export default function AccountPage() {
                   Browse Venues
                 </Link>
               </div>
-              {myClaims.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {myClaims.map((claim) => {
-                    const venue = (claim as any).venue;
-                    return (
+
+              {/* Owned Venues Section */}
+              {ownedVenues.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Properties You Own</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {ownedVenues.map((venue) => (
                       <div
-                        key={claim.id}
+                        key={venue.id}
                         className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                        onClick={() => router.push(`/venues/${claim.venue_id}`)}
+                        onClick={() => router.push(`/venues/${venue.id}`)}
                       >
                         {/* Image */}
-                        {venue?.image_url ? (
+                        {venue.image_url ? (
                           <img
                             src={venue.image_url}
                             alt={venue.name}
@@ -900,59 +911,96 @@ export default function AccountPage() {
                         ) : (
                           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700" />
                         )}
-
-                        {/* Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                        {/* Edit Button Overlay */}
-                        {claim.status === 'approved' && (
-                          <Link
-                            href={`/venues/${claim.venue_id}/edit`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                          >
-                            <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                          </Link>
-                        )}
+                        {/* Edit Button */}
+                        <Link
+                          href={`/venues/${venue.id}/edit`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                        >
+                          <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </Link>
 
-                        {/* Status Badge */}
                         <div className="absolute top-2 left-2">
-                          <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded uppercase ${claim.status === 'approved' ? 'bg-green-400 text-green-900' :
-                            claim.status === 'rejected' ? 'bg-red-400 text-red-900' :
-                              'bg-yellow-400 text-yellow-900'
-                            }`}>
-                            {claim.status}
-                          </span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded uppercase bg-blue-500 text-white">Owner</span>
                         </div>
 
-                        {/* Content */}
                         <div className="absolute bottom-0 left-0 right-0 p-3">
-                          <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
-                            {venue?.name || `Venue ${claim.venue_id.slice(0, 8)}...`}
-                          </h3>
-                          <p className="text-white/70 text-[10px] truncate">
-                            {venue?.address || 'Address not available'}
-                          </p>
+                          <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">{venue.name}</h3>
+                          <p className="text-white/70 text-[10px] truncate">{venue.address}</p>
                         </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-12 bg-gray-50 rounded-xl">
-                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <p className="text-gray-500 mb-4">No venue claims yet.</p>
-                  <Link
-                    href="/venues"
-                    className="text-emerald-600 hover:text-emerald-700 font-medium"
-                  >
-                    Browse venues to claim ownership
-                  </Link>
+              )}
+
+              {/* Claims Section */}
+              {myClaims.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Pending Claims</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {myClaims.map((claim) => {
+                      const venue = (claim as any).venue;
+                      return (
+                        <div
+                          key={claim.id}
+                          className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
+                          onClick={() => router.push(`/venues/${claim.venue_id}`)}
+                        >
+                          {/* Image */}
+                          {venue?.image_url ? (
+                            <img
+                              src={venue.image_url}
+                              alt={venue.name}
+                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700" />
+                          )}
+
+                          {/* Gradient Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                          {/* Edit Button Overlay */}
+                          {claim.status === 'approved' && (
+                            <Link
+                              href={`/venues/${claim.venue_id}/edit`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                            >
+                              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </Link>
+                          )}
+
+                          {/* Status Badge */}
+                          <div className="absolute top-2 left-2">
+                            <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded uppercase ${claim.status === 'approved' ? 'bg-green-400 text-green-900' :
+                              claim.status === 'rejected' ? 'bg-red-400 text-red-900' :
+                                'bg-yellow-400 text-yellow-900'
+                              }`}>
+                              {claim.status}
+                            </span>
+                          </div>
+
+                          {/* Content */}
+                          <div className="absolute bottom-0 left-0 right-0 p-3">
+                            <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
+                              {venue?.name || `Venue ${claim.venue_id.slice(0, 8)}...`}
+                            </h3>
+                            <p className="text-white/70 text-[10px] truncate">
+                              {venue?.address || 'Address not available'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </Card>
@@ -964,7 +1012,7 @@ export default function AccountPage() {
           <SettingsTab categories={categories} />
         )}
 
-      </div>
+      </div >
     </div >
   );
 }

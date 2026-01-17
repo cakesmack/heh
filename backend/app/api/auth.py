@@ -5,7 +5,8 @@ Handles user registration, login, profile retrieval, and password reset.
 from datetime import datetime, timedelta
 import secrets
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Request
+from app.core.limiter import limiter
 from sqlmodel import Session, select
 from pydantic import BaseModel, EmailStr
 
@@ -129,7 +130,9 @@ def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 def login(
+    request: Request,
     credentials: UserLogin,
     session: Session = Depends(get_session)
 ):
