@@ -654,9 +654,13 @@ def claim_venue(
     if not venue:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Venue not found")
     
-    # Check if already owned
+    # Check if already owned by a non-admin
     if venue.owner_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Venue is already owned")
+        owner = session.get(User, venue.owner_id)
+        # If owner exists and is NOT an admin, block the claim
+        # We allow claiming if the owner is an admin (system-owned)
+        if owner and not owner.is_admin:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Venue is already owned")
         
     # Check for existing pending claim
     existing_claim = session.exec(

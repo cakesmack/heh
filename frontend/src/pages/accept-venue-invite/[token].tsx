@@ -7,10 +7,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { venueInvitesAPI } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AcceptVenueInvite() {
     const router = useRouter();
     const { token } = router.query;
+    const { user, isLoading: authLoading } = useAuth();
 
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [venueName, setVenueName] = useState('');
@@ -18,22 +20,32 @@ export default function AcceptVenueInvite() {
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
-        if (!token || typeof token !== 'string') return;
+        if (!router.isReady || !token) return;
+
+        // Wait for auth to initialize
+        if (authLoading) return;
+
+        // If not logged in, redirect to login with return URL
+        if (!user) {
+            router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+            return;
+        }
 
         const acceptInvite = async () => {
             try {
-                const result = await venueInvitesAPI.accept(token);
+                // ... same logic 
+                const result = await venueInvitesAPI.accept(token as string);
                 setStatus('success');
                 setVenueName(result.venue_name);
                 setVenueId(result.venue_id);
             } catch (err: any) {
                 setStatus('error');
-                setErrorMessage(err.message || 'Failed to accept invite');
+                setErrorMessage(err.response?.data?.detail || err.message || 'Failed to accept invite');
             }
         };
 
         acceptInvite();
-    }, [token]);
+    }, [token, user, authLoading, router.isReady]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
