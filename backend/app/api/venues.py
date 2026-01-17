@@ -723,12 +723,31 @@ def accept_venue_invite(
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
     
-    if venue.owner_id:
-        raise HTTPException(status_code=400, detail="Venue already has an owner")
     
-    # Transfer ownership
-    venue.owner_id = current_user.id
-    session.add(venue)
+    if venue.owner_id:
+        # Venue has owner, check if already staff
+        from app.models.venue_staff import VenueStaff, VenueRole
+        
+        # Check if already staff
+        existing_staff = session.exec(
+            select(VenueStaff).where(
+                VenueStaff.venue_id == venue.id,
+                VenueStaff.user_id == current_user.id
+            )
+        ).first()
+
+        if not existing_staff:
+            # Add as Manager
+            staff = VenueStaff(
+                venue_id=venue.id,
+                user_id=current_user.id,
+                role=VenueRole.MANAGER
+            )
+            session.add(staff)
+    else:
+        # Transfer ownership
+        venue.owner_id = current_user.id
+        session.add(venue)
     
     # Mark invite as claimed
     invite.claimed = True

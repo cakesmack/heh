@@ -779,12 +779,6 @@ def create_venue_invite(
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
     
-    if venue.owner_id:
-        raise HTTPException(
-            status_code=400, 
-            detail="Venue already has an owner. Remove current owner first."
-        )
-    
     # Create invite
     invite = VenueInvite(
         venue_id=venue.id,

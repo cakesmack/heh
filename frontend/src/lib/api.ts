@@ -1292,6 +1292,23 @@ export const venueClaimsAPI = {
   },
 };
 
+export const eventClaimsAPI = {
+  /**
+   * List event claims (admin only)
+   */
+  list: async (status?: string): Promise<any[]> => {
+    const qs = status ? `?status=${status}` : '';
+    return apiFetch<any[]>(`/api/admin/event-claims${qs}`);
+  },
+
+  /**
+   * Process an event claim (admin only)
+   */
+  process: async (claimId: number, action: 'approve' | 'reject'): Promise<void> => {
+    return apiFetch<void>(`/api/admin/event-claims/${claimId}/${action}`, { method: 'POST' });
+  },
+};
+
 // ============================================================
 // COLLECTIONS API
 // ============================================================
@@ -1461,6 +1478,8 @@ export const groupsAPI = {
   },
 };
 
+
+
 // ============================================================
 // EXPORTS
 // ============================================================
@@ -1501,7 +1520,7 @@ export const api = {
       });
     },
     my: async () => {
-      return apiFetch<Array<{ id: number; event_id: string; status: string }>>('/api/events/claims/my');
+      return apiFetch<{ id: number; status: string }[]>('/api/events/claims/my');
     },
   },
   analytics: analyticsAPI,
