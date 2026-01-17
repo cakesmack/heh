@@ -501,6 +501,47 @@ export const venuesAPI = {
 };
 
 
+// ============================================================
+// VENUE INVITES API (Admin - Golden Key)
+// ============================================================
+
+export interface VenueInvite {
+  id: number;
+  venue_id: string;
+  email: string;
+  token: string;
+  expires_at: string;
+  claimed?: boolean;
+}
+
+export const venueInvitesAPI = {
+  /**
+   * Send venue ownership invite (admin only)
+   */
+  create: async (venueId: string, email: string): Promise<VenueInvite> => {
+    return apiFetch<VenueInvite>(`/api/admin/venues/${venueId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  /**
+   * List all venue invites (admin only)
+   */
+  list: async (): Promise<VenueInvite[]> => {
+    return apiFetch<VenueInvite[]>('/api/admin/venues/invites');
+  },
+
+  /**
+   * Accept venue invite (user)
+   */
+  accept: async (token: string): Promise<{ success: boolean; venue_id: string; venue_name: string }> => {
+    return apiFetch(`/api/venues/accept-invite/${token}`, {
+      method: 'POST',
+    });
+  },
+};
+
 
 // ============================================================
 // PROMOTIONS API

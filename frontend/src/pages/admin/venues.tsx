@@ -11,7 +11,7 @@ import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
 import ImageUpload from '@/components/common/ImageUpload';
 import PlacesAutocomplete from '@/components/maps/PlacesAutocomplete';
-import { venuesAPI, analyticsAPI } from '@/lib/api';
+import { venuesAPI, analyticsAPI, venueInvitesAPI } from '@/lib/api';
 import { isHIERegion } from '@/utils/validation/hie-check';
 import { VenueCategory, VenueAnalyticsSummary } from '@/types';
 import type { VenueResponse } from '@/types';
@@ -65,6 +65,13 @@ export default function AdminVenues() {
   const [venueStats, setVenueStats] = useState<VenueAnalyticsSummary | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
+  // Invite Owner Modal State
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [invitingVenue, setInvitingVenue] = useState<VenueResponse | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+
   useEffect(() => {
     if (viewingStatsVenue && statsModalOpen) {
       const fetchStats = async () => {
@@ -86,6 +93,27 @@ export default function AdminVenues() {
     setViewingStatsVenue(venue);
     setVenueStats(null);
     setStatsModalOpen(true);
+  };
+
+  const openInviteModal = (venue: VenueResponse) => {
+    setInvitingVenue(venue);
+    setInviteEmail('');
+    setInviteSuccess(null);
+    setInviteModalOpen(true);
+  };
+
+  const handleSendInvite = async () => {
+    if (!invitingVenue || !inviteEmail) return;
+    setSendingInvite(true);
+    try {
+      await venueInvitesAPI.create(invitingVenue.id, inviteEmail);
+      setInviteSuccess(`Invite sent to ${inviteEmail}`);
+      setInviteEmail('');
+    } catch (err: any) {
+      alert(err.message || 'Failed to send invite');
+    } finally {
+      setSendingInvite(false);
+    }
   };
 
   const fetchVenues = useCallback(async () => {
@@ -433,6 +461,14 @@ export default function AdminVenues() {
                         >
                           Edit
                         </button>
+                        {!venue.owner_id && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openInviteModal(venue); }}
+                            className="text-xs text-amber-600 hover:text-amber-800 px-2 py-1 rounded hover:bg-amber-50"
+                          >
+                            Invite Owner
+                          </button>
+                        )}
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(venue); }}
                           className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50"
@@ -819,6 +855,54 @@ export default function AdminVenues() {
           ) : (
             <div className="p-8 text-center text-gray-500">No data available</div>
           )}
+        </Modal>
+
+        {/* Invite Owner Modal */}
+        <Modal
+          isOpen={inviteModalOpen}
+          onClose={() => setInviteModalOpen(false)}
+          title={`Invite Owner: ${invitingVenue?.name}`}
+          size="sm"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Send an email invitation to assign ownership of this venue. The recipient will become the venue owner when they accept.
+            </p>
+
+            {inviteSuccess && (
+              <div className="p-3 bg-green-50 text-green-700 rounded-lg text-sm">
+                ✓ {inviteSuccess}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                placeholder="owner@venue.com"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setInviteModalOpen(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleSendInvite}
+                disabled={sendingInvite || !inviteEmail}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                {sendingInvite ? 'Sending...' : 'Send Invite'}
+              </button>
+            </div>
+          </div>
         </Modal>
       </AdminLayout>
     </AdminGuard >
