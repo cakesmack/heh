@@ -414,24 +414,7 @@ export default function AccountPage() {
               My Events
             </button>
 
-            {/* Claim Error Debug */}
-            {claimError && (
-              <div className="text-red-500 text-xs px-2 py-1">! Claim Error: {claimError}</div>
-            )}
 
-            {/* Conditional "My Venues" Tab */}
-            {/* Show if they have claims OR if they own venues */}
-            {(myClaims.length > 0 || ownedVenues.length > 0) && (
-              <button
-                onClick={() => setActiveTab('venues')}
-                className={`${activeTab === 'venues'
-                  ? 'border-emerald-500 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                My Venues
-              </button>
-            )}
 
             <button
               onClick={() => setActiveTab('settings')}
@@ -613,6 +596,78 @@ export default function AccountPage() {
                   )}
                 </Card>
               </div>
+
+              {/* Managed Venues - Moved from separate tab */}
+              {(ownedVenues.length > 0 || myClaims.length > 0) && (
+                <div className="lg:col-span-3">
+                  <Card>
+                    <div className="mb-6 flex items-center justify-between">
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Managed Venues <span className="text-gray-500 text-sm font-normal">({ownedVenues.length} owned, {myClaims.length} pending)</span>
+                      </h2>
+                      {claimError && (
+                        <div className="text-red-500 text-xs px-2 py-1 bg-red-50 rounded">
+                          ! Error: {claimError}
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {/* My Claims (Pending/Rejected) */}
+                      {myClaims.map((claim) => (
+                        <div key={claim.id} className="relative rounded-lg border border-gray-200 p-4 bg-gray-50">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-medium text-gray-900 line-clamp-1">{claim.venue?.name || 'Unknown Venue'}</h3>
+                            <span className={`px-2 py-0.5 text-xs font-bold uppercase rounded ${claim.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              claim.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                              {claim.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-2">Claimed on {new Date(claim.created_at).toLocaleDateString()}</p>
+                          {claim.status === 'pending' && <p className="text-xs text-gray-600 italic">Waiting for admin approval...</p>}
+                        </div>
+                      ))}
+
+                      {/* Owned Venues */}
+                      {ownedVenues.map((venue) => (
+                        <Link key={venue.id} href={`/venues/${venue.id}`}>
+                          <div className="group relative rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all h-full bg-white">
+                            <div className="aspect-video bg-gray-200 relative">
+                              {venue.image_url ? (
+                                <img
+                                  src={venue.image_url}
+                                  alt={venue.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-600">
+                                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div className="absolute top-2 right-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
+                                OWNER
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="font-medium text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors">
+                                {venue.name}
+                              </h3>
+                              <p className="text-sm text-gray-500 line-clamp-1">{venue.address}</p>
+                              <div className="mt-4 flex items-center text-xs text-emerald-600 font-medium">
+                                Manage Venue &rarr;
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              )}
+
             </div>
 
 
@@ -882,138 +937,7 @@ export default function AccountPage() {
           </div>
         )}
 
-        {/* Tab Content: Venues */}
-        {activeTab === 'venues' && (
-          <div className="space-y-8 animate-fade-in">
-            <Card>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Managed Venues ({ownedVenues.length + myClaims.length})
-                </h2>
-                <Link
-                  href="/venues"
-                  className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
-                >
-                  Browse Venues
-                </Link>
-              </div>
 
-              {/* Owned Venues Section */}
-              {ownedVenues.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Properties You Own</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {ownedVenues.map((venue) => (
-                      <div
-                        key={venue.id}
-                        className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                        onClick={() => router.push(`/venues/${venue.id}`)}
-                      >
-                        {/* Image */}
-                        {venue.image_url ? (
-                          <img
-                            src={venue.image_url}
-                            alt={venue.name}
-                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                        {/* Edit Button */}
-                        <Link
-                          href={`/venues/${venue.id}/edit`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                        >
-                          <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </Link>
-
-                        <div className="absolute top-2 left-2">
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded uppercase bg-blue-500 text-white">Owner</span>
-                        </div>
-
-                        <div className="absolute bottom-0 left-0 right-0 p-3">
-                          <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">{venue.name}</h3>
-                          <p className="text-white/70 text-[10px] truncate">{venue.address}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Claims Section */}
-              {myClaims.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Pending Claims</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {myClaims.map((claim) => {
-                      const venue = (claim as any).venue;
-                      return (
-                        <div
-                          key={claim.id}
-                          className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                          onClick={() => router.push(`/venues/${claim.venue_id}`)}
-                        >
-                          {/* Image */}
-                          {venue?.image_url ? (
-                            <img
-                              src={venue.image_url}
-                              alt={venue.name}
-                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700" />
-                          )}
-
-                          {/* Gradient Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                          {/* Edit Button Overlay */}
-                          {claim.status === 'approved' && (
-                            <Link
-                              href={`/venues/${claim.venue_id}/edit`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                            >
-                              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                              </svg>
-                            </Link>
-                          )}
-
-                          {/* Status Badge */}
-                          <div className="absolute top-2 left-2">
-                            <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded uppercase ${claim.status === 'approved' ? 'bg-green-400 text-green-900' :
-                              claim.status === 'rejected' ? 'bg-red-400 text-red-900' :
-                                'bg-yellow-400 text-yellow-900'
-                              }`}>
-                              {claim.status}
-                            </span>
-                          </div>
-
-                          {/* Content */}
-                          <div className="absolute bottom-0 left-0 right-0 p-3">
-                            <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
-                              {venue?.name || `Venue ${claim.venue_id.slice(0, 8)}...`}
-                            </h3>
-                            <p className="text-white/70 text-[10px] truncate">
-                              {venue?.address || 'Address not available'}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
 
         {/* Tab Content: Settings */}
         {activeTab === 'settings' && (
