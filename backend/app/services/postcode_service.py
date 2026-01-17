@@ -31,12 +31,6 @@ class PostcodeLookupResult(BaseModel):
     country: str = "United Kingdom"
 
 
-class AddressSuggestion(BaseModel):
-    """Address suggestion for autocomplete."""
-    id: str
-    address: str
-    url: str
-
 
 class OSPlacesSuggestion(BaseModel):
     """Address/postcode suggestion."""
@@ -154,16 +148,10 @@ async def lookup_postcode(postcode: str) -> Optional[PostcodeLookupResult]:
     """
     Look up a UK postcode and return address + coordinates.
 
-    Tries Ideal Postcodes first, falls back to Google if unavailable.
+    Uses Google Geocode API as fallback.
     """
     # Clean postcode
     postcode = postcode.upper().replace(" ", "")
-
-    # Try Ideal Postcodes first
-    if settings.IDEAL_POSTCODES_API_KEY:
-        result = await _ideal_postcodes_lookup(postcode)
-        if result:
-            return result
 
     # Fallback to Google
     if settings.GOOGLE_GEOCODE_API_KEY:
@@ -174,138 +162,7 @@ async def lookup_postcode(postcode: str) -> Optional[PostcodeLookupResult]:
     return None
 
 
-async def autocomplete_address(query: str) -> list[AddressSuggestion]:
-    """
-    Search for addresses matching the query.
-    Uses Ideal Postcodes Autocomplete API.
-    """
-    if not settings.IDEAL_POSTCODES_API_KEY:
-        return []
 
-    url = "https://api.ideal-postcodes.co.uk/v1/autocomplete"
-    params = {
-        "api_key": settings.IDEAL_POSTCODES_API_KEY,
-        "query": query
-    }
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, params=params, timeout=5.0)
-            if response.status_code != 200:
-                return []
-
-            data = response.json()
-            if not data.get("result") or not data["result"].get("hits"):
-                return []
-
-            suggestions = []
-            for hit in data["result"]["hits"]:
-                suggestions.append(AddressSuggestion(
-                    id=hit.get("id", ""),
-                    address=hit.get("suggestion", ""),
-                    url=hit.get("urls", {}).get("udprn", "")
-                ))
-            
-            return suggestions
-
-        except Exception as e:
-            print(f"Address autocomplete error: {e}")
-            return []
-
-
-async def lookup_address_by_id(address_id: str) -> Optional[PostcodeLookupResult]:
-    """
-    Look up a specific address by its UDPRN ID (from autocomplete).
-    """
-    if not settings.IDEAL_POSTCODES_API_KEY:
-        return None
-
-    # Ideal Postcodes UDPRN lookup
-    url = f"https://api.ideal-postcodes.co.uk/v1/udprn/{address_id}"
-    params = {"api_key": settings.IDEAL_POSTCODES_API_KEY}
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, params=params, timeout=10.0)
-            if response.status_code != 200:
-                return None
-
-            data = response.json()
-            if data.get("code") != 2000 or not data.get("result"):
-                return None
-
-            result = data["result"]
-            
-            # Build full address
-            address_parts = []
-            if result.get("line_1"): address_parts.append(result["line_1"])
-            if result.get("line_2"): address_parts.append(result["line_2"])
-            if result.get("post_town"): address_parts.append(result["post_town"])
-            if result.get("county"): address_parts.append(result["county"])
-
-            return PostcodeLookupResult(
-                postcode=result.get("postcode", ""),
-                address_full=", ".join(address_parts),
-                latitude=float(result.get("latitude", 0)),
-                longitude=float(result.get("longitude", 0)),
-                town=result.get("post_town"),
-                county=result.get("county"),
-                country="United Kingdom"
-            )
-
-        except Exception as e:
-            print(f"Address lookup error: {e}")
-            return None
-
-
-async def _ideal_postcodes_lookup(postcode: str) -> Optional[PostcodeLookupResult]:
-    """Look up postcode using Ideal Postcodes API."""
-    url = f"https://api.ideal-postcodes.co.uk/v1/postcodes/{postcode}"
-    params = {"api_key": settings.IDEAL_POSTCODES_API_KEY}
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, params=params, timeout=10.0)
-
-            if response.status_code != 200:
-                return None
-
-            data = response.json()
-
-            if data.get("code") != 2000 or not data.get("result"):
-                return None
-
-            result = data["result"]
-
-            # Build full address
-            address_parts = []
-            if result.get("line_1"):
-                address_parts.append(result["line_1"])
-            if result.get("line_2"):
-                address_parts.append(result["line_2"])
-            if result.get("post_town"):
-                address_parts.append(result["post_town"])
-            if result.get("county"):
-                address_parts.append(result["county"])
-
-            # Format postcode with space
-            formatted_postcode = result.get("postcode", postcode)
-            if len(formatted_postcode) > 3 and " " not in formatted_postcode:
-                formatted_postcode = f"{formatted_postcode[:-3]} {formatted_postcode[-3:]}"
-
-            return PostcodeLookupResult(
-                postcode=formatted_postcode,
-                address_full=", ".join(address_parts) if address_parts else postcode,
-                latitude=float(result.get("latitude", 0)),
-                longitude=float(result.get("longitude", 0)),
-                town=result.get("post_town"),
-                county=result.get("county"),
-                country="United Kingdom"
-            )
-
-        except Exception as e:
-            print(f"Ideal Postcodes error: {e}")
-            return None
 
 
 async def _google_geocode_lookup(postcode: str) -> Optional[PostcodeLookupResult]:

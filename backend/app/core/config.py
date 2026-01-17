@@ -67,23 +67,17 @@ class Settings(BaseSettings):
         return v
 
     # External Services
-    MAPBOX_API_KEY: Optional[str] = None
+    GOOGLE_MAPS_API_KEY: Optional[str] = None
+    GOOGLE_GEOCODE_API_KEY: Optional[str] = None
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_PUBLISHABLE_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
-
-    # Cloudinary
+    RESEND_API_KEY: Optional[str] = None
     CLOUDINARY_CLOUD_NAME: Optional[str] = None
     CLOUDINARY_API_KEY: Optional[str] = None
     CLOUDINARY_API_SECRET: Optional[str] = None
-
-    # UK Postcode Geocoding
-    IDEAL_POSTCODES_API_KEY: Optional[str] = None
-    GOOGLE_GEOCODE_API_KEY: Optional[str] = None
+    OS_PLACES_API_KEY: Optional[str] = None
     OS_API_KEY: Optional[str] = None
-
-    # Resend (Marketing Emails)
-    RESEND_API_KEY: Optional[str] = None
 
     # Email (Gmail SMTP for password reset)
     SMTP_USER: Optional[str] = None

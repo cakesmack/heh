@@ -746,30 +746,14 @@ def accept_venue_invite(
         raise HTTPException(status_code=404, detail="Venue not found")
     
     
-    if venue.owner_id:
-        # Venue has owner, check if already staff
-        from app.models.venue_staff import VenueStaff, VenueRole
-        
-        # Check if already staff
-        existing_staff = session.exec(
-            select(VenueStaff).where(
-                VenueStaff.venue_id == venue.id,
-                VenueStaff.user_id == current_user.id
-            )
-        ).first()
+    # Transfer ownership regardless of current owner
+    # Valid invite implies authorization to transfer
+    previous_owner_id = venue.owner_id
+    venue.owner_id = current_user.id
+    session.add(venue)
 
-        if not existing_staff:
-            # Add as Manager
-            staff = VenueStaff(
-                venue_id=venue.id,
-                user_id=current_user.id,
-                role=VenueRole.MANAGER
-            )
-            session.add(staff)
-    else:
-        # Transfer ownership
-        venue.owner_id = current_user.id
-        session.add(venue)
+    # Optional: If previous owner was not admin, maybe remove them or add as staff? 
+    # For now, simplistic "Golden Key" handover.
     
     # Mark invite as claimed
     invite.claimed = True

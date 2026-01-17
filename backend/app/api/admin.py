@@ -17,6 +17,7 @@ from app.models.venue import Venue
 from app.models.checkin import CheckIn
 from app.models.venue_claim import VenueClaim
 from app.models.venue_invite import VenueInvite
+from app.models.venue_staff import VenueStaff, VenueRole
 from app.models.event_claim import EventClaim
 from app.models.report import Report
 from app.models.organizer import Organizer
@@ -727,17 +728,60 @@ def process_venue_claim(
     claim.updated_at = datetime.utcnow()
     
     if action == "approve":
+        # 1. Moderation Check: Ensure user is active
+        # Attempt to load user if not present (although relationship should handle it)
+        if not claim.user:
+             claim.user = session.get(User, claim.user_id)
+             
+        if not claim.user or not claim.user.is_active:
+             raise HTTPException(status_code=400, detail="Cannot approve claim for inactive or banned user")
+
         venue = session.get(Venue, claim.venue_id)
         if venue:
+            # 2. Transfer Ownership
             venue.owner_id = claim.user_id
             session.add(venue)
             
+            # 3. Staff Roster Sync
+            # Check if new owner is already staff
+            existing_staff = session.exec(
+                select(VenueStaff).where(
+                    VenueStaff.venue_id == venue.id,
+                    VenueStaff.user_id == claim.user_id
+                )
+            ).first()
+            
+            if existing_staff:
+                # Promote to MANAGER if not already
+                if existing_staff.role != VenueRole.MANAGER:
+                    existing_staff.role = VenueRole.MANAGER
+                    session.add(existing_staff)
+            else:
+                # Add as MANAGER
+                # Note: We intentionally do NOT add the Admin (requester) to staff
+                new_staff = VenueStaff(
+                    venue_id=venue.id,
+                    user_id=claim.user_id,
+                    role=VenueRole.MANAGER
+                )
+                session.add(new_staff)
+            
+            # 4. Success Email
+            if claim.user and claim.user.email:
+                resend_email_service.send_venue_claim_approved(
+                    to_email=claim.user.email, 
+                    venue_name=venue.name, 
+                    venue_id=venue.id,
+                    username=claim.user.username
+                )
+
     session.add(claim)
     session.commit()
     session.refresh(claim)
     
-    # Send Notification
-    if claim.user and claim.user.email:
+    # Send Notification (Reject only)
+    # We handled Approval email specifically above with the new template
+    if action == "reject" and claim.user and claim.user.email:
         venue_name = claim.venue.name if claim.venue else "Unknown Venue"
         notification_service.notify_venue_claim_update(claim.user.email, venue_name, claim.status)
 

@@ -1085,5 +1085,78 @@ class ResendEmailService:
             logger.error(f"Failed to send venue invite to {mask_email(to_email)}: {e}")
             return False
 
+    def send_venue_claim_approved(
+        self,
+        to_email: str,
+        venue_name: str,
+        venue_id: str,
+        username: Optional[str] = None
+    ) -> bool:
+        """
+        Send notification when a venue claim is approved.
+
+        Args:
+            to_email: Manager's email
+            venue_name: Name of the venue
+            venue_id: Venue ID
+            username: User's username
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send venue claim approved email to {mask_email(to_email)}")
+            return True
+
+        name = username or "there"
+        manage_url = f"{settings.FRONTEND_URL}/venues/{venue_id}/edit"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ padding: 40px 30px; background: #ffffff; }}
+                .icon {{ width: 60px; height: 60px; background: #d1fae5; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 30px; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Claim Approved!</h1>
+                </div>
+                <div class="content">
+                    <div class="icon">&#x1F3E2;</div>
+                    <p>Hey {name}!</p>
+                    <p>Great news! Your claim for <strong>{venue_name}</strong> has been approved.</p>
+                    <p>You have been granted full manager access. You can now update the venue details, manage events, and add other staff members.</p>
+                    <p style="text-align: center;">
+                        <a href="{manage_url}" class="button">Manage Venue</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            response = resend.Emails.send({
+                "from": self.from_address,
+                "to": [to_email],
+                "subject": f"You're now managing {venue_name}! 🔑",
+                "html": html_content,
+            })
+            logger.info(f"Venue claim approved email sent to {mask_email(to_email)}, id: {response.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send venue claim approved email to {mask_email(to_email)}: {e}")
+            return False
+
 # Create global instance
 resend_email_service = ResendEmailService()
