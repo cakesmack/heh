@@ -597,13 +597,14 @@ export default function AccountPage() {
                 </Card>
               </div>
 
-              {/* Managed Venues - Moved from separate tab */}
+
+              {/* Managed Venues - Combined list of Owned + Approved Claims */}
               {(ownedVenues.length > 0 || myClaims.length > 0) && (
                 <div className="lg:col-span-3">
                   <Card>
                     <div className="mb-6 flex items-center justify-between">
                       <h2 className="text-xl font-semibold text-gray-900">
-                        Managed Venues <span className="text-gray-500 text-sm font-normal">({ownedVenues.length} owned, {myClaims.length} pending)</span>
+                        Managed Venues
                       </h2>
                       {claimError && (
                         <div className="text-red-500 text-xs px-2 py-1 bg-red-50 rounded">
@@ -611,59 +612,82 @@ export default function AccountPage() {
                         </div>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {/* My Claims (Pending/Rejected) */}
-                      {myClaims.map((claim) => (
-                        <div key={claim.id} className="relative rounded-lg border border-gray-200 p-4 bg-gray-50">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-medium text-gray-900 line-clamp-1">{claim.venue?.name || 'Unknown Venue'}</h3>
-                            <span className={`px-2 py-0.5 text-xs font-bold uppercase rounded ${claim.status === 'approved' ? 'bg-green-100 text-green-800' :
-                              claim.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                              {claim.status}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mb-2">Claimed on {new Date(claim.created_at).toLocaleDateString()}</p>
-                          {claim.status === 'pending' && <p className="text-xs text-gray-600 italic">Waiting for admin approval...</p>}
-                        </div>
-                      ))}
 
-                      {/* Owned Venues */}
-                      {ownedVenues.map((venue) => (
-                        <Link key={venue.id} href={`/venues/${venue.id}`}>
-                          <div className="group relative rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all h-full bg-white">
-                            <div className="aspect-video bg-gray-200 relative">
-                              {venue.image_url ? (
-                                <img
-                                  src={venue.image_url}
-                                  alt={venue.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-600">
-                                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                  </svg>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {/* Calculate Unique Managed Venues */}
+                      {(() => {
+                        // Start with owned venues
+                        const displayedVenues = [...ownedVenues];
+                        const displayedIds = new Set(displayedVenues.map(v => v.id));
+
+                        // Add venues from APPROVED claims if not already present
+                        myClaims.forEach(claim => {
+                          if (claim.status === 'approved' && claim.venue && !displayedIds.has(claim.venue.id)) {
+                            // Attach a virtual flag to indicate this came from a claim (optional usage)
+                            const v = { ...claim.venue, _isClaimed: true };
+                            displayedVenues.push(v);
+                            displayedIds.add(v.id);
+                          }
+                        });
+
+                        return displayedVenues.map((venue: any) => (
+                          <Link key={venue.id} href={`/venues/${venue.id}`}>
+                            <div className="group relative rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all h-full bg-white">
+                              <div className="aspect-video bg-gray-200 relative">
+                                {venue.image_url ? (
+                                  <img
+                                    src={venue.image_url}
+                                    alt={venue.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-600">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                  </div>
+                                )}
+                                <div className="absolute top-2 right-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
+                                  {venue.owner_id === user?.id ? 'OWNER' : 'MANAGER'}
                                 </div>
-                              )}
-                              <div className="absolute top-2 right-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
-                                OWNER
+                              </div>
+                              <div className="p-4">
+                                <h3 className="font-medium text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors">
+                                  {venue.name}
+                                </h3>
+                                <p className="text-sm text-gray-500 line-clamp-1">{venue.address}</p>
+                                <div className="mt-4 flex items-center text-xs text-emerald-600 font-medium">
+                                  Manage Venue &rarr;
+                                </div>
                               </div>
                             </div>
-                            <div className="p-4">
-                              <h3 className="font-medium text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors">
-                                {venue.name}
-                              </h3>
-                              <p className="text-sm text-gray-500 line-clamp-1">{venue.address}</p>
-                              <div className="mt-4 flex items-center text-xs text-emerald-600 font-medium">
-                                Manage Venue &rarr;
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        ));
+                      })()}
                     </div>
+
+                    {/* Pending Claims Section (Separate) */}
+                    {myClaims.some(c => c.status !== 'approved') && (
+                      <div className="mt-8 pt-6 border-t border-gray-100">
+                        <h3 className="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wider">Pending Applications</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {myClaims.filter(c => c.status !== 'approved').map((claim) => (
+                            <div key={claim.id} className="relative rounded-lg border border-gray-200 p-4 bg-gray-50">
+                              <div className="flex justify-between items-start mb-2">
+                                <h3 className="font-medium text-gray-900 line-clamp-1">{claim.venue?.name || 'Unknown Venue'}</h3>
+                                <span className={`px-2 py-0.5 text-xs font-bold uppercase rounded ${claim.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                  {claim.status}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mb-2">Applied: {new Date(claim.created_at).toLocaleDateString()}</p>
+                              {claim.status === 'pending' && <p className="text-xs text-gray-600 italic">Waiting for admin approval...</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                   </Card>
                 </div>
               )}
