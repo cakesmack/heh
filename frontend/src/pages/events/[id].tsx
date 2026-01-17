@@ -829,6 +829,32 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
 
 
 
+              {/* Claim Event Card - for users who don't own the event */}
+              {isAuthenticated && user && event.organizer_id !== user.id && !user.is_admin && (
+                <Card className="mt-4 border-purple-200 bg-purple-50/50">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Is this your event?</h3>
+                  <p className="text-xs text-gray-600 mb-3">Claim this event to manage it, update details, and track analytics.</p>
+                  <button
+                    onClick={async () => {
+                      const reason = prompt("Why do you want to claim this event?");
+                      if (!reason) return;
+                      try {
+                        await api.eventClaims.create(event.id, reason);
+                        alert("Claim submitted! An admin will review your request.");
+                      } catch (err: any) {
+                        alert(err.message || "Failed to submit claim.");
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-medium transition-colors text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Claim Event
+                  </button>
+                </Card>
+              )}
+
               {/* Owner Actions */}
               {user && (event.organizer_id === user.id || user.is_admin) && (
                 <Card className="mt-4">

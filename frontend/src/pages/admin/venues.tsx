@@ -469,6 +469,14 @@ export default function AdminVenues() {
                             Invite Owner
                           </button>
                         )}
+                        {venue.owner_id && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openInviteModal(venue); }}
+                            className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
+                          >
+                            Change Owner
+                          </button>
+                        )}
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(venue); }}
                           className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50"

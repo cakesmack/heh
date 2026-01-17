@@ -1479,7 +1479,31 @@ export const api = {
   users: usersAPI,
   admin: adminAPI,
   hero: heroAPI,
-  venueClaims: venueClaimsAPI,
+  venueClaims: {
+    create: async (venueId: string, reason: string) => {
+      return apiFetch<VenueClaim>(`/api/venues/${venueId}/claim`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+    },
+    my: async () => {
+      return apiFetch<VenueClaim[]>('/api/venues/claims/my');
+    },
+    getMyClaims: async () => {
+      return apiFetch<VenueClaim[]>('/api/venues/claims/my');
+    },
+  },
+  eventClaims: {
+    create: async (eventId: string, reason: string) => {
+      return apiFetch<{ id: number; status: string }>(`/api/events/${eventId}/claim`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+    },
+    my: async () => {
+      return apiFetch<Array<{ id: number; event_id: string; status: string }>>('/api/events/claims/my');
+    },
+  },
   analytics: analyticsAPI,
   moderation: moderationAPI,
   recommendations: recommendationsAPI,
