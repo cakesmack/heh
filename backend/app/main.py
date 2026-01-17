@@ -34,7 +34,10 @@ async def lifespan(app: FastAPI):
         # Continue startup - individual requests will fail gracefully
 
     # Create database tables
+    # Import all models explicitly to ensure they're registered with SQLModel metadata
+    from app.models import VenueInvite, EventClaim  # New ownership/claiming tables
     SQLModel.metadata.create_all(engine)
+    logger.info("Database tables created/verified (including venue_invites, event_claims)")
     
     # Run pending migrations (add missing columns to existing tables)
     try:
