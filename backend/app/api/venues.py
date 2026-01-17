@@ -16,6 +16,7 @@ from app.models.venue import Venue
 from app.models.venue_category import VenueCategory
 from app.models.event import Event
 from app.models.venue_claim import VenueClaim
+from app.models.venue_invite import VenueInvite
 from app.models.venue_staff import VenueStaff, VenueRole
 from app.schemas.venue_claim import VenueClaimCreate, VenueClaimResponse
 from app.schemas.venue import (
@@ -689,6 +690,60 @@ def get_my_claims(
     
     return claims
 
+
+# ============================================================
+# VENUE INVITE ACCEPTANCE (PUBLIC)
+# ============================================================
+
+@router.post("/accept-invite/{token}")
+def accept_venue_invite(
+    token: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Accept a venue ownership invitation using the token.
+    Instantly transfers ownership to the authenticated user.
+    """
+    invite = session.exec(
+        select(VenueInvite).where(VenueInvite.token == token)
+    ).first()
+    
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invalid invite token")
+    
+    if invite.claimed:
+        raise HTTPException(status_code=400, detail="This invite has already been claimed")
+    
+    if invite.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="This invite has expired")
+    
+    # Get the venue
+    venue = session.get(Venue, invite.venue_id)
+    if not venue:
+        raise HTTPException(status_code=404, detail="Venue not found")
+    
+    if venue.owner_id:
+        raise HTTPException(status_code=400, detail="Venue already has an owner")
+    
+    # Transfer ownership
+    venue.owner_id = current_user.id
+    session.add(venue)
+    
+    # Mark invite as claimed
+    invite.claimed = True
+    invite.claimed_by_user_id = current_user.id
+    invite.claimed_at = datetime.utcnow()
+    session.add(invite)
+    
+    session.commit()
+    
+    return {
+        "success": True,
+        "message": f"You are now the owner of {venue.name}",
+        "venue_id": venue.id,
+        "venue_name": venue.name
+    }
 
 # ============================================================
 # VENUE STAFF MANAGEMENT

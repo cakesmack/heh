@@ -48,6 +48,8 @@ import logging
 logger = logging.getLogger(__name__)
 from app.models.organizer import Organizer
 from app.models.group_member import GroupMember, GroupRole
+from app.models.event_claim import EventClaim
+from app.schemas.event_claim import EventClaimCreate, EventClaimResponse
 from app.core.query_utils import deduplicate_recurring_events
 
 router = APIRouter(tags=["Events"])
@@ -1146,7 +1148,16 @@ def update_event(
     # Check permissions - normalize both IDs for comparison
     user_id_str = str(current_user.id).replace('-', '')
     organizer_id_str = str(event.organizer_id).replace('-', '') if event.organizer_id else ''
-    if organizer_id_str != user_id_str and not current_user.is_admin:
+    
+    # Check if user is the venue owner (cascade permission)
+    is_venue_owner = False
+    if event.venue_id:
+        venue = session.get(Venue, event.venue_id)
+        if venue and venue.owner_id:
+            venue_owner_id_str = str(venue.owner_id).replace('-', '')
+            is_venue_owner = venue_owner_id_str == user_id_str
+    
+    if organizer_id_str != user_id_str and not is_venue_owner and not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this event"
@@ -1328,8 +1339,19 @@ def delete_event(
             detail="Event not found"
         )
 
-    # Check permissions
-    if event.organizer_id != current_user.id and not current_user.is_admin:
+    # Check permissions - normalize IDs for comparison
+    user_id_str = str(current_user.id).replace('-', '')
+    organizer_id_str = str(event.organizer_id).replace('-', '') if event.organizer_id else ''
+    
+    # Check if user is the venue owner (cascade permission)
+    is_venue_owner = False
+    if event.venue_id:
+        venue = session.get(Venue, event.venue_id)
+        if venue and venue.owner_id:
+            venue_owner_id_str = str(venue.owner_id).replace('-', '')
+            is_venue_owner = venue_owner_id_str == user_id_str
+    
+    if organizer_id_str != user_id_str and not is_venue_owner and not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this event"
@@ -1387,3 +1409,92 @@ def delete_event(
     session.commit()
 
     return None
+
+
+# ============================================================
+# EVENT CLAIMING
+# ============================================================
+
+@router.post("/{event_id}/claim", response_model=EventClaimResponse)
+def claim_event(
+    event_id: str,
+    claim: EventClaimCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Submit a claim for event ownership/management.
+    Useful for venue owners or original organizers who want to manage an event.
+    """
+    event = session.get(Event, normalize_uuid(event_id))
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    
+    # Check if user already owns the event
+    user_id_str = str(current_user.id).replace('-', '')
+    organizer_id_str = str(event.organizer_id).replace('-', '') if event.organizer_id else ''
+    if organizer_id_str == user_id_str:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already own this event")
+    
+    # Check for existing pending claim
+    existing_claim = session.exec(
+        select(EventClaim)
+        .where(EventClaim.event_id == event.id)
+        .where(EventClaim.user_id == current_user.id)
+        .where(EventClaim.status == "pending")
+    ).first()
+    
+    if existing_claim:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already have a pending claim for this event")
+    
+    new_claim = EventClaim(
+        event_id=event.id,
+        user_id=current_user.id,
+        reason=claim.reason,
+        status="pending"
+    )
+    session.add(new_claim)
+    session.commit()
+    session.refresh(new_claim)
+    
+    return EventClaimResponse(
+        id=new_claim.id,
+        event_id=new_claim.event_id,
+        user_id=new_claim.user_id,
+        status=new_claim.status,
+        reason=new_claim.reason,
+        created_at=new_claim.created_at,
+        updated_at=new_claim.updated_at,
+        event_title=event.title,
+        user_email=current_user.email
+    )
+
+
+@router.get("/claims/my", response_model=list[EventClaimResponse])
+def get_my_event_claims(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Get current user's event claims."""
+    claims = session.exec(
+        select(EventClaim)
+        .where(EventClaim.user_id == current_user.id)
+        .order_by(EventClaim.created_at.desc())
+    ).all()
+    
+    results = []
+    for c in claims:
+        event = session.get(Event, c.event_id)
+        results.append(EventClaimResponse(
+            id=c.id,
+            event_id=c.event_id,
+            user_id=c.user_id,
+            status=c.status,
+            reason=c.reason,
+            created_at=c.created_at,
+            updated_at=c.updated_at,
+            event_title=event.title if event else "Deleted Event",
+            user_email=current_user.email
+        ))
+    
+    return results

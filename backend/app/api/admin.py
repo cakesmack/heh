@@ -16,6 +16,8 @@ from app.models.event import Event
 from app.models.venue import Venue
 from app.models.checkin import CheckIn
 from app.models.venue_claim import VenueClaim
+from app.models.venue_invite import VenueInvite
+from app.models.event_claim import EventClaim
 from app.models.report import Report
 from app.models.organizer import Organizer
 from app.models.featured_booking import FeaturedBooking, BookingStatus, SlotType
@@ -740,6 +742,177 @@ def process_venue_claim(
         notification_service.notify_venue_claim_update(claim.user.email, venue_name, claim.status)
 
     return claim
+
+
+# ============================================================
+# VENUE INVITATIONS (GOLDEN KEY)
+# ============================================================
+
+class VenueInviteRequest(BaseModel):
+    email: str
+
+class VenueInviteResponse(BaseModel):
+    id: int
+    venue_id: str
+    email: str
+    token: str
+    expires_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+@router.post("/venues/{venue_id}/invite", response_model=VenueInviteResponse)
+def create_venue_invite(
+    venue_id: str,
+    invite_data: VenueInviteRequest,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Create a venue ownership invitation (Golden Key).
+    Generates a token and sends an email to the recipient.
+    When they click the link, ownership is instantly transferred.
+    """
+    from app.core.utils import normalize_uuid
+    
+    venue = session.get(Venue, normalize_uuid(venue_id))
+    if not venue:
+        raise HTTPException(status_code=404, detail="Venue not found")
+    
+    if venue.owner_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="Venue already has an owner. Remove current owner first."
+        )
+    
+    # Create invite
+    invite = VenueInvite(
+        venue_id=venue.id,
+        email=invite_data.email
+    )
+    session.add(invite)
+    session.commit()
+    session.refresh(invite)
+    
+    # Send email
+    invite_url = f"{settings.FRONTEND_URL.rstrip('/')}/accept-venue-invite/{invite.token}"
+    resend_email_service.send_venue_invite(
+        to_email=invite_data.email,
+        venue_name=venue.name,
+        invite_url=invite_url
+    )
+    
+    return invite
+
+
+@router.get("/venues/invites", response_model=List[VenueInviteResponse])
+def list_venue_invites(
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """List all venue invites (for admin dashboard)."""
+    invites = session.exec(
+        select(VenueInvite).order_by(VenueInvite.created_at.desc())
+    ).all()
+    return invites
+
+
+# ============================================================
+# EVENT CLAIMS ADMIN
+# ============================================================
+
+class EventClaimAdminResponse(BaseModel):
+    id: int
+    event_id: str
+    event_title: str
+    user_id: str
+    user_email: str
+    status: str
+    reason: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/event-claims", response_model=List[EventClaimAdminResponse])
+def list_event_claims(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """List event ownership claims."""
+    query = select(EventClaim)
+    if status_filter:
+        query = query.where(EventClaim.status == status_filter)
+    query = query.order_by(EventClaim.created_at.desc())
+    claims = session.exec(query).all()
+    
+    results = []
+    for claim in claims:
+        event = session.get(Event, claim.event_id)
+        user = session.get(User, claim.user_id)
+        results.append(EventClaimAdminResponse(
+            id=claim.id,
+            event_id=claim.event_id,
+            event_title=event.title if event else "Deleted Event",
+            user_id=claim.user_id,
+            user_email=user.email if user else "Unknown",
+            status=claim.status,
+            reason=claim.reason,
+            created_at=claim.created_at,
+            updated_at=claim.updated_at
+        ))
+    return results
+
+
+@router.post("/event-claims/{claim_id}/{action}", response_model=EventClaimAdminResponse)
+def process_event_claim(
+    claim_id: int,
+    action: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Approve or reject an event claim."""
+    if action not in ["approve", "reject"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid action")
+    
+    claim = session.get(EventClaim, claim_id)
+    if not claim:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Claim not found")
+    
+    if claim.status != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Claim is not pending")
+    
+    claim.status = "approved" if action == "approve" else "rejected"
+    claim.updated_at = datetime.utcnow()
+    
+    if action == "approve":
+        event = session.get(Event, claim.event_id)
+        if event:
+            event.organizer_id = claim.user_id
+            session.add(event)
+    
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
+    
+    # Get related data for response
+    event = session.get(Event, claim.event_id)
+    user = session.get(User, claim.user_id)
+    
+    return EventClaimAdminResponse(
+        id=claim.id,
+        event_id=claim.event_id,
+        event_title=event.title if event else "Deleted Event",
+        user_id=claim.user_id,
+        user_email=user.email if user else "Unknown",
+        status=claim.status,
+        reason=claim.reason,
+        created_at=claim.created_at,
+        updated_at=claim.updated_at
+    )
 
 
 # ============================================================

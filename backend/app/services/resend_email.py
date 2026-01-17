@@ -1000,5 +1000,90 @@ class ResendEmailService:
             logger.error(f"Failed to send group invite to {mask_email(to_email)}: {e}")
             return False
 
+    def send_venue_invite(
+        self,
+        to_email: str,
+        venue_name: str,
+        invite_url: str
+    ) -> bool:
+        """
+        Send venue ownership invitation email (Golden Key).
+        
+        Args:
+            to_email: Recipient's email
+            venue_name: Name of the venue
+            invite_url: The unique invite link with token
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send venue invite to {mask_email(to_email)}")
+            return True
+
+        subject = f"You're invited to manage {venue_name} on Highland Events Hub"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ padding: 40px 30px; background: #ffffff; }}
+                .venue-card {{ background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }}
+                .venue-card h2 {{ color: #059669; margin: 0 0 10px 0; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🔑 Venue Ownership Invitation</h1>
+                </div>
+                <div class="content">
+                    <p>Hello!</p>
+                    <p>You've been invited to take ownership of a venue on Highland Events Hub:</p>
+                    
+                    <div class="venue-card">
+                        <h2>{venue_name}</h2>
+                        <p style="color: #6b7280; margin: 0;">Click below to claim your venue</p>
+                    </div>
+                    
+                    <p>As the venue owner, you'll be able to:</p>
+                    <ul>
+                        <li>Edit venue details and photos</li>
+                        <li>Manage events at your venue</li>
+                        <li>Run promotions and featured ads</li>
+                        <li>Add staff members</li>
+                    </ul>
+                    
+                    <p style="text-align: center;">
+                        <a href="{invite_url}" class="button">Accept Ownership</a>
+                    </p>
+                    
+                    <p style="color: #6b7280; font-size: 14px;">This invite expires in 7 days. If you didn't expect this email, you can safely ignore it.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; Highland Events Hub</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        try:
+            response = resend.Emails.send({
+                "from": self.from_address,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+            })
+            logger.info(f"Venue invite sent to {mask_email(to_email)}, id: {response.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send venue invite to {mask_email(to_email)}: {e}")
+            return False
+
 # Create global instance
 resend_email_service = ResendEmailService()

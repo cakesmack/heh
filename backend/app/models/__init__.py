@@ -22,6 +22,8 @@ from .group_invite import GroupInvite
 from .analytics import AnalyticsEvent
 from .password_reset import PasswordResetToken
 from .venue_staff import VenueStaff, VenueRole
+from .venue_invite import VenueInvite
+from .event_claim import EventClaim
 from .user_category_follow import UserCategoryFollow
 from .bookmark import Bookmark
 from .report import Report
@@ -89,4 +91,8 @@ __all__ = [
     "DEFAULT_PRICING",
     # Showtimes
     "EventShowtime",
+    # Venue Invite
+    "VenueInvite",
+    # Event Claim
+    "EventClaim",
 ]
