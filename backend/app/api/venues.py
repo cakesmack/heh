@@ -670,6 +670,20 @@ def claim_venue(
     session.add(new_claim)
     session.commit()
     session.refresh(new_claim)
+    
+    # Notify admins
+    from app.services.notifications import notification_service
+    # Get admins (reuse logic or simple query)
+    admin_users = session.exec(select(User).where(User.is_admin == True)).all()
+    admin_emails = [u.email for u in admin_users if u.email]
+    if admin_emails:
+        notification_service.notify_admin_new_claim(
+            admin_emails, 
+            "venue", 
+            venue.name, 
+            current_user.email
+        )
+
     return new_claim
 
 

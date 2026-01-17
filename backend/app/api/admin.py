@@ -892,6 +892,12 @@ def process_event_claim(
     session.commit()
     session.refresh(claim)
     
+    # Send Notification
+    if claim.user and claim.user.email:
+        event = session.get(Event, claim.event_id)
+        event_title = event.title if event else "Unknown Event"
+        notification_service.notify_event_claim_update(claim.user.email, event_title, claim.status)
+    
     # Get related data for response
     event = session.get(Event, claim.event_id)
     user = session.get(User, claim.user_id)

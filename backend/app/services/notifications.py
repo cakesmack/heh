@@ -58,4 +58,18 @@ class NotificationService:
         body = f"Your claim for the venue '{venue_name}' has been {status}. Please check your dashboard for details."
         NotificationService.send_email(to_email, subject, body)
 
+    @staticmethod
+    def notify_event_claim_update(to_email: str, event_title: str, status: str):
+        subject = f"Event Claim {status.capitalize()}"
+        body = f"Your claim for the event '{event_title}' has been {status}. Please check your dashboard for details."
+        NotificationService.send_email(to_email, subject, body)
+
+    @staticmethod
+    def notify_admin_new_claim(admin_emails: List[str], claim_type: str, claim_target_name: str, user_email: str):
+        """Alert admins about a new ownership claim."""
+        subject = f"[Admin] New {claim_type.capitalize()} Claim Pending"
+        body = f"A new claim for {claim_type} '{claim_target_name}' has been submitted by {user_email}. Please check the admin dashboard: /admin/claims"
+        for email in admin_emails:
+            NotificationService.send_email(email, subject, body)
+
 notification_service = NotificationService()
