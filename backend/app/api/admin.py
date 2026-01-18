@@ -13,7 +13,7 @@ from app.core.database import get_session
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
-from app.models.venue import Venue
+from app.models.venue import Venue, VenueStatus
 from app.models.checkin import CheckIn
 from app.models.venue_claim import VenueClaim
 from app.models.venue_invite import VenueInvite
@@ -1329,3 +1329,67 @@ def update_pricing(
 # NOTE: Migration endpoints removed for security.
 # Database migrations should be run via CLI scripts in backend/scripts/
 # See: scripts/migrate_collections.py
+    
+    return {
+        "id": invite.id,
+        "venue_id": invite.venue_id,
+        "token": invite.token,
+        "email": invite.email,
+        "status": status,
+        "user_email": invite.user_email,
+        "created_at": invite.created_at,
+        "expires_at": invite.expires_at,
+        "claimed": invite.claimed
+    }
+
+
+# ============================================================
+# UNVERIFIED VENUES (RISING LOCATIONS)
+# ============================================================
+
+class UnverifiedVenueStats(BaseModel):
+    id: str
+    name: str
+    address: str
+    created_at: datetime
+    event_count: int
+
+@router.get("/venues/unverified", response_model=List[UnverifiedVenueStats])
+def get_unverified_venues(
+    limit: int = 10,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Get top unverified venues sorted by number of events.
+    Used for 'Rising Locations' widget.
+    """
+    # Group by Venue and count events
+    # We want venues with status=UNVERIFIED
+    # Sorted by event count DESC
+    
+    # Note: VenueStatus.UNVERIFIED might need string cast if Enum issues arise, 
+    # but SQLModel usually handles it.
+    
+    query = (
+        select(Venue, func.count(Event.id).label("event_count"))
+        .outerjoin(Event, Event.venue_id == Venue.id)
+        .where(Venue.status == VenueStatus.UNVERIFIED)
+        .group_by(Venue.id)
+        .order_by(func.count(Event.id).desc())
+        .limit(limit)
+    )
+    
+    results = session.exec(query).all()
+    
+    response = []
+    for venue, count in results:
+        response.append(UnverifiedVenueStats(
+            id=venue.id,
+            name=venue.name,
+            address=venue.address,
+            created_at=venue.created_at,
+            event_count=count
+        ))
+        
+    return response

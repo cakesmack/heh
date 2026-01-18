@@ -8,6 +8,11 @@ from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
 
+class VenueStatus(str, Enum):
+    VERIFIED = "verified"
+    UNVERIFIED = "unverified"
+    ARCHIVED = "archived"
+
 from .event_participating_venue import EventParticipatingVenue
 
 if TYPE_CHECKING:
@@ -41,7 +46,9 @@ class Venue(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
     name: str = Field(max_length=255, index=True)
+    name: str = Field(max_length=255, index=True)
     address: str = Field(max_length=500)
+    status: VenueStatus = Field(default=VenueStatus.UNVERIFIED, index=True)
 
     # Geolocation
     latitude: float = Field(index=True)

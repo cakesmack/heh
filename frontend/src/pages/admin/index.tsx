@@ -12,6 +12,7 @@ import {
   TopContentWidget,
   StatCard
 } from '@/components/admin/AnalyticsWidgets';
+import RisingLocationsWidget from '@/components/admin/dashboard/RisingLocationsWidget';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -111,7 +112,7 @@ export default function AdminDashboard() {
 
                 {/* Second Row */}
                 <div className="lg:col-span-2">
-                  <TopContentWidget analytics={analytics} />
+                  <RisingLocationsWidget />
                 </div>
 
                 <div className="lg:col-span-2">

@@ -39,7 +39,7 @@ class VenueCreate(BaseModel):
     address: str = Field(min_length=1, max_length=500)
     latitude: float = Field(ge=-90.0, le=90.0)
     longitude: float = Field(ge=-180.0, le=180.0)
-    category_id: str = Field(..., description="Venue category is required")
+    category_id: Optional[str] = Field(None, description="Venue category")
     description: Optional[str] = Field(None, max_length=2000)
     website: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
@@ -63,6 +63,7 @@ class VenueCreate(BaseModel):
     social_linkedin: Optional[str] = Field(None, max_length=255)
     social_tiktok: Optional[str] = Field(None, max_length=255)
     website_url: Optional[str] = Field(None, max_length=255)
+    status: str = "unverified"
 
 
 class VenueUpdate(BaseModel):
@@ -95,6 +96,7 @@ class VenueUpdate(BaseModel):
     social_linkedin: Optional[str] = Field(None, max_length=255)
     social_tiktok: Optional[str] = Field(None, max_length=255)
     website_url: Optional[str] = Field(None, max_length=255)
+    status: Optional[str] = None
 
 
 class VenueResponse(BaseModel):
@@ -115,7 +117,9 @@ class VenueResponse(BaseModel):
     image_url: Optional[str]
     formatted_address: Optional[str]
     owner_id: Optional[UUID]
+    owner_id: Optional[UUID]
     created_at: datetime
+    status: str
 
     # Phase 2.10 additions
     postcode: Optional[str] = None

@@ -13,7 +13,7 @@ from app.core.limiter import limiter
 from app.core.security import get_current_user
 from app.core.utils import normalize_uuid
 from app.models.user import User
-from app.models.venue import Venue
+from app.models.venue import Venue, VenueStatus
 from app.models.venue_category import VenueCategory
 from app.models.event import Event
 from app.models.venue_claim import VenueClaim
@@ -374,10 +374,23 @@ def create_venue(
     # Calculate geohash
     geohash = calculate_geohash(venue_data.latitude, venue_data.longitude)
 
+    geohash = calculate_geohash(venue_data.latitude, venue_data.longitude)
+
+    # Status Logic
+    # Admins can set any status. Regular users forced to UNVERIFIED.
+    venue_status = VenueStatus.UNVERIFIED
+    if current_user.is_admin:
+        if venue_data.status:
+             try:
+                venue_status = VenueStatus(venue_data.status)
+             except ValueError:
+                venue_status = VenueStatus.UNVERIFIED
+    
     # Create venue with ALL fields from schema
     new_venue = Venue(
         name=venue_data.name,
         address=venue_data.address,
+        status=venue_status,
         latitude=venue_data.latitude,
         longitude=venue_data.longitude,
         geohash=geohash,
