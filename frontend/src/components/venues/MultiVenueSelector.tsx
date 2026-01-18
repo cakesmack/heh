@@ -44,38 +44,6 @@ export default function MultiVenueSelector({
                 address: place.formatted_address,
                 latitude: place.geometry.location.lat(),
                 longitude: place.geometry.location.lng(),
-                category_id: 'other', // Default or need a "User Generated" category? falling back to 'other' or a known ID is safest. 
-                // However, category_id is required by schema. 
-                // We might need to fetch a default category ID first or assume one exists. 
-                // For now, let's try to fetch categories or use a hardcoded fallback if we know it, 
-                // but fetching is better. Or maybe making category_id optional for Unverified? 
-                // Schema said category_id is required. 
-                // Let's use a dummy ID or handle it. 
-                // Actually, let's hardcode a known "Other" or generic category ID if possible, 
-                // or fetch the first available one as fallback.
-                // Re-reading usage: often simpler to just pick one if backend allows.
-                // Let's check if we can pass a 'status' to bypass strict checks?
-                // The backend requires category_id. 
-                // I will use a placeholder logic: assume 'other' slug or ID exists, or require backend change.
-                // Wait, I can't guess ID. 
-                // I will add a default fetch effect if needed, but for now I'll use a placeholder string 
-                // and if it fails, I'll know. 
-                // BETTER: Just list categories and pick first one? 
-                // Actually, let's mock it for now or make category optional in schema for UNVERIFIED?
-                // Phase 1 plan said "Make fields optional", but I didn't change category_id to optional in schema.
-                // Let's quickly verify schema again.
-                // I will check schema content I viewed earlier.
-                // `category_id: str = Field(..., description="Venue category is required")`
-                // It IS required.
-                // I should fetch categories in useEffect or make it optional.
-                // Making it optional is safer for 'Draft' venues.
-                // I will make it optional for now in schema first.
-                // Wait, I can't change schema without re-doing that step.
-                // I will modify schema to make category_id optional for unverified.
-                // But let's check if I can just pass a dummy value? No foreign key constraint?
-                // There is a foreign key.
-                // I'll update schema to make it optional in next step.
-                // For this step, I'll assume I'll fix the schema.
                 status: 'unverified'
             };
 
