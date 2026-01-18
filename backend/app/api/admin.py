@@ -1413,13 +1413,14 @@ def emergency_migrate(
             return {"message": "Column 'status' already exists. No action taken."}
         
         # Add column
-        session.exec(text("ALTER TABLE venues ADD COLUMN status VARCHAR(50) DEFAULT 'unverified'"))
+        session.exec(text("ALTER TABLE venues ADD COLUMN status VARCHAR(50) DEFAULT 'UNVERIFIED'"))
         session.commit()
         
         # Backfill
-        session.exec(text("UPDATE venues SET status = 'verified' WHERE status = 'unverified'"))
+        session.exec(text("UPDATE venues SET status = 'VERIFIED' WHERE status = 'unverified' OR status = 'verified'"))
+        session.exec(text("UPDATE venues SET status = upper(status)"))
         session.commit()
         
-        return {"message": "Migration successful: 'status' column added and backfilled."}
+        return {"message": "Migration successful: 'status' column added/updated to UPPERCASE."}
     except Exception as e:
         return {"error": str(e)}

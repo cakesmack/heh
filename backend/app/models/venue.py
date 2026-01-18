@@ -9,9 +9,9 @@ from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
 
 class VenueStatus(str, Enum):
-    VERIFIED = "verified"
-    UNVERIFIED = "unverified"
-    ARCHIVED = "archived"
+    VERIFIED = "VERIFIED"
+    UNVERIFIED = "UNVERIFIED"
+    ARCHIVED = "ARCHIVED"
 
 from .event_participating_venue import EventParticipatingVenue
 

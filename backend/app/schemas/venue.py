@@ -63,7 +63,7 @@ class VenueCreate(BaseModel):
     social_linkedin: Optional[str] = Field(None, max_length=255)
     social_tiktok: Optional[str] = Field(None, max_length=255)
     website_url: Optional[str] = Field(None, max_length=255)
-    status: str = "unverified"
+    status: str = "UNVERIFIED"
 
 
 class VenueUpdate(BaseModel):

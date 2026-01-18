@@ -119,10 +119,13 @@ async def lifespan(app: FastAPI):
 
                     -- Venue Status Migration (Production Recovery)
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='status') THEN
-                        ALTER TABLE venues ADD COLUMN status VARCHAR(50) DEFAULT 'unverified';
+                        ALTER TABLE venues ADD COLUMN status VARCHAR(50) DEFAULT 'UNVERIFIED';
                         -- Backfill existing as verified
-                        UPDATE venues SET status = 'verified' WHERE status IS NULL OR status = 'unverified';
+                        UPDATE venues SET status = 'VERIFIED' WHERE status IS NULL OR status = 'unverified' OR status = 'verified';
                     END IF;
+                    
+                    -- Normalize existing status to uppercase if column exists
+                    UPDATE venues SET status = upper(status);
                 END $$;
             """))
             conn.commit()

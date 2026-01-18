@@ -44,7 +44,7 @@ export default function MultiVenueSelector({
                 address: place.formatted_address,
                 latitude: place.geometry.location.lat(),
                 longitude: place.geometry.location.lng(),
-                status: 'unverified'
+                status: 'UNVERIFIED'
             };
 
             // Note: We need to handle the category_id issue. 
@@ -116,7 +116,7 @@ export default function MultiVenueSelector({
                             <div className="flex-1 min-w-0 mr-4">
                                 <div className="flex items-center gap-2">
                                     <p className="text-sm font-medium text-gray-900 truncate">{venue.name}</p>
-                                    {(venue as any).status === 'unverified' && (
+                                    {(venue as any).status === 'UNVERIFIED' && (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
                                             New
                                         </span>

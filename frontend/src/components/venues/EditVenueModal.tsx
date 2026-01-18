@@ -40,7 +40,7 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
         email: '',
         opening_hours: '',
         image_url: '',
-        status: 'verified', // Default to verified when admin edits
+        status: 'VERIFIED', // Default to verified when admin edits
         // Amenities
         is_dog_friendly: false,
         has_wheelchair_access: false,
@@ -88,7 +88,7 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                 email: venueData.email || '',
                 opening_hours: venueData.opening_hours || '',
                 image_url: venueData.image_url || '',
-                status: venueData.status || 'verified',
+                status: venueData.status || 'VERIFIED',
                 is_dog_friendly: (venueData as any).is_dog_friendly || false,
                 has_wheelchair_access: (venueData as any).has_wheelchair_access || false,
                 has_parking: (venueData as any).has_parking || false,
@@ -173,9 +173,9 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
                             >
-                                <option value="unverified">Unverified (Draft)</option>
-                                <option value="verified">Verified (Live)</option>
-                                <option value="archived">Archived</option>
+                                <option value="UNVERIFIED">Unverified (Draft)</option>
+                                <option value="VERIFIED">Verified (Live)</option>
+                                <option value="ARCHIVED">Archived</option>
                             </select>
                         </div>
 
