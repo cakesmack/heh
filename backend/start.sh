@@ -3,9 +3,9 @@ set -e
 
 echo "Running startup script..."
 
-# Run backfill script
-echo "Backfilling usernames..."
-python scripts/backfill_usernames.py
+# Run migration script
+echo "Running venue status migration..."
+python scripts/migrate_venues_status.py
 
 # Start the application
 echo "Starting application..."
