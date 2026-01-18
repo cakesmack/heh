@@ -191,6 +191,36 @@ export default function EventScheduleSection({
                                             />
                                         </div>
                                     </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Ticket Link (Optional)</label>
+                                            <input
+                                                type="url"
+                                                value={st.ticket_url || ''}
+                                                onChange={(e) => {
+                                                    const updated = [...showtimes];
+                                                    updated[index] = { ...updated[index], ticket_url: e.target.value };
+                                                    setShowtimes(updated);
+                                                }}
+                                                placeholder="Specific ticket link"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-emerald-500 focus:border-emerald-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Notes (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={st.notes || ''}
+                                                onChange={(e) => {
+                                                    const updated = [...showtimes];
+                                                    updated[index] = { ...updated[index], notes: e.target.value };
+                                                    setShowtimes(updated);
+                                                }}
+                                                placeholder="e.g. Matinee"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-emerald-500 focus:border-emerald-500"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                                 <button
                                     type="button"
