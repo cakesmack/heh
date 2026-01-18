@@ -116,6 +116,13 @@ async def lifespan(app: FastAPI):
                         ALTER TABLE events ADD COLUMN recurrence_group_id VARCHAR(255);
                         CREATE INDEX IF NOT EXISTS ix_events_recurrence_group_id ON events(recurrence_group_id);
                     END IF;
+
+                    -- Venue Status Migration (Production Recovery)
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='venues' AND column_name='status') THEN
+                        ALTER TABLE venues ADD COLUMN status VARCHAR(50) DEFAULT 'unverified';
+                        -- Backfill existing as verified
+                        UPDATE venues SET status = 'verified' WHERE status IS NULL OR status = 'unverified';
+                    END IF;
                 END $$;
             """))
             conn.commit()
