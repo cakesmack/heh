@@ -24,6 +24,7 @@ export default function MultiVenueSelector({
     const [currentValue, setCurrentValue] = useState<string | null>(null);
     const [showAddLocation, setShowAddLocation] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [creationKey, setCreationKey] = useState(0); // Used to reset the input
 
     const handleAddVenue = (venueId: string, venue: VenueResponse | null) => {
         if (venue && !selectedVenues.find(v => v.id === venue.id)) {
@@ -55,8 +56,9 @@ export default function MultiVenueSelector({
             // I will pause creation here and fix schema first? 
             // No, I'll implement logic assuming it's optional, and then fix schema.
 
-            onChange([...selectedVenues, { ...newVenue, status: 'unverified' }]); // Add badge logic later
-            setShowAddLocation(false);
+            onChange([...selectedVenues, { ...newVenue, status: 'UNVERIFIED' }]); // Add badge logic later
+            // Don't close the form, just reset the input so they can add another
+            setCreationKey(prev => prev + 1);
         } catch (err) {
             console.error('Failed to create venue', err);
             // Ideally show error toast
@@ -99,6 +101,7 @@ export default function MultiVenueSelector({
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 animate-fadeIn">
                     <label className="block text-xs font-medium text-gray-700 mb-2">Search Google Maps</label>
                     <GooglePlacesAutocomplete
+                        key={creationKey}
                         placeholder="Search for a location on Google..."
                         onPlaceSelect={handleCreateVenue}
                         required={false}

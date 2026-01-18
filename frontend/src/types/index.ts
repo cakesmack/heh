@@ -168,7 +168,6 @@ export interface VenueResponse extends Venue {
   social_linkedin?: string;
   social_tiktok?: string;
   website_url?: string;
-  website_url?: string;
   status?: 'VERIFIED' | 'UNVERIFIED' | 'ARCHIVED';
 }
 
