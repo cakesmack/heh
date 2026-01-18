@@ -10,6 +10,7 @@ interface UnifiedVenueSelectProps {
     placeholder?: string;
     disabled?: boolean;
     error?: string;
+    disableGoogle?: boolean;
 }
 
 interface GooglePrediction {
@@ -28,6 +29,7 @@ export function UnifiedVenueSelect({
     placeholder = 'Search for a venue or place...',
     disabled = false,
     error,
+    disableGoogle = false,
 }: UnifiedVenueSelectProps) {
     const [query, setQuery] = useState('');
     const [internalResults, setInternalResults] = useState<VenueResponse[]>([]);
@@ -94,9 +96,10 @@ export function UnifiedVenueSelect({
             // 1. Internal Search
             const internalPromise = api.venues.search(query).then(res => res.venues).catch(() => []);
 
+
             // 2. Google Search
             const googlePromise = new Promise<GooglePrediction[]>((resolve) => {
-                if (!autocompleteService) {
+                if (disableGoogle || !autocompleteService) {
                     resolve([]);
                     return;
                 };

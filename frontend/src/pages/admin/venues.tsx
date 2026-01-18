@@ -867,7 +867,8 @@ export default function AdminVenues() {
               </label>
               <UnifiedVenueSelect
                 onChange={(venue: any) => setMergeTargetVenue(venue)}
-                placeholder="Search for the Correct Venue..."
+                placeholder="Search for internal Master Venue..."
+                disableGoogle={true}
               />
             </div>
 

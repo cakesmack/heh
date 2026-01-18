@@ -23,8 +23,11 @@ export default function VenuesPage() {
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
         radius_km: 100,
+        exclude_status: 'UNVERIFIED',
       }
-      : undefined,
+      : {
+        exclude_status: 'UNVERIFIED',
+      },
     autoFetch: true,
   });
 
