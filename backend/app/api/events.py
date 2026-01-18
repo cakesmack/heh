@@ -697,7 +697,10 @@ def create_event(
             longitude = event_data.longitude
             geohash = calculate_geohash(latitude, longitude)
         
-        if not event_data.location_name:
+        # Validation: Must have venue_id OR location_name OR participating_venue_ids
+        has_participating = event_data.participating_venue_ids and len(event_data.participating_venue_ids) > 0
+        
+        if not event_data.location_name and not has_participating:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Either venue_id or location_name must be provided"
