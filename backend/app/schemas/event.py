@@ -5,7 +5,8 @@ Handles event creation, updates, filtering, and listings.
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, BeforeValidator
+from typing import Annotated
 
 from app.schemas.category import CategoryResponse
 from app.schemas.category import CategoryResponse
@@ -52,7 +53,7 @@ class EventCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=5000)
     date_start: datetime
     date_end: datetime
-    venue_id: Optional[UUID] = None
+    venue_id: OptionalUUID = None
     location_name: Optional[str] = Field(None, max_length=255)
     category_id: str
     tags: Optional[List[str]] = Field(None, max_length=5, description="List of tag names (max 5)")
@@ -62,7 +63,7 @@ class EventCreate(BaseModel):
     ticket_url: Optional[str] = Field(None, max_length=500)
     age_restriction: Optional[Union[str, int]] = Field(None, description="Age restriction as number (0=all ages, 18, 21) or legacy string")
     # Phase 2.3 additions
-    organizer_profile_id: Optional[UUID] = None
+    organizer_profile_id: OptionalUUID = None
     is_recurring: Optional[bool] = False
     frequency: Optional[str] = Field(None, description="WEEKLY, BIWEEKLY, MONTHLY")
     recurrence_end_date: Optional[datetime] = None
@@ -85,7 +86,7 @@ class EventUpdate(BaseModel):
     description: Optional[str] = Field(None, min_length=1, max_length=5000)
     date_start: Optional[datetime] = None
     date_end: Optional[datetime] = None
-    venue_id: Optional[UUID] = None
+    venue_id: OptionalUUID = None
     location_name: Optional[str] = Field(None, max_length=255)
     category_id: Optional[str] = None
     tags: Optional[List[str]] = Field(None, description="List of tag names")
@@ -95,7 +96,7 @@ class EventUpdate(BaseModel):
     ticket_url: Optional[str] = Field(None, max_length=500)
     age_restriction: Optional[Union[str, int]] = Field(None, description="Age restriction as number or string")
     # Phase 2.3 additions
-    organizer_profile_id: Optional[UUID] = None
+    organizer_profile_id: OptionalUUID = None
     recurrence_rule: Optional[str] = Field(None, max_length=500)
     is_recurring: Optional[bool] = None
     # Custom Location (Phase 3)
