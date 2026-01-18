@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 interface VenueTypeaheadProps {
   value: string | null;
   onChange: (venueId: string, venue: VenueResponse | null) => void;
+  onFocus?: () => void;
   placeholder?: string;
   disabled?: boolean;
   error?: string;
@@ -17,6 +18,7 @@ interface VenueTypeaheadProps {
 export function VenueTypeahead({
   value,
   onChange,
+  onFocus,
   placeholder = 'Search for a venue...',
   disabled = false,
   error,
@@ -119,7 +121,10 @@ export function VenueTypeahead({
           type="text"
           value={query}
           onChange={handleInputChange}
-          onFocus={() => setShowDropdown(true)}
+          onFocus={() => {
+            setShowDropdown(true);
+            if (onFocus) onFocus();
+          }}
           placeholder={placeholder}
           disabled={disabled}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${error ? 'border-red-300' : 'border-gray-300'

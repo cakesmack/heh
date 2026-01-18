@@ -9,6 +9,7 @@ interface GooglePlacesAutocompleteProps {
     defaultValue?: string;
     className?: string;
     required?: boolean;
+    onFocus?: () => void;
 }
 
 export default function GooglePlacesAutocomplete({
@@ -16,7 +17,8 @@ export default function GooglePlacesAutocomplete({
     placeholder = 'Search for a location...',
     defaultValue = '',
     className = '',
-    required = false
+    required = false,
+    onFocus
 }: GooglePlacesAutocompleteProps) {
     const [inputValue, setInputValue] = useState(defaultValue);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +64,7 @@ export default function GooglePlacesAutocomplete({
             className={`block w-full px-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm ${className}`}
             placeholder={placeholder}
             required={required}
+            onFocus={onFocus}
         />
     );
 }

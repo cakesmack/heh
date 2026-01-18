@@ -8,12 +8,14 @@ interface MultiVenueSelectorProps {
     selectedVenues: VenueResponse[];
     onChange: (venues: VenueResponse[]) => void;
     disabled?: boolean;
+    onFocus?: () => void;
 }
 
 export default function MultiVenueSelector({
     selectedVenues,
     onChange,
-    disabled = false
+    disabled = false,
+    onFocus
 }: MultiVenueSelectorProps) {
     // Temporary state for the typeahead input
     const [currentValue, setCurrentValue] = useState<string | null>(null);
@@ -39,6 +41,7 @@ export default function MultiVenueSelector({
                     onChange={handleAddVenue}
                     placeholder="Search and add venues..."
                     disabled={disabled}
+                    onFocus={onFocus}
                 />
             </div>
 

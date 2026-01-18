@@ -25,6 +25,7 @@ import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';
 import LocationPickerMap from '@/components/maps/LocationPickerMap';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
+import HelpfulTipsSidebar from '@/components/events/HelpfulTipsSidebar';
 
 export default function SubmitEventPage() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export default function SubmitEventPage() {
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<VenueResponse | null>(null);
   const [participatingVenues, setParticipatingVenues] = useState<VenueResponse[]>([]);
+  const [activeField, setActiveField] = useState<string | null>(null);
 
   const [locationTab, setLocationTab] = useState<'main' | 'multi'>('main');
   const [locationMode, setLocationMode] = useState<'venue' | 'custom'>('venue');
@@ -277,491 +279,507 @@ export default function SubmitEventPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Submit an Event</h1>
           <p className="text-gray-600">Share your event with the Highland Events Hub community</p>
         </div>
 
-        <Card>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Messages (Success/Error) - Same as before */}
-            {successMessage?.type === 'published' && (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <p className="text-emerald-800 font-medium">Event published! Redirecting...</p>
-              </div>
-            )}
-            {successMessage?.type === 'pending' && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-amber-800 font-medium">Event submitted for review.</p>
-              </div>
-            )}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
-                {error}
-              </div>
-            )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="lg:col-span-2">
+            <Card>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Messages (Success/Error) - Same as before */}
+                {successMessage?.type === 'published' && (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <p className="text-emerald-800 font-medium">Event published! Redirecting...</p>
+                  </div>
+                )}
+                {successMessage?.type === 'pending' && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-amber-800 font-medium">Event submitted for review.</p>
+                  </div>
+                )}
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+                    {error}
+                  </div>
+                )}
 
-            <ImageUpload folder="events" currentImageUrl={formData.image_url} onUpload={handleImageUpload} onRemove={handleImageRemove} />
+                <div onFocusCapture={() => setActiveField('image_url')}>
+                  <ImageUpload folder="events" currentImageUrl={formData.image_url} onUpload={handleImageUpload} onRemove={handleImageRemove} />
+                </div>
 
-            {organizers.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Post as Organizer</label>
-                <select name="organizer_profile_id" value={formData.organizer_profile_id} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
-                  <option value="">Myself ({user?.email})</option>
-                  {organizers.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}
-                </select>
-              </div>
-            )}
+                {organizers.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Post as Organizer</label>
+                    <select name="organizer_profile_id" value={formData.organizer_profile_id} onChange={handleChange} onFocus={() => setActiveField('organizer_profile_id')} className="w-full px-3 py-2 border rounded-lg">
+                      <option value="">Myself ({user?.email})</option>
+                      {organizers.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}
+                    </select>
+                  </div>
+                )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Event Title *</label>
-              <Input name="title" required value={formData.title} onChange={handleChange} placeholder="e.g. Festival" />
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Event Title *</label>
+                  <Input name="title" required value={formData.title} onChange={handleChange} onFocus={() => setActiveField('title')} placeholder="e.g. Festival" />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <RichTextEditor
-                value={formData.description}
-                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
-                placeholder="Describe your event..."
-              />
-              <p className="mt-2 text-sm text-amber-600">
-                <span className="font-medium">Note:</span> To prevent spam, events containing external links (URLs) in the description will require manual approval and may take up to 24 hours to appear on the map.
-              </p>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <RichTextEditor
+                    value={formData.description}
+                    onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                    onFocus={() => setActiveField('description')}
+                    placeholder="Describe your event..."
+                  />
+                  <p className="mt-2 text-sm text-amber-600">
+                    <span className="font-medium">Note:</span> To prevent spam, events containing external links (URLs) in the description will require manual approval and may take up to 24 hours to appear on the map.
+                  </p>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-              <select name="category_id" required value={formData.category_id} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
-                <option value="">Select a category</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                  <select name="category_id" required value={formData.category_id} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select a category</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
 
-            <TagInput selectedTags={selectedTags} onChange={setSelectedTags} maxTags={5} />
+                <TagInput selectedTags={selectedTags} onChange={setSelectedTags} maxTags={5} />
 
-            {/* LOCATION SECTION - Tab Split */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
-              <label className="block text-sm font-medium text-gray-900">Event Location *</label>
+                {/* LOCATION SECTION - Tab Split */}
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
+                  <label className="block text-sm font-medium text-gray-900">Event Location *</label>
 
-              {/* Main Tabs: Main Location vs Multi-Venue */}
-              <div className="flex border-b border-gray-200 mb-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocationTab('main');
-                    // Clear multi-venue data when switching to main
-                    setParticipatingVenues([]);
-                  }}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationTab === 'main'
-                    ? 'border-emerald-600 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                >
-                  📍 Main Location
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocationTab('multi');
-                    // Clear main location data when switching to multi-venue
-                    setFormData(prev => ({ ...prev, venue_id: '', location_name: '' }));
-                    setSelectedVenue(null);
-                  }}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationTab === 'multi'
-                    ? 'border-emerald-600 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                >
-                  🎪 Multi-Venue Event
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              {locationTab === 'main' ? (
-                <div className="space-y-4">
-                  {/* Sub-tabs: Venue vs Custom */}
-                  <div className="flex gap-2">
+                  {/* Main Tabs: Main Location vs Multi-Venue */}
+                  <div className="flex border-b border-gray-200 mb-4">
                     <button
                       type="button"
-                      onClick={() => setLocationMode('venue')}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'venue'
-                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                        : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                      onClick={() => {
+                        setLocationTab('main');
+                        // Clear multi-venue data when switching to main
+                        setParticipatingVenues([]);
+                      }}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationTab === 'main'
+                        ? 'border-emerald-600 text-emerald-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                         }`}
                     >
-                      Select Venue
+                      📍 Main Location
                     </button>
                     <button
                       type="button"
-                      onClick={() => setLocationMode('custom')}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'custom'
-                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                        : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                      onClick={() => {
+                        setLocationTab('multi');
+                        // Clear main location data when switching to multi-venue
+                        setFormData(prev => ({ ...prev, venue_id: '', location_name: '' }));
+                        setSelectedVenue(null);
+                      }}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${locationTab === 'multi'
+                        ? 'border-emerald-600 text-emerald-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                         }`}
                     >
-                      Custom Location
+                      🎪 Multi-Venue Event
                     </button>
                   </div>
 
-                  {locationMode === 'venue' ? (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Search for a venue</label>
-                      <VenueTypeahead value={formData.venue_id} onChange={handleVenueChange} placeholder="e.g. The Ironworks" />
-                      <p className="mt-1 text-xs text-gray-500">
-                        <Link href="/venues" className="text-emerald-600 hover:underline">Can't find it? Add a new venue.</Link>
-                      </p>
+                  {/* Tab Content */}
+                  {locationTab === 'main' ? (
+                    <div className="space-y-4">
+                      {/* Sub-tabs: Venue vs Custom */}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setLocationMode('venue')}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'venue'
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                            }`}
+                        >
+                          Select Venue
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLocationMode('custom')}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'custom'
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                            }`}
+                        >
+                          Custom Location
+                        </button>
+                      </div>
+
+                      {locationMode === 'venue' ? (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Search for a venue</label>
+                          <VenueTypeahead value={formData.venue_id} onChange={handleVenueChange} onFocus={() => setActiveField('venue_id')} placeholder="e.g. The Ironworks" />
+                          <p className="mt-1 text-xs text-gray-500">
+                            <Link href="/venues" target="_blank" className="text-emerald-600 hover:underline">Can't find it? Add a new venue.</Link>
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Location Name *</label>
+                            <GooglePlacesAutocomplete
+                              placeholder="e.g. Belladrum Estate, High Street, etc."
+                              defaultValue={formData.location_name}
+                              onPlaceSelect={handlePlaceSelect}
+                              onFocus={() => setActiveField('location_name')}
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Pin Location</label>
+                            <LocationPickerMap
+                              latitude={formData.latitude}
+                              longitude={formData.longitude}
+                              onLocationChange={handleLocationChange}
+                            />
+                          </div>
+
+                          {/* Geofencing Warning */}
+                          {!isLocationValid && formData.location_name && (
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              <div>
+                                <p className="text-sm font-medium text-red-800">Location outside the Scottish Highlands</p>
+                                <p className="text-xs text-red-600 mt-1">Events must be located within the Scottish Highlands (IV, HS, KW, ZE, or qualifying PH/PA/AB/KA postcodes).</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Location Name *</label>
-                        <GooglePlacesAutocomplete
-                          placeholder="e.g. Belladrum Estate, High Street, etc."
-                          defaultValue={formData.location_name}
-                          onPlaceSelect={handlePlaceSelect}
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Pin Location</label>
-                        <LocationPickerMap
-                          latitude={formData.latitude}
-                          longitude={formData.longitude}
-                          onLocationChange={handleLocationChange}
-                        />
-                      </div>
-
-                      {/* Geofencing Warning */}
-                      {!isLocationValid && formData.location_name && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                          <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                          <div>
-                            <p className="text-sm font-medium text-red-800">Location outside the Scottish Highlands</p>
-                            <p className="text-xs text-red-600 mt-1">Events must be located within the Scottish Highlands (IV, HS, KW, ZE, or qualifying PH/PA/AB/KA postcodes).</p>
-                          </div>
-                        </div>
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600">
+                        For festivals, pub crawls, or multi-venue events. Add all participating venues below.
+                      </p>
+                      <MultiVenueSelector
+                        selectedVenues={participatingVenues}
+                        onChange={setParticipatingVenues}
+                        onFocus={() => setActiveField('multi_venue')}
+                      />
+                      {participatingVenues.length === 0 && (
+                        <p className="text-xs text-amber-600">Please add at least one participating venue.</p>
                       )}
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-600">
-                    For festivals, pub crawls, or multi-venue events. Add all participating venues below.
-                  </p>
-                  <MultiVenueSelector
-                    selectedVenues={participatingVenues}
-                    onChange={setParticipatingVenues}
-                  />
-                  {participatingVenues.length === 0 && (
-                    <p className="text-xs text-amber-600">Please add at least one participating venue.</p>
+
+                {/* Event Type Toggle */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-900 mb-3">
+                    Event Type
+                  </label>
+                  <div className="flex gap-4">
+                    <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${!isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                      <input
+                        type="radio"
+                        name="eventType"
+                        checked={!isMultiSession}
+                        onChange={() => {
+                          setIsMultiSession(false);
+                          setShowtimes([]);
+                        }}
+                        onFocus={() => setActiveField('event_type')}
+                        className="text-emerald-600"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">Single Event</span>
+                        <p className="text-xs text-gray-500">One start and end time</p>
+                      </div>
+                    </label>
+                    <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                      <input
+                        type="radio"
+                        name="eventType"
+                        checked={isMultiSession}
+                        onChange={() => {
+                          // Push current dates to first showtime when switching
+                          if (formData.date_start) {
+                            setShowtimes([{
+                              start_time: new Date(formData.date_start).toISOString(),
+                              end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
+                            }]);
+                          }
+                          setIsMultiSession(true);
+                        }}
+                        onFocus={() => setActiveField('event_type')}
+                        className="text-emerald-600"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">Multiple Showings</span>
+                        <p className="text-xs text-gray-500">Theatre, cinema-style</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Single Event Date Inputs */}
+                  {!isMultiSession && (
+                    <div className="mt-4 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
+                          <DateTimePicker
+                            id="date_start"
+                            name="date_start"
+                            required
+                            value={formData.date_start}
+                            onChange={(val) => {
+                              // Smart Date Sync: Update end date when start date changes
+                              const oldStartDate = formData.date_start ? formData.date_start.split('T')[0] : '';
+                              const newStartDate = val.split('T')[0];
+                              const currentEndDate = formData.date_end ? formData.date_end.split('T')[0] : '';
+
+                              // Sync end date if: empty, matches old start, or is before new start
+                              if (!formData.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
+                                // Keep the time from end date if it exists, otherwise use start time + 2 hours
+                                const endTime = formData.date_end ? formData.date_end.split('T')[1] : val.split('T')[1];
+                                setFormData({
+                                  ...formData,
+                                  date_start: val,
+                                  date_end: `${newStartDate}T${endTime || '18:00'}`
+                                });
+                              } else {
+                                setFormData({ ...formData, date_start: val });
+                              }
+                            }}
+                          />
+                        </div>
+                        {!noEndTime && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
+                            <DateTimePicker id="date_end" name="date_end" required value={formData.date_end} onChange={(val) => setFormData({ ...formData, date_end: val })} min={formData.date_start} />
+                          </div>
+                        )}
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={noEndTime}
+                          onChange={(e) => setNoEndTime(e.target.checked)}
+                          className="rounded text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-sm text-gray-600">No specific end time</span>
+                      </label>
+                      {noEndTime && (
+                        <p className="text-xs text-gray-500">End time will be set to 4 hours after start time.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Multiple Showtimes Manager */}
+                  {isMultiSession && (
+                    <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-lg">
+                      <p className="text-sm text-gray-500">
+                        Add performance times. The event's main dates will be calculated automatically.
+                      </p>
+
+                      {showtimes.map((st, index) => {
+                        const startValue = st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : '';
+                        const endValue = st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : '';
+
+                        return (
+                          <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
+                            <div className="flex-1 space-y-2">
+                              <div className="grid grid-cols-1 gap-4">
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Start *</label>
+                                  <DateTimePicker
+                                    id={`showtime_start_${index}`}
+                                    name={`showtime_start_${index}`}
+                                    value={startValue}
+                                    onChange={(value) => {
+                                      const updated = [...showtimes];
+                                      updated[index] = { ...updated[index], start_time: new Date(value).toISOString() };
+                                      setShowtimes(updated);
+                                    }}
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">End *</label>
+                                  <DateTimePicker
+                                    id={`showtime_end_${index}`}
+                                    name={`showtime_end_${index}`}
+                                    value={endValue}
+                                    onChange={(value) => {
+                                      const updated = [...showtimes];
+                                      updated[index] = { ...updated[index], end_time: new Date(value).toISOString() };
+                                      setShowtimes(updated);
+                                    }}
+                                    min={startValue}
+                                    required
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Ticket URL (optional)</label>
+                                  <input
+                                    type="url"
+                                    value={st.ticket_url || ''}
+                                    onChange={(e) => {
+                                      const updated = [...showtimes];
+                                      updated[index] = { ...updated[index], ticket_url: e.target.value || undefined };
+                                      setShowtimes(updated);
+                                    }}
+                                    className="w-full px-2 py-1 text-sm border rounded"
+                                    placeholder="https://..."
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Notes (optional)</label>
+                                  <input
+                                    type="text"
+                                    maxLength={255}
+                                    value={st.notes || ''}
+                                    onChange={(e) => {
+                                      const updated = [...showtimes];
+                                      updated[index] = { ...updated[index], notes: e.target.value || undefined };
+                                      setShowtimes(updated);
+                                    }}
+                                    className="w-full px-2 py-1 text-sm border rounded"
+                                    placeholder="e.g. Phone only, Sold Out"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowtimes(showtimes.filter((_, i) => i !== index))}
+                              className="text-red-500 hover:text-red-700 p-1"
+                              title="Remove"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const now = new Date();
+                          setShowtimes([...showtimes, {
+                            start_time: now.toISOString(),
+                            end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                          }]);
+                        }}
+                        className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
+                      >
+                        + Add Another Performance
+                      </button>
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Event Type Toggle */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <label className="block text-sm font-medium text-gray-900 mb-3">
-                Event Type
-              </label>
-              <div className="flex gap-4">
-                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${!isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                  <input
-                    type="radio"
-                    name="eventType"
-                    checked={!isMultiSession}
-                    onChange={() => {
-                      setIsMultiSession(false);
-                      setShowtimes([]);
-                    }}
-                    className="text-emerald-600"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900">Single Event</span>
-                    <p className="text-xs text-gray-500">One start and end time</p>
-                  </div>
-                </label>
-                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                  <input
-                    type="radio"
-                    name="eventType"
-                    checked={isMultiSession}
-                    onChange={() => {
-                      // Push current dates to first showtime when switching
-                      if (formData.date_start) {
-                        setShowtimes([{
-                          start_time: new Date(formData.date_start).toISOString(),
-                          end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
-                        }]);
-                      }
-                      setIsMultiSession(true);
-                    }}
-                    className="text-emerald-600"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900">Multiple Showings</span>
-                    <p className="text-xs text-gray-500">Theatre, cinema-style</p>
-                  </div>
-                </label>
-              </div>
+                {/* Recurring Event Logic (Simplified for brevity but functional) */}
+                <div className="flex items-center space-x-2">
+                  <input type="checkbox" id="is_recurring" checked={formData.is_recurring} onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })} onFocus={() => setActiveField('is_recurring')} className="rounded text-emerald-600" />
+                  <label htmlFor="is_recurring" className="text-sm">This is a recurring event</label>
+                </div>
 
-              {/* Single Event Date Inputs */}
-              {!isMultiSession && (
-                <div className="mt-4 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
-                      <DateTimePicker
-                        id="date_start"
-                        name="date_start"
-                        required
-                        value={formData.date_start}
-                        onChange={(val) => {
-                          // Smart Date Sync: Update end date when start date changes
-                          const oldStartDate = formData.date_start ? formData.date_start.split('T')[0] : '';
-                          const newStartDate = val.split('T')[0];
-                          const currentEndDate = formData.date_end ? formData.date_end.split('T')[0] : '';
+                {formData.is_recurring && (
+                  <div className="pl-6 border-l-2 border-emerald-100 space-y-4">
+                    <select name="frequency" value={formData.frequency} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
+                      <option value="WEEKLY">Weekly</option>
+                      <option value="BIWEEKLY">Bi-Weekly</option>
+                      <option value="MONTHLY">Monthly</option>
+                    </select>
 
-                          // Sync end date if: empty, matches old start, or is before new start
-                          if (!formData.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
-                            // Keep the time from end date if it exists, otherwise use start time + 2 hours
-                            const endTime = formData.date_end ? formData.date_end.split('T')[1] : val.split('T')[1];
-                            setFormData({
-                              ...formData,
-                              date_start: val,
-                              date_end: `${newStartDate}T${endTime || '18:00'}`
-                            });
-                          } else {
-                            setFormData({ ...formData, date_start: val });
-                          }
-                        }}
-                      />
-                    </div>
-                    {!noEndTime && (
+                    {/* Weekday Selector - shown for Weekly/Bi-Weekly */}
+                    {(formData.frequency === 'WEEKLY' || formData.frequency === 'BIWEEKLY') && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
-                        <DateTimePicker id="date_end" name="date_end" required value={formData.date_end} onChange={(val) => setFormData({ ...formData, date_end: val })} min={formData.date_start} />
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Repeat on these days:</label>
+                        <div className="flex gap-2">
+                          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                const newWeekdays = formData.weekdays.includes(idx)
+                                  ? formData.weekdays.filter(d => d !== idx)
+                                  : [...formData.weekdays, idx];
+                                setFormData({ ...formData, weekdays: newWeekdays });
+                              }}
+                              className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${formData.weekdays.includes(idx)
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Select one or more days</p>
                       </div>
                     )}
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={noEndTime}
-                      onChange={(e) => setNoEndTime(e.target.checked)}
-                      className="rounded text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="text-sm text-gray-600">No specific end time</span>
-                  </label>
-                  {noEndTime && (
-                    <p className="text-xs text-gray-500">End time will be set to 4 hours after start time.</p>
-                  )}
-                </div>
-              )}
 
-              {/* Multiple Showtimes Manager */}
-              {isMultiSession && (
-                <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-500">
-                    Add performance times. The event's main dates will be calculated automatically.
-                  </p>
-
-                  {showtimes.map((st, index) => {
-                    const startValue = st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : '';
-                    const endValue = st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : '';
-
-                    return (
-                      <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
-                        <div className="flex-1 space-y-2">
-                          <div className="grid grid-cols-1 gap-4">
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Start *</label>
-                              <DateTimePicker
-                                id={`showtime_start_${index}`}
-                                name={`showtime_start_${index}`}
-                                value={startValue}
-                                onChange={(value) => {
-                                  const updated = [...showtimes];
-                                  updated[index] = { ...updated[index], start_time: new Date(value).toISOString() };
-                                  setShowtimes(updated);
-                                }}
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">End *</label>
-                              <DateTimePicker
-                                id={`showtime_end_${index}`}
-                                name={`showtime_end_${index}`}
-                                value={endValue}
-                                onChange={(value) => {
-                                  const updated = [...showtimes];
-                                  updated[index] = { ...updated[index], end_time: new Date(value).toISOString() };
-                                  setShowtimes(updated);
-                                }}
-                                min={startValue}
-                                required
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Ticket URL (optional)</label>
-                              <input
-                                type="url"
-                                value={st.ticket_url || ''}
-                                onChange={(e) => {
-                                  const updated = [...showtimes];
-                                  updated[index] = { ...updated[index], ticket_url: e.target.value || undefined };
-                                  setShowtimes(updated);
-                                }}
-                                className="w-full px-2 py-1 text-sm border rounded"
-                                placeholder="https://..."
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block">Notes (optional)</label>
-                              <input
-                                type="text"
-                                maxLength={255}
-                                value={st.notes || ''}
-                                onChange={(e) => {
-                                  const updated = [...showtimes];
-                                  updated[index] = { ...updated[index], notes: e.target.value || undefined };
-                                  setShowtimes(updated);
-                                }}
-                                className="w-full px-2 py-1 text-sm border rounded"
-                                placeholder="e.g. Phone only, Sold Out"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowtimes(showtimes.filter((_, i) => i !== index))}
-                          className="text-red-500 hover:text-red-700 p-1"
-                          title="Remove"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    );
-                  })}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const now = new Date();
-                      setShowtimes([...showtimes, {
-                        start_time: now.toISOString(),
-                        end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-                      }]);
-                    }}
-                    className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
-                  >
-                    + Add Another Performance
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Recurring Event Logic (Simplified for brevity but functional) */}
-            <div className="flex items-center space-x-2">
-              <input type="checkbox" id="is_recurring" checked={formData.is_recurring} onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })} className="rounded text-emerald-600" />
-              <label htmlFor="is_recurring" className="text-sm">This is a recurring event</label>
-            </div>
-
-            {formData.is_recurring && (
-              <div className="pl-6 border-l-2 border-emerald-100 space-y-4">
-                <select name="frequency" value={formData.frequency} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
-                  <option value="WEEKLY">Weekly</option>
-                  <option value="BIWEEKLY">Bi-Weekly</option>
-                  <option value="MONTHLY">Monthly</option>
-                </select>
-
-                {/* Weekday Selector - shown for Weekly/Bi-Weekly */}
-                {(formData.frequency === 'WEEKLY' || formData.frequency === 'BIWEEKLY') && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Repeat on these days:</label>
-                    <div className="flex gap-2">
-                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            const newWeekdays = formData.weekdays.includes(idx)
-                              ? formData.weekdays.filter(d => d !== idx)
-                              : [...formData.weekdays, idx];
-                            setFormData({ ...formData, weekdays: newWeekdays });
-                          }}
-                          className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${formData.weekdays.includes(idx)
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                        >
-                          {day}
-                        </button>
-                      ))}
+                    {/* Ends On Logic */}
+                    <div className="space-y-2">
+                      <label className="flex items-center"><input type="radio" value="never" checked={formData.ends_on === 'never'} onChange={() => setFormData({ ...formData, ends_on: 'never' })} className="mr-2" /> Never (90 days)</label>
+                      <label className="flex items-center"><input type="radio" value="date" checked={formData.ends_on === 'date'} onChange={() => setFormData({ ...formData, ends_on: 'date' })} className="mr-2" /> On Date</label>
+                      {formData.ends_on === 'date' && <Input type="date" name="recurrence_end_date" value={formData.recurrence_end_date} onChange={handleChange} />}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Select one or more days</p>
                   </div>
                 )}
 
-                {/* Ends On Logic */}
-                <div className="space-y-2">
-                  <label className="flex items-center"><input type="radio" value="never" checked={formData.ends_on === 'never'} onChange={() => setFormData({ ...formData, ends_on: 'never' })} className="mr-2" /> Never (90 days)</label>
-                  <label className="flex items-center"><input type="radio" value="date" checked={formData.ends_on === 'date'} onChange={() => setFormData({ ...formData, ends_on: 'date' })} className="mr-2" /> On Date</label>
-                  {formData.ends_on === 'date' && <Input type="date" name="recurrence_end_date" value={formData.recurrence_end_date} onChange={handleChange} />}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                  <Input
+                    name="price"
+                    type="text"
+                    value={formData.price}
+                    onChange={handleChange}
+                    onFocus={() => setActiveField('price')}
+                    placeholder="e.g., Free, £5, £5-£10, Donation"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Enter "Free" for free events, or any price format.</p>
                 </div>
-              </div>
-            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
-              <Input
-                name="price"
-                type="text"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="e.g., Free, £5, £5-£10, Donation"
-              />
-              <p className="mt-1 text-xs text-gray-500">Enter "Free" for free events, or any price format.</p>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Ticket URL</label>
+                  <Input name="ticket_url" type="url" value={formData.ticket_url} onChange={handleChange} onFocus={() => setActiveField('ticket_url')} />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ticket URL</label>
-              <Input name="ticket_url" type="url" value={formData.ticket_url} onChange={handleChange} />
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Age</label>
+                  <Input
+                    name="age_restriction"
+                    type="number"
+                    min="0"
+                    value={formData.age_restriction}
+                    onChange={handleChange}
+                    onFocus={() => setActiveField('age_restriction')}
+                    placeholder="0"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Enter 0 for All Ages, or minimum age required (e.g., 18).</p>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Age</label>
-              <Input
-                name="age_restriction"
-                type="number"
-                min="0"
-                value={formData.age_restriction}
-                onChange={handleChange}
-                placeholder="0"
-              />
-              <p className="mt-1 text-xs text-gray-500">Enter 0 for All Ages, or minimum age required (e.g., 18).</p>
-            </div>
-
-            <div className="flex justify-between pt-4 border-t border-gray-200">
-              <Link href="/events" className="text-gray-600 hover:text-emerald-600">Cancel</Link>
-              <Button type="submit" variant="primary" size="lg" disabled={isLoading}>{isLoading ? 'Submitting...' : 'Submit Event'}</Button>
-            </div>
-          </form>
-        </Card>
+                <div className="flex justify-between pt-4 border-t border-gray-200">
+                  <Link href="/events" className="text-gray-600 hover:text-emerald-600">Cancel</Link>
+                  <Button type="submit" variant="primary" size="lg" disabled={isLoading}>{isLoading ? 'Submitting...' : 'Submit Event'}</Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+          <div className="lg:col-span-1">
+            <HelpfulTipsSidebar activeField={activeField} />
+          </div>
+        </div>
       </div>
     </div>
   );

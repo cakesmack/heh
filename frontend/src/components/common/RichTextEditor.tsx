@@ -13,6 +13,7 @@ import { useCallback, useEffect } from 'react';
 interface RichTextEditorProps {
     value: string;
     onChange: (value: string) => void;
+    onFocus?: () => void;
     placeholder?: string;
     className?: string;
 }
@@ -20,6 +21,7 @@ interface RichTextEditorProps {
 export default function RichTextEditor({
     value,
     onChange,
+    onFocus,
     placeholder = 'Write your description...',
     className = '',
 }: RichTextEditorProps) {
@@ -41,6 +43,9 @@ export default function RichTextEditor({
             attributes: {
                 class: 'prose prose-sm max-w-none focus:outline-none min-h-[120px] px-3 py-2',
             },
+        },
+        onFocus: () => {
+            if (onFocus) onFocus();
         },
         onUpdate: ({ editor }) => {
             onChange(editor.getHTML());
