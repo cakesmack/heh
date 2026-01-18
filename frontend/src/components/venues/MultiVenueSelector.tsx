@@ -22,7 +22,7 @@ export default function MultiVenueSelector({
 }: MultiVenueSelectorProps) {
     // Temporary state for the typeahead input
     const [currentValue, setCurrentValue] = useState<string | null>(null);
-    const [showAddLocation, setShowAddLocation] = useState(false);
+    const [currentValue, setCurrentValue] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [creationKey, setCreationKey] = useState(0); // Used to reset the input
 
@@ -72,74 +72,82 @@ export default function MultiVenueSelector({
     };
 
     return (
-        <div className="space-y-3">
-            {/* Search Input */}
+        <div className="space-y-6">
+            {/* Section 1: Search Existing */}
             <div>
+                <label className="block text-sm font-medium text-gray-800 mb-1">
+                    Option 1: Search Existing Venues
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                    Search our database for venues already listed on Highland Events Hub.
+                </p>
                 <VenueTypeahead
                     value={null}
                     onChange={handleAddVenue}
-                    placeholder="Search for an existing venue..."
+                    placeholder="Type to search existing venues..."
                     disabled={disabled}
                     onFocus={onFocus}
                 />
             </div>
 
-            {/* Toggle New Location */}
-            <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">Can't find the venue?</span>
-                <button
-                    type="button"
-                    onClick={() => setShowAddLocation(!showAddLocation)}
-                    className="text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
-                >
-                    {showAddLocation ? 'Cancel' : '+ Add New Location'}
-                </button>
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center">
+                    <span className="bg-white px-2 text-sm text-gray-500">OR</span>
+                </div>
             </div>
 
-            {/* Google Places Add */}
-            {showAddLocation && (
-                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 animate-fadeIn">
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Search Google Maps</label>
-                    <GooglePlacesAutocomplete
-                        key={creationKey}
-                        placeholder="Search for a location on Google..."
-                        onPlaceSelect={handleCreateVenue}
-                        required={false}
-                    />
-                    {isCreating && <p className="text-xs text-emerald-600 mt-2">Creating venue...</p>}
-                </div>
-            )}
-
+            {/* Section 2: Add New from Google */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label className="block text-sm font-medium text-gray-800 mb-1">
+                    Option 2: Add New Venue from Google Maps
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                    Can't find it above? Search Google Maps to add a new location automatically.
+                </p>
+                <GooglePlacesAutocomplete
+                    key={creationKey}
+                    placeholder="Search Google Maps to add..."
+                    onPlaceSelect={handleCreateVenue}
+                    required={false}
+                />
+                {isCreating && <p className="text-xs text-emerald-600 mt-2">Creating venue...</p>}
+            </div>
 
             {/* Selected List */}
             {selectedVenues.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
-                    {selectedVenues.map((venue) => (
-                        <div key={venue.id} className="flex items-center justify-between p-3">
-                            <div className="flex-1 min-w-0 mr-4">
-                                <div className="flex items-center gap-2">
-                                    <p className="text-sm font-medium text-gray-900 truncate">{venue.name}</p>
-                                    {(venue as any).status === 'UNVERIFIED' && (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                                            New
-                                        </span>
-                                    )}
+                <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Venues</h4>
+                    <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+                        {selectedVenues.map((venue) => (
+                            <div key={venue.id} className="flex items-center justify-between p-3">
+                                <div className="flex-1 min-w-0 mr-4">
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{venue.name}</p>
+                                        {(venue as any).status === 'UNVERIFIED' && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                                New
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 truncate">{venue.address}</p>
                                 </div>
-                                <p className="text-xs text-gray-500 truncate">{venue.address}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveVenue(venue.id)}
+                                    disabled={disabled}
+                                    className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
+                                    aria-label="Remove venue"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => handleRemoveVenue(venue.id)}
-                                disabled={disabled}
-                                className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
-                                aria-label="Remove venue"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             )}
 
