@@ -389,6 +389,15 @@ def create_venue(
     # Deduplication for UNVERIFIED creations (Silent Create from Google Maps)
     # If the user selects a Google Place that already exists in our DB, return the existing venue.
     if venue_status == VenueStatus.UNVERIFIED:
+        # Step 1: Check match by google_place_id
+        if venue_data.google_place_id:
+            existing_by_id = session.exec(
+                select(Venue).where(Venue.google_place_id == venue_data.google_place_id)
+            ).first()
+            if existing_by_id:
+                return build_venue_response(existing_by_id, session)
+
+        # Step 2: Fuzzy Match (Name + Postcode/Address)
         query = select(Venue).where(Venue.name == venue_data.name)
         if venue_data.postcode:
              query = query.where(Venue.postcode == venue_data.postcode)
@@ -396,7 +405,14 @@ def create_venue(
              query = query.where(Venue.address == venue_data.address)
         
         existing_venue = session.exec(query).first()
+        
+        # Step 3: If Fuzzy match found, UPDATE venue with google_place_id and return
         if existing_venue:
+            if venue_data.google_place_id and not existing_venue.google_place_id:
+                existing_venue.google_place_id = venue_data.google_place_id
+                session.add(existing_venue)
+                session.commit()
+                session.refresh(existing_venue)
             return build_venue_response(existing_venue, session)
     
     # Create venue with ALL fields from schema
@@ -415,6 +431,7 @@ def create_venue(
         formatted_address=venue_data.formatted_address,
         postcode=venue_data.postcode,
         address_full=venue_data.address_full,
+        google_place_id=venue_data.google_place_id, # Added field
         # Amenities
         is_dog_friendly=venue_data.is_dog_friendly,
         has_wheelchair_access=venue_data.has_wheelchair_access,

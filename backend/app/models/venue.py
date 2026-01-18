@@ -70,6 +70,7 @@ class Venue(SQLModel, table=True):
     # Phase 2.10 additions
     postcode: Optional[str] = Field(default=None, max_length=10, index=True)
     address_full: Optional[str] = Field(default=None, max_length=500)
+    google_place_id: Optional[str] = Field(default=None, max_length=255, index=True, sa_column_kwargs={"unique": True})
 
     # Amenities (Phase 2.3 Sprint 2)
     is_dog_friendly: bool = Field(default=False)

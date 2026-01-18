@@ -156,6 +156,7 @@ export interface Venue {
   has_parking?: boolean;
   serves_food?: boolean;
   amenities_notes?: string;
+  google_place_id?: string;
 }
 
 export interface VenueResponse extends Venue {
@@ -172,6 +173,7 @@ export interface VenueResponse extends Venue {
   social_tiktok?: string;
   website_url?: string;
   status?: 'VERIFIED' | 'UNVERIFIED' | 'ARCHIVED';
+  google_place_id?: string;
 }
 
 export interface VenueCreate {
@@ -191,6 +193,7 @@ export interface VenueCreate {
   has_parking?: boolean;
   serves_food?: boolean;
   amenities_notes?: string;
+  google_place_id?: string;
 }
 
 export interface VenueUpdate {
@@ -209,6 +212,7 @@ export interface VenueUpdate {
   has_parking?: boolean;
   serves_food?: boolean;
   amenities_notes?: string;
+  google_place_id?: string;
 }
 
 export interface VenueFilter {

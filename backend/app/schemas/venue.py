@@ -50,6 +50,7 @@ class VenueCreate(BaseModel):
     # Phase 2.10 additions
     postcode: Optional[str] = Field(None, max_length=10)
     address_full: Optional[str] = Field(None, max_length=500)
+    google_place_id: Optional[str] = Field(None, max_length=255)
     # Amenities (Phase 2.3 Sprint 2)
     is_dog_friendly: bool = False
     has_wheelchair_access: bool = False
@@ -83,6 +84,7 @@ class VenueUpdate(BaseModel):
     # Phase 2.10 additions
     postcode: Optional[str] = Field(None, max_length=10)
     address_full: Optional[str] = Field(None, max_length=500)
+    google_place_id: Optional[str] = Field(None, max_length=255)
     # Amenities (Phase 2.3 Sprint 2)
     is_dog_friendly: Optional[bool] = None
     has_wheelchair_access: Optional[bool] = None
@@ -124,6 +126,7 @@ class VenueResponse(BaseModel):
     # Phase 2.10 additions
     postcode: Optional[str] = None
     address_full: Optional[str] = None
+    google_place_id: Optional[str] = None
 
     # Amenities (Phase 2.3 Sprint 2)
     is_dog_friendly: bool = False

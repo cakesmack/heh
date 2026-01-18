@@ -191,6 +191,7 @@ export function UnifiedVenueSelect({
                         website: place.website || undefined,
                         phone: place.formatted_phone_number || undefined,
                         postcode: postcode || undefined, // Send if found
+                        google_place_id: place.place_id || undefined, // Send for deduplication
                         category_id: 'other', // Default fallback
                     } as any;
 
