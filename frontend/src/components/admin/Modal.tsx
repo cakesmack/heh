@@ -46,7 +46,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
 
         {/* Modal */}
         <div
-          className={`relative inline-block bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:w-full ${sizeClasses[size]}`}
+          className={`relative inline-block bg-white rounded-lg text-left overflow-visible shadow-xl transform transition-all sm:my-8 sm:w-full ${sizeClasses[size]}`}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b">

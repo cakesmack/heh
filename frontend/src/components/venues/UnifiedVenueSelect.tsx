@@ -11,6 +11,7 @@ interface UnifiedVenueSelectProps {
     disabled?: boolean;
     error?: string;
     disableGoogle?: boolean;
+    excludedVenueId?: string;
 }
 
 interface GooglePrediction {
@@ -30,6 +31,7 @@ export function UnifiedVenueSelect({
     disabled = false,
     error,
     disableGoogle = false,
+    excludedVenueId,
 }: UnifiedVenueSelectProps) {
     const [query, setQuery] = useState('');
     const [internalResults, setInternalResults] = useState<VenueResponse[]>([]);
@@ -94,7 +96,9 @@ export function UnifiedVenueSelect({
             setIsLoading(true);
 
             // 1. Internal Search
-            const internalPromise = api.venues.search(query).then(res => res.venues).catch(() => []);
+            const internalPromise = api.venues.search(query)
+                .then(res => res.venues.filter(v => v.id !== excludedVenueId))
+                .catch(() => []);
 
 
             // 2. Google Search
