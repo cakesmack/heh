@@ -160,7 +160,7 @@ export default function AdminVenues() {
         setVenues(response.venues);
         setTotal(response.total);
       } else {
-        const response = await venuesAPI.list({ limit: 100, exclude_status: 'UNVERIFIED' });
+        const response = await venuesAPI.list({ limit: 100 });
         setVenues(response.venues);
         setTotal(response.total);
       }
