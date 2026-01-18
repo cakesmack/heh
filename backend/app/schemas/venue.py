@@ -191,3 +191,8 @@ class VenueStatsResponse(BaseModel):
     total_events: int
     upcoming_events: int
     last_event_date: Optional[datetime] = None
+
+
+class VenueMergeRequest(BaseModel):
+    source_id: str = Field(..., description="ID of the duplicate venue to merge FROM")
+    target_id: str = Field(..., description="ID of the master venue to merge INTO")
