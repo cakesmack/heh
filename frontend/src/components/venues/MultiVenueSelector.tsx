@@ -22,7 +22,6 @@ export default function MultiVenueSelector({
 }: MultiVenueSelectorProps) {
     // Temporary state for the typeahead input
     const [currentValue, setCurrentValue] = useState<string | null>(null);
-    const [currentValue, setCurrentValue] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [creationKey, setCreationKey] = useState(0); // Used to reset the input
 
