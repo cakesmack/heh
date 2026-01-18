@@ -20,7 +20,7 @@ import type { VenueResponse } from '@/types';
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
 // Dynamic import for UnifiedVenueSelect to avoid SSR issues
-const UnifiedVenueSelect = dynamic<any>(() => import('@/components/venues/UnifiedVenueSelect'), { ssr: false });
+const UnifiedVenueSelect = dynamic<any>(() => import('@/components/venues/UnifiedVenueSelect').then(mod => mod.UnifiedVenueSelect), { ssr: false });
 
 export default function AdminVenues() {
   const [venues, setVenues] = useState<VenueResponse[]>([]);
