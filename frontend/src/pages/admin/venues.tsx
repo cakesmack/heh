@@ -866,7 +866,7 @@ export default function AdminVenues() {
                 Select Target Master Venue
               </label>
               <UnifiedVenueSelect
-                onChange={(venue: any) => setMergeTargetVenue(venue)}
+                onChange={(_id, venue) => setMergeTargetVenue(venue)}
                 placeholder="Search for internal Master Venue..."
                 disableGoogle={true}
                 excludedVenueId={mergingSourceVenue?.id}
