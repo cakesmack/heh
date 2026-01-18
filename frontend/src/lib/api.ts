@@ -474,6 +474,16 @@ export const venuesAPI = {
   },
 
   /**
+   * Merge venues (Admin only)
+   */
+  merge: async (sourceId: string, targetId: string): Promise<{ message: string; events_moved: number }> => {
+    return apiFetch<{ message: string; events_moved: number }>('/api/venues/merge', {
+      method: 'POST',
+      body: JSON.stringify({ source_id: sourceId, target_id: targetId }),
+    });
+  },
+
+  /**
    * List staff for a venue
    */
   listStaff: async (venueId: string): Promise<VenueStaffResponse[]> => {

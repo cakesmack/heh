@@ -224,6 +224,7 @@ export interface VenueFilter {
   sort_by?: 'name' | 'activity';
   skip?: number;
   limit?: number;
+  exclude_status?: string;
 }
 
 export interface VenueListResponse {

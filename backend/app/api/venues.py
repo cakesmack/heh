@@ -30,8 +30,10 @@ from app.schemas.venue import (
     VenueCategoryCreate,
     VenueCategoryUpdate,
     VenueStaffCreate,
+    VenueStaffCreate,
     VenueStaffResponse,
-    VenueStatsResponse
+    VenueStatsResponse,
+    VenueMergeRequest
 )
 from app.schemas.event import EventListResponse, EventResponse
 from app.services.geolocation import calculate_geohash, haversine_distance, get_bounding_box
@@ -251,6 +253,7 @@ def list_venues(
     sort_by: Optional[str] = Query(None, description="Sort order: 'activity' (future events count) or 'name' (default A-Z)"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=1000),
+    exclude_status: Optional[str] = Query(None, description="Status to exclude"),
     session: Session = Depends(get_session)
 ):
     """
@@ -286,6 +289,10 @@ def list_venues(
     # Filter by owner
     if owner_id:
         query = query.where(Venue.owner_id == owner_id)
+
+    # Exclude status
+    if exclude_status:
+        query = query.where(Venue.status != exclude_status)
 
     # Filter by geographic proximity
     if latitude is not None and longitude is not None and radius_km is not None:
@@ -625,6 +632,76 @@ def delete_venue(
     session.commit()
 
     return None
+
+
+@router.post("/merge", status_code=status.HTTP_200_OK)
+def merge_venues(
+    merge_data: VenueMergeRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Merge a duplicate venue (source) into a master venue (target).
+    
+    Actions:
+    1. Moves google_place_id to target if target is missing it.
+    2. Reassigns all events from source to target.
+    3. Deletes source venue.
+    
+    Requries Admin privileges.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can merge venues")
+
+    # 1. Fetch Venues
+    source_venue = session.get(Venue, normalize_uuid(merge_data.source_id))
+    target_venue = session.get(Venue, normalize_uuid(merge_data.target_id))
+
+    if not source_venue:
+        raise HTTPException(status_code=404, detail="Source venue not found")
+    if not target_venue:
+        raise HTTPException(status_code=404, detail="Target venue not found")
+    if source_venue.id == target_venue.id:
+        raise HTTPException(status_code=400, detail="Cannot merge venue into itself")
+
+    # 2. Smart Data Transfer (Google Place ID)
+    # If target has no place ID but source does, upgrade the target
+    if not target_venue.google_place_id and source_venue.google_place_id:
+        target_venue.google_place_id = source_venue.google_place_id
+        session.add(target_venue)
+    
+    # 3. Reassign Events
+    events = session.exec(select(Event).where(Event.venue_id == source_venue.id)).all()
+    events_moved_count = len(events)
+    
+    for event in events:
+        event.venue_id = target_venue.id
+        session.add(event)
+        
+    # 4. Handle Claims/Invites (Delete source's pending items to avoid conflicts)
+    session.exec(select(VenueClaim).where(VenueClaim.venue_id == source_venue.id)).all()
+    # (Cascading delete might handle this, but explicit is safer for logic)
+    # actually, we can just delete the venue and let foreign keys cascade if configured, 
+    # OR explicit delete. Let's explicit delete claims for source.
+    claims = session.exec(select(VenueClaim).where(VenueClaim.venue_id == source_venue.id)).all()
+    for claim in claims:
+        session.delete(claim)
+        
+    invites = session.exec(select(VenueInvite).where(VenueInvite.venue_id == source_venue.id)).all()
+    for invite in invites:
+        session.delete(invite)
+
+    # 5. Delete Source Venue
+    session.delete(source_venue)
+    
+    session.commit()
+    
+    return {
+        "message": "Venue merged successfully",
+        "source_name": source_venue.name,
+        "target_name": target_venue.name,
+        "events_moved": events_moved_count
+    }
 
 
 @router.get("/{venue_id}/events", response_model=EventListResponse)
