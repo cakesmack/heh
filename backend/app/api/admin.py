@@ -1393,3 +1393,33 @@ def get_unverified_venues(
         ))
         
     return response
+
+
+@router.get("/emergency-migrate")
+def emergency_migrate(
+    session: Session = Depends(get_session)
+):
+    """
+    Emergency endpoint to force-add the status column to venues.
+    Use this if the auto-migration fails on Render.
+    """
+    from sqlalchemy import text
+    try:
+        # Check if column exists
+        check_query = text("SELECT column_name FROM information_schema.columns WHERE table_name='venues' AND column_name='status'")
+        result = session.exec(check_query).first()
+        
+        if result:
+            return {"message": "Column 'status' already exists. No action taken."}
+        
+        # Add column
+        session.exec(text("ALTER TABLE venues ADD COLUMN status VARCHAR(50) DEFAULT 'unverified'"))
+        session.commit()
+        
+        # Backfill
+        session.exec(text("UPDATE venues SET status = 'verified' WHERE status = 'unverified'"))
+        session.commit()
+        
+        return {"message": "Migration successful: 'status' column added and backfilled."}
+    except Exception as e:
+        return {"error": str(e)}
