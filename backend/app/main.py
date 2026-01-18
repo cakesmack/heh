@@ -130,6 +130,27 @@ async def lifespan(app: FastAPI):
             """))
             conn.commit()
             logger.info("Migrations applied successfully")
+
+            # --- Robust Google Place ID Fix (Production Recovery) ---
+            # Using Inspector to check columns reliably
+            from sqlalchemy import inspect
+            inspector = inspect(engine)
+            
+            if inspector.has_table("venues"):
+                columns = [c['name'] for c in inspector.get_columns("venues")]
+                if 'google_place_id' not in columns:
+                    logger.warning("Column 'google_place_id' missing in venues. Adding it now...")
+                    conn.execute(text("ALTER TABLE venues ADD COLUMN google_place_id VARCHAR(255)"))
+                    try:
+                        conn.execute(text("CREATE UNIQUE INDEX ix_venues_google_place_id ON venues (google_place_id)"))
+                    except Exception as ie:
+                        logger.warning(f"Index creation warning: {ie}")
+                    conn.commit()
+                    logger.info("Column 'google_place_id' added successfully.")
+                else:
+                    logger.info("Column 'google_place_id' verified existing.")
+            # -------------------------------------------------------
+
     except Exception as e:
         logger.warning(f"Migration check failed (may be SQLite): {e}")
 
