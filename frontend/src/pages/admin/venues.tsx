@@ -134,6 +134,18 @@ export default function AdminVenues() {
   const handleMerge = async () => {
     if (!mergingSourceVenue || !mergeTargetVenue) return;
 
+    // Debugging: Check what we are about to send
+    console.log('Merging:', {
+      source: mergingSourceVenue,
+      target: mergeTargetVenue,
+      targetId: mergeTargetVenue.id
+    });
+
+    if (!mergeTargetVenue.id) {
+      alert('Error: Target venue has no ID. Please re-select the venue.');
+      return;
+    }
+
     if (!confirm(`WARNING: This will permanently delete "${mergingSourceVenue.name}" and move all its data to "${mergeTargetVenue.name}". This action cannot be undone.\n\nAre you sure?`)) {
       return;
     }
@@ -145,6 +157,7 @@ export default function AdminVenues() {
       setMergeModalOpen(false);
       fetchVenues(); // Refresh table
     } catch (err: any) {
+      console.error('Merge error:', err);
       alert(err.message || 'Merge failed');
     } finally {
       setIsMerging(false);
@@ -866,6 +879,7 @@ export default function AdminVenues() {
                 Select Target Master Venue
               </label>
               <UnifiedVenueSelect
+                value={mergeTargetVenue?.id || null}
                 onChange={(_id, venue) => setMergeTargetVenue(venue)}
                 placeholder="Search for internal Master Venue..."
                 disableGoogle={true}
