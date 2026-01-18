@@ -15,6 +15,14 @@ from app.schemas.venue import VenueResponse
 from typing import Union
 
 
+def empty_string_to_none(v: Union[str, None]) -> Union[str, None]:
+    if isinstance(v, str) and v.strip() == "":
+        return None
+    return v
+
+OptionalUUID = Annotated[Optional[UUID], BeforeValidator(empty_string_to_none)]
+
+
 class ShowtimeCreate(BaseModel):
     """Schema for creating a showtime."""
     start_time: datetime
