@@ -128,6 +128,9 @@ export interface TokenResponse {
 // VENUE TYPES
 // ============================================================
 
+
+export type VenueStatus = 'VERIFIED' | 'UNVERIFIED' | 'ARCHIVED';
+
 export interface Venue {
   id: string;
   name: string;

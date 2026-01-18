@@ -1,9 +1,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import VenueTypeahead from '@/components/venues/VenueTypeahead';
-import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
-import LocationPickerMap from '@/components/maps/LocationPickerMap';
+import { UnifiedVenueSelect } from '@/components/venues/UnifiedVenueSelect';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import FormSection from '../FormSection';
 import { VenueResponse } from '@/types';
@@ -11,6 +9,7 @@ import { VenueResponse } from '@/types';
 interface EventLocationSectionProps {
     locationTab: 'main' | 'multi';
     setLocationTab: (tab: 'main' | 'multi') => void;
+    // Legacy props kept for compatibility (can be removed from parent later)
     locationMode: 'venue' | 'custom';
     setLocationMode: (mode: 'venue' | 'custom') => void;
     formData: any;
@@ -25,27 +24,20 @@ interface EventLocationSectionProps {
 export default function EventLocationSection({
     locationTab,
     setLocationTab,
-    locationMode,
-    setLocationMode,
     formData,
     handleVenueChange,
-    handlePlaceSelect,
-    handleLocationChange,
     participatingVenues,
     setParticipatingVenues,
-    isLocationValid
 }: EventLocationSectionProps) {
     return (
         <FormSection
             title="Location"
             description="Where is this happening?"
-            tipTitle="Finding the Spot"
+            tipTitle="Unified Search"
             tipContent={
-                <ul className="list-disc pl-4 space-y-1">
-                    <li><strong>Venue:</strong> Search our database. If it's missing, you can add it!</li>
-                    <li><strong>Custom:</strong> Use for one-off locations like parks or pop-ups.</li>
-                    <li><strong>Multi-Venue:</strong> Great for festivals or trails. Pins will appear at all locations.</li>
-                </ul>
+                <p>
+                    Search for an existing venue OR type a new place name to add it automatically from Google Maps.
+                </p>
             }
         >
             {/* Main Tabs: Main Location vs Multi-Venue */}
@@ -75,77 +67,21 @@ export default function EventLocationSection({
             {/* Tab Content */}
             {locationTab === 'main' ? (
                 <div className="space-y-4">
-                    {/* Sub-tabs: Venue vs Custom */}
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setLocationMode('venue')}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'venue'
-                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                                : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
-                                }`}
-                        >
-                            Select Venue
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setLocationMode('custom')}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${locationMode === 'custom'
-                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                                : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
-                                }`}
-                        >
-                            Custom Location
-                        </button>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Venue or Location</label>
+                        <UnifiedVenueSelect
+                            value={formData.venue_id}
+                            onChange={(id, venue) => {
+                                handleVenueChange(id, venue);
+                                // Ensure we clear legacy fields if they exist in parent handling, 
+                                // but here we just pass the venue change.
+                            }}
+                            placeholder="Search for a venue or add from Google Maps..."
+                        />
+                        <p className="mt-2 text-xs text-gray-500">
+                            Can't find it on Google Maps? <Link href="/venues" target="_blank" className="text-emerald-600 hover:underline">Create a Venue manually.</Link>
+                        </p>
                     </div>
-
-                    {locationMode === 'venue' ? (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Search for a venue</label>
-                            <VenueTypeahead
-                                value={formData.venue_id}
-                                onChange={handleVenueChange}
-                                placeholder="e.g. The Ironworks"
-                            />
-                            <p className="mt-1 text-xs text-gray-500">
-                                <Link href="/venues" target="_blank" className="text-emerald-600 hover:underline">Can't find it? Add a new venue.</Link>
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Location Name *</label>
-                                <GooglePlacesAutocomplete
-                                    placeholder="e.g. Belladrum Estate, High Street, etc."
-                                    defaultValue={formData.location_name}
-                                    onPlaceSelect={handlePlaceSelect}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Pin Location</label>
-                                <LocationPickerMap
-                                    latitude={formData.latitude}
-                                    longitude={formData.longitude}
-                                    onLocationChange={handleLocationChange}
-                                />
-                            </div>
-
-                            {/* Geofencing Warning */}
-                            {!isLocationValid && formData.location_name && (
-                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                                    <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                    <div>
-                                        <p className="text-sm font-medium text-red-800">Location outside the Scottish Highlands</p>
-                                        <p className="text-xs text-red-600 mt-1">Events must be located within the Scottish Highlands (IV, HS, KW, ZE, or qualifying PH/PA/AB/KA postcodes).</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
             ) : (
                 <div className="space-y-3">

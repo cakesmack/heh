@@ -386,6 +386,19 @@ def create_venue(
              except ValueError:
                 venue_status = VenueStatus.UNVERIFIED
     
+    # Deduplication for UNVERIFIED creations (Silent Create from Google Maps)
+    # If the user selects a Google Place that already exists in our DB, return the existing venue.
+    if venue_status == VenueStatus.UNVERIFIED:
+        query = select(Venue).where(Venue.name == venue_data.name)
+        if venue_data.postcode:
+             query = query.where(Venue.postcode == venue_data.postcode)
+        else:
+             query = query.where(Venue.address == venue_data.address)
+        
+        existing_venue = session.exec(query).first()
+        if existing_venue:
+            return build_venue_response(existing_venue, session)
+    
     # Create venue with ALL fields from schema
     new_venue = Venue(
         name=venue_data.name,

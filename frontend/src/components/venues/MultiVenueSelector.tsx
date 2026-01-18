@@ -1,11 +1,7 @@
-'use client';
 
 import { useState } from 'react';
 import { VenueResponse } from '@/types';
-import { VenueTypeahead } from '../venues/VenueTypeahead';
-import GooglePlacesAutocomplete from '../common/GooglePlacesAutocomplete';
-import { api } from '@/lib/api';
-import { Button } from '../common/Button';
+import { UnifiedVenueSelect } from '../venues/UnifiedVenueSelect';
 
 interface MultiVenueSelectorProps {
     selectedVenues: VenueResponse[];
@@ -20,49 +16,17 @@ export default function MultiVenueSelector({
     disabled = false,
     onFocus
 }: MultiVenueSelectorProps) {
-    // Temporary state for the typeahead input
-    const [currentValue, setCurrentValue] = useState<string | null>(null);
-    const [isCreating, setIsCreating] = useState(false);
-    const [creationKey, setCreationKey] = useState(0); // Used to reset the input
+    // Key to force reset of the input after adding
+    const [inputKey, setInputKey] = useState(0);
 
     const handleAddVenue = (venueId: string, venue: VenueResponse | null) => {
-        if (venue && !selectedVenues.find(v => v.id === venue.id)) {
-            onChange([...selectedVenues, venue]);
-        }
-        // Reset typeahead
-        setCurrentValue(null);
-        setCurrentValue(null);
-    };
-
-    const handleCreateVenue = async (place: google.maps.places.PlaceResult) => {
-        if (!place.name || !place.formatted_address || !place.geometry?.location) return;
-
-        setIsCreating(true);
-        try {
-            const venueData = {
-                name: place.name,
-                address: place.formatted_address,
-                latitude: place.geometry.location.lat(),
-                longitude: place.geometry.location.lng(),
-                status: 'UNVERIFIED'
-            };
-
-            // Note: We need to handle the category_id issue. 
-            // I'll update the schema in a separate tool call immediately after this.
-
-            const newVenue: any = await api.venues.create(venueData as any);
-            // API might reject due to missing category_id.
-            // I will pause creation here and fix schema first? 
-            // No, I'll implement logic assuming it's optional, and then fix schema.
-
-            onChange([...selectedVenues, { ...newVenue, status: 'UNVERIFIED' }]); // Add badge logic later
-            // Don't close the form, just reset the input so they can add another
-            setCreationKey(prev => prev + 1);
-        } catch (err) {
-            console.error('Failed to create venue', err);
-            // Ideally show error toast
-        } finally {
-            setIsCreating(false);
+        if (venue) {
+            // Avoid duplicates
+            if (!selectedVenues.find(v => v.id === venue.id)) {
+                onChange([...selectedVenues, venue]);
+            }
+            // Reset the input by forcing re-mount
+            setInputKey(prev => prev + 1);
         }
     };
 
@@ -72,47 +36,22 @@ export default function MultiVenueSelector({
 
     return (
         <div className="space-y-6">
-            {/* Section 1: Search Existing */}
+            {/* Search / Add Section */}
             <div>
                 <label className="block text-sm font-medium text-gray-800 mb-1">
-                    Option 1: Search Existing Venues
+                    Add Participating Venue
                 </label>
                 <p className="text-xs text-gray-500 mb-3">
-                    Search our database for venues already listed on Highland Events Hub.
+                    Search existing venues or type a new place name to add from Google Maps.
                 </p>
-                <VenueTypeahead
+                <UnifiedVenueSelect
+                    key={inputKey}
                     value={null}
                     onChange={handleAddVenue}
-                    placeholder="Type to search existing venues..."
+                    placeholder="Search for a venue or place..."
                     disabled={disabled}
                     onFocus={onFocus}
                 />
-            </div>
-
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                    <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center">
-                    <span className="bg-white px-2 text-sm text-gray-500">OR</span>
-                </div>
-            </div>
-
-            {/* Section 2: Add New from Google */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <label className="block text-sm font-medium text-gray-800 mb-1">
-                    Option 2: Add New Venue from Google Maps
-                </label>
-                <p className="text-xs text-gray-500 mb-3">
-                    Can't find it above? Search Google Maps to add a new location automatically.
-                </p>
-                <GooglePlacesAutocomplete
-                    key={creationKey}
-                    placeholder="Search Google Maps to add..."
-                    onPlaceSelect={handleCreateVenue}
-                    required={false}
-                />
-                {isCreating && <p className="text-xs text-emerald-600 mt-2">Creating venue...</p>}
             </div>
 
             {/* Selected List */}
