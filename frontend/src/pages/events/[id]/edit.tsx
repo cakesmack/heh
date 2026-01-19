@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -64,6 +64,12 @@ export default function EditEventPage() {
     const [isLocationValid, setIsLocationValid] = useState(true);
     const [originalIsRecurring, setOriginalIsRecurring] = useState(false);  // Track if event was originally recurring
     const [hasLoaded, setHasLoaded] = useState(false); // CRITICAL: Prevent re-fetching on user object changes
+
+    // FIX: Use ref to ensure handleSubmit always has access to current formData
+    const formDataRef = useRef(formData);
+    useEffect(() => {
+        formDataRef.current = formData;
+    }, [formData]);
 
     // Fetch initial data - ONLY ONCE when id is available
     useEffect(() => {
@@ -226,14 +232,21 @@ export default function EditEventPage() {
         setIsLoading(true);
         setError(null);
 
+        // FIX: Use ref to get CURRENT formData (not stale closure)
+        const currentFormData = formDataRef.current;
+        console.log('[handleSubmit] Using currentFormData from ref:', {
+            date_start: currentFormData.date_start,
+            date_end: currentFormData.date_end
+        });
+
         try {
             // Validate required fields based on location tab
             if (locationTab === 'main') {
-                if (locationMode === 'venue' && !formData.venue_id) {
+                if (locationMode === 'venue' && !currentFormData.venue_id) {
                     throw new Error('Please select a venue');
                 }
                 if (locationMode === 'custom') {
-                    if (!formData.location_name) {
+                    if (!currentFormData.location_name) {
                         throw new Error('Please enter a location name');
                     }
                     if (!isLocationValid) {
@@ -247,16 +260,16 @@ export default function EditEventPage() {
                 }
             }
 
-            if (!formData.category_id) throw new Error('Please select a category');
+            if (!currentFormData.category_id) throw new Error('Please select a category');
 
             // Date Validation
-            if (new Date(formData.date_end) <= new Date(formData.date_start) && !noEndTime) {
+            if (new Date(currentFormData.date_end) <= new Date(currentFormData.date_start) && !noEndTime) {
                 throw new Error('End date must be after start date');
             }
 
             // Calculate dates based on mode
-            let calculatedDateStart = formData.date_start;
-            let calculatedDateEnd = formData.date_end;
+            let calculatedDateStart = currentFormData.date_start;
+            let calculatedDateEnd = currentFormData.date_end;
             let showtimesPayload: ShowtimeCreate[] | undefined = undefined;
 
             if (isMultiSession && showtimes.length > 0) {
@@ -272,37 +285,37 @@ export default function EditEventPage() {
                 // Single session: use form dates
                 // CRITICAL FIX: Explicitly send empty array to clear any existing showtimes in backend
                 showtimesPayload = [];
-                calculatedDateStart = new Date(formData.date_start).toISOString();
+                calculatedDateStart = new Date(currentFormData.date_start).toISOString();
 
                 // If no specific end time, calculate as start + 4 hours
                 if (noEndTime) {
-                    const startDate = new Date(formData.date_start);
+                    const startDate = new Date(currentFormData.date_start);
                     calculatedDateEnd = new Date(startDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
                 } else {
-                    calculatedDateEnd = new Date(formData.date_end).toISOString();
+                    calculatedDateEnd = new Date(currentFormData.date_end).toISOString();
                 }
             }
 
             // Build payload
             const eventData = {
-                title: formData.title,
-                description: formData.description || undefined,
-                category_id: formData.category_id,
-                venue_id: locationTab === 'main' && locationMode === 'venue' ? formData.venue_id : null,
-                location_name: locationTab === 'main' && locationMode === 'custom' ? formData.location_name : null,
-                latitude: locationTab === 'main' && locationMode === 'custom' ? formData.latitude : null,
-                longitude: locationTab === 'main' && locationMode === 'custom' ? formData.longitude : null,
+                title: currentFormData.title,
+                description: currentFormData.description || undefined,
+                category_id: currentFormData.category_id,
+                venue_id: locationTab === 'main' && locationMode === 'venue' ? currentFormData.venue_id : null,
+                location_name: locationTab === 'main' && locationMode === 'custom' ? currentFormData.location_name : null,
+                latitude: locationTab === 'main' && locationMode === 'custom' ? currentFormData.latitude : null,
+                longitude: locationTab === 'main' && locationMode === 'custom' ? currentFormData.longitude : null,
                 date_start: calculatedDateStart,
                 date_end: calculatedDateEnd,
-                price: formData.price,
-                image_url: formData.image_url || undefined,
-                ticket_url: formData.ticket_url || undefined,
-                age_restriction: formData.age_restriction || undefined,
+                price: currentFormData.price,
+                image_url: currentFormData.image_url || undefined,
+                ticket_url: currentFormData.ticket_url || undefined,
+                age_restriction: currentFormData.age_restriction || undefined,
                 tags: selectedTags.length > 0 ? selectedTags : undefined,
-                organizer_profile_id: formData.organizer_profile_id || undefined,
-                is_recurring: formData.is_recurring,
-                frequency: formData.is_recurring ? formData.frequency : undefined,
-                recurrence_end_date: (formData.is_recurring && formData.ends_on === 'date') ? new Date(formData.recurrence_end_date).toISOString() : undefined,
+                organizer_profile_id: currentFormData.organizer_profile_id || undefined,
+                is_recurring: currentFormData.is_recurring,
+                frequency: currentFormData.is_recurring ? currentFormData.frequency : undefined,
+                recurrence_end_date: (currentFormData.is_recurring && currentFormData.ends_on === 'date') ? new Date(currentFormData.recurrence_end_date).toISOString() : undefined,
                 participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined,
                 showtimes: showtimesPayload,
             };
