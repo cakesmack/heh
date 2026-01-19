@@ -47,6 +47,15 @@ export default function EditEventPage() {
         weekdays: [] as number[],  // 0=Mon, 1=Tue, ... 6=Sun
     });
 
+    // Helper to convert UTC string/Date to Local ISO string "YYYY-MM-DDTHH:mm"
+    const toLocalISOString = (dateInput: string | Date | undefined | null) => {
+        if (!dateInput) return '';
+        const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+        const offset = date.getTimezoneOffset() * 60000;
+        const localDate = new Date(date.getTime() - offset);
+        return localDate.toISOString().slice(0, 16);
+    };
+
     const [categories, setCategories] = useState<Category[]>([]);
     const [organizers, setOrganizers] = useState<Organizer[]>([]);
     const [selectedVenue, setSelectedVenue] = useState<VenueResponse | null>(null);
@@ -99,6 +108,9 @@ export default function EditEventPage() {
                     }
                 }
 
+                // Helper to convert UTC string to Local ISO string "YYYY-MM-DDTHH:mm"
+                // REMOVED (Using component-scoped helper)
+
                 // Populate form
                 setFormData({
                     title: eventData.title,
@@ -108,8 +120,8 @@ export default function EditEventPage() {
                     location_name: eventData.location_name || '',
                     latitude: eventData.latitude || 57.4778,
                     longitude: eventData.longitude || -4.2247,
-                    date_start: new Date(eventData.date_start).toISOString().slice(0, 16),
-                    date_end: new Date(eventData.date_end).toISOString().slice(0, 16),
+                    date_start: toLocalISOString(eventData.date_start),
+                    date_end: toLocalISOString(eventData.date_end),
                     price: eventData.price.toString(),
                     image_url: eventData.image_url || '',
                     ticket_url: eventData.ticket_url || '',
@@ -139,9 +151,13 @@ export default function EditEventPage() {
                     setLocationTab('main');
                 }
 
-                // Showtimes / Multi-Session
+                // Showtimes / Multi-Session (Convert to Local Strings)
                 if (eventData.showtimes && eventData.showtimes.length > 0) {
-                    setShowtimes(eventData.showtimes);
+                    setShowtimes(eventData.showtimes.map((st: any) => ({
+                        ...st,
+                        start_time: toLocalISOString(st.start_time),
+                        end_time: st.end_time ? toLocalISOString(st.end_time) : undefined
+                    })));
                     setIsMultiSession(true);
                 } else {
                     setIsMultiSession(false);
@@ -273,12 +289,24 @@ export default function EditEventPage() {
             let showtimesPayload: ShowtimeCreate[] | undefined = undefined;
 
             if (isMultiSession && showtimes.length > 0) {
-                // Multi-session: calculate from showtimes
+                // Multi-session: calculate from showtimes (using Local Strings)
                 const startTimes = showtimes.map(st => new Date(st.start_time).getTime());
                 const endTimes = showtimes.map(st => st.end_time ? new Date(st.end_time).getTime() : new Date(st.start_time).getTime());
+                // calculatedDateStart/End are expected to be UTC strings for the Payload
+                // But wait, in the logic below, we ASSIGNE them to eventData.date_start/end directly.
+                // So they MUST be UTC strings.
+                // new Date(minString).toISOString() converts Local -> UTC. Correct.
                 calculatedDateStart = new Date(Math.min(...startTimes)).toISOString();
                 calculatedDateEnd = new Date(Math.max(...endTimes)).toISOString();
-                showtimesPayload = showtimes;
+
+                // CRITICAL: Map showtimes back to UTC
+                showtimesPayload = showtimes.map(st => ({
+                    ...st,
+                    start_time: new Date(st.start_time).toISOString(),
+                    end_time: st.end_time ? new Date(st.end_time).toISOString() : undefined,
+                    ticket_url: st.ticket_url || null, // Allow clearing
+                    notes: st.notes || null
+                }));
             } else if (isMultiSession && showtimes.length === 0) {
                 throw new Error('Please add at least one showtime');
             } else {
@@ -299,7 +327,7 @@ export default function EditEventPage() {
             // Build payload
             const eventData = {
                 title: currentFormData.title,
-                description: currentFormData.description || undefined,
+                description: currentFormData.description || null,
                 category_id: currentFormData.category_id,
                 venue_id: locationTab === 'main' && locationMode === 'venue' ? currentFormData.venue_id : null,
                 location_name: locationTab === 'main' && locationMode === 'custom' ? currentFormData.location_name : null,
@@ -308,15 +336,15 @@ export default function EditEventPage() {
                 date_start: calculatedDateStart,
                 date_end: calculatedDateEnd,
                 price: currentFormData.price,
-                image_url: currentFormData.image_url || undefined,
-                ticket_url: currentFormData.ticket_url || undefined,
-                age_restriction: currentFormData.age_restriction || undefined,
-                tags: selectedTags.length > 0 ? selectedTags : undefined,
-                organizer_profile_id: currentFormData.organizer_profile_id || undefined,
+                image_url: currentFormData.image_url || null,
+                ticket_url: currentFormData.ticket_url || null,
+                age_restriction: currentFormData.age_restriction || null,
+                tags: selectedTags.length > 0 ? selectedTags : [],
+                organizer_profile_id: currentFormData.organizer_profile_id || null,
                 is_recurring: currentFormData.is_recurring,
-                frequency: currentFormData.is_recurring ? currentFormData.frequency : undefined,
-                recurrence_end_date: (currentFormData.is_recurring && currentFormData.ends_on === 'date') ? new Date(currentFormData.recurrence_end_date).toISOString() : undefined,
-                participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined,
+                frequency: currentFormData.is_recurring ? currentFormData.frequency : null,
+                recurrence_end_date: (currentFormData.is_recurring && currentFormData.ends_on === 'date') ? new Date(currentFormData.recurrence_end_date).toISOString() : null,
+                participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : [],
                 showtimes: showtimesPayload,
             };
 
@@ -744,8 +772,9 @@ export default function EditEventPage() {
                                     </p>
 
                                     {showtimes.map((st: ShowtimeCreate, index: number) => {
-                                        const startValue = st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : '';
-                                        const endValue = st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : '';
+                                        // FIX: Use Local strings directly (no conversion)
+                                        const startValue = st.start_time || '';
+                                        const endValue = st.end_time || '';
 
                                         return (
                                             <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
@@ -759,7 +788,8 @@ export default function EditEventPage() {
                                                                 value={startValue}
                                                                 onChange={(value) => {
                                                                     const updated = [...showtimes];
-                                                                    updated[index] = { ...updated[index], start_time: new Date(value).toISOString() };
+                                                                    // FIX: Store Local string directly
+                                                                    updated[index] = { ...updated[index], start_time: value };
                                                                     setShowtimes(updated);
                                                                 }}
                                                                 required
@@ -774,7 +804,8 @@ export default function EditEventPage() {
                                                                 value={endValue}
                                                                 onChange={(value) => {
                                                                     const updated = [...showtimes];
-                                                                    updated[index] = { ...updated[index], end_time: new Date(value).toISOString() };
+                                                                    // FIX: Store Local string directly
+                                                                    updated[index] = { ...updated[index], end_time: value };
                                                                     setShowtimes(updated);
                                                                 }}
                                                                 min={startValue}
@@ -837,8 +868,9 @@ export default function EditEventPage() {
                                         onClick={() => {
                                             const now = new Date();
                                             setShowtimes([...showtimes, {
-                                                start_time: now.toISOString(),
-                                                end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                                                // FIX: Use toLocalISOString for new entries
+                                                start_time: toLocalISOString(now),
+                                                end_time: toLocalISOString(new Date(now.getTime() + 2 * 60 * 60 * 1000)),
                                             }]);
                                         }}
                                         className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"

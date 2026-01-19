@@ -28,6 +28,15 @@ export default function EventScheduleSection({
     noEndTime,
     setNoEndTime
 }: EventScheduleSectionProps) {
+    // Helper to convert UTC string/Date to Local ISO string "YYYY-MM-DDTHH:mm"
+    const toLocalISOString = (dateInput: string | Date | undefined | null) => {
+        if (!dateInput) return '';
+        const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+        const offset = date.getTimezoneOffset() * 60000;
+        const localDate = new Date(date.getTime() - offset);
+        return localDate.toISOString().slice(0, 16);
+    };
+
     return (
         <FormSection
             title="Date & Time"
@@ -70,8 +79,8 @@ export default function EventScheduleSection({
                             // Push current dates to first showtime when switching
                             if (formData.date_start) {
                                 setShowtimes([{
-                                    start_time: new Date(formData.date_start).toISOString(),
-                                    end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
+                                    start_time: formData.date_start, // Already Local
+                                    end_time: formData.date_end || undefined, // Already Local
                                 }]);
                             }
                             setIsMultiSession(true);
@@ -154,8 +163,8 @@ export default function EventScheduleSection({
                     </p>
 
                     {showtimes.map((st, index) => {
-                        const startValue = st.start_time ? new Date(st.start_time).toISOString().slice(0, 16) : '';
-                        const endValue = st.end_time ? new Date(st.end_time).toISOString().slice(0, 16) : '';
+                        const startValue = st.start_time || '';
+                        const endValue = st.end_time || '';
 
                         return (
                             <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
@@ -169,7 +178,7 @@ export default function EventScheduleSection({
                                                 value={startValue}
                                                 onChange={(value) => {
                                                     const updated = [...showtimes];
-                                                    updated[index] = { ...updated[index], start_time: new Date(value).toISOString() };
+                                                    updated[index] = { ...updated[index], start_time: value };
                                                     setShowtimes(updated);
                                                 }}
                                                 required
@@ -183,7 +192,7 @@ export default function EventScheduleSection({
                                                 value={endValue}
                                                 onChange={(value) => {
                                                     const updated = [...showtimes];
-                                                    updated[index] = { ...updated[index], end_time: new Date(value).toISOString() };
+                                                    updated[index] = { ...updated[index], end_time: value };
                                                     setShowtimes(updated);
                                                 }}
                                                 min={startValue}
@@ -241,8 +250,8 @@ export default function EventScheduleSection({
                         onClick={() => {
                             const now = new Date();
                             setShowtimes([...showtimes, {
-                                start_time: now.toISOString(),
-                                end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                                start_time: toLocalISOString(now),
+                                end_time: toLocalISOString(new Date(now.getTime() + 2 * 60 * 60 * 1000)),
                             }]);
                         }}
                         className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
