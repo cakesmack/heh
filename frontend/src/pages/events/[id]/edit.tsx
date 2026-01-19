@@ -658,23 +658,25 @@ export default function EditEventPage() {
                                                 required
                                                 value={formData.date_start}
                                                 onChange={(val) => {
-                                                    // Smart Date Sync: Update end date when start date changes
-                                                    const oldStartDate = formData.date_start ? formData.date_start.split('T')[0] : '';
-                                                    const newStartDate = val.split('T')[0];
-                                                    const currentEndDate = formData.date_end ? formData.date_end.split('T')[0] : '';
+                                                    setFormData(prev => {
+                                                        // Smart Date Sync: Update end date when start date changes
+                                                        const oldStartDate = prev.date_start ? prev.date_start.split('T')[0] : '';
+                                                        const newStartDate = val.split('T')[0];
+                                                        const currentEndDate = prev.date_end ? prev.date_end.split('T')[0] : '';
 
-                                                    // Sync end date if: empty, matches old start, or is before new start
-                                                    if (!formData.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
-                                                        // Keep the time from end date if it exists, otherwise use start time + 2 hours
-                                                        const endTime = formData.date_end ? formData.date_end.split('T')[1] : val.split('T')[1];
-                                                        setFormData({
-                                                            ...formData,
-                                                            date_start: val,
-                                                            date_end: `${newStartDate}T${endTime || '18:00'}`
-                                                        });
-                                                    } else {
-                                                        setFormData({ ...formData, date_start: val });
-                                                    }
+                                                        // Sync end date if: empty, matches old start, or is before new start
+                                                        if (!prev.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
+                                                            // Keep the time from end date if it exists, otherwise use start time + 2 hours
+                                                            const endTime = prev.date_end ? prev.date_end.split('T')[1] : val.split('T')[1];
+                                                            return {
+                                                                ...prev,
+                                                                date_start: val,
+                                                                date_end: `${newStartDate}T${endTime || '18:00'}`
+                                                            };
+                                                        } else {
+                                                            return { ...prev, date_start: val };
+                                                        }
+                                                    });
                                                 }}
                                                 disabled={isLoading}
                                             />
@@ -687,7 +689,7 @@ export default function EditEventPage() {
                                                     name="date_end"
                                                     required
                                                     value={formData.date_end}
-                                                    onChange={(val) => setFormData({ ...formData, date_end: val })}
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, date_end: val }))}
                                                     min={formData.date_start}
                                                     disabled={isLoading}
                                                 />
