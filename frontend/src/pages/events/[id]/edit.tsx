@@ -728,9 +728,7 @@ export default function EditEventPage() {
                                                 required
                                                 value={formData.date_start}
                                                 onChange={(val) => {
-                                                    console.log('[Edit Page] date_start onChange received:', val);
                                                     setFormData(prev => {
-                                                        console.log('[Edit Page] setFormData for date_start, prev value:', prev.date_start);
                                                         // Smart Date Sync: Update end date when start date changes
                                                         const oldStartDate = prev.date_start ? prev.date_start.split('T')[0] : '';
                                                         const newStartDate = val.split('T')[0];
@@ -740,17 +738,13 @@ export default function EditEventPage() {
                                                         if (!prev.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
                                                             // Keep the time from end date if it exists, otherwise use start time + 2 hours
                                                             const endTime = prev.date_end ? prev.date_end.split('T')[1] : val.split('T')[1];
-                                                            const result = {
+                                                            return {
                                                                 ...prev,
                                                                 date_start: val,
                                                                 date_end: `${newStartDate}T${endTime || '18:00'}`
                                                             };
-                                                            console.log('[Edit Page] Returning new state with date_start:', result.date_start);
-                                                            return result;
                                                         } else {
-                                                            const result = { ...prev, date_start: val };
-                                                            console.log('[Edit Page] Returning new state with date_start:', result.date_start);
-                                                            return result;
+                                                            return { ...prev, date_start: val };
                                                         }
                                                     });
                                                 }}
@@ -766,13 +760,7 @@ export default function EditEventPage() {
                                                     required
                                                     value={formData.date_end}
                                                     onChange={(val) => {
-                                                        console.log('[Edit Page] date_end onChange received:', val);
-                                                        setFormData(prev => {
-                                                            console.log('[Edit Page] setFormData for date_end, prev value:', prev.date_end);
-                                                            const result = { ...prev, date_end: val };
-                                                            console.log('[Edit Page] Returning new state with date_end:', result.date_end);
-                                                            return result;
-                                                        });
+                                                        setFormData(prev => ({ ...prev, date_end: val }));
                                                     }}
                                                     min={formData.date_start}
                                                     disabled={isLoading}
@@ -1079,20 +1067,6 @@ export default function EditEventPage() {
                         </div>
                     </form>
                 </Card>
-
-                {/* VISIBLE DEBUG PANEL TO DIAGNOSE PERSISTENCE ISSUES */}
-                <div className="mt-8 p-4 bg-gray-900 rounded-lg text-emerald-400 font-mono text-xs overflow-x-auto">
-                    <h3 className="text-white font-bold mb-2">DEBUG: FORM STATE (Show this to Support)</h3>
-                    <pre>{JSON.stringify({
-                        title: formData.title,
-                        date_start: formData.date_start,
-                        date_end: formData.date_end,
-                        is_recurring: formData.is_recurring,
-                        showtimes: showtimes,
-                        locationMode,
-                        locationTab
-                    }, null, 2)}</pre>
-                </div>
 
             </div>
         </div>
