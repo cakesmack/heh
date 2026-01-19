@@ -50,7 +50,17 @@ export default function EditEventPage() {
     // Helper to convert UTC string/Date to Local ISO string "YYYY-MM-DDTHH:mm"
     const toLocalISOString = (dateInput: string | Date | undefined | null) => {
         if (!dateInput) return '';
-        const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+        let date: Date;
+        if (typeof dateInput === 'string') {
+            // Treat naive strings from backend as UTC by appending 'Z'
+            const safeStr = dateInput.endsWith('Z') ? dateInput : dateInput + 'Z';
+            date = new Date(safeStr);
+        } else {
+            date = dateInput;
+        }
+
+        if (isNaN(date.getTime())) return ''; // Safety check
+
         const offset = date.getTimezoneOffset() * 60000;
         const localDate = new Date(date.getTime() - offset);
         return localDate.toISOString().slice(0, 16);
