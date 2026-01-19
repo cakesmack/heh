@@ -1079,6 +1079,21 @@ export default function EditEventPage() {
                         </div>
                     </form>
                 </Card>
+
+                {/* VISIBLE DEBUG PANEL TO DIAGNOSE PERSISTENCE ISSUES */}
+                <div className="mt-8 p-4 bg-gray-900 rounded-lg text-emerald-400 font-mono text-xs overflow-x-auto">
+                    <h3 className="text-white font-bold mb-2">DEBUG: FORM STATE (Show this to Support)</h3>
+                    <pre>{JSON.stringify({
+                        title: formData.title,
+                        date_start: formData.date_start,
+                        date_end: formData.date_end,
+                        is_recurring: formData.is_recurring,
+                        showtimes: showtimes,
+                        locationMode,
+                        locationTab
+                    }, null, 2)}</pre>
+                </div>
+
             </div>
         </div>
     );
