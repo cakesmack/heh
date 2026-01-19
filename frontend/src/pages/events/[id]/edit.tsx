@@ -47,23 +47,28 @@ export default function EditEventPage() {
         weekdays: [] as number[],  // 0=Mon, 1=Tue, ... 6=Sun
     });
 
-    // Helper to convert UTC string/Date to Local ISO string "YYYY-MM-DDTHH:mm"
-    const toLocalISOString = (dateInput: string | Date | undefined | null) => {
-        if (!dateInput) return '';
+    // Helper to format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input
+    const formatDateForInput = (isoString: string | Date | undefined | null) => {
+        if (!isoString) return '';
+
         let date: Date;
-        if (typeof dateInput === 'string') {
-            // Treat naive strings from backend as UTC by appending 'Z'
-            const safeStr = dateInput.endsWith('Z') ? dateInput : dateInput + 'Z';
+        if (typeof isoString === 'string') {
+            // Treat naive strings from backend as UTC by appending 'Z' if missing
+            const safeStr = isoString.endsWith('Z') ? isoString : `${isoString}Z`;
             date = new Date(safeStr);
         } else {
-            date = dateInput;
+            date = isoString;
         }
 
-        if (isNaN(date.getTime())) return ''; // Safety check
+        if (isNaN(date.getTime())) return '';
 
-        const offset = date.getTimezoneOffset() * 60000;
-        const localDate = new Date(date.getTime() - offset);
-        return localDate.toISOString().slice(0, 16);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
     const [categories, setCategories] = useState<Category[]>([]);
@@ -130,8 +135,8 @@ export default function EditEventPage() {
                     location_name: eventData.location_name || '',
                     latitude: eventData.latitude || 57.4778,
                     longitude: eventData.longitude || -4.2247,
-                    date_start: toLocalISOString(eventData.date_start),
-                    date_end: toLocalISOString(eventData.date_end),
+                    date_start: formatDateForInput(eventData.date_start),
+                    date_end: formatDateForInput(eventData.date_end),
                     price: eventData.price.toString(),
                     image_url: eventData.image_url || '',
                     ticket_url: eventData.ticket_url || '',
@@ -165,8 +170,8 @@ export default function EditEventPage() {
                 if (eventData.showtimes && eventData.showtimes.length > 0) {
                     setShowtimes(eventData.showtimes.map((st: any) => ({
                         ...st,
-                        start_time: toLocalISOString(st.start_time),
-                        end_time: st.end_time ? toLocalISOString(st.end_time) : undefined
+                        start_time: formatDateForInput(st.start_time),
+                        end_time: st.end_time ? formatDateForInput(st.end_time) : undefined
                     })));
                     setIsMultiSession(true);
                 } else {
@@ -878,9 +883,9 @@ export default function EditEventPage() {
                                         onClick={() => {
                                             const now = new Date();
                                             setShowtimes([...showtimes, {
-                                                // FIX: Use toLocalISOString for new entries
-                                                start_time: toLocalISOString(now),
-                                                end_time: toLocalISOString(new Date(now.getTime() + 2 * 60 * 60 * 1000)),
+                                                // FIX: Use formatDateForInput for new entries
+                                                start_time: formatDateForInput(now),
+                                                end_time: formatDateForInput(new Date(now.getTime() + 2 * 60 * 60 * 1000)),
                                             }]);
                                         }}
                                         className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"

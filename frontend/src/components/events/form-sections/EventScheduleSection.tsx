@@ -28,23 +28,27 @@ export default function EventScheduleSection({
     noEndTime,
     setNoEndTime
 }: EventScheduleSectionProps) {
-    // Helper to convert UTC string/Date to Local ISO string "YYYY-MM-DDTHH:mm"
-    const toLocalISOString = (dateInput: string | Date | undefined | null) => {
-        if (!dateInput) return '';
+    // Helper to format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input
+    const formatDateForInput = (isoString: string | Date | undefined | null) => {
+        if (!isoString) return '';
+
         let date: Date;
-        if (typeof dateInput === 'string') {
-            // Treat naive strings from backend as UTC by appending 'Z'
-            const safeStr = dateInput.endsWith('Z') ? dateInput : dateInput + 'Z';
+        if (typeof isoString === 'string') {
+            const safeStr = isoString.endsWith('Z') ? isoString : `${isoString}Z`;
             date = new Date(safeStr);
         } else {
-            date = dateInput;
+            date = isoString;
         }
 
-        if (isNaN(date.getTime())) return ''; // Safety check
+        if (isNaN(date.getTime())) return '';
 
-        const offset = date.getTimezoneOffset() * 60000;
-        const localDate = new Date(date.getTime() - offset);
-        return localDate.toISOString().slice(0, 16);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
     return (
@@ -260,8 +264,8 @@ export default function EventScheduleSection({
                         onClick={() => {
                             const now = new Date();
                             setShowtimes([...showtimes, {
-                                start_time: toLocalISOString(now),
-                                end_time: toLocalISOString(new Date(now.getTime() + 2 * 60 * 60 * 1000)),
+                                start_time: formatDateForInput(now),
+                                end_time: formatDateForInput(new Date(now.getTime() + 2 * 60 * 60 * 1000)),
                             }]);
                         }}
                         className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
