@@ -63,15 +63,16 @@ export default function EditEventPage() {
     const [noEndTime, setNoEndTime] = useState(false);
     const [isLocationValid, setIsLocationValid] = useState(true);
     const [originalIsRecurring, setOriginalIsRecurring] = useState(false);  // Track if event was originally recurring
+    const [hasLoaded, setHasLoaded] = useState(false); // CRITICAL: Prevent re-fetching on user object changes
 
-    // Fetch initial data
+    // Fetch initial data - ONLY ONCE when id is available
     useEffect(() => {
         if (!isAuthenticated && !authLoading) {
             router.push(`/auth/login?redirect=/events/${id}/edit`);
             return;
         }
 
-        if (!id) return;
+        if (!id || hasLoaded) return; // Don't re-fetch if already loaded
 
         const fetchData = async () => {
             try {
@@ -145,16 +146,12 @@ export default function EditEventPage() {
                 }
 
                 // Permission check: only organizer or admin can edit
-
-                if (eventData.tags) {
-                    setSelectedTags(eventData.tags.map((t: any) => t.name));
-                }
-
-                // Permission check: only organizer or admin can edit
                 if (user && eventData.organizer_id !== user.id && !user.is_admin) {
                     router.push('/403');
                     return;
                 }
+
+                setHasLoaded(true); // Mark as loaded to prevent re-fetching
 
             } catch (err) {
                 console.error('Failed to load data:', err);
@@ -167,7 +164,7 @@ export default function EditEventPage() {
         if (isAuthenticated) {
             fetchData();
         }
-    }, [isAuthenticated, authLoading, id, user, router]);
+    }, [isAuthenticated, authLoading, id, hasLoaded]); // Removed user and router from deps, added hasLoaded guard
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
