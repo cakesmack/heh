@@ -1,8 +1,10 @@
 /**
  * DateTimePicker Component
  * Custom date/time picker with separate hour and minute dropdowns (15-minute intervals)
+ * 
+ * FIXED: Uses useState with useEffect sync instead of useMemo to prevent stale closures
  */
-import { useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface DateTimePickerProps {
   id: string;
@@ -28,6 +30,29 @@ const MINUTE_OPTIONS = [
   { value: '45', label: '45' },
 ];
 
+// Helper to parse datetime string
+function parseDateTime(value: string) {
+  if (!value) {
+    return { dateValue: '', hourValue: '12', minuteValue: '00' };
+  }
+
+  const [datePart, timePart] = value.split('T');
+  const time = timePart ? timePart.substring(0, 5) : '12:00';
+  const [hours, mins] = time.split(':');
+
+  // Round minutes to nearest 15
+  const minsNum = parseInt(mins, 10);
+  const roundedMins = Math.round(minsNum / 15) * 15;
+  const adjustedHours = roundedMins === 60 ? (parseInt(hours, 10) + 1) % 24 : parseInt(hours, 10);
+  const finalMins = roundedMins === 60 ? 0 : roundedMins;
+
+  return {
+    dateValue: datePart || '',
+    hourValue: adjustedHours.toString().padStart(2, '0'),
+    minuteValue: finalMins.toString().padStart(2, '0'),
+  };
+}
+
 export default function DateTimePicker({
   id,
   name,
@@ -37,56 +62,47 @@ export default function DateTimePicker({
   disabled = false,
   required = false,
 }: DateTimePickerProps) {
-  // Parse the datetime-local value into date, hour, and minute parts
-  const { dateValue, hourValue, minuteValue } = useMemo(() => {
-    if (!value) {
-      return { dateValue: '', hourValue: '12', minuteValue: '00' };
-    }
+  // Use useState for internal state - this is the key fix!
+  const [dateValue, setDateValue] = useState('');
+  const [hourValue, setHourValue] = useState('12');
+  const [minuteValue, setMinuteValue] = useState('00');
 
-    // value is in format "2024-01-15T14:30" or "2024-01-15T14:30:00"
-    const [datePart, timePart] = value.split('T');
-    const time = timePart ? timePart.substring(0, 5) : '12:00';
-    const [hours, mins] = time.split(':');
-
-    // Round minutes to nearest 15
-    const minsNum = parseInt(mins, 10);
-    const roundedMins = Math.round(minsNum / 15) * 15;
-    const adjustedHours = roundedMins === 60 ? (parseInt(hours, 10) + 1) % 24 : parseInt(hours, 10);
-    const finalMins = roundedMins === 60 ? 0 : roundedMins;
-
-    return {
-      dateValue: datePart || '',
-      hourValue: adjustedHours.toString().padStart(2, '0'),
-      minuteValue: finalMins.toString().padStart(2, '0'),
-    };
+  // Sync internal state when prop changes (controlled component pattern)
+  useEffect(() => {
+    const parsed = parseDateTime(value);
+    setDateValue(parsed.dateValue);
+    setHourValue(parsed.hourValue);
+    setMinuteValue(parsed.minuteValue);
   }, [value]);
 
   // Parse min date if provided
-  const minDate = useMemo(() => {
-    if (!min) return undefined;
-    const [datePart] = min.split('T');
-    return datePart;
-  }, [min]);
+  const minDate = min ? min.split('T')[0] : undefined;
 
-  const handleDateChange = (newDate: string) => {
+  // Handlers now use current state values correctly
+  const handleDateChange = useCallback((newDate: string) => {
     if (newDate) {
+      // Use current state values
+      setDateValue(newDate);
       onChange(`${newDate}T${hourValue}:${minuteValue}`);
     } else {
+      setDateValue('');
       onChange('');
     }
-  };
+  }, [hourValue, minuteValue, onChange]);
 
-  const handleHourChange = (newHour: string) => {
+  const handleHourChange = useCallback((newHour: string) => {
     if (dateValue) {
+      setHourValue(newHour);
       onChange(`${dateValue}T${newHour}:${minuteValue}`);
     }
-  };
+  }, [dateValue, minuteValue, onChange]);
 
-  const handleMinuteChange = (newMinute: string) => {
+  const handleMinuteChange = useCallback((newMinute: string) => {
     if (dateValue) {
+      setMinuteValue(newMinute);
       onChange(`${dateValue}T${hourValue}:${newMinute}`);
     }
-  };
+  }, [dateValue, hourValue, onChange]);
 
   return (
     <div className="flex gap-2 items-center">
