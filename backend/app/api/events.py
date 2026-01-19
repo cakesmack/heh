@@ -1169,18 +1169,35 @@ def update_event(
             detail="Not authorized to update this event"
         )
 
-    # Update fields (exclude tags, participating_venue_ids, and showtimes for special handling)
-    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes"})
+    # Update fields (exclude tags, participating_venue_ids, showtimes, and explicit dates for special handling)
+    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring"})
 
     # DEBUG: Log what we received
     logger.info(f"[UPDATE_EVENT] Event ID: {event_id}")
     logger.info(f"[UPDATE_EVENT] Received update_data keys: {list(update_data.keys())}")
-    if "date_start" in update_data:
-        logger.info(f"[UPDATE_EVENT] date_start: {update_data['date_start']}")
-    if "date_end" in update_data:
-        logger.info(f"[UPDATE_EVENT] date_end: {update_data['date_end']}")
-    if "ticket_url" in update_data:
-        logger.info(f"[UPDATE_EVENT] ticket_url: {update_data['ticket_url']}")
+
+    # 1. Priority Update: Always update dates if provided
+    if event_data.date_start is not None:
+        logger.info(f"[UPDATE_EVENT] explicit date_start: {event_data.date_start}")
+        event.date_start = event_data.date_start
+    
+    if event_data.date_end is not None:
+        logger.info(f"[UPDATE_EVENT] explicit date_end: {event_data.date_end}")
+        event.date_end = event_data.date_end
+
+    # 2. Handle Recurring Status Logic
+    if event_data.is_recurring is not None:
+        event.is_recurring = event_data.is_recurring
+        if event_data.is_recurring is False:
+            # Explicitly turning OFF recurrence -> Clear showtimes
+            logger.info(f"[UPDATE_EVENT] Turning OFF recurrence for {event_id}. Clearing showtimes.")
+            existing_showtimes = session.exec(
+                select(EventShowtime).where(EventShowtime.event_id == event.id)
+            ).all()
+            for st in existing_showtimes:
+                session.delete(st)
+            # Also clear RRULE if present
+            event.recurrence_rule = None
 
     # Validate category if being updated
     if "category_id" in update_data:
@@ -1205,9 +1222,12 @@ def update_event(
         update_data["age_restriction"] = age_restriction_str  # Keep legacy field
         update_data["min_age"] = min_age
 
-    # Update Showtimes if provided
+    # Update Showtimes if provided (Only if is_recurring is not False, or if user explicitly provides them)
+    # Note: If is_recurring was set to False above, we cleared showtimes. 
+    # If showtimes are provided in the same payload, we assume they want to add them (and maybe is_recurring should be true?)
+    # But usually frontend sends is_recurring=False and showtimes=[]/None.
     if event_data.showtimes is not None:
-        # Clear existing showtimes
+        # Clear existing showtimes (redundant if we did it above, but safe)
         stmt = select(EventShowtime).where(EventShowtime.event_id == event.id)
         existing_showtimes = session.exec(stmt).all()
         for st in existing_showtimes:
@@ -1289,26 +1309,6 @@ def update_event(
                 event_tag = EventTag(event_id=event.id, tag_id=tag.id)
                 session.add(event_tag)
                 tag.usage_count += 1
-
-    # Handle showtimes update
-    if event_data.showtimes is not None:
-        # Delete existing showtimes
-        existing_showtimes = session.exec(
-            select(EventShowtime).where(EventShowtime.event_id == event.id)
-        ).all()
-        for st in existing_showtimes:
-            session.delete(st)
-        
-        # Add new showtimes
-        for showtime_data in event_data.showtimes:
-            showtime = EventShowtime(
-                event_id=event.id,
-                start_time=showtime_data.start_time,
-                end_time=showtime_data.end_time,
-                ticket_url=showtime_data.ticket_url,
-                notes=showtime_data.notes
-            )
-            session.add(showtime)
 
     event.updated_at = datetime.utcnow()
 
