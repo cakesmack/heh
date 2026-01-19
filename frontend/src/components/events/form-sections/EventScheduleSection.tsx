@@ -34,7 +34,8 @@ export default function EventScheduleSection({
 
         let date: Date;
         if (typeof isoString === 'string') {
-            const safeStr = isoString.endsWith('Z') ? isoString : `${isoString}Z`;
+            // Remove 'Z' if present to force Local interpretation
+            const safeStr = isoString.endsWith('Z') ? isoString.slice(0, -1) : isoString;
             date = new Date(safeStr);
         } else {
             date = isoString;

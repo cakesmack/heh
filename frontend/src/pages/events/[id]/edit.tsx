@@ -53,9 +53,9 @@ export default function EditEventPage() {
 
         let date: Date;
         if (typeof isoString === 'string') {
-            // Treat naive strings from backend as UTC by appending 'Z' if missing
-            const safeStr = isoString.endsWith('Z') ? isoString : `${isoString}Z`;
-            date = new Date(safeStr);
+            // Remove 'Z' if present to force Local interpretation
+            const localStr = isoString.endsWith('Z') ? isoString.slice(0, -1) : isoString;
+            date = new Date(localStr);
         } else {
             date = isoString;
         }
@@ -311,14 +311,24 @@ export default function EditEventPage() {
                 // But wait, in the logic below, we ASSIGNE them to eventData.date_start/end directly.
                 // So they MUST be UTC strings.
                 // new Date(minString).toISOString() converts Local -> UTC. Correct.
-                calculatedDateStart = new Date(Math.min(...startTimes)).toISOString();
-                calculatedDateEnd = new Date(Math.max(...endTimes)).toISOString();
+                calculatedDateStart = startTimes.length > 0 ? (new Date(Math.min(...startTimes)).toISOString().slice(0, 19)) : ''; // Fallback, careful. Ideally use strings.
+                // Actually, if showtimes are naive, Math.min works on timestamps? Yes.
+                // But we want Naive output.
+                // Simplest: use the strings.
+                // Sort strings.
+                const sortedStart = [...showtimes].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+                const sortedEnd = [...showtimes].sort((a, b) => (a.end_time || a.start_time || '').localeCompare(b.end_time || b.start_time || ''));
+
+                calculatedDateStart = sortedStart[0]?.start_time ? (sortedStart[0].start_time.length === 16 ? sortedStart[0].start_time + ':00' : sortedStart[0].start_time) : '';
+                const lastEnd = sortedEnd[sortedEnd.length - 1];
+                const lastEndStr = lastEnd?.end_time || lastEnd?.start_time || '';
+                calculatedDateEnd = lastEndStr.length === 16 ? lastEndStr + ':00' : lastEndStr;
 
                 // CRITICAL: Map showtimes back to UTC
                 showtimesPayload = showtimes.map(st => ({
                     ...st,
-                    start_time: new Date(st.start_time).toISOString(),
-                    end_time: st.end_time ? new Date(st.end_time).toISOString() : undefined,
+                    start_time: st.start_time ? (st.start_time.length === 16 ? st.start_time + ':00' : st.start_time) : '',
+                    end_time: st.end_time ? (st.end_time.length === 16 ? st.end_time + ':00' : st.end_time) : undefined,
                     ticket_url: st.ticket_url || null, // Allow clearing
                     notes: st.notes || null
                 }));
@@ -328,14 +338,21 @@ export default function EditEventPage() {
                 // Single session: use form dates
                 // CRITICAL FIX: Explicitly send empty array to clear any existing showtimes in backend
                 showtimesPayload = [];
-                calculatedDateStart = new Date(currentFormData.date_start).toISOString();
+                calculatedDateStart = currentFormData.date_start.length === 16 ? currentFormData.date_start + ':00' : currentFormData.date_start;
 
                 // If no specific end time, calculate as start + 4 hours
                 if (noEndTime) {
-                    const startDate = new Date(currentFormData.date_start);
-                    calculatedDateEnd = new Date(startDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+                    const startDate = new Date(currentFormData.date_start); // Local
+                    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000);
+                    // Format explicitly as Local + :00
+                    const year = endDate.getFullYear();
+                    const month = String(endDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(endDate.getDate()).padStart(2, '0');
+                    const hours = String(endDate.getHours()).padStart(2, '0');
+                    const minutes = String(endDate.getMinutes()).padStart(2, '0');
+                    calculatedDateEnd = `${year}-${month}-${day}T${hours}:${minutes}:00`;
                 } else {
-                    calculatedDateEnd = new Date(currentFormData.date_end).toISOString();
+                    calculatedDateEnd = currentFormData.date_end.length === 16 ? currentFormData.date_end + ':00' : currentFormData.date_end;
                 }
             }
 
