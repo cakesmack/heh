@@ -1172,6 +1172,16 @@ def update_event(
     # Update fields (exclude tags, participating_venue_ids, and showtimes for special handling)
     update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes"})
 
+    # DEBUG: Log what we received
+    logger.info(f"[UPDATE_EVENT] Event ID: {event_id}")
+    logger.info(f"[UPDATE_EVENT] Received update_data keys: {list(update_data.keys())}")
+    if "date_start" in update_data:
+        logger.info(f"[UPDATE_EVENT] date_start: {update_data['date_start']}")
+    if "date_end" in update_data:
+        logger.info(f"[UPDATE_EVENT] date_end: {update_data['date_end']}")
+    if "ticket_url" in update_data:
+        logger.info(f"[UPDATE_EVENT] ticket_url: {update_data['ticket_url']}")
+
     # Validate category if being updated
     if "category_id" in update_data:
         category = session.get(Category, normalize_uuid(update_data["category_id"]))

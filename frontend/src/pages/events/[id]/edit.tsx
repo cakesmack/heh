@@ -310,6 +310,14 @@ export default function EditEventPage() {
                 showtimes: showtimesPayload,
             };
 
+            // DEBUG: Log exact payload being sent
+            console.log('=== UPDATE EVENT PAYLOAD ===');
+            console.log('Event ID:', id);
+            console.log('date_start:', eventData.date_start);
+            console.log('date_end:', eventData.date_end);
+            console.log('ticket_url:', eventData.ticket_url);
+            console.log('Full payload:', JSON.stringify(eventData, null, 2));
+
             await api.events.update(id as string, eventData);
 
             // Redirect to the event page

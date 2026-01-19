@@ -16,6 +16,10 @@ build/
 scripts/_archive/
 backend/scripts/_archive/
 
+# Scrapers
+
+scrapers/
+
 # Documentation (local only)
 docs/
 
