@@ -727,7 +727,7 @@ def merge_venues(
 @router.get("/{venue_id}/events", response_model=EventListResponse)
 def get_venue_events(
     venue_id: str,
-    status_filter: Optional[str] = Query(None, alias="status", regex="^(upcoming|past|all)$"),
+    status_filter: Optional[str] = Query(None, alias="status", pattern="^(upcoming|past|all)$"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=500),
     session: Session = Depends(get_session)
