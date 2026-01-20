@@ -129,7 +129,15 @@ export function GoogleMapView({
   // Filter events with valid coordinates
   const validEvents = useMemo(() => {
     if (!showEvents) return [];
-    return events.filter((e) => e.latitude && e.longitude);
+
+    return events
+      .filter((e) => (e.latitude && e.longitude) || (e.map_display_lat && e.map_display_lng))
+      .map(e => ({
+        ...e,
+        // Prioritize map_display coordinates if available
+        latitude: e.map_display_lat || e.latitude,
+        longitude: e.map_display_lng || e.longitude
+      }));
   }, [events, showEvents]);
 
   const venueMarkers = useMemo<MapMarker[]>(() => {

@@ -1,10 +1,10 @@
-
 import React from 'react';
 import Link from 'next/link';
 import { UnifiedVenueSelect } from '@/components/venues/UnifiedVenueSelect';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import FormSection from '../FormSection';
 import { VenueResponse } from '@/types';
+import { MapPinAdjuster } from '../MapPinAdjuster';
 
 interface EventLocationSectionProps {
     locationTab: 'main' | 'multi';
@@ -19,6 +19,8 @@ interface EventLocationSectionProps {
     participatingVenues: VenueResponse[];
     setParticipatingVenues: (venues: VenueResponse[]) => void;
     isLocationValid: boolean;
+    // New prop for map display
+    onMapDisplayChange?: (updates: { map_display_lat?: number; map_display_lng?: number; map_display_label?: string }) => void;
 }
 
 export default function EventLocationSection({
@@ -28,6 +30,7 @@ export default function EventLocationSection({
     handleVenueChange,
     participatingVenues,
     setParticipatingVenues,
+    onMapDisplayChange
 }: EventLocationSectionProps) {
     return (
         <FormSection
@@ -94,6 +97,20 @@ export default function EventLocationSection({
                     />
                     {participatingVenues.length === 0 && (
                         <p className="text-xs text-amber-600">Please add at least one participating venue.</p>
+                    )}
+
+                    {/* Map Pin Adjuster */}
+                    {participatingVenues.length > 0 && onMapDisplayChange && (
+                        <div className="mt-6 border-t pt-4">
+                            <MapPinAdjuster
+                                participatingVenues={participatingVenues}
+                                currentLat={formData.map_display_lat}
+                                currentLng={formData.map_display_lng}
+                                label={formData.map_display_label}
+                                onChange={(lat, lng) => onMapDisplayChange({ map_display_lat: lat, map_display_lng: lng })}
+                                onLabelChange={(label) => onMapDisplayChange({ map_display_label: label })}
+                            />
+                        </div>
                     )}
                 </div>
             )}

@@ -53,7 +53,11 @@ export default function SubmitEventPage() {
     ends_on: 'never',
     weekdays: [] as number[],  // 0=Mon, 1=Tue, ... 6=Sun
     postcode: '',
-    address: ''
+    address: '',
+    // Map Display Override
+    map_display_lat: null as number | null,
+    map_display_lng: null as number | null,
+    map_display_label: '',
   });
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -133,6 +137,10 @@ export default function SubmitEventPage() {
     setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
   };
 
+  const handleMapDisplayChange = (updates: { map_display_lat?: number; map_display_lng?: number; map_display_label?: string }) => {
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError(null);
@@ -209,6 +217,10 @@ export default function SubmitEventPage() {
         weekdays: formData.is_recurring && formData.weekdays.length > 0 ? formData.weekdays : undefined,
         participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined,
         showtimes: showtimesPayload,
+        // Map Display
+        map_display_lat: formData.map_display_lat,
+        map_display_lng: formData.map_display_lng,
+        map_display_label: formData.map_display_label || undefined,
       };
 
       const newEvent = await api.events.create(eventData);
@@ -301,6 +313,7 @@ export default function SubmitEventPage() {
               participatingVenues={participatingVenues}
               setParticipatingVenues={setParticipatingVenues}
               isLocationValid={isLocationValid}
+              onMapDisplayChange={handleMapDisplayChange}
             />
 
             <EventScheduleSection
