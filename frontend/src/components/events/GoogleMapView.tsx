@@ -216,7 +216,7 @@ export function GoogleMapView({
     // Use setTimeout to avoid state update during render
     setTimeout(() => {
       map.panTo({ lat: focusEvent.latitude, lng: focusEvent.longitude });
-      map.setZoom(14);
+      map.setZoom(16);
       setInfoWindowMarkerId(focusEvent.id);
       onFocusComplete?.();
     }, 0);
@@ -238,6 +238,7 @@ export function GoogleMapView({
         style={{ width: '100%', height: '100%' }}
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
         onIdle={() => setMapReady(true)}
+        styles={MAP_STYLES}
       >
         {/* Event Markers - Using MarkerClusterer for zoom-based clustering */}
         {mapReady && (

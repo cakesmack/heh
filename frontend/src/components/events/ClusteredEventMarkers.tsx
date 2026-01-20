@@ -143,10 +143,11 @@ export function ClusteredEventMarkers({
                     const clusterPosition = cluster.position;
 
                     // Get events in this cluster
+                    // We match events to the markers contained in this cluster
                     const eventsInCluster = events.filter(e => {
-                        const latDiff = Math.abs(e.latitude - clusterPosition.lat());
-                        const lngDiff = Math.abs(e.longitude - clusterPosition.lng());
-                        return latDiff < 0.0001 && lngDiff < 0.0001; // Strict check for "events in this visual cluster"
+                        const marker = markers[e.id];
+                        // Need to check if this specific marker instance is in the cluster's markers
+                        return marker && clusterMarkers.includes(marker);
                     });
 
                     // Determine bounds of the cluster
