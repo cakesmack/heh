@@ -960,19 +960,19 @@ export const analyticsAPI = {
   },
 
   async clearMissedOpportunities(): Promise<void> {
-    return apiFetch<void>('/analytics/missed-opportunities', { method: 'DELETE' });
+    return apiFetch<void>('/api/analytics/missed-opportunities', { method: 'DELETE' });
   },
 
   async getSupplyGaps(threshold: number = 3, days: number = 30): Promise<SupplyGap[]> {
-    return apiFetch<SupplyGap[]>(`/analytics/supply-gaps?threshold=${threshold}&days=${days}`);
+    return apiFetch<SupplyGap[]>(`/api/analytics/supply-gaps?threshold=${threshold}&days=${days}`);
   },
 
   async getQualityIssues(): Promise<QualityIssue[]> {
-    return apiFetch<QualityIssue[]>('/analytics/quality-issues');
+    return apiFetch<QualityIssue[]>('/api/analytics/quality-issues');
   },
 
   async getCategoryMix(): Promise<CategoryMixStats[]> {
-    return apiFetch<CategoryMixStats[]>('/analytics/category-mix');
+    return apiFetch<CategoryMixStats[]>('/api/analytics/category-mix');
   },
 
   async getTopPerformers(limit: number = 5, days: number = 30): Promise<OrganizerEventStats[]> {

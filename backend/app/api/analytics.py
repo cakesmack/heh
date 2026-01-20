@@ -659,33 +659,35 @@ def get_top_performers(
     """
     cutoff = datetime.utcnow() - timedelta(days=days)
     
-    query = (
-        select(
-            Event, 
-            func.count(AnalyticsEvent.id).label("views")
-        )
-        .join(AnalyticsEvent, (AnalyticsEvent.target_id == Event.id) & (AnalyticsEvent.event_type == "event_view"))
-        .where(AnalyticsEvent.timestamp >= cutoff)
-        .group_by(Event.id)
-        .order_by(func.count(AnalyticsEvent.id).desc())
-        .limit(limit)
-    )
+    # Fetch raw analytics logs
+    logs = session.exec(
+        select(AnalyticsEvent)
+        .where(AnalyticsEvent.event_type == "event_view")
+        .where(AnalyticsEvent.created_at >= cutoff)
+    ).all()
     
-    results = session.exec(query).all()
-    
-    # Needs matching to OrganizerEventStats structure
-    # OrganizerEventStats requires: event_id, title, views, saves, ticket_clicks, is_series (optional)
+    # Aggregate counts in Python
+    event_counts = {}
+    for log in logs:
+        if log.event_metadata and "target_id" in log.event_metadata:
+            # Normalize ID
+            tid = log.event_metadata["target_id"].replace("-", "")
+            event_counts[tid] = event_counts.get(tid, 0) + 1
+            
+    # Sort by views descending
+    top_items = sorted(event_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
     
     response = []
-    for event, views in results:
-        # Mocking click count for performance - in real app would need subquery or separate aggregation
-        response.append(OrganizerEventStats(
-            event_id=event.id,
-            title=event.title,
-            views=views,
-            saves=0, 
-            ticket_clicks=0,
-            is_series=False
-        ))
-        
+    for eid, views in top_items:
+        event = session.get(Event, eid)
+        if event:
+            response.append(OrganizerEventStats(
+                event_id=eid,
+                title=event.title,
+                views=views,
+                saves=0,
+                ticket_clicks=0,
+                is_series=event.parent_event_id is not None
+            ))
+            
     return response
