@@ -1371,11 +1371,17 @@ def get_unverified_venues(
     # Note: VenueStatus.UNVERIFIED might need string cast if Enum issues arise, 
     # but SQLModel usually handles it.
     
+    today = datetime.utcnow()
+
+    # Query: Venues that are UNVERIFIED and have ACTIVE (future) events
+    # We want to catch ANY venue with > 0 active events so we can verify them ASAP.
     query = (
         select(Venue, func.count(Event.id).label("event_count"))
-        .outerjoin(Event, Event.venue_id == Venue.id)
+        .join(Event, Event.venue_id == Venue.id)  # Inner join forces > 0 events
         .where(Venue.status == VenueStatus.UNVERIFIED)
+        .where(Event.date_end >= today)           # Only count active events
         .group_by(Venue.id)
+        .having(func.count(Event.id) > 0)
         .order_by(func.count(Event.id).desc())
         .limit(limit)
     )

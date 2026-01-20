@@ -1,5 +1,6 @@
 import React from 'react';
-import { AdminAnalyticsSummary, MissedOpportunitiesResponse } from '@/types';
+import { AdminAnalyticsSummary, MissedOpportunitiesResponse, SupplyGap, QualityIssue, CategoryMixStats, OrganizerEventStats } from '@/types';
+import { analyticsAPI } from '@/lib/api';
 
 interface StatCardProps {
     title: string;
@@ -40,44 +41,6 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, tren
     </div>
 );
 
-export const LivePulseWidget: React.FC<{ analytics: AdminAnalyticsSummary }> = ({ analytics }) => {
-    const latestCount = analytics.daily_views[analytics.daily_views.length - 1]?.count || 0;
-
-    return (
-        <StatCard
-            title="Live Pulse"
-            value={latestCount}
-            subtitle="Views Today"
-            className="relative overflow-hidden"
-        >
-            <div className="absolute top-4 right-4 flex items-center">
-                <span className="relative flex h-3 w-3 mr-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter">Live</span>
-            </div>
-            <div className="h-24 flex items-end gap-1 mt-2">
-                {analytics.daily_views.slice(-14).map((day, i) => {
-                    const max = Math.max(...analytics.daily_views.map(d => d.count), 1);
-                    const height = (day.count / max) * 100;
-                    return (
-                        <div
-                            key={day.date}
-                            className="flex-1 bg-emerald-100 rounded-t-sm hover:bg-emerald-500 transition-all duration-300 cursor-pointer group relative"
-                            style={{ height: `${Math.max(height, 5)}%` }}
-                        >
-                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-20">
-                                {day.date}: {day.count}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </StatCard>
-    );
-};
-
 export const ConversionFunnelWidget: React.FC<{ analytics: AdminAnalyticsSummary }> = ({ analytics }) => {
     const views = analytics.total_event_views || 0;
     const clicks = analytics.total_ticket_clicks || 0;
@@ -113,6 +76,7 @@ export const ConversionFunnelWidget: React.FC<{ analytics: AdminAnalyticsSummary
 };
 
 export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesResponse }> = ({ missed }) => {
+    const [clearing, setClearing] = React.useState(false);
     const [showAll, setShowAll] = React.useState(false);
 
     // Only show Topic gaps, ignore Location gaps as requested
@@ -121,9 +85,33 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
 
     const topGaps = allGaps.slice(0, 5);
 
+    const handleClear = async () => {
+        if (!confirm("Clear all failed search history? This cannot be undone.")) return;
+        setClearing(true);
+        try {
+            await analyticsAPI.clearMissedOpportunities();
+            window.location.reload(); // Simple refresh for now
+        } catch (e) {
+            console.error(e);
+            alert("Failed to clear history");
+        } finally {
+            setClearing(false);
+        }
+    };
+
     return (
         <>
             <StatCard title="Missed Opportunities" value={missed.total_failed_searches} subtitle="Failed Searches">
+                <div className="absolute top-4 right-4">
+                    <button
+                        onClick={handleClear}
+                        disabled={clearing || missed.total_failed_searches === 0}
+                        className="text-xs text-gray-400 hover:text-gray-900 disabled:opacity-50"
+                        title="Clear History"
+                    >
+                        {clearing ? "..." : "Dismiss All"}
+                    </button>
+                </div>
                 <div className="mt-4 space-y-3">
                     {topGaps.map((gap, i) => (
                         <div key={`${gap.type}-${gap.term}`} className="flex items-center justify-between">
@@ -235,3 +223,104 @@ export const TopContentWidget: React.FC<{ analytics: AdminAnalyticsSummary }> = 
         </div>
     </StatCard>
 );
+
+export const SupplyGapWidget: React.FC<{ gaps: SupplyGap[] }> = ({ gaps }) => {
+    return (
+        <StatCard title="Ghost Town Alert" value={gaps.length} subtitle="Days with low supply" trend={{ value: gaps.length, isPositive: gaps.length === 0 }}>
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200">
+                {gaps.length === 0 ? (
+                    <div className="text-sm text-gray-500 italic">No gaps detected. Good job!</div>
+                ) : (
+                    gaps.map(gap => (
+                        <div key={gap.date} className="flex-shrink-0 bg-rose-50 border border-rose-100 rounded-lg p-2 w-24 flex flex-col items-center">
+                            <span className="text-[10px] uppercase font-bold text-rose-400">{new Date(gap.date).toLocaleDateString('en-GB', { weekday: 'short' })}</span>
+                            <span className="text-sm font-bold text-gray-900">{new Date(gap.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                            <span className="mt-1 text-[10px] font-bold text-rose-600 bg-white px-1.5 py-0.5 rounded-full shadow-sm border border-rose-100">
+                                {gap.event_count} active
+                            </span>
+                        </div>
+                    ))
+                )}
+            </div>
+        </StatCard>
+    );
+};
+
+export const QualityIssuesWidget: React.FC<{ issues: QualityIssue[] }> = ({ issues }) => {
+    const totalIssues = issues.reduce((acc, curr) => acc + curr.count, 0);
+
+    return (
+        <StatCard title="Quality Control" value={totalIssues} subtitle="Issues to Fix">
+            <div className="mt-4 space-y-3">
+                {issues.map(issue => (
+                    <div key={issue.issue_type} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${issue.count > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+                            <span className="text-xs font-medium text-gray-600 capitalize">
+                                {issue.issue_type.replace('_', ' ')}
+                            </span>
+                        </div>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${issue.count > 0 ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-400'}`}>
+                            {issue.count}
+                        </span>
+                    </div>
+                ))}
+                {totalIssues === 0 && (
+                    <p className="text-xs text-emerald-600 font-medium text-center py-2 bg-emerald-50 rounded-lg">All clean!</p>
+                )}
+            </div>
+        </StatCard>
+    );
+};
+
+export const CategoryMixWidget: React.FC<{ mix: CategoryMixStats[] }> = ({ mix }) => {
+    // Sort by percentage desc
+    const sortedMix = [...mix].sort((a, b) => b.percentage - a.percentage).slice(0, 5);
+
+    return (
+        <StatCard title="Inventory Balance" value={`${mix.length}`} subtitle="Active Categories">
+            <div className="mt-4 space-y-3">
+                {sortedMix.map(cat => (
+                    <div key={cat.category_name} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                            <span className="font-medium text-gray-600 truncate max-w-[70%]">{cat.category_name}</span>
+                            <span className="text-gray-400">{cat.percentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                                className="bg-indigo-500 h-full rounded-full"
+                                style={{ width: `${cat.percentage}%` }}
+                            />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </StatCard>
+    );
+};
+
+export const PerformanceLeaderboardWidget: React.FC<{ events: OrganizerEventStats[] }> = ({ events }) => {
+    return (
+        <StatCard title="Top Performers" value={events.length} subtitle="High Engagement">
+            <div className="mt-4 space-y-3">
+                {events.length > 0 ? (
+                    events.map((event, i) => (
+                        <div key={event.event_id} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[10px] font-bold text-gray-400 w-4">{i + 1}.</span>
+                                <span className="text-xs text-gray-700 truncate group-hover:text-indigo-600 transition-colors cursor-pointer" title={event.title}>
+                                    {event.title}
+                                </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-900 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
+                                {event.views.toLocaleString()}
+                            </span>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-xs text-gray-400 italic text-center py-4">No data yet</p>
+                )}
+            </div>
+        </StatCard>
+    );
+};

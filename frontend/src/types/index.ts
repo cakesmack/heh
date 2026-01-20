@@ -131,6 +131,32 @@ export interface TokenResponse {
 
 export type VenueStatus = 'VERIFIED' | 'UNVERIFIED' | 'ARCHIVED';
 
+// Analytics Types
+export interface UnverifiedVenueStats {
+  id: string;
+  name: string;
+  address: string;
+  created_at: string;
+  event_count: number;
+}
+
+export interface SupplyGap {
+  date: string; // ISO date YYYY-MM-DD
+  event_count: number;
+}
+
+export interface QualityIssue {
+  issue_type: 'missing_image' | 'short_description' | 'missing_location';
+  count: number;
+  event_ids: string[];
+}
+
+export interface CategoryMixStats {
+  category_name: string;
+  count: number;
+  percentage: number;
+}
+
 export interface Venue {
   id: string;
   name: string;

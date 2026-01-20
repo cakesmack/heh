@@ -23,6 +23,13 @@ import type {
   VenueCategory,
   VenueCategoryCreate,
   VenueCategoryUpdate,
+  VenueStaffCreate,
+  VenueStaffResponse,
+  MissedOpportunitiesResponse,
+  SupplyGap,
+  QualityIssue,
+  CategoryMixStats,
+  OrganizerEventStats,
 
 
   PromotionResponse,
@@ -48,9 +55,6 @@ import type {
   Collection,
   CollectionCreate,
   CollectionUpdate,
-  MissedOpportunitiesResponse,
-  VenueStaffResponse,
-  VenueStaffCreate,
   UserPreferences,
   UserPreferencesUpdate,
   SlotType,
@@ -953,6 +957,26 @@ export const analyticsAPI = {
    */
   getMissedOpportunities: async (days: number = 30): Promise<MissedOpportunitiesResponse> => {
     return apiFetch<MissedOpportunitiesResponse>(`/api/analytics/missed-opportunities?days=${days}`);
+  },
+
+  async clearMissedOpportunities(): Promise<void> {
+    return apiFetch<void>('/analytics/missed-opportunities', { method: 'DELETE' });
+  },
+
+  async getSupplyGaps(threshold: number = 3, days: number = 30): Promise<SupplyGap[]> {
+    return apiFetch<SupplyGap[]>(`/analytics/supply-gaps?threshold=${threshold}&days=${days}`);
+  },
+
+  async getQualityIssues(): Promise<QualityIssue[]> {
+    return apiFetch<QualityIssue[]>('/analytics/quality-issues');
+  },
+
+  async getCategoryMix(): Promise<CategoryMixStats[]> {
+    return apiFetch<CategoryMixStats[]>('/analytics/category-mix');
+  },
+
+  async getTopPerformers(limit: number = 5, days: number = 30): Promise<OrganizerEventStats[]> {
+    return apiFetch<OrganizerEventStats[]>(`/api/analytics/top-performers?limit=${limit}&days=${days}`);
   },
 };
 

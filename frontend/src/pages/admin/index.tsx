@@ -3,14 +3,23 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import AdminHealthStrip from '@/components/admin/AdminHealthStrip';
 import { adminAPI, analyticsAPI } from '@/lib/api';
-import { AdminAnalyticsSummary, AdminDashboardStats, MissedOpportunitiesResponse } from '@/types';
+import {
+  AdminAnalyticsSummary,
+  AdminDashboardStats,
+  MissedOpportunitiesResponse,
+  SupplyGap,
+  QualityIssue,
+  CategoryMixStats,
+  OrganizerEventStats
+} from '@/types';
 import Link from 'next/link';
 import {
-  LivePulseWidget,
   ConversionFunnelWidget,
   MissedOpportunitiesWidget,
-  TopContentWidget,
-  StatCard
+  SupplyGapWidget,
+  QualityIssuesWidget,
+  CategoryMixWidget,
+  PerformanceLeaderboardWidget
 } from '@/components/admin/AnalyticsWidgets';
 import RisingLocationsWidget from '@/components/admin/dashboard/RisingLocationsWidget';
 
@@ -18,20 +27,42 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [analytics, setAnalytics] = useState<AdminAnalyticsSummary | null>(null);
   const [missedOpportunities, setMissedOpportunities] = useState<MissedOpportunitiesResponse | null>(null);
+  const [supplyGaps, setSupplyGaps] = useState<SupplyGap[]>([]);
+  const [qualityIssues, setQualityIssues] = useState<QualityIssue[]>([]);
+  const [categoryMix, setCategoryMix] = useState<CategoryMixStats[]>([]);
+  const [topPerformers, setTopPerformers] = useState<OrganizerEventStats[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [statsData, analyticsData, missedData] = await Promise.all([
+        const [
+          statsData,
+          analyticsData,
+          missedData,
+          gapsData,
+          issuesData,
+          mixData,
+          performersData
+        ] = await Promise.all([
           adminAPI.getStats(),
           analyticsAPI.getAdminSummary(30),
-          analyticsAPI.getMissedOpportunities(30)
+          analyticsAPI.getMissedOpportunities(30),
+          analyticsAPI.getSupplyGaps(3, 30),
+          analyticsAPI.getQualityIssues(),
+          analyticsAPI.getCategoryMix(),
+          analyticsAPI.getTopPerformers(5, 30)
         ]);
+
         setStats(statsData);
         setAnalytics(analyticsData);
         setMissedOpportunities(missedData);
+        setSupplyGaps(gapsData);
+        setQualityIssues(issuesData);
+        setCategoryMix(mixData);
+        setTopPerformers(performersData);
       } catch (err) {
         console.error('Failed to fetch stats:', err);
         setError('Failed to load dashboard stats');
@@ -41,15 +72,6 @@ export default function AdminDashboard() {
     };
     fetchStats();
   }, []);
-
-  const calculateGrowth = (current: number, previous?: number) => {
-    if (!previous || previous === 0) return { value: 0, isPositive: true };
-    const diff = ((current - previous) / previous) * 100;
-    return {
-      value: Math.round(Math.abs(diff)),
-      isPositive: diff >= 0
-    };
-  };
 
   return (
     <AdminGuard>
@@ -64,8 +86,8 @@ export default function AdminDashboard() {
           {/* Header Section */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Platform Overview</h1>
-              <p className="text-gray-500 mt-1 text-sm">Real-time health and performance metrics.</p>
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Act Now</h1>
+              <p className="text-gray-500 mt-1 text-sm">Prioritize inventory health and actionable insights.</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">
@@ -83,40 +105,40 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Bento Grid Analytics */}
+          {/* Actionable Insights Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {loading ? (
               // Skeleton Loading
-              Array.from({ length: 4 }).map((_, i) => (
+              Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="bg-white rounded-2xl h-48 animate-pulse border border-gray-100 shadow-sm" />
               ))
-            ) : analytics && (
+            ) : (
               <>
-                {/* Main Stats */}
-                <StatCard
-                  title="Total Traffic"
-                  value={analytics.total_views.toLocaleString()}
-                  subtitle="Last 30 Days"
-                  trend={calculateGrowth(analytics.total_views, analytics.previous_total_views)}
-                />
-
-                <StatCard
-                  title="Unique Visitors"
-                  value={analytics.total_unique_visitors.toLocaleString()}
-                  subtitle="Estimated Sessions"
-                />
-
-                <LivePulseWidget analytics={analytics} />
-
-                <ConversionFunnelWidget analytics={analytics} />
-
-                {/* Second Row */}
+                {/* Row 1: Immediate Supply Actions */}
                 <div className="lg:col-span-2">
                   <RisingLocationsWidget />
                 </div>
+                <div className="lg:col-span-2">
+                  <SupplyGapWidget gaps={supplyGaps} />
+                </div>
 
+                {/* Row 2: Quality & Mix Strategy */}
+                <div className="lg:col-span-1">
+                  <QualityIssuesWidget issues={qualityIssues} />
+                </div>
+                <div className="lg:col-span-1">
+                  <CategoryMixWidget mix={categoryMix} />
+                </div>
                 <div className="lg:col-span-2">
                   {missedOpportunities && <MissedOpportunitiesWidget missed={missedOpportunities} />}
+                </div>
+
+                {/* Row 3: Performance & Growth */}
+                <div className="lg:col-span-2">
+                  <PerformanceLeaderboardWidget events={topPerformers} />
+                </div>
+                <div className="lg:col-span-2">
+                  {analytics && <ConversionFunnelWidget analytics={analytics} />}
                 </div>
               </>
             )}
