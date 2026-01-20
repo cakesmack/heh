@@ -126,6 +126,17 @@ async def lifespan(app: FastAPI):
                     
                     -- Normalize existing status to uppercase if column exists
                     UPDATE venues SET status = upper(status);
+
+                    -- Add Map Display Fields for Multi-Venue Events
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='map_display_lat') THEN
+                        ALTER TABLE events ADD COLUMN map_display_lat FLOAT;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='map_display_lng') THEN
+                        ALTER TABLE events ADD COLUMN map_display_lng FLOAT;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='map_display_label') THEN
+                        ALTER TABLE events ADD COLUMN map_display_label VARCHAR(255);
+                    END IF;
                 END $$;
             """))
             conn.commit()

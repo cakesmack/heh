@@ -17,6 +17,7 @@ import RichTextEditor from '@/components/common/RichTextEditor';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 import LocationPickerMap from '@/components/maps/LocationPickerMap';
 import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
+import { MapPinAdjuster } from '@/components/events/MapPinAdjuster';
 import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';
 import { ShowtimeCreate } from '@/types';
 
@@ -45,6 +46,10 @@ export default function EditEventPage() {
         ends_on: 'never', // 'never' | 'date'
         recurrence_end_date: '',
         weekdays: [] as number[],  // 0=Mon, 1=Tue, ... 6=Sun
+        // Map Display Override
+        map_display_lat: null as number | null,
+        map_display_lng: null as number | null,
+        map_display_label: '',
     });
 
     // Helper to format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input
@@ -147,6 +152,11 @@ export default function EditEventPage() {
                     ends_on: 'never',
                     recurrence_end_date: '',
                     weekdays: [],  // Existing events don't have weekdays stored, default to empty
+
+                    // Map Display
+                    map_display_lat: eventData.map_display_lat ?? null,
+                    map_display_lng: eventData.map_display_lng ?? null,
+                    map_display_label: eventData.map_display_label || '',
                 });
 
                 // Track original recurring status for UI logic
@@ -378,6 +388,10 @@ export default function EditEventPage() {
                 recurrence_end_date: (currentFormData.is_recurring && currentFormData.ends_on === 'date') ? new Date(currentFormData.recurrence_end_date).toISOString() : null,
                 participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : [],
                 showtimes: showtimesPayload,
+                // Map Display
+                map_display_lat: currentFormData.map_display_lat,
+                map_display_lng: currentFormData.map_display_lng,
+                map_display_label: currentFormData.map_display_label || null,
             };
 
             // DEBUG: Log exact payload being sent

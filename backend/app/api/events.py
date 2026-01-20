@@ -792,7 +792,11 @@ def create_event(
         # For recurring events, set recurrence_group_id to own ID (will be shared with children)
         recurrence_group_id=normalize_uuid(uuid4()) if (event_data.is_recurring if event_data.is_recurring is not None else False) else None,
         # Status will be set below based on trust evaluation
-        status="pending"
+        status="pending",
+        # Map Display Point
+        map_display_lat=event_data.map_display_lat,
+        map_display_lng=event_data.map_display_lng,
+        map_display_label=event_data.map_display_label
     )
 
     # Content Moderation: Check for offensive language
@@ -867,6 +871,35 @@ def create_event(
                     venue_id=normalize_uuid(p_venue_id)
                 )
                 session.add(p_venue_link)
+
+    # ---------------------------------------------------------
+    # Task 3: Multi-Venue Map Display Logic (Centroid Fallback)
+    # ---------------------------------------------------------
+    # If no custom map point is set, calculating centroid of all participating venues
+    if new_event.map_display_lat is None or new_event.map_display_lng is None:
+        if event_data.participating_venue_ids:
+            # We have IDs, fetch the venues to get coords
+            # Optimization: We can fetch them in one batch query instead of loop above, 
+            # but usually this list is small (<20).
+            # We can re-fetch or use session cache.
+            # Let's query venues by ID list
+            p_venue_uuids = [normalize_uuid(vid) for vid in event_data.participating_venue_ids]
+            p_venues = session.exec(select(Venue).where(Venue.id.in_(p_venue_uuids))).all()
+            
+            valid_venues = [v for v in p_venues if v.latitude is not None and v.longitude is not None]
+            count = len(valid_venues)
+            
+            if count > 0:
+                total_lat = sum(v.latitude for v in valid_venues)
+                total_lng = sum(v.longitude for v in valid_venues)
+                
+                new_event.map_display_lat = total_lat / count
+                new_event.map_display_lng = total_lng / count
+                # Default label if missing
+                if not new_event.map_display_label:
+                    new_event.map_display_label = "Event Location (Center)"
+                
+                logger.info(f"[CREATE_EVENT] Calculated Centroid for Multi-Venue Event {new_event.id}: {new_event.map_display_lat}, {new_event.map_display_lng}")
 
     # Handle showtimes
     if event_data.showtimes:
@@ -1289,6 +1322,32 @@ def update_event(
             if venue:
                 link = EventParticipatingVenue(event_id=event.id, venue_id=venue.id)
                 session.add(link)
+
+    # ---------------------------------------------------------
+    # Task 3: Multi-Venue Map Display Logic (Centroid Fallback)
+    # ---------------------------------------------------------
+    # If no custom map point is set, calculating centroid of all participating venues
+    if event.map_display_lat is None or event.map_display_lng is None:
+        # Fetch fresh list of participating venues
+        p_venues_stmt = select(Venue).join(EventParticipatingVenue).where(EventParticipatingVenue.event_id == event.id)
+        participating_venues = session.exec(p_venues_stmt).all()
+        
+        if participating_venues:
+            # Calculate Centroid
+            valid_venues = [v for v in participating_venues if v.latitude is not None and v.longitude is not None]
+            count = len(valid_venues)
+            
+            if count > 0:
+                total_lat = sum(v.latitude for v in valid_venues)
+                total_lng = sum(v.longitude for v in valid_venues)
+                
+                event.map_display_lat = total_lat / count
+                event.map_display_lng = total_lng / count
+                # Default label if missing
+                if not event.map_display_label:
+                    event.map_display_label = "Event Location (Center)"
+                
+                logger.info(f"[UPDATE_EVENT] Calculated Centroid for Multi-Venue Event {event.id}: {event.map_display_lat}, {event.map_display_lng}")
 
     # Handle tags update
     if event_data.tags is not None:

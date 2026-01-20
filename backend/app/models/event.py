@@ -65,6 +65,11 @@ class Event(SQLModel, table=True):
     longitude: Optional[float] = Field(default=None, index=True)
     geohash: Optional[str] = Field(default=None, max_length=12, index=True)
 
+    # Custom Map Display Point (for multi-venue events)
+    map_display_lat: Optional[float] = Field(default=None)
+    map_display_lng: Optional[float] = Field(default=None)
+    map_display_label: Optional[str] = Field(default=None, max_length=255)
+
     # Classification - SET NULL so events survive if category is deleted
     category_id: Optional[str] = Field(
         default=None,

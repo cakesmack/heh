@@ -314,6 +314,10 @@ export interface EventResponse extends Event {
   organizer_profile?: OrganizerProfileResponse;
   participating_venues?: VenueResponse[];
   showtimes?: Showtime[];
+  // Map Display
+  map_display_lat?: number;
+  map_display_lng?: number;
+  map_display_label?: string;
 }
 
 export interface EventCreate {

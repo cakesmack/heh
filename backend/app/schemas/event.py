@@ -87,6 +87,10 @@ class EventCreate(BaseModel):
     participating_venue_ids: Optional[List[UUID]] = Field(None, description="List of IDs for other participating venues")
     # Showtimes (Theatre/Cinema workflow)
     showtimes: Optional[List[ShowtimeCreate]] = Field(None, description="Multiple showtimes for this event")
+    # Map Display Point
+    map_display_lat: Optional[float] = None
+    map_display_lng: Optional[float] = None
+    map_display_label: Optional[str] = Field(None, max_length=255)
 
 class EventUpdate(BaseModel):
     """Schema for updating an existing event."""
@@ -98,6 +102,10 @@ class EventUpdate(BaseModel):
     location_name: Optional[str] = Field(None, max_length=255)
     category_id: Optional[str] = None
     tags: Optional[List[str]] = Field(None, description="List of tag names")
+    # Map Display Point
+    map_display_lat: Optional[float] = None
+    map_display_lng: Optional[float] = None
+    map_display_label: Optional[str] = Field(None, max_length=255)
     price: Optional[Union[str, float]] = Field(None, description="Price as text or number")
     image_url: Optional[str] = Field(None, max_length=500)
     # Phase 2.10 additions
@@ -165,6 +173,11 @@ class EventResponse(BaseModel):
     # Computed fields (populated by endpoint logic)
     venue_name: Optional[str] = None
     distance_km: Optional[float] = None
+
+    # Map Display Point
+    map_display_lat: Optional[float] = None
+    map_display_lng: Optional[float] = None
+    map_display_label: Optional[str] = None
 
     view_count: int = 0
     save_count: int = 0
