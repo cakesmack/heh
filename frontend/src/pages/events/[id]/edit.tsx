@@ -678,6 +678,20 @@ export default function EditEventPage() {
                                     {participatingVenues.length === 0 && (
                                         <p className="text-xs text-amber-600">Please add at least one participating venue.</p>
                                     )}
+
+                                    {/* Map Pin Adjuster for Multi-Venue */}
+                                    {participatingVenues.length > 0 && (
+                                        <div className="mt-6 border-t pt-4">
+                                            <MapPinAdjuster
+                                                participatingVenues={participatingVenues}
+                                                currentLat={formData.map_display_lat}
+                                                currentLng={formData.map_display_lng}
+                                                label={formData.map_display_label}
+                                                onChange={(lat, lng) => setFormData(prev => ({ ...prev, map_display_lat: lat, map_display_lng: lng }))}
+                                                onLabelChange={(label) => setFormData(prev => ({ ...prev, map_display_label: label }))}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
