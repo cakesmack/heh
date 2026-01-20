@@ -11,6 +11,7 @@ interface MapSidebarProps {
     hoveredEventId: string | null;
     onEventClick: (event: EventResponse) => void;
     onHover: (eventId: string | null) => void;
+    onFocusEvent: (eventId: string) => void;
 }
 
 export default function MapSidebar({
@@ -20,7 +21,8 @@ export default function MapSidebar({
     selectedMarkerId,
     hoveredEventId,
     onEventClick,
-    onHover
+    onHover,
+    onFocusEvent
 }: MapSidebarProps) {
     if (loading) {
         return (
@@ -91,6 +93,7 @@ export default function MapSidebar({
                                     isSelected={selectedMarkerId === event.id}
                                     onClick={() => onEventClick(event)}
                                     onHover={(isHovering) => onHover(isHovering ? event.id : null)}
+                                    onFocus={() => onFocusEvent(event.id)}
                                 />
                             ))}
                         </div>

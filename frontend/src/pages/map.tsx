@@ -227,6 +227,11 @@ export function MapPage() {
             router.push(`/events/${event.id}`);
           }}
           onHover={(eventId) => setHoveredEventId(eventId)}
+          onFocusEvent={(eventId) => {
+            setFocusEventId(eventId);
+            // Also ensure it's selected (for marker highlight)
+            setSelectedMarkerId(eventId);
+          }}
         />
 
         {/* Right Panel - Map */}

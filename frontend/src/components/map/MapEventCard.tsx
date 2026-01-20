@@ -9,13 +9,15 @@ interface MapEventCardProps {
     isSelected?: boolean;
     onClick?: () => void;
     onHover?: (isHovering: boolean) => void;
+    onFocus?: () => void;
 }
 
 export default function MapEventCard({
     event,
     isSelected = false,
     onClick,
-    onHover
+    onHover,
+    onFocus
 }: MapEventCardProps) {
     // Format date
     const startDate = new Date(event.date_start);
@@ -70,23 +72,45 @@ export default function MapEventCard({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span className="truncate">{event.venue_name || 'Unknown Venue'}</span>
+                        <span className="truncate">
+                            {event.participating_venues && event.participating_venues.length > 0
+                                ? `${event.participating_venues.length} Participating Venues`
+                                : event.venue_name || 'Unknown Venue'}
+                        </span>
                     </div>
                 </div>
 
-                {/* Footer Actions (Optional) */}
-                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-50">
-                    {event.ticket_url && (
+                {/* Footer Actions */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+                    {event.ticket_url ? (
                         <span className="text-[10px] font-medium text-gray-400">
                             Tickets Available
                         </span>
-                    )}
-                    <span className="ml-auto text-xs font-semibold text-emerald-600 flex items-center group-hover:underline">
-                        Details
-                        <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </span>
+                    ) : (<span></span>)}
+
+                    <div className="flex items-center gap-3">
+                        {/* Map Focus Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onFocus?.();
+                            }}
+                            className="text-gray-400 hover:text-emerald-600 transition-colors p-1 -mr-1 rounded-full hover:bg-gray-100"
+                            title="View on Map"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </button>
+
+                        <span className="text-xs font-semibold text-emerald-600 flex items-center group-hover:underline">
+                            Details
+                            <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
