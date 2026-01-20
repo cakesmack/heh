@@ -62,6 +62,12 @@ export default function AdminVenues() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Filters & Sorting state
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterCategory, setFilterCategory] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'name' | 'activity'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
   // Stats Modal State
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [viewingStatsVenue, setViewingStatsVenue] = useState<VenueResponse | null>(null);
@@ -168,12 +174,30 @@ export default function AdminVenues() {
     setLoading(true);
     try {
       // Use search endpoint if query exists, otherwise list
+      // BUT list supports complex filters, search logic might be limited or different
+      // If we are just filtering/sorting, we should use 'list'. search is for fuzzy text search.
+      // If searchQuery is present, we MIGHT lose other filters if 'search' API doesn't support them.
+      // HOWEVER, admin dashboard usually prefers LIST endpoint with filters.
+      // Let's assume list endpoint handles everything if we don't have a specific text search?
+      // Actually, 'list_venues' doesn't seem to support text search 'q'.
+      // Only 'search_venues' supports 'q'.
+      // So if 'searchQuery' is active, we use search.
+      // If NOT active, we use list with filters.
+
       if (searchQuery && searchQuery.length >= 2) {
+        // Search API currently doesn't support status/category filters (based on backend code)
+        // We might want to fix that later, but for now behave as is.
         const response = await venuesAPI.search(searchQuery, 50);
         setVenues(response.venues);
         setTotal(response.total);
       } else {
-        const response = await venuesAPI.list({ limit: 100 });
+        const response = await venuesAPI.list({
+          limit: 100,
+          status: filterStatus || undefined,
+          category_id: filterCategory || undefined,
+          sort_by: sortBy,
+          sort_dir: sortDir
+        });
         setVenues(response.venues);
         setTotal(response.total);
       }
@@ -182,7 +206,7 @@ export default function AdminVenues() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, filterStatus, filterCategory, sortBy, sortDir]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -205,6 +229,7 @@ export default function AdminVenues() {
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
+      // Only fetch if query changed significantly or is empty
       fetchVenues();
     }, 300);
     return () => clearTimeout(timer);
@@ -405,32 +430,62 @@ export default function AdminVenues() {
     <AdminGuard>
       <AdminLayout title="Venues">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <p className="text-gray-600">Manage venues ({total} total)</p>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search venues..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              />
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <div className="flex flex-col gap-4 w-full">
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600">Manage venues ({total} total)</p>
+              <button
+                onClick={openCreateModal}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+                Add Venue
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Search */}
+              <div className="relative flex-grow max-w-md">
+                <input
+                  type="text"
+                  placeholder="Search venues..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              {/* Status Filter */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">All Statuses</option>
+                <option value="VERIFIED">Verified</option>
+                <option value="UNVERIFIED">Unverified</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+
+              {/* Category Filter */}
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
             </div>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-          >
-            Add Venue
-          </button>
         </div>
 
         {/* Venues Table */}
@@ -447,10 +502,44 @@ export default function AdminVenues() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Name</th>
+                  <th
+                    className="text-left py-3 px-4 font-medium text-gray-600 text-sm cursor-pointer hover:bg-gray-100"
+                    onClick={() => {
+                      if (sortBy === 'name') {
+                        setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('name');
+                        setSortDir('asc');
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      Name
+                      {sortBy === 'name' && (
+                        <span>{sortDir === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Type</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Manager</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Events</th>
+                  <th
+                    className="text-left py-3 px-4 font-medium text-gray-600 text-sm cursor-pointer hover:bg-gray-100"
+                    onClick={() => {
+                      if (sortBy === 'activity') {
+                        setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('activity');
+                        setSortDir('desc'); // Default to high activity
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      Events
+                      {sortBy === 'activity' && (
+                        <span>{sortDir === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 text-sm">Actions</th>
                 </tr>
               </thead>

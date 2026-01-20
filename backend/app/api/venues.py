@@ -66,9 +66,16 @@ def build_venue_response(venue: Venue, session: Session, latitude: float = None,
         distance_km = haversine_distance(latitude, longitude, venue.latitude, venue.longitude)
 
     # Count upcoming events
+    # Count upcoming events (Main Venue OR Participating Venue)
+    from app.models.event_participating_venue import EventParticipatingVenue
+    
     upcoming_events_count = session.exec(
-        select(func.count(Event.id))
-        .where(Event.venue_id == venue.id)
+        select(func.count(func.distinct(Event.id)))
+        .outerjoin(EventParticipatingVenue, Event.id == EventParticipatingVenue.event_id)
+        .where(
+            (Event.venue_id == venue.id) | 
+            (EventParticipatingVenue.venue_id == venue.id)
+        )
         .where(Event.date_start >= func.now())
     ).one()
 
@@ -250,30 +257,28 @@ def list_venues(
     latitude: Optional[float] = None,
     longitude: Optional[float] = None,
     radius_km: Optional[float] = None,
-    sort_by: Optional[str] = Query(None, description="Sort order: 'activity' (future events count) or 'name' (default A-Z)"),
+    sort_by: Optional[str] = Query(None, description="Sort field: 'activity' or 'name'"),
+    sort_dir: str = Query("asc", description="Sort direction: 'asc' or 'desc'"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=1000),
+    status: Optional[str] = Query(None, description="Status to filter by"),
     exclude_status: Optional[str] = Query(None, description="Status to exclude"),
     session: Session = Depends(get_session)
 ):
     """
     List venues with optional filtering.
-
-    Supports filtering by:
-    - Category ID
-    - Category
-    - Geographic proximity (latitude, longitude, radius)
-    
-    Supports sorting by:
-    - name (default): Alphabetical A-Z
-    - activity: By count of future events (most active first)
     """
     # Build base query
     if sort_by == "activity":
-        # Subquery to count future events per venue
+        from app.models.event_participating_venue import EventParticipatingVenue
+        # Subquery to count future events per venue (Main + Participating)
         future_events_count = (
-            select(func.count(Event.id))
-            .where(Event.venue_id == Venue.id)
+            select(func.count(func.distinct(Event.id)))
+            .outerjoin(EventParticipatingVenue, Event.id == EventParticipatingVenue.event_id)
+            .where(
+                (Event.venue_id == Venue.id) | 
+                (EventParticipatingVenue.venue_id == Venue.id)
+            )
             .where(Event.date_start >= func.now())
             .correlate(Venue)
             .scalar_subquery()
@@ -289,6 +294,10 @@ def list_venues(
     # Filter by owner
     if owner_id:
         query = query.where(Venue.owner_id == owner_id)
+        
+    # Filter by status
+    if status:
+        query = query.where(Venue.status == status)
 
     # Exclude status
     if exclude_status:
@@ -304,17 +313,28 @@ def list_venues(
 
     # Apply sorting
     if sort_by == "activity":
-        query = query.order_by(future_events_count.desc(), Venue.name)
+        if sort_dir == "desc":
+             query = query.order_by(future_events_count.desc(), Venue.name)
+        else:
+             query = query.order_by(future_events_count.asc(), Venue.name)
     else:
-        query = query.order_by(Venue.name)
+        # Default name sort
+        if sort_dir == "desc":
+            query = query.order_by(Venue.name.desc())
+        else:
+            query = query.order_by(Venue.name.asc())
 
     # Count total (need to handle subquery differently for activity sort)
     if sort_by == "activity":
-        count_query = select(func.count()).select_from(
-            select(Venue.id).where(
-                (Venue.category_id == category_id) if category_id else True
-            ).subquery()
-        )
+        # Simplified count just for total (ignoring sorting logic)
+        count_query = select(func.count()).select_from(Venue)
+        if category_id:
+            count_query = count_query.where(Venue.category_id == category_id)
+        if status:
+             count_query = count_query.where(Venue.status == status)
+        if exclude_status:
+             count_query = count_query.where(Venue.status != exclude_status)
+             
         total = session.exec(count_query).one()
     else:
         total = session.exec(select(func.count()).select_from(query.subquery())).one()
