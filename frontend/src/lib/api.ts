@@ -975,6 +975,10 @@ export const analyticsAPI = {
     return apiFetch<CategoryMixStats[]>('/api/analytics/category-mix');
   },
 
+  async getQualityIssueDetails(issueType: string): Promise<OrganizerEventStats[]> {
+    return apiFetch<OrganizerEventStats[]>(`/api/analytics/quality-issues/details?issue_type=${issueType}`);
+  },
+
   async getTopPerformers(limit: number = 5, days: number = 30): Promise<OrganizerEventStats[]> {
     return apiFetch<OrganizerEventStats[]>(`/api/analytics/top-performers?limit=${limit}&days=${days}`);
   },

@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import Modal from './Modal';
 import { AdminAnalyticsSummary, MissedOpportunitiesResponse, SupplyGap, QualityIssue, CategoryMixStats, OrganizerEventStats } from '@/types';
 import { analyticsAPI } from '@/lib/api';
 
@@ -248,27 +250,98 @@ export const SupplyGapWidget: React.FC<{ gaps: SupplyGap[] }> = ({ gaps }) => {
 
 export const QualityIssuesWidget: React.FC<{ issues: QualityIssue[] }> = ({ issues }) => {
     const totalIssues = issues.reduce((acc, curr) => acc + curr.count, 0);
+    const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
+    const [issueEvents, setIssueEvents] = useState<OrganizerEventStats[]>([]);
+    const [loadingDetails, setLoadingDetails] = useState(false);
+
+    const handleIssueClick = async (issueType: string) => {
+        if (loadingDetails) return;
+        setSelectedIssue(issueType);
+        setLoadingDetails(true);
+        try {
+            const events = await analyticsAPI.getQualityIssueDetails(issueType);
+            setIssueEvents(events);
+        } catch (error) {
+            console.error(error);
+            setIssueEvents([]);
+        } finally {
+            setLoadingDetails(false);
+        }
+    };
+
+    const handleClose = () => {
+        setSelectedIssue(null);
+        setIssueEvents([]);
+    };
 
     return (
         <StatCard title="Quality Control" value={totalIssues} subtitle="Issues to Fix">
             <div className="mt-4 space-y-3">
                 {issues.map(issue => (
-                    <div key={issue.issue_type} className="flex items-center justify-between">
+                    <div
+                        key={issue.issue_type}
+                        className={`flex items-center justify-between p-2 rounded-lg transition-colors cursor-pointer hover:bg-gray-50 ${selectedIssue === issue.issue_type ? 'bg-gray-50 rings-1 ring-gray-200' : ''}`}
+                        onClick={() => handleIssueClick(issue.issue_type)}
+                    >
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${issue.count > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
                             <span className="text-xs font-medium text-gray-600 capitalize">
                                 {issue.issue_type.replace('_', ' ')}
                             </span>
                         </div>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${issue.count > 0 ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-400'}`}>
-                            {issue.count}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${issue.count > 0 ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-400'}`}>
+                                {issue.count}
+                            </span>
+                            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </div>
                     </div>
                 ))}
                 {totalIssues === 0 && (
                     <p className="text-xs text-emerald-600 font-medium text-center py-2 bg-emerald-50 rounded-lg">All clean!</p>
                 )}
             </div>
+
+            {/* Details Modal */}
+            {selectedIssue && (
+                <Modal
+                    isOpen={!!selectedIssue}
+                    onClose={handleClose}
+                    title={`Fix: ${selectedIssue.replace('_', ' ')}`}
+                    size="lg"
+                >
+                    <div className="max-h-[60vh] overflow-y-auto p-1">
+                        {loadingDetails ? (
+                            <div className="flex justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                            </div>
+                        ) : issueEvents.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">No events found for this issue type.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                <p className="text-sm text-gray-500 mb-4">The following events have been flagged. Click to edit and resolve.</p>
+                                {issueEvents.map(event => (
+                                    <div key={event.event_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+                                        <div className="min-w-0 flex-1 mr-4">
+                                            <h4 className="text-sm font-medium text-gray-900 truncate">{event.title}</h4>
+                                            <p className="text-xs text-gray-400">ID: {event.event_id.substring(0, 8)}...</p>
+                                        </div>
+                                        <Link
+                                            href={`/events/${event.event_id}/edit`}
+                                            target="_blank"
+                                            className="text-xs font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
+                                        >
+                                            Fix Issue &rarr;
+                                        </Link>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </Modal>
+            )}
         </StatCard>
     );
 };

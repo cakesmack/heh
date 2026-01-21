@@ -613,6 +613,53 @@ def get_quality_issues(
     ]
 
 
+@router.get("/quality-issues/details", response_model=List[OrganizerEventStats])
+def get_quality_issue_details(
+    issue_type: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get detailed list of events for a specific quality issue.
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    today = datetime.utcnow()
+    
+    # Base query: Active events only
+    base_query = select(Event).where(Event.date_end >= today)
+    active_events = session.exec(base_query).all()
+    
+    matching_events = []
+    
+    for event in active_events:
+        is_issue = False
+        
+        if issue_type == 'missing_image':
+            if not event.image_url:
+                is_issue = True
+        elif issue_type == 'short_description':
+            if not event.description or len(event.description) < 50:
+                is_issue = True
+        elif issue_type == 'missing_location':
+            if event.latitude is None or (abs(event.latitude) < 0.0001 and abs(event.longitude) < 0.0001):
+                is_issue = True
+                
+        if is_issue:
+            # Calculate basic stats (or pass 0 if not needed for this view)
+            matching_events.append(OrganizerEventStats(
+                event_id=event.id,
+                title=event.title,
+                views=0, # Not needed for this view
+                saves=0,
+                ticket_clicks=0,
+                is_series=event.parent_event_id is not None
+            ))
+            
+    return matching_events
+
+
 class CategoryMixStats(BaseModel):
     category_name: str
     count: int
