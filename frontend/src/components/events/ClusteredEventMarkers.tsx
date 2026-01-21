@@ -36,6 +36,12 @@ function EventMarkerWithRef({
     setMarkerRef: (marker: Marker | null, key: string) => void;
 }) {
 
+    const ref = useCallback(
+        (marker: google.maps.marker.AdvancedMarkerElement | null) => {
+            setMarkerRef(marker, event.id);
+        },
+        [setMarkerRef, event.id]
+    );
 
     // Determine marker color based on category
     const categoryColor = event.category?.gradient_color || '#10b981';
@@ -44,9 +50,7 @@ function EventMarkerWithRef({
     return (
         <AdvancedMarker
             position={{ lat: event.latitude, lng: event.longitude }}
-            ref={(marker) => {
-                setMarkerRef(marker, event.id)
-            }}
+            ref={ref}
             onClick={onClick}
             title={event.title}
         >
