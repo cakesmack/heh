@@ -45,10 +45,6 @@ function EventMarkerWithRef({
         <AdvancedMarker
             position={{ lat: event.latitude, lng: event.longitude }}
             ref={(marker) => {
-                if (marker) {
-                    // @ts-ignore
-                    marker.eventId = event.id;
-                }
                 setMarkerRef(marker, event.id)
             }}
             onClick={onClick}
@@ -95,6 +91,8 @@ export function ClusteredEventMarkers({
     onClusterClick,
     isMobile = false,
 }: ClusteredEventMarkersProps) {
+    // Robust mapping of Marker -> EventID using refs to avoid closure staleness
+    const markerToEventId = useMemo(() => new Map<google.maps.marker.AdvancedMarkerElement, string>(), []);
     const [markers, setMarkers] = useState<{ [key: string]: Marker }>({});
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
@@ -143,15 +141,15 @@ export function ClusteredEventMarkers({
                     const clusterMarkers = cluster.markers || [];
                     const clusterPosition = cluster.position;
 
-                    // Improved Event Lookup: Use attached eventId on markers
+                    // Improved Event Lookup: Use memoized map to lookup ID from marker instance
                     const eventsInCluster = clusterMarkers
                         .map(m => {
-                            // @ts-ignore
-                            const eventId = m.eventId;
-                            // Find the event in our full list
+                            const marker = m as google.maps.marker.AdvancedMarkerElement;
+                            const eventId = markerToEventId.get(marker);
+                            if (!eventId) return null;
                             return events.find(e => e.id === eventId);
                         })
-                        .filter((e): e is EventResponse => !!e); // Filter out undefined
+                        .filter((e): e is EventResponse => !!e);
 
                     // Determine bounds of the cluster
                     const bounds = new google.maps.LatLngBounds();
@@ -219,7 +217,7 @@ export function ClusteredEventMarkers({
                 clustererInstance.setMap(null);
             }
         };
-    }, [map, events]);
+    }, [map, events, markerToEventId]);
 
     // Update clusterer when markers change
     useEffect(() => {
@@ -235,19 +233,27 @@ export function ClusteredEventMarkers({
 
     // Cleanup on unmount - handled in the init useEffect above
 
-    // Callback to track markers
+    // Callback to track markers and populate Map
     const setMarkerRef = useCallback((marker: Marker | null, key: string) => {
         setMarkers(prev => {
             if ((marker && prev[key]) || (!marker && !prev[key])) return prev;
 
             if (marker) {
+                // Add to Map
+                markerToEventId.set(marker as google.maps.marker.AdvancedMarkerElement, key);
                 return { ...prev, [key]: marker };
             } else {
+                // Remove from Map
+                const oldMarker = prev[key] as google.maps.marker.AdvancedMarkerElement;
+                if (oldMarker) {
+                    markerToEventId.delete(oldMarker);
+                }
+
                 const { [key]: _, ...rest } = prev;
                 return rest;
             }
         });
-    }, []);
+    }, [markerToEventId]);
 
     // Handle marker click
     const handleMarkerClick = useCallback((event: EventResponse) => {
