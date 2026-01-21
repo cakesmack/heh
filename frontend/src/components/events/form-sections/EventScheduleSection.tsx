@@ -15,6 +15,8 @@ interface EventScheduleSectionProps {
     setShowtimes: (showtimes: ShowtimeCreate[]) => void;
     noEndTime: boolean;
     setNoEndTime: (noEnd: boolean) => void;
+    isAllDay: boolean;
+    setIsAllDay: (isAllDay: boolean) => void;
 }
 
 export default function EventScheduleSection({
@@ -26,7 +28,9 @@ export default function EventScheduleSection({
     showtimes,
     setShowtimes,
     noEndTime,
-    setNoEndTime
+    setNoEndTime,
+    isAllDay,
+    setIsAllDay
 }: EventScheduleSectionProps) {
     // Helper to format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input
     const formatDateForInput = (isoString: string | Date | undefined | null) => {
@@ -155,16 +159,37 @@ export default function EventScheduleSection({
                             </div>
                         )}
                     </div>
+                    {/* All Day Checkbox */}
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
                             type="checkbox"
-                            checked={noEndTime}
-                            onChange={(e) => setNoEndTime(e.target.checked)}
+                            checked={isAllDay}
+                            onChange={(e) => {
+                                setIsAllDay(e.target.checked);
+                                if (e.target.checked) {
+                                    setNoEndTime(true); // Force no end time when all day
+                                }
+                            }}
                             className="rounded text-emerald-600 focus:ring-emerald-500"
                         />
-                        <span className="text-sm text-gray-600">No specific end time</span>
+                        <span className="text-sm text-gray-600">All Day Event</span>
                     </label>
-                    {noEndTime && (
+                    {isAllDay && (
+                        <p className="text-xs text-gray-500">The event spans the entire day (no specific start/end times shown).</p>
+                    )}
+                    {/* No End Time Checkbox - Only show if not All Day */}
+                    {!isAllDay && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={noEndTime}
+                                onChange={(e) => setNoEndTime(e.target.checked)}
+                                className="rounded text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span className="text-sm text-gray-600">No specific end time</span>
+                        </label>
+                    )}
+                    {noEndTime && !isAllDay && (
                         <p className="text-xs text-gray-500">End time will be set to 4 hours after start time.</p>
                     )}
                 </div>

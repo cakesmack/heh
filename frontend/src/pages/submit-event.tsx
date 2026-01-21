@@ -45,9 +45,11 @@ export default function SubmitEventPage() {
     price: '0',
     image_url: '',
     ticket_url: '',
+    website_url: '',
     age_restriction: '',
     organizer_profile_id: '',
     is_recurring: false,
+    is_all_day: false,
     frequency: 'WEEKLY',
     recurrence_end_date: '',
     ends_on: 'never',
@@ -208,6 +210,8 @@ export default function SubmitEventPage() {
         price: formData.price,
         image_url: formData.image_url || undefined,
         ticket_url: formData.ticket_url || undefined,
+        website_url: formData.website_url || undefined,
+        is_all_day: formData.is_all_day,
         age_restriction: formData.age_restriction || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         organizer_profile_id: formData.organizer_profile_id || undefined,
@@ -337,6 +341,8 @@ export default function SubmitEventPage() {
               setShowtimes={setShowtimes}
               noEndTime={noEndTime}
               setNoEndTime={setNoEndTime}
+              isAllDay={formData.is_all_day}
+              setIsAllDay={(val) => setFormData(prev => ({ ...prev, is_all_day: val }))}
             />
 
             <EventTicketingSection

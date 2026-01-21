@@ -69,6 +69,8 @@ class EventCreate(BaseModel):
     image_url: Optional[str] = Field(None, max_length=500)
     # Phase 2.10 additions
     ticket_url: Optional[str] = Field(None, max_length=500)
+    website_url: Optional[str] = Field(None, max_length=500)
+    is_all_day: Optional[bool] = False
     age_restriction: Optional[Union[str, int]] = Field(None, description="Age restriction as number (0=all ages, 18, 21) or legacy string")
     # Phase 2.3 additions
     organizer_profile_id: OptionalUUID = None
@@ -110,6 +112,8 @@ class EventUpdate(BaseModel):
     image_url: Optional[str] = Field(None, max_length=500)
     # Phase 2.10 additions
     ticket_url: Optional[str] = Field(None, max_length=500)
+    website_url: Optional[str] = Field(None, max_length=500)
+    is_all_day: Optional[bool] = None
     age_restriction: Optional[Union[str, int]] = Field(None, description="Age restriction as number or string")
     # Phase 2.3 additions
     organizer_profile_id: OptionalUUID = None
@@ -150,6 +154,8 @@ class EventResponse(BaseModel):
 
     # Phase 2.10 additions
     ticket_url: Optional[str] = None
+    website_url: Optional[str] = None
+    is_all_day: bool = False
     age_restriction: Optional[str] = None
     min_age: Optional[int] = None  # Numeric minimum age
     postcode: Optional[str] = None

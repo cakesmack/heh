@@ -43,6 +43,24 @@ async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     logger.info("Database tables created/verified (including venue_invites, event_claims)")
     
+    # Inline Migration: Add website_url and is_all_day to events table
+    from sqlalchemy import text
+    from app.core.database import get_session
+    try:
+        with next(get_session()) as session:
+            # Add website_url column if it doesn't exist
+            session.exec(text("""
+                ALTER TABLE events ADD COLUMN IF NOT EXISTS website_url VARCHAR(500);
+            """))
+            # Add is_all_day column if it doesn't exist
+            session.exec(text("""
+                ALTER TABLE events ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN DEFAULT FALSE;
+            """))
+            session.commit()
+            logger.info("Migration complete: Added website_url and is_all_day columns to events table")
+    except Exception as e:
+        logger.warning(f"Migration skipped or failed (columns may already exist): {e}")
+    
     # Database initialized
     logger.info("Application startup complete.")
 

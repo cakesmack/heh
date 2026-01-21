@@ -284,10 +284,9 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
               </div>
             </div>
 
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              {/* Ticket Button Logic */}
+            <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+              {/* Get Tickets Button Logic */}
               {event.ticket_url ? (
-                /* Scenario A: Main Link Exists */
                 <a
                   href={event.ticket_url}
                   target="_blank"
@@ -298,7 +297,6 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                   Get Tickets
                 </a>
               ) : (event.showtimes && event.showtimes.length > 0) ? (
-                /* Scenario B: Multi-Date / No Main Link -> Scroll to Sidebar */
                 <button
                   onClick={() => {
                     const mobileSidebar = document.getElementById('mobile-dates-sidebar');
@@ -306,7 +304,6 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                     const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
                     if (sidebar) {
                       sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      // Trigger Pulse Animation
                       sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
                       setTimeout(() => {
                         sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
@@ -317,7 +314,19 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 >
                   Get Tickets
                 </button>
-              ) : null /* Scenario C: No Links -> Render Nothing */}
+              ) : null}
+
+              {/* Visit Website Button */}
+              {event.website_url && (
+                <a
+                  href={event.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 md:flex-none px-6 py-3 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:text-white font-semibold rounded-full transition-all transform hover:scale-105 text-center"
+                >
+                  Visit Website
+                </a>
+              )}
 
               <BookmarkButton
                 eventId={event.id}
@@ -333,7 +342,6 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                         : Math.max(0, (prev.save_count || 0) - 1)
                     };
                   });
-                  // Also update local bookmark count state just in case other things use it
                   setBookmarkCount(prev => isBookmarked ? prev + 1 : Math.max(0, prev - 1));
                 }}
               />
@@ -420,7 +428,9 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
-                      <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
+                      <p className="text-sm text-gray-500">
+                        {event.is_all_day ? 'All Day' : `${formatTime(event.date_start)} - ${formatTime(event.date_end)}`}
+                      </p>
                     </div>
                   </div>
                   {event.ticket_url && (
@@ -776,7 +786,9 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
-                          <p className="text-sm text-gray-500">{formatTime(event.date_start)} - {formatTime(event.date_end)}</p>
+                          <p className="text-sm text-gray-500">
+                            {event.is_all_day ? 'All Day' : `${formatTime(event.date_start)} - ${formatTime(event.date_end)}`}
+                          </p>
                         </div>
                       </div>
                     )}

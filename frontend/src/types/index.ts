@@ -307,6 +307,8 @@ export interface Event {
   updated_at: string;
   // Phase 2.10 additions
   ticket_url?: string;
+  website_url?: string;
+  is_all_day?: boolean;
   age_restriction?: string;
   min_age?: number;  // Numeric minimum age (0 = all ages)
   postcode?: string;
@@ -360,6 +362,8 @@ export interface EventCreate {
   tags?: string[];
   // Phase 2.10 additions
   ticket_url?: string;
+  website_url?: string;
+  is_all_day?: boolean;
   age_restriction?: number | string;  // Can be number (18) or string ("18+")
   location_name?: string;
   // Phase 2.3 additions
@@ -388,6 +392,8 @@ export interface EventUpdate {
   tags?: string[];
   // Phase 2.10 additions
   ticket_url?: string;
+  website_url?: string;
+  is_all_day?: boolean;
   age_restriction?: string;
   location_name?: string | null;
   // Phase 2.3 additions

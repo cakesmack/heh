@@ -110,6 +110,8 @@ class Event(SQLModel, table=True):
 
     # Phase 2.10 additions
     ticket_url: Optional[str] = Field(default=None, max_length=500)
+    website_url: Optional[str] = Field(default=None, max_length=500)  # Separate event website link
+    is_all_day: bool = Field(default=False)  # True if event spans entire day (no specific times)
     age_restriction: Optional[str] = Field(default=None, max_length=50)  # Legacy - keeping for compatibility
     min_age: Optional[int] = Field(default=None)  # Numeric minimum age (0 = all ages, None = not specified)
     postcode: Optional[str] = Field(default=None, max_length=10)
