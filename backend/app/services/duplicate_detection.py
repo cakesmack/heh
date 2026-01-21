@@ -80,12 +80,24 @@ def check_duplicate_risk(new_event: Event, session: Session):
         
         # New Rule: Overlapping Time (if not exact match)
         # If same venue + overlapping time, highly suspicious
-        elif location_match and (
-            (new_event.date_start <= candidate.date_end) and 
-            (new_event.date_end >= candidate.date_start)
-        ):
-             risk += 20
-             reasons.append("Overlapping Time")
+        elif location_match:
+            # Normalize datetimes for comparison (handle offset-naive vs aware)
+            def normalize_dt(dt):
+                if dt.tzinfo is None:
+                    # Assume naive is UTC if not specified (or match system)
+                    # But safer to force both to be aware or both naive.
+                    # Best practice: make naive aware (UTC)
+                    return dt.replace(tzinfo=None) # Simplest: Make everything naive (ignore TZ)
+                return dt.replace(tzinfo=None)
+
+            ne_start = normalize_dt(new_event.date_start)
+            ne_end = normalize_dt(new_event.date_end)
+            cand_start = normalize_dt(candidate.date_start)
+            cand_end = normalize_dt(candidate.date_end)
+            
+            if (ne_start <= cand_end) and (ne_end >= cand_start):
+                 risk += 20
+                 reasons.append("Overlapping Time")
             
         # Cap risk at 100
         risk = min(risk, 100)
