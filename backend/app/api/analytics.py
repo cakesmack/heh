@@ -630,7 +630,7 @@ def get_quality_issue_details(
     """
     Get detailed list of events for a specific quality issue.
     """
-    if not current_user.is_superuser:
+    if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     today = datetime.utcnow()
