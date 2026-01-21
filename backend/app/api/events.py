@@ -783,6 +783,8 @@ def create_event(
         organizer_id=normalize_uuid(current_user.id),
         # Phase 2.10 fields
         ticket_url=event_data.ticket_url,
+        website_url=event_data.website_url,
+        is_all_day=event_data.is_all_day if event_data.is_all_day is not None else False,
         age_restriction=age_restriction_str,  # Backward compatibility (string)
         min_age=min_age,  # Numeric for filtering
         # Phase 2.3 fields
