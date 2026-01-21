@@ -793,14 +793,24 @@ def create_event(
         recurrence_group_id=normalize_uuid(uuid4()) if (event_data.is_recurring if event_data.is_recurring is not None else False) else None,
         # Status will be set below based on trust evaluation
         status="pending",
-        # Map Display Point
+    # Map Display Point
         map_display_lat=event_data.map_display_lat,
         map_display_lng=event_data.map_display_lng,
         map_display_label=event_data.map_display_label
     )
+    
+    
+    # --- 1. Duplicate Detection ---
+    from app.services.duplicate_detection import check_duplicate_risk
+    from app.models.report import Report
+    import json
+    
+    risk_score, meta = check_duplicate_risk(new_event, session)
+    is_duplicate_risk = risk_score >= 75
+    if is_duplicate_risk:
+        print(f"[DUPLICATE_DETECT] High Risk ({risk_score}%) detected for '{new_event.title}'")
 
-    # Content Moderation: Check for offensive language
-    # Combine title, description, and tags for profanity check
+    # --- 2. Content Moderation (Profanity) ---
     content_to_check = f"{event_data.title or ''} {event_data.description or ''}"
     if event_data.tags:
         content_to_check += " " + " ".join(event_data.tags)
@@ -809,7 +819,7 @@ def create_event(
     is_offensive = moderation_result["flagged"]
     moderation_reason = moderation_result["reason"]
     
-    # Link Warden: Detect URLs in title/description
+    # --- 3. Link Warden ---
     import re
     link_pattern = re.compile(
         r'(https?://|www\.|\.com|\.co\.uk|\.org|\.net|\.io|\.info|\.biz)',
@@ -818,37 +828,48 @@ def create_event(
     content_for_link_check = f"{event_data.title or ''} {event_data.description or ''}"
     contains_link = bool(link_pattern.search(content_for_link_check))
     
-    # Auto-Approval Logic
-    # A user qualifies for auto-approval if:
-    # - They are an admin, OR
-    # - They are marked as a trusted organizer (is_trusted_organizer=True), OR
-    # - They have a trust_level >= 5 (meaning 5+ events previously approved)
+    # --- 4. Auto-Approval Check ---
     is_auto_approved = (
         current_user.is_admin or
         current_user.is_trusted_organizer or
         current_user.trust_level >= 5
     )
 
-    # OVERRIDE 1: Offensive content must go to moderation regardless of trust
+    # --- Status Decision Tree ---
     if is_offensive:
-        new_event.status = "pending"
+        new_event.status = "pending" # Keep as pending for admin to review/reject? Or rejected?
+        # Original code said "pending" with reason.
         new_event.moderation_reason = moderation_reason
-        print(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged: {moderation_reason}")
-    # OVERRIDE 2: Links require manual approval unless user is admin or explicitly trusted organizer
-    # This overrides trust_level >= 5 for security (Link Warden)
+        logger.info(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged: {moderation_reason}")
+        
+    elif is_duplicate_risk:
+        new_event.status = "pending_moderation"
+        new_event.moderation_reason = "Potential Duplicate"
+        
+        # Create Moderation Report
+        report = Report(
+            target_type="event",
+            target_id=new_event.id,
+            reason="Potential Duplicate",
+            details=json.dumps(meta),
+            status="pending",
+            reporter_id="system" 
+        )
+        session.add(report)
+        logger.info(f"[DUPLICATE_DETECT] Event '{new_event.title}' flagged as duplicate.")
+
     elif contains_link and not current_user.is_admin and not current_user.is_trusted_organizer:
         new_event.status = "pending"
         new_event.moderation_reason = "Contains External Link"
-        logger.info(f"[LINK_WARDEN] Event '{new_event.title}' pending for user_id={current_user.id} "
-              f"(contains external link, trust_level={current_user.trust_level})")
+        logger.info(f"[LINK_WARDEN] Event '{new_event.title}' pending (link detected)")
+        
     elif is_auto_approved:
         new_event.status = "published"
-        logger.info(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved for user_id={current_user.id} "
-              f"(admin={current_user.is_admin}, trusted={current_user.is_trusted_organizer}, trust_level={current_user.trust_level})")
+        logger.info(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved.")
+        
     else:
         new_event.status = "pending"
-        logger.info(f"[MODERATION] Event '{new_event.title}' pending for user_id={current_user.id} "
-              f"(trust_level={current_user.trust_level})")
+        logger.info(f"[MODERATION] Event '{new_event.title}' pending (standard review).")
     session.add(new_event)
     session.flush()  # Get the event ID
 

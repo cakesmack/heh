@@ -4,6 +4,7 @@ import AdminGuard from '@/components/admin/AdminGuard';
 import { moderationAPI } from '@/lib/api';
 import { Report, EventResponse } from '@/types';
 import Link from 'next/link';
+import DuplicateDiffModal from '@/components/admin/DuplicateDiffModal';
 
 export default function AdminModeration() {
     const [reports, setReports] = useState<Report[]>([]);
@@ -16,6 +17,11 @@ export default function AdminModeration() {
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [rejectingEvent, setRejectingEvent] = useState<EventResponse | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
+
+    // Duplicate comparison state
+    const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+    const [duplicateEvent, setDuplicateEvent] = useState<EventResponse | null>(null);
+    const [duplicateMatchId, setDuplicateMatchId] = useState<string>('');
 
     const fetchData = async () => {
         setLoading(true);
@@ -74,6 +80,30 @@ export default function AdminModeration() {
         setRejectModalOpen(false);
         setRejectingEvent(null);
         setRejectionReason('');
+    };
+
+    const handleOpenDuplicateCheck = (event: EventResponse, matchId: string) => {
+        setDuplicateEvent(event);
+        setDuplicateMatchId(matchId);
+        setDuplicateModalOpen(true);
+    };
+
+    const handleDuplicateDecision = async (eventId: string, action: 'approve' | 'reject', reason?: string) => {
+        await handleModerateEvent(eventId, action, reason);
+        setDuplicateModalOpen(false);
+        setDuplicateEvent(null);
+    };
+
+    // Helper to find duplicate report info
+    const getDuplicateInfo = (eventId: string) => {
+        const report = reports.find(r => r.target_id === eventId && r.reason === 'Potential Duplicate');
+        if (!report || !report.details) return null;
+        try {
+            const details = JSON.parse(report.details);
+            return details.matched_event_id;
+        } catch (e) {
+            return null;
+        }
     };
 
     return (
@@ -168,46 +198,68 @@ export default function AdminModeration() {
                                         No pending events.
                                     </div>
                                 ) : (
-                                    pendingEvents.map((event) => (
-                                        <div key={event.id} className="bg-white rounded-lg shadow p-6">
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex-1">
-                                                    <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
-                                                    {/* Show moderation reason if flagged */}
-                                                    {event.moderation_reason && (
-                                                        <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                                                            <span className="text-sm font-semibold text-red-700">
-                                                                ⚠️ Flagged: {event.moderation_reason}
-                                                            </span>
+                                    pendingEvents.map((event) => {
+                                        const duplicateMatchId = getDuplicateInfo(event.id);
+                                        return (
+                                            <div key={event.id} className="bg-white rounded-lg shadow p-6">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
+                                                        {/* Show moderation reason if flagged */}
+                                                        {event.moderation_reason && (
+                                                            <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+                                                                <span className="text-sm font-semibold text-red-700">
+                                                                    ⚠️ Flagged: {event.moderation_reason}
+                                                                </span>
+                                                                {duplicateMatchId && (
+                                                                    <button
+                                                                        onClick={() => handleOpenDuplicateCheck(event, duplicateMatchId)}
+                                                                        className="text-xs font-bold text-red-700 underline hover:text-red-900"
+                                                                    >
+                                                                        Review Duplicate Match &rarr;
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
+                                                        <div className="flex gap-4 text-sm text-gray-500">
+                                                            <span>📅 {new Date(event.date_start).toLocaleDateString()}</span>
+                                                            <span>📍 {event.venue_name || 'Unknown Venue'}</span>
+                                                            <span>👤 {event.organizer_id}</span>
                                                         </div>
-                                                    )}
-                                                    <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
-                                                    <div className="flex gap-4 text-sm text-gray-500">
-                                                        <span>📅 {new Date(event.date_start).toLocaleDateString()}</span>
-                                                        <span>📍 {event.venue_name || 'Unknown Venue'}</span>
-                                                        <span>👤 {event.organizer_id}</span>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2 ml-4">
+                                                        {duplicateMatchId ? (
+                                                            <button
+                                                                onClick={() => handleOpenDuplicateCheck(event, duplicateMatchId)}
+                                                                className="px-4 py-2 text-sm text-white bg-amber-500 rounded hover:bg-amber-600 shadow-sm"
+                                                            >
+                                                                Compare
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleModerateEvent(event.id, 'approve')}
+                                                                className="px-4 py-2 text-sm text-white bg-emerald-600 rounded hover:bg-emerald-700"
+                                                            >
+                                                                Approve
+                                                            </button>
+                                                        )}
+                                                        <Link href={`/events/${event.id}`} target="_blank" className="text-center px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200">
+                                                            Preview
+                                                        </Link>
+                                                        {!duplicateMatchId && (
+                                                            <button
+                                                                onClick={() => openRejectModal(event)}
+                                                                className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col gap-2 ml-4">
-                                                    <Link href={`/events/${event.id}`} target="_blank" className="text-center px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200">
-                                                        Preview
-                                                    </Link>
-                                                    <button
-                                                        onClick={() => handleModerateEvent(event.id, 'approve')}
-                                                        className="px-4 py-2 text-sm text-white bg-emerald-600 rounded hover:bg-emerald-700"
-                                                    >
-                                                        Approve
-                                                    </button>
-                                                    <button
-                                                        onClick={() => openRejectModal(event)}
-                                                        className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        )
+                                    })
                                 )}
                             </>
                         )}
@@ -262,6 +314,18 @@ export default function AdminModeration() {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* Duplicate Comparison Modal */}
+                {duplicateModalOpen && duplicateEvent && duplicateMatchId && (
+                    <DuplicateDiffModal
+                        isOpen={duplicateModalOpen}
+                        onClose={() => setDuplicateModalOpen(false)}
+                        newEvent={duplicateEvent}
+                        matchedEventId={duplicateMatchId}
+                        onApprove={(id) => handleDuplicateDecision(id, 'approve')}
+                        onReject={(id, reason) => handleDuplicateDecision(id, 'reject', reason)}
+                    />
                 )}
             </AdminLayout>
         </AdminGuard>

@@ -67,7 +67,7 @@ export default function SubmitEventPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<{ type: 'published' | 'pending'; eventId: string } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<{ type: 'published' | 'pending' | 'duplicate'; eventId: string } | null>(null);
   const [isLocationValid, setIsLocationValid] = useState(true);
 
   // Fetch categories on mount
@@ -229,6 +229,9 @@ export default function SubmitEventPage() {
       if (newEvent.status === 'published') {
         setSuccessMessage({ type: 'published', eventId: newEvent.id });
         setTimeout(() => router.push(`/events/${newEvent.id}`), 2000);
+      } else if (newEvent.status === 'pending_moderation') {
+        setSuccessMessage({ type: 'duplicate', eventId: newEvent.id });
+        setTimeout(() => router.push('/events'), 4000);
       } else {
         setSuccessMessage({ type: 'pending', eventId: newEvent.id });
         setTimeout(() => router.push('/events'), 3000);
@@ -274,6 +277,14 @@ export default function SubmitEventPage() {
             {successMessage?.type === 'pending' && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-6">
                 <p className="text-amber-800 font-medium">Event submitted for review.</p>
+              </div>
+            )}
+            {successMessage?.type === 'duplicate' && (
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
+                <p className="text-orange-800 font-bold">Event submitted for review.</p>
+                <p className="text-orange-700 text-sm mt-1">
+                  Our system detected a similar event. We'll verify it shortly.
+                </p>
               </div>
             )}
             {error && (
