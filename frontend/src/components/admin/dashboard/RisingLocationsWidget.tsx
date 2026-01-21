@@ -21,7 +21,7 @@ export default function RisingLocationsWidget() {
 
     const fetchVenues = async () => {
         try {
-            const res: any = await api.get('/admin/venues/unverified');
+            const res: any = await api.get('/api/admin/venues/unverified');
             setVenues(Array.isArray(res) ? res : []);
         } catch (error) {
             console.error("Failed to fetch rising locations", error);
