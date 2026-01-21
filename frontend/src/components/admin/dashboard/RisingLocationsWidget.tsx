@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import Modal from '../Modal';
 import { Card } from '../../common/Card';
 import { Button } from '../../common/Button';
 import { EditVenueModal } from '../../venues/EditVenueModal';
@@ -18,6 +19,9 @@ export default function RisingLocationsWidget() {
     const [venues, setVenues] = useState<UnverifiedVenue[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
+    const [allVenues, setAllVenues] = useState<UnverifiedVenue[]>([]);
+    const [isViewAllOpen, setIsViewAllOpen] = useState(false);
+    const [isLoadingAll, setIsLoadingAll] = useState(false);
 
     const fetchVenues = async () => {
         try {
@@ -30,6 +34,20 @@ export default function RisingLocationsWidget() {
         }
     };
 
+    const fetchAllVenues = async () => {
+        setIsLoadingAll(true);
+        try {
+            // Fetch up to 100 unverified venues for the modal view
+            const res: any = await api.get('/api/admin/venues/unverified?limit=100');
+            setAllVenues(Array.isArray(res) ? res : []);
+            setIsViewAllOpen(true);
+        } catch (error) {
+            console.error("Failed to fetch all venues", error);
+        } finally {
+            setIsLoadingAll(false);
+        }
+    };
+
     useEffect(() => {
         fetchVenues();
     }, []);
@@ -37,6 +55,17 @@ export default function RisingLocationsWidget() {
     const handleVerifySuccess = () => {
         setSelectedVenue(null);
         fetchVenues();
+        // If we were viewing all, refresh that list too
+        if (isViewAllOpen) {
+            fetchAllVenues();
+        }
+    };
+
+    const handleVerifyClick = (venueId: string) => {
+        // We keep the View All modal open in the background, OR close it. 
+        // Let's keep it open but maybe we need to manage z-indices or just simple stacking.
+        // For simplicity, let's just open the edit modal on top.
+        setSelectedVenue(venueId);
     };
 
     if (isLoading) {
@@ -58,9 +87,18 @@ export default function RisingLocationsWidget() {
         <Card className="h-full">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">Rising Locations</h3>
-                <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full font-medium">
-                    {venues.length} Pending
-                </span>
+                <div className="flex items-center gap-3">
+                    <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full font-medium">
+                        {venues.length} Pending
+                    </span>
+                    <button
+                        onClick={fetchAllVenues}
+                        className="text-sm text-emerald-600 hover:text-emerald-700 font-medium disabled:opacity-50"
+                        disabled={isLoadingAll}
+                    >
+                        {isLoadingAll ? 'Loading...' : 'View All'}
+                    </button>
+                </div>
             </div>
 
             {venues.length === 0 ? (
@@ -90,6 +128,42 @@ export default function RisingLocationsWidget() {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {/* View All Modal */}
+            {isViewAllOpen && (
+                <Modal
+                    isOpen={isViewAllOpen}
+                    onClose={() => setIsViewAllOpen(false)}
+                    title="All Rising Locations"
+                    size="lg"
+                >
+                    <div className="max-h-[60vh] overflow-y-auto space-y-4 p-1">
+                        {allVenues.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">No unverified venues found.</div>
+                        ) : (
+                            allVenues.map((venue) => (
+                                <div key={venue.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+                                    <div className="min-w-0 flex-1 mr-4">
+                                        <div className="flex items-center gap-3 mb-1">
+                                            <h4 className="font-medium text-gray-900 text-lg">{venue.name}</h4>
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                {venue.event_count} Active Events
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-500">{venue.address}</p>
+                                        <p className="text-xs text-gray-400 mt-1">Found: {new Date(venue.created_at).toLocaleDateString()}</p>
+                                    </div>
+                                    <Button
+                                        onClick={() => handleVerifyClick(venue.id)}
+                                    >
+                                        Verify
+                                    </Button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </Modal>
             )}
 
             {selectedVenue && (
