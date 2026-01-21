@@ -35,12 +35,7 @@ function EventMarkerWithRef({
     onClick: () => void;
     setMarkerRef: (marker: Marker | null, key: string) => void;
 }) {
-    const ref = useCallback(
-        (marker: google.maps.marker.AdvancedMarkerElement | null) => {
-            setMarkerRef(marker, event.id);
-        },
-        [setMarkerRef, event.id]
-    );
+
 
     // Determine marker color based on category
     const categoryColor = event.category?.gradient_color || '#10b981';
@@ -49,7 +44,13 @@ function EventMarkerWithRef({
     return (
         <AdvancedMarker
             position={{ lat: event.latitude, lng: event.longitude }}
-            ref={ref}
+            ref={(marker) => {
+                if (marker) {
+                    // @ts-ignore
+                    marker.eventId = event.id;
+                }
+                setMarkerRef(marker, event.id)
+            }}
             onClick={onClick}
             title={event.title}
         >
@@ -142,33 +143,30 @@ export function ClusteredEventMarkers({
                     const clusterMarkers = cluster.markers || [];
                     const clusterPosition = cluster.position;
 
-                    // Get events in this cluster
-                    // We match events to the markers contained in this cluster
-                    const eventsInCluster = events.filter(e => {
-                        const marker = markers[e.id];
-                        // Need to check if this specific marker instance is in the cluster's markers
-                        return marker && clusterMarkers.includes(marker);
-                    });
+                    // Improved Event Lookup: Use attached eventId on markers
+                    const eventsInCluster = clusterMarkers
+                        .map(m => {
+                            // @ts-ignore
+                            const eventId = m.eventId;
+                            // Find the event in our full list
+                            return events.find(e => e.id === eventId);
+                        })
+                        .filter((e): e is EventResponse => !!e); // Filter out undefined
 
                     // Determine bounds of the cluster
                     const bounds = new google.maps.LatLngBounds();
                     clusterMarkers.forEach(m => {
                         // Cast to AdvancedMarkerElement as that's what we are using
                         const marker = m as google.maps.marker.AdvancedMarkerElement;
+                        // For AdvancedMarkerElement, position is a property, not a function
                         if (marker.position) {
-                            // AdvancedMarker uses .position (LatLng | LatLngLiteral), not getPosition()
-                            // But wait, the markerClusterer library might wrap it?
-                            // Let's safe check. If it's AdvancedMarkerElement, it has position property.
-                            // If it's legacy Marker, it has getPosition().
-                            // The @vis.gl integration uses AdvancedMarker.
-                            if (marker.position) {
-                                bounds.extend(marker.position);
-                            }
+                            bounds.extend(marker.position);
                         }
                     });
 
                     const currentZoom = mapInstance.getZoom() || 0;
                     const isMaxZoom = currentZoom >= 15; // Max zoom for clustering is 16, so 15 is "near max"
+
                     // Check if bounds are very tight (effectively same location)
                     const ne = bounds.getNorthEast();
                     const sw = bounds.getSouthWest();
@@ -177,6 +175,9 @@ export function ClusteredEventMarkers({
                         Math.abs(ne.lng() - sw.lng()) < 0.00005;
 
                     // ACTION: Show List (Mobile Sheet or Desktop Popup)
+                    // Trigger if:
+                    // 1. We are at max zoom OR
+                    // 2. All markers are effectively at the exact same location
                     if (isSameLocation || isMaxZoom) {
                         if (isMobile && onClusterClick) {
                             // On mobile, delegate to parent to show Bottom Sheet
