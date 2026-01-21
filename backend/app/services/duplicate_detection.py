@@ -48,7 +48,7 @@ def check_duplicate_risk(new_event: Event, session: Session):
         if new_event.venue_id and candidate.venue_id:
             if new_event.venue_id == candidate.venue_id:
                 location_match = True
-                risk += 40
+                risk += 50  # Up from 40
                 reasons.append("Same Venue")
         elif new_event.latitude and candidate.latitude:
             dist = haversine_distance(
@@ -57,7 +57,7 @@ def check_duplicate_risk(new_event: Event, session: Session):
             )
             if dist < 0.1: # 100 meters
                 location_match = True
-                risk += 30
+                risk += 40  # Up from 30
                 reasons.append("Same Location (<100m)")
                 
         # If locations are totally different (and venue is set), unlikely to be duplicate
@@ -66,17 +66,26 @@ def check_duplicate_risk(new_event: Event, session: Session):
 
         # Check Title Similarity
         similarity = calculate_similarity(new_event.title, candidate.title)
-        if similarity > 0.9:
+        if similarity > 0.85: # Threshold adjusted for "The Specials Ltd" vs "The Specials" (0.857)
             risk += 50
             reasons.append("Exact/Very Similar Title")
-        elif similarity > 0.7:
+        elif similarity > 0.6: # Lowered from 0.7 for "Similar"
             risk += 30
             reasons.append("Similar Title")
             
         # Check Exact Time
         if new_event.date_start == candidate.date_start:
-            risk += 10
+            risk += 20 # Up from 10
             reasons.append("Exact Start Time")
+        
+        # New Rule: Overlapping Time (if not exact match)
+        # If same venue + overlapping time, highly suspicious
+        elif location_match and (
+            (new_event.date_start <= candidate.date_end) and 
+            (new_event.date_end >= candidate.date_start)
+        ):
+             risk += 20
+             reasons.append("Overlapping Time")
             
         # Cap risk at 100
         risk = min(risk, 100)
