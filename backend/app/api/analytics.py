@@ -611,7 +611,8 @@ def get_quality_issues(
             issues['short_description'].append(event.id)
             
         # Check Location
-        if event.latitude is None or (abs(event.latitude) < 0.0001 and abs(event.longitude) < 0.0001):
+        # Only flag if latitude is missing AND it's not linked to a venue
+        if (event.latitude is None or (abs(event.latitude) < 0.0001 and abs(event.longitude) < 0.0001)) and event.venue_id is None:
             issues['missing_location'].append(event.id)
             
     return [
@@ -651,7 +652,7 @@ def get_quality_issue_details(
             if not event.description or len(event.description) < 50:
                 is_issue = True
         elif issue_type == 'missing_location':
-            if event.latitude is None or (abs(event.latitude) < 0.0001 and abs(event.longitude) < 0.0001):
+            if (event.latitude is None or (abs(event.latitude) < 0.0001 and abs(event.longitude) < 0.0001)) and event.venue_id is None:
                 is_issue = True
                 
         if is_issue:
