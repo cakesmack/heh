@@ -45,6 +45,14 @@ class VenueAnalyticsSummary(BaseModel):
     daily_views: List[DailyStats]
     top_events: List[Dict[str, Any]]
 
+class OrganizerEventStats(BaseModel):
+    event_id: str
+    title: str
+    views: int
+    saves: int
+    ticket_clicks: int
+    is_series: bool
+
 # --- Endpoints ---
 
 @router.post("/track", status_code=status.HTTP_202_ACCEPTED)

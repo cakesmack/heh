@@ -1379,7 +1379,7 @@ def get_unverified_venues(
         select(Venue, func.count(Event.id).label("event_count"))
         .join(Event, Event.venue_id == Venue.id)  # Inner join forces > 0 events
         .where(Venue.status == VenueStatus.UNVERIFIED)
-        .where(Event.date_end >= today)           # Only count active events
+        # .where(Event.date_end >= today)           # Removed to show ANY unverified with events
         .group_by(Venue.id)
         .having(func.count(Event.id) > 0)
         .order_by(func.count(Event.id).desc())
