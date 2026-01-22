@@ -749,7 +749,7 @@ export const mediaAPI = {
    */
   upload: async (
     file: File,
-    folder: 'events' | 'venues' | 'categories' | 'organizers'
+    folder: 'events' | 'venues' | 'categories' | 'organizers' | 'hero'
   ): Promise<{
     url: string;
     thumbnail_url: string;

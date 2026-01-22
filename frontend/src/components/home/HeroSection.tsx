@@ -120,93 +120,139 @@ export default function HeroSection() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Background Images with Crossfade */}
-            {slides.map((slide, index) => {
-                const rawImg = isWelcomeSlide(slide)
-                    ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
-                    : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
+            {/* Triptych Grid Layout */}
+            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-[1fr_1.3fr_1fr] h-full">
 
-                const img = getOptimizedImage(rawImg, 1280);
+                {/* Left Column (Desktop Only) */}
+                <div className="hidden md:block relative h-full overflow-hidden border-r border-white/10">
+                    {slides.map((slide, index) => {
+                        const rawImg = isWelcomeSlide(slide)
+                            ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
+                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg'); // Fallback for paid slots (could add left/right support later)
+                        const img = getOptimizedImage(rawImg, 800);
 
-                return (
-                    <div
-                        key={isWelcomeSlide(slide) ? `welcome-${slide.id}` : `paid-${slide.id}`}
-                        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-                        style={{ backgroundImage: `url(${img})` }}
-                    />
-                );
-            })}
+                        return (
+                            <div
+                                key={`left-${index}`}
+                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                                style={{ backgroundImage: `url(${img})` }}
+                            >
+                                <div className="absolute inset-0 bg-black/40" /> {/* Dimmer */}
+                            </div>
+                        );
+                    })}
+                </div>
 
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-stone-dark via-stone-dark/60 to-transparent" />
+                {/* Center Column (Main) */}
+                <div className="relative h-full overflow-hidden">
+                    {slides.map((slide, index) => {
+                        const rawImg = isWelcomeSlide(slide)
+                            ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
+                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
+                        const img = getOptimizedImage(rawImg, 1280);
 
-            {/* Navigation Buttons */}
+                        return (
+                            <div
+                                key={`main-${index}`}
+                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                                style={{ backgroundImage: `url(${img})` }}
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-t from-stone-dark via-stone-dark/40 to-black/30" />
+                            </div>
+                        );
+                    })}
+
+                    {/* Content Overlay (Centered on Main Column) */}
+                    <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-20">
+                        <div className="animate-slide-up max-w-2xl">
+                            <div className="flex items-center justify-center gap-3 mb-6">
+                                {!isWelcome && (
+                                    <Badge variant="warning" className="bg-yellow-500/90 text-white border-none backdrop-blur-sm shadow-xl px-4 py-1 text-sm font-bold">
+                                        FEATURED EVENT
+                                    </Badge>
+                                )}
+                            </div>
+
+                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight leading-[1.1] drop-shadow-xl">
+                                {isWelcome && title === 'Discover the Highlands' ? (
+                                    <>Discover the <span className="text-emerald-400">Highlands</span></>
+                                ) : (
+                                    title
+                                )}
+                            </h1>
+
+                            <div className="w-24 h-1 bg-emerald-500 mx-auto mb-6 rounded-full shadow-lg"></div>
+
+                            <p className="text-lg md:text-xl text-gray-100 mb-8 line-clamp-3 font-medium drop-shadow-md max-w-lg mx-auto leading-relaxed">
+                                {subtitle}
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <Link href={link}>
+                                    <Button variant="primary" size="lg" className="shadow-xl shadow-emerald-900/20 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[180px] text-lg py-6">
+                                        {ctaText}
+                                    </Button>
+                                </Link>
+                                {isWelcome && (
+                                    <button
+                                        onClick={() => {
+                                            const el = document.getElementById('categories');
+                                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                        }}
+                                        className="px-8 py-4 rounded-xl border-2 border-white/30 bg-white/5 text-white font-bold hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-sm min-w-[180px]"
+                                    >
+                                        Browse Categories
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column (Desktop Only) */}
+                <div className="hidden md:block relative h-full overflow-hidden border-l border-white/10">
+                    {slides.map((slide, index) => {
+                        const rawImg = isWelcomeSlide(slide)
+                            ? ((slide as HeroSlot).image_override_right || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
+                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg'); // Fallback
+                        const img = getOptimizedImage(rawImg, 800);
+
+                        return (
+                            <div
+                                key={`right-${index}`}
+                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                                style={{ backgroundImage: `url(${img})` }}
+                            >
+                                <div className="absolute inset-0 bg-black/40" /> {/* Dimmer */}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Navigation Buttons (Desktop Only - positioned over side columns) */}
             {slides.length > 1 && (
                 <>
                     <button
                         onClick={prevSlide}
-                        className="absolute left-0 inset-y-0 w-24 bg-gradient-to-r from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center text-white/70 hover:text-white z-20"
+                        className="hidden md:flex absolute left-0 inset-y-0 w-[15%] bg-black/0 hover:bg-black/20 transition-colors z-30 items-center justify-center text-white/50 hover:text-white"
                         aria-label="Previous slide"
                     >
-                        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 19l-7-7 7-7" />
+                        <svg className="w-12 h-12 drop-shadow-lg transform -translate-x-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
                     <button
                         onClick={nextSlide}
-                        className="absolute right-0 inset-y-0 w-24 bg-gradient-to-l from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center text-white/70 hover:text-white z-20"
+                        className="hidden md:flex absolute right-0 inset-y-0 w-[15%] bg-black/0 hover:bg-black/20 transition-colors z-30 items-center justify-center text-white/50 hover:text-white"
                         aria-label="Next slide"
                     >
-                        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5l7 7-7 7" />
+                        <svg className="w-12 h-12 drop-shadow-lg transform translate-x-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                     </button>
                 </>
             )}
-
-            {/* Content */}
-            <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="max-w-3xl animate-slide-up">
-                    <div className="flex items-center gap-3 mb-4">
-                        {!isWelcome && (
-                            <Badge variant="warning" className="bg-yellow-500/90 text-white border-none backdrop-blur-sm shadow-lg">
-                                Featured Event
-                            </Badge>
-                        )}
-                    </div>
-
-                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight leading-tight drop-shadow-lg">
-                        {isWelcome && title === 'Discover the Highlands' ? (
-                            <>Discover the <span className="text-gradient">Highlands</span></>
-                        ) : (
-                            title
-                        )}
-                    </h1>
-
-                    <p className="text-lg md:text-xl text-gray-100 mb-8 line-clamp-2 font-light drop-shadow-md max-w-2xl">
-                        {subtitle}
-                    </p>
-
-                    <div className="flex flex-wrap gap-4">
-                        <Link href={link}>
-                            <Button variant="white" size="lg" className="shadow-lg shadow-white/10 border-none">
-                                {ctaText}
-                            </Button>
-                        </Link>
-                        {isWelcome && (
-                            <button
-                                onClick={() => {
-                                    const el = document.getElementById('categories');
-                                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                }}
-                                className="px-6 py-3 rounded-xl border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors backdrop-blur-sm"
-                            >
-                                Browse Categories
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
 
             {/* Progress Bar Indicators */}
             {slides.length > 1 && (

@@ -605,6 +605,8 @@ export interface HeroSlot {
   type: 'welcome' | 'spotlight_event';
   event_id?: string;
   image_override?: string;
+  image_override_left?: string;
+  image_override_right?: string;
   title_override?: string;
   cta_override?: string;
   overlay_style: 'dark' | 'light' | 'gradient';
@@ -619,6 +621,8 @@ export interface HeroSlotCreate {
   type?: string;
   event_id?: string;
   image_override?: string;
+  image_override_left?: string;
+  image_override_right?: string;
   title_override?: string;
   cta_override?: string;
   overlay_style?: string;
@@ -631,6 +635,8 @@ export interface HeroSlotUpdate {
   type?: string;
   event_id?: string;
   image_override?: string;
+  image_override_left?: string;
+  image_override_right?: string;
   title_override?: string;
   cta_override?: string;
   overlay_style?: string;

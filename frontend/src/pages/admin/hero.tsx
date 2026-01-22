@@ -47,6 +47,8 @@ export default function HeroManager() {
             await heroAPI.update(editingWelcome.id, {
                 type: 'welcome',
                 image_override: editingWelcome.image_override || null,
+                image_override_left: editingWelcome.image_override_left || null,
+                image_override_right: editingWelcome.image_override_right || null,
                 title_override: editingWelcome.title_override || null,
                 cta_override: editingWelcome.cta_override || null,
             });
@@ -92,16 +94,49 @@ export default function HeroManager() {
                     {editingWelcome ? (
                         <Card className="p-6 border-2 border-emerald-500">
                             <form onSubmit={handleSaveWelcome} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Background Image</label>
-                                    <ImageUpload
-                                        folder="events"
-                                        currentImageUrl={editingWelcome.image_override}
-                                        onUpload={(result) => setEditingWelcome({ ...editingWelcome, image_override: result.url })}
-                                        onRemove={() => setEditingWelcome({ ...editingWelcome, image_override: undefined })}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Recommended: 1920x1080px or higher.</p>
+                                {/* Images Grid - 3 Columns */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                                    {/* Left Column (Desktop) */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Left Image (Desktop)</label>
+                                        <ImageUpload
+                                            folder="hero"
+                                            currentImageUrl={editingWelcome.image_override_left}
+                                            onUpload={(result) => setEditingWelcome({ ...editingWelcome, image_override_left: result.url })}
+                                            onRemove={() => setEditingWelcome({ ...editingWelcome, image_override_left: undefined })}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Side column image.</p>
+                                    </div>
+
+                                    {/* Main Column (Mobile + Desktop) */}
+                                    <div className="relative">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-bold text-emerald-700">Main Image *</label>
+                                            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">Required</span>
+                                        </div>
+                                        <ImageUpload
+                                            folder="hero"
+                                            currentImageUrl={editingWelcome.image_override}
+                                            onUpload={(result) => setEditingWelcome({ ...editingWelcome, image_override: result.url })}
+                                            onRemove={() => setEditingWelcome({ ...editingWelcome, image_override: undefined })}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Center image. Visible on all devices.</p>
+                                    </div>
+
+                                    {/* Right Column (Desktop) */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Right Image (Desktop)</label>
+                                        <ImageUpload
+                                            folder="hero"
+                                            currentImageUrl={editingWelcome.image_override_right}
+                                            onUpload={(result) => setEditingWelcome({ ...editingWelcome, image_override_right: result.url })}
+                                            onRemove={() => setEditingWelcome({ ...editingWelcome, image_override_right: undefined })}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Side column image.</p>
+                                    </div>
                                 </div>
+
+                                <div className="border-t pt-4 mt-2"></div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Title</label>
                                     <input
@@ -132,19 +167,31 @@ export default function HeroManager() {
                         <Card className="p-6">
                             <div className="flex items-start justify-between">
                                 <div className="flex gap-6">
-                                    {welcomeSlot?.image_override ? (
-                                        <div className="shrink-0">
-                                            <img
-                                                src={welcomeSlot.image_override}
-                                                alt="Welcome"
-                                                className="w-48 h-28 object-cover rounded shadow-sm"
-                                            />
+                                    <div className="flex gap-2">
+                                        {/* Triptych Preview */}
+                                        <div className="flex shrink-0 w-64 h-28 bg-gray-100 rounded overflow-hidden border border-gray-200">
+                                            {/* Left */}
+                                            <div className="w-1/4 h-full bg-gray-200 border-r border-white/20 relative">
+                                                {welcomeSlot?.image_override_left && (
+                                                    <img src={welcomeSlot.image_override_left} className="w-full h-full object-cover opacity-70" alt="Left" />
+                                                )}
+                                            </div>
+                                            {/* Center */}
+                                            <div className="w-2/4 h-full bg-gray-300 relative">
+                                                {welcomeSlot?.image_override ? (
+                                                    <img src={welcomeSlot.image_override} className="w-full h-full object-cover" alt="Main" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No Main Image</div>
+                                                )}
+                                            </div>
+                                            {/* Right */}
+                                            <div className="w-1/4 h-full bg-gray-200 border-l border-white/20 relative">
+                                                {welcomeSlot?.image_override_right && (
+                                                    <img src={welcomeSlot.image_override_right} className="w-full h-full object-cover opacity-70" alt="Right" />
+                                                )}
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <div className="shrink-0 w-48 h-28 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-sm border-2 border-dashed border-gray-300">
-                                            No Custom Image
-                                        </div>
-                                    )}
+                                    </div>
                                     <div className="space-y-2">
                                         <div>
                                             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Title</span>

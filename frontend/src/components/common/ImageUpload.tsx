@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { api } from '@/lib/api';
 
 interface ImageUploadProps {
-  folder: 'events' | 'venues' | 'categories' | 'organizers';
+  folder: 'events' | 'venues' | 'categories' | 'organizers' | 'hero';
   currentImageUrl?: string;
   onUpload: (urls: { url: string; thumbnail_url: string; medium_url: string }) => void;
   onRemove?: () => void;

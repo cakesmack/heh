@@ -23,6 +23,8 @@ class HeroSlot(SQLModel, table=True):
     
     # Overrides
     image_override: Optional[str] = Field(default=None, max_length=500)
+    image_override_left: Optional[str] = Field(default=None, max_length=500)
+    image_override_right: Optional[str] = Field(default=None, max_length=500)
     title_override: Optional[str] = Field(default=None, max_length=255)
     cta_override: Optional[str] = Field(default=None, max_length=100)
     
