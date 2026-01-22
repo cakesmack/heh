@@ -65,6 +65,16 @@ def generate_recurring_instances(
         # Let's start from current_date + 1 day
         current_date = current_date + timedelta(days=1)
         
+        # Align end_date timezone with current_date (parent_start) to avoid comparison errors
+        if current_date.tzinfo is not None and current_date.tzinfo.utcoffset(current_date) is not None:
+             # current_date is aware. Ensure end_date is also aware.
+             if end_date.tzinfo is None:
+                 end_date = end_date.replace(tzinfo=current_date.tzinfo)
+        else:
+             # current_date is naive. Ensure end_date is also naive.
+             if end_date.tzinfo is not None:
+                 end_date = end_date.replace(tzinfo=None)
+
         # Performance: Pre-fetch existing start dates to avoid duplicates
         # (Crucial for "Update" logic where we might not delete everything)
         existing_instances = session.exec(
@@ -111,10 +121,6 @@ def generate_recurring_instances(
                     is_recurring=True,
                     parent_event_id=parent_event.id,
                     recurrence_group_id=parent_event.recurrence_group_id,
-                    # Inherit other phases fields?
-                    # participating_venues? We don't copy relationships automatically here usually, 
-                    # but new logic might require it. 
-                    # For now, base fields.
                 )
                 session.add(child_event)
                 new_instances.append(child_event)
@@ -124,13 +130,9 @@ def generate_recurring_instances(
         if new_instances:
             session.commit()
             logger.info(f"Generated {len(new_instances)} recurring instances for event {parent_event.id}")
-        else:
-            logger.warning(f"Recurrence generation produced 0 instances. Debug: Start={parent_event.date_start}, End={end_date}, Weekdays={effective_weekdays}, Current={current_date}")
             
     except Exception as e:
         logger.error(f"Error generating recurring instances for {parent_event.id}: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
         # Don't raise, just return empty
         
     return new_instances
