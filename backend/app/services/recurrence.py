@@ -124,9 +124,13 @@ def generate_recurring_instances(
         if new_instances:
             session.commit()
             logger.info(f"Generated {len(new_instances)} recurring instances for event {parent_event.id}")
+        else:
+            logger.warning(f"Recurrence generation produced 0 instances. Debug: Start={parent_event.date_start}, End={end_date}, Weekdays={effective_weekdays}, Current={current_date}")
             
     except Exception as e:
         logger.error(f"Error generating recurring instances for {parent_event.id}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         # Don't raise, just return empty
         
     return new_instances
