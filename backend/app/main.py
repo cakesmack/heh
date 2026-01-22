@@ -56,6 +56,13 @@ async def lifespan(app: FastAPI):
             session.exec(text("""
                 ALTER TABLE events ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN DEFAULT FALSE;
             """))
+            # Triptych Hero Migration
+            session.exec(text("""
+                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_left VARCHAR(500);
+            """))
+            session.exec(text("""
+                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_right VARCHAR(500);
+            """))
             session.commit()
             logger.info("Migration complete: Added website_url and is_all_day columns to events table")
     except Exception as e:
