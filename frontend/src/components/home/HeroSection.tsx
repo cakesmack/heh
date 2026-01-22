@@ -120,11 +120,11 @@ export default function HeroSection() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Triptych Grid Layout */}
-            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-[1fr_1.3fr_1fr] h-full">
+            {/* Triptych Grid Layout (Gallery Look) */}
+            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-[1fr_1.3fr_1fr] h-full gap-4 md:gap-6 p-4 md:p-6 bg-stone-dark">
 
                 {/* Left Column (Desktop Only) */}
-                <div className="hidden md:block relative h-full overflow-hidden border-r border-white/10">
+                <div className="hidden md:block relative h-full rounded-2xl overflow-hidden shadow-lg group/side">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -137,14 +137,15 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-black/40" /> {/* Dimmer */}
+                                {/* Spotlight Overlay: Dims by default, revealing on hover */}
+                                <div className="absolute inset-0 bg-black/40 group-hover/side:bg-black/10 transition-colors duration-500" />
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Center Column (Main) */}
-                <div className="relative h-full overflow-hidden">
+                {/* Center Column (Main - The Hero) */}
+                <div className="relative h-full rounded-2xl overflow-hidden shadow-2xl z-10 md:transform md:scale-[1.01] transition-transform duration-700">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -157,39 +158,39 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-t from-stone-dark via-stone-dark/40 to-black/30" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-stone-dark via-stone-dark/30 to-black/20" />
                             </div>
                         );
                     })}
 
-                    {/* Content Overlay (Centered on Main Column) */}
+                    {/* Content Overlay */}
                     <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-20">
                         <div className="animate-slide-up max-w-2xl">
                             <div className="flex items-center justify-center gap-3 mb-6">
                                 {!isWelcome && (
-                                    <Badge variant="warning" className="bg-yellow-500/90 text-white border-none backdrop-blur-sm shadow-xl px-4 py-1 text-sm font-bold">
+                                    <Badge variant="warning" className="bg-yellow-500/90 text-white border-none backdrop-blur-sm shadow-xl px-4 py-1.5 text-sm font-bold tracking-wide">
                                         FEATURED EVENT
                                     </Badge>
                                 )}
                             </div>
 
-                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight leading-[1.1] drop-shadow-xl">
+                            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-6 tracking-tight leading-[1.1] drop-shadow-2xl">
                                 {isWelcome && title === 'Discover the Highlands' ? (
-                                    <>Discover the <span className="text-emerald-400">Highlands</span></>
+                                    <>Discover the <span className="text-emerald-400 drop-shadow-lg">Highlands</span></>
                                 ) : (
                                     title
                                 )}
                             </h1>
 
-                            <div className="w-24 h-1 bg-emerald-500 mx-auto mb-6 rounded-full shadow-lg"></div>
+                            <div className="w-24 h-1.5 bg-emerald-500 mx-auto mb-8 rounded-full shadow-lg"></div>
 
-                            <p className="text-lg md:text-xl text-gray-100 mb-8 line-clamp-3 font-medium drop-shadow-md max-w-lg mx-auto leading-relaxed">
+                            <p className="text-lg md:text-xl text-gray-100 mb-10 line-clamp-3 font-medium drop-shadow-lg max-w-lg mx-auto leading-relaxed">
                                 {subtitle}
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <Link href={link}>
-                                    <Button variant="primary" size="lg" className="shadow-xl shadow-emerald-900/20 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[180px] text-lg py-6">
+                                    <Button variant="primary" size="lg" className="shadow-2xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[200px] text-lg py-4 rounded-xl transition-transform hover:-translate-y-1">
                                         {ctaText}
                                     </Button>
                                 </Link>
@@ -199,7 +200,7 @@ export default function HeroSection() {
                                             const el = document.getElementById('categories');
                                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                                         }}
-                                        className="px-8 py-4 rounded-xl border-2 border-white/30 bg-white/5 text-white font-bold hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-sm min-w-[180px]"
+                                        className="px-8 py-4 rounded-xl border-2 border-white/30 bg-white/5 text-white font-bold hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-md min-w-[200px] shadow-lg hover:-translate-y-1"
                                     >
                                         Browse Categories
                                     </button>
@@ -210,11 +211,11 @@ export default function HeroSection() {
                 </div>
 
                 {/* Right Column (Desktop Only) */}
-                <div className="hidden md:block relative h-full overflow-hidden border-l border-white/10">
+                <div className="hidden md:block relative h-full rounded-2xl overflow-hidden shadow-lg group/side">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_right || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
-                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg'); // Fallback
+                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
                         const img = getOptimizedImage(rawImg, 800);
 
                         return (
@@ -223,7 +224,8 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-black/40" /> {/* Dimmer */}
+                                {/* Spotlight Overlay */}
+                                <div className="absolute inset-0 bg-black/40 group-hover/side:bg-black/10 transition-colors duration-500" />
                             </div>
                         );
                     })}
