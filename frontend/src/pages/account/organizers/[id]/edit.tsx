@@ -35,6 +35,7 @@ export default function EditOrganizerPage() {
 
     // Profile form data
     const [formData, setFormData] = useState<GroupFormData | undefined>(undefined);
+    const [organizerSlug, setOrganizerSlug] = useState<string | null>(null);
 
     // Team management state
     const [members, setMembers] = useState<GroupMember[]>([]);
@@ -74,6 +75,7 @@ export default function EditOrganizerPage() {
                     social_linkedin: org.social_linkedin || '', // Added
                 });
                 setOrganizerUserId(org.user_id);
+                setOrganizerSlug(org.slug || null);
 
                 // Check user's role in this group
                 try {
@@ -129,12 +131,14 @@ export default function EditOrganizerPage() {
                 public_email: data.public_email || undefined,
             };
 
-            await api.organizers.update(id as string, updateData);
+            const updatedOrg = await api.organizers.update(id as string, updateData);
             setSuccessMessage('Profile updated successfully!');
 
             // Redirect to the public group page after a short delay
             setTimeout(() => {
-                router.push(`/organizers/${id}`);
+                // Use new slug if name changed (assuming API returns it), otherwise fallback or use old one
+                const newSlug = (updatedOrg as any).slug || organizerSlug;
+                router.push(`/groups/${newSlug}`);
             }, 1000);
 
         } catch (err) {
@@ -242,8 +246,8 @@ export default function EditOrganizerPage() {
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="mb-8">
-                    <Link href="/account" className="text-sm text-gray-600 hover:text-emerald-600 mb-4 inline-block">
-                        &larr; Back to Account
+                    <Link href={`/groups/${organizerSlug || ''}`} className="text-sm text-gray-600 hover:text-emerald-600 mb-4 inline-block">
+                        &larr; Back to Group
                     </Link>
                     <h1 className="text-3xl font-bold text-gray-900">Edit Organizer Profile</h1>
                 </div>
