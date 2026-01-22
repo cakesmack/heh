@@ -131,7 +131,12 @@ export default function EditOrganizerPage() {
 
             await api.organizers.update(id as string, updateData);
             setSuccessMessage('Profile updated successfully!');
-            setTimeout(() => setSuccessMessage(null), 3000); // Clear message
+
+            // Redirect to the public group page after a short delay
+            setTimeout(() => {
+                router.push(`/organizers/${id}`);
+            }, 1000);
+
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update organizer profile');
         } finally {

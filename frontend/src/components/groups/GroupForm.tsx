@@ -159,7 +159,7 @@ export default function GroupForm({
                         <ImageUpload
                             folder="organizers"
                             currentImageUrl={formData.logo_url}
-                            onUpload={(urls) => setFormData(prev => ({ ...prev, logo_url: urls.url }))}
+                            onUpload={(data) => setFormData(prev => ({ ...prev, logo_url: data.url }))}
                             onRemove={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
                             aspectRatio="1/1"
                         />
@@ -177,7 +177,7 @@ export default function GroupForm({
                         <ImageUpload
                             folder="organizers"
                             currentImageUrl={formData.cover_image_url}
-                            onUpload={(urls) => setFormData(prev => ({ ...prev, cover_image_url: urls.url }))}
+                            onUpload={(data) => setFormData(prev => ({ ...prev, cover_image_url: data.url }))}
                             onRemove={() => setFormData(prev => ({ ...prev, cover_image_url: '' }))}
                             aspectRatio="3/1"
                         />
