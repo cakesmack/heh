@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { api } from '@/lib/api';
 
 interface ImageUploadProps {
@@ -9,6 +9,7 @@ interface ImageUploadProps {
   onUploadStart?: () => void;
   onUploadEnd?: () => void;
   aspectRatio?: string;
+  label?: string | null;
 }
 
 export default function ImageUpload({
@@ -18,12 +19,18 @@ export default function ImageUpload({
   onRemove,
   onUploadStart,
   onUploadEnd,
-  aspectRatio = '16/9'
+  aspectRatio = '16/9',
+  label = 'Featured Image'
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync preview when currentImageUrl changes (e.g. loaded async)
+  useEffect(() => {
+    setPreview(currentImageUrl || null);
+  }, [currentImageUrl]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -70,9 +77,11 @@ export default function ImageUpload({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        Featured Image
-      </label>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700">
+          {label}
+        </label>
+      )}
 
       {preview ? (
         <div className="relative" style={{ aspectRatio }}>

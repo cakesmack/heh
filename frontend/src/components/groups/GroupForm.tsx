@@ -162,6 +162,7 @@ export default function GroupForm({
                             onUpload={(data) => setFormData(prev => ({ ...prev, logo_url: data.url }))}
                             onRemove={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
                             aspectRatio="1/1"
+                            label={null}
                         />
                         <p className="mt-1 text-xs text-gray-500">Recommended: Square image (1:1), at least 200x200px</p>
                     </div>
@@ -180,6 +181,7 @@ export default function GroupForm({
                             onUpload={(data) => setFormData(prev => ({ ...prev, cover_image_url: data.url }))}
                             onRemove={() => setFormData(prev => ({ ...prev, cover_image_url: '' }))}
                             aspectRatio="3/1"
+                            label={null}
                         />
                         <p className="mt-1 text-xs text-gray-500">Recommended: Landscape image (3:1 aspect ratio), e.g., 1200x400px</p>
                     </div>
