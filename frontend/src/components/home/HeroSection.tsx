@@ -120,11 +120,13 @@ export default function HeroSection() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Triptych Grid Layout (Gallery Look) */}
-            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-[1fr_1.3fr_1fr] h-full gap-4 md:gap-6 p-4 md:p-6 bg-stone-dark">
+            {/* Staggered Triptych Grid Layout */}
+            {/* items-center: Ensures the side columns float in the middle vertically */}
+            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-[1fr_1.3fr_1fr] h-full gap-4 md:gap-6 p-4 md:p-6 bg-stone-dark items-center">
 
                 {/* Left Column (Desktop Only) */}
-                <div className="hidden md:block relative h-full rounded-2xl overflow-hidden shadow-lg group/side">
+                {/* h-[85%]: Smaller height for staggered look */}
+                <div className="hidden md:block relative h-[85%] hover:h-[90%] transition-all duration-500 ease-out rounded-2xl overflow-hidden shadow-lg group/side">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -137,15 +139,16 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                {/* Spotlight Overlay: Dims by default, revealing on hover */}
-                                <div className="absolute inset-0 bg-black/40 group-hover/side:bg-black/10 transition-colors duration-500" />
+                                {/* Atmosphere: Darker default (60%), lightens on hover (20%) */}
+                                <div className="absolute inset-0 bg-black/60 group-hover/side:bg-black/20 transition-colors duration-500" />
                             </div>
                         );
                     })}
                 </div>
 
                 {/* Center Column (Main - The Hero) */}
-                <div className="relative h-full rounded-2xl overflow-hidden shadow-2xl z-10 md:transform md:scale-[1.01] transition-transform duration-700">
+                {/* h-full: Using full available height. z-10: Lifted up. Scale: Subtly larger. */}
+                <div className="relative h-full rounded-2xl overflow-hidden shadow-2xl z-10 md:transform md:scale-[1.02] transition-transform duration-700 border border-white/5">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -158,14 +161,15 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-t from-stone-dark via-stone-dark/30 to-black/20" />
+                                {/* Text Readability Gradient: Strong at bottom to support text */}
+                                <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                             </div>
                         );
                     })}
 
                     {/* Content Overlay */}
                     <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-20">
-                        <div className="animate-slide-up max-w-2xl">
+                        <div className="animate-slide-up max-w-2xl mt-auto pb-12 sm:pb-20 md:mt-0 md:pb-0">
                             <div className="flex items-center justify-center gap-3 mb-6">
                                 {!isWelcome && (
                                     <Badge variant="warning" className="bg-yellow-500/90 text-white border-none backdrop-blur-sm shadow-xl px-4 py-1.5 text-sm font-bold tracking-wide">
@@ -184,7 +188,7 @@ export default function HeroSection() {
 
                             <div className="w-24 h-1.5 bg-emerald-500 mx-auto mb-8 rounded-full shadow-lg"></div>
 
-                            <p className="text-lg md:text-xl text-gray-100 mb-10 line-clamp-3 font-medium drop-shadow-lg max-w-lg mx-auto leading-relaxed">
+                            <p className="text-lg md:text-xl text-gray-100 mb-10 line-clamp-3 font-medium drop-shadow-lg max-w-lg mx-auto leading-relaxed text-shadow-sm">
                                 {subtitle}
                             </p>
 
@@ -211,7 +215,8 @@ export default function HeroSection() {
                 </div>
 
                 {/* Right Column (Desktop Only) */}
-                <div className="hidden md:block relative h-full rounded-2xl overflow-hidden shadow-lg group/side">
+                {/* h-[85%]: Smaller height for staggered look */}
+                <div className="hidden md:block relative h-[85%] hover:h-[90%] transition-all duration-500 ease-out rounded-2xl overflow-hidden shadow-lg group/side">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_right || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -224,8 +229,8 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                {/* Spotlight Overlay */}
-                                <div className="absolute inset-0 bg-black/40 group-hover/side:bg-black/10 transition-colors duration-500" />
+                                {/* Atmosphere: Darker default (60%), lightens on hover (20%) */}
+                                <div className="absolute inset-0 bg-black/60 group-hover/side:bg-black/20 transition-colors duration-500" />
                             </div>
                         );
                     })}
