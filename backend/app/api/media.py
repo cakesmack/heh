@@ -18,7 +18,7 @@ router = APIRouter(tags=["Media"])
 @router.post("/upload")
 async def upload_media(
     file: UploadFile = File(...),
-    folder: str = Query(..., pattern="^(events|venues|categories|organizers)$"),
+    folder: str = Query(..., pattern="^(events|venues|categories|organizers|hero)$"),
     current_user: User = Depends(get_current_user)
 ):
     """
