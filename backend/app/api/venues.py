@@ -263,13 +263,15 @@ def list_venues(
     limit: int = Query(default=50, ge=1, le=1000),
     status: Optional[str] = Query(None, description="Status to filter by"),
     exclude_status: Optional[str] = Query(None, description="Status to exclude"),
+    has_image: Optional[bool] = Query(None, description="Filter by presence of image_url"),
+    min_events: Optional[int] = Query(None, description="Minimum number of upcoming events"),
     session: Session = Depends(get_session)
 ):
     """
     List venues with optional filtering.
     """
     # Build base query
-    if sort_by == "activity":
+    if sort_by == "activity" or min_events:
         from app.models.event_participating_venue import EventParticipatingVenue
         # Subquery to count future events per venue (Main + Participating)
         future_events_count = (
@@ -302,6 +304,17 @@ def list_venues(
     # Exclude status
     if exclude_status:
         query = query.where(Venue.status != exclude_status)
+
+    # Filter by image presence
+    if has_image is not None:
+        if has_image:
+             query = query.where(Venue.image_url != None)
+        else:
+             query = query.where(Venue.image_url == None)
+             
+    # Filter by minimum events
+    if min_events is not None and min_events > 0:
+        query = query.where(future_events_count >= min_events)
 
     # Filter by geographic proximity
     if latitude is not None and longitude is not None and radius_km is not None:
