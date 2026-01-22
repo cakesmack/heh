@@ -126,6 +126,9 @@ class EventUpdate(BaseModel):
     participating_venue_ids: Optional[List[UUID]] = Field(None, description="List of IDs for participating venues")
     # Showtimes (Theatre/Cinema workflow)
     showtimes: Optional[List[ShowtimeCreate]] = Field(None, description="Replace all showtimes for this event")
+    frequency: Optional[str] = Field(None, description="WEEKLY, BIWEEKLY, MONTHLY")
+    recurrence_end_date: Optional[datetime] = None
+    weekdays: Optional[List[int]] = Field(None, description="Days of the week for recurring events (0=Mon, 6=Sun)")
 
 
 class EventResponse(BaseModel):

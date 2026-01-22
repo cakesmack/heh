@@ -166,6 +166,39 @@ export default function EditEventPage() {
                 // Track original recurring status for UI logic
                 setOriginalIsRecurring(eventData.is_recurring || false);
 
+                // Hydrate Recurrence from RRULE
+                if (eventData.is_recurring && eventData.recurrence_rule) {
+                    const rule = eventData.recurrence_rule;
+                    let freq = 'WEEKLY';
+                    let endsOn = 'never';
+                    let endDate = '';
+
+                    const freqMatch = rule.match(/FREQ=([A-Z]+)/);
+                    if (freqMatch) freq = freqMatch[1];
+
+                    const untilMatch = rule.match(/UNTIL=([0-9TZ]+)/);
+                    if (untilMatch) {
+                        endsOn = 'date';
+                        // Parse YYYYMMDDTHHMMSSZ to YYYY-MM-DD
+                        const raw = untilMatch[1];
+                        if (raw.length >= 8) {
+                            const y = raw.substring(0, 4);
+                            const m = raw.substring(4, 6);
+                            const d = raw.substring(6, 8);
+                            endDate = `${y}-${m}-${d}`;
+                        }
+                    }
+
+                    setFormData(prev => ({
+                        ...prev,
+                        frequency: freq,
+                        ends_on: endsOn,
+                        recurrence_end_date: endDate,
+                        // Note: Weekdays are not persisted in RRULE in current backend implementation
+                        // Users will need to re-select them.
+                    }));
+                }
+
                 // Hydrate participating venues
                 if (eventData.participating_venues && eventData.participating_venues.length > 0) {
                     setParticipatingVenues(eventData.participating_venues);
@@ -988,23 +1021,36 @@ export default function EditEventPage() {
                             <p className="mt-1 text-sm text-gray-500">Enter 0 for All Ages, or minimum age required.</p>
                         </div>
 
-                        {/* Recurring Event Options */}
-                        {!formData.is_recurring && (
-                            <div className="space-y-4">
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        id="is_recurring"
-                                        checked={formData.is_recurring}
-                                        onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
-                                        className="rounded text-emerald-600"
-                                    />
-                                    <label htmlFor="is_recurring" className="text-sm">Make this a recurring event</label>
-                                </div>
+                        {/* Recurring Event Options - Always visible toggle */}
+                        <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="is_recurring"
+                                    checked={formData.is_recurring}
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setFormData(prev => ({ ...prev, is_recurring: checked }));
+                                        if (!checked && originalIsRecurring) {
+                                            if (!confirm("Turning off recurrence will delete all FUTURE instances of this event. Continue?")) {
+                                                // Revert if cancelled
+                                                e.preventDefault();
+                                                setFormData(prev => ({ ...prev, is_recurring: true }));
+                                            }
+                                        }
+                                    }}
+                                    className="rounded text-emerald-600"
+                                />
+                                <label htmlFor="is_recurring" className="text-sm font-medium text-gray-900">Make this a recurring event</label>
                             </div>
-                        )}
+                            {formData.is_recurring && originalIsRecurring && (
+                                <p className="text-xs text-amber-600 ml-6">
+                                    Warning: Changing recurrence settings will regenerate all future events.
+                                </p>
+                            )}
+                        </div>
 
-                        {formData.is_recurring && !originalIsRecurring && (
+                        {formData.is_recurring && (
                             <div className="pl-6 border-l-2 border-emerald-100 space-y-4">
                                 <select
                                     name="frequency"
@@ -1057,33 +1103,6 @@ export default function EditEventPage() {
                                         <Input type="date" name="recurrence_end_date" value={formData.recurrence_end_date} onChange={handleChange} />
                                     )}
                                 </div>
-                            </div>
-                        )}
-
-                        {/* Stop Recurring Series - for existing recurring events */}
-                        {formData.is_recurring && originalIsRecurring && (
-                            <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                                <h3 className="text-sm font-medium text-purple-800 mb-2">Recurring Event</h3>
-                                <p className="text-sm text-purple-600 mb-3">
-                                    This event is part of a recurring series. Changes will only affect this instance.
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        if (confirm('Are you sure you want to stop this recurring series? All future instances will be deleted.')) {
-                                            try {
-                                                await api.events.stopRecurrence(id as string);
-                                                alert('Recurring series stopped. Future instances have been removed.');
-                                                router.push('/account');
-                                            } catch (err) {
-                                                alert('Failed to stop series. Please try again.');
-                                            }
-                                        }
-                                    }}
-                                    className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
-                                >
-                                    Stop Recurring Series
-                                </button>
                             </div>
                         )}
 

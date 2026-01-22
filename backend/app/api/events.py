@@ -746,6 +746,7 @@ def create_event(
     # Handle Recurrence Rule Translation
     recurrence_rule = event_data.recurrence_rule
     if event_data.is_recurring and event_data.frequency:
+        event_data.frequency = event_data.frequency.upper()
         freq_map = {
             "WEEKLY": "FREQ=WEEKLY",
             "BIWEEKLY": "FREQ=WEEKLY;INTERVAL=2",
@@ -940,67 +941,17 @@ def create_event(
     session.refresh(new_event)
 
     # Generate recurring event instances based on weekdays selection
-    if new_event.is_recurring and event_data.weekdays and len(event_data.weekdays) > 0:
-        try:
-            from datetime import timedelta
-            
-            # Determine the end date for recurrence generation
-            end_date = event_data.recurrence_end_date
-            if not end_date:
-                # Default to 90 days from start if no end date specified
-                end_date = event_data.date_start + timedelta(days=90)
-            
-            # Calculate event duration
-            duration = event_data.date_end - event_data.date_start
-            
-            # The parent event's recurrence_group_id (set during creation)
-            group_id = new_event.recurrence_group_id
-            
-            # Iterate through each day in the range
-            current_date = event_data.date_start + timedelta(days=1)  # Start from next day
-            child_events = []
-            
-            while current_date <= end_date:
-                # Check if this day's weekday is in selected weekdays
-                if current_date.weekday() in event_data.weekdays:
-                    # Create child event for this date
-                    child_event = Event(
-                        id=normalize_uuid(uuid4()),
-                        title=new_event.title,
-                        description=new_event.description,
-                        date_start=current_date,
-                        date_end=current_date + duration,
-                        venue_id=new_event.venue_id,
-                        location_name=new_event.location_name,
-                        latitude=new_event.latitude,
-                        longitude=new_event.longitude,
-                        geohash=new_event.geohash,
-                        category_id=new_event.category_id,
-                        price=new_event.price,
-                        price_display=new_event.price_display,
-                        min_price=new_event.min_price,
-                        image_url=new_event.image_url,
-                        ticket_url=new_event.ticket_url,
-                        age_restriction=new_event.age_restriction,
-                        min_age=new_event.min_age,
-                        organizer_id=new_event.organizer_id,
-                        organizer_profile_id=new_event.organizer_profile_id,
-                        status=new_event.status,  # Inherit status (pending/published)
-                        is_recurring=True,
-                        parent_event_id=new_event.id,
-                        recurrence_group_id=group_id,
-                    )
-                    session.add(child_event)
-                    child_events.append(child_event)
-                
-                current_date += timedelta(days=1)
-            
-            if child_events:
-                session.commit()
-                logger.info(f"Generated {len(child_events)} recurring instances for event {new_event.id}")
-        except Exception as e:
-            logger.error(f"Error generating recurring instances for {new_event.id}: {e}")
-            # Don't fail the request, just log it
+    if new_event.is_recurring:
+        # Use centralized recurrence service
+        # Fallback to defaults if weekdays not provided (service handles it)
+        from app.services.recurrence import generate_recurring_instances
+        
+        generate_recurring_instances(
+            session=session,
+            parent_event=new_event,
+            weekdays=event_data.weekdays,
+            recurrence_end_date=event_data.recurrence_end_date
+        )
     elif new_event.is_recurring and new_event.recurrence_rule:
         # Fallback to old RRULE-based generation if weekdays not provided
         try:
@@ -1242,10 +1193,19 @@ def update_event(
         event.date_end = event_data.date_end
 
     # 2. Handle Recurring Status Logic
+    # Check if recurrence details changed
+    recurrence_changed = False
+    new_frequency = update_data.get("frequency")
+    new_weekdays = update_data.get("weekdays")
+    new_recurrence_end = update_data.get("recurrence_end_date")
+    
     if event_data.is_recurring is not None:
-        event.is_recurring = event_data.is_recurring
+        if event.is_recurring != event_data.is_recurring:
+            event.is_recurring = event_data.is_recurring
+            recurrence_changed = True
+            
         if event_data.is_recurring is False:
-            # Explicitly turning OFF recurrence -> Clear showtimes
+            # Explicitly turning OFF recurrence -> Clear showtimes and future instances
             logger.info(f"[UPDATE_EVENT] Turning OFF recurrence for {event_id}. Clearing showtimes.")
             existing_showtimes = session.exec(
                 select(EventShowtime).where(EventShowtime.event_id == event.id)
@@ -1254,6 +1214,66 @@ def update_event(
                 session.delete(st)
             # Also clear RRULE if present
             event.recurrence_rule = None
+            
+            # CRITICAL: Delete future instances
+            now = datetime.utcnow()
+            future_children = session.exec(
+                select(Event).where(
+                    Event.parent_event_id == event.id,
+                    Event.date_start > now
+                )
+            ).all()
+            for child in future_children:
+                session.delete(child)
+
+    # Detect changes in schedule keys if recurrence is ON
+    if event.is_recurring and (new_frequency or new_weekdays or new_recurrence_end):
+        recurrence_changed = True
+        
+    # Logic for Regenerating Recursion (The "Clean Slate" Strategy)
+    if recurrence_changed and event.is_recurring:
+        # 1. Update RRULE string on parent (if frequency provided)
+        # Note: We rely on generating new instances, but we should also update the RRULE for record
+        # Ideally we reconstruct it.
+        if new_frequency:
+             new_frequency = new_frequency.upper()
+             base_rule = ""
+             if new_frequency == "WEEKLY": base_rule = "FREQ=WEEKLY"
+             elif new_frequency == "BIWEEKLY": base_rule = "FREQ=WEEKLY;INTERVAL=2"
+             elif new_frequency == "MONTHLY": base_rule = "FREQ=MONTHLY"
+             
+             if base_rule:
+                 if new_recurrence_end:
+                     until_str = new_recurrence_end.strftime("%Y%m%dT%H%M%SZ")
+                     base_rule += f";UNTIL={until_str}"
+                 elif event_data.recurrence_end_date: # fallback if in root
+                      until_str = event_data.recurrence_end_date.strftime("%Y%m%dT%H%M%SZ")
+                      base_rule += f";UNTIL={until_str}"
+                 event.recurrence_rule = base_rule
+
+        # 2. Delete ALL future instances
+        now = datetime.utcnow()
+        future_children = session.exec(
+            select(Event).where(
+                Event.parent_event_id == event.id,
+                Event.date_start > now
+            )
+        ).all()
+        for child in future_children:
+            session.delete(child)
+        session.flush() # Commit deletes before regenerating
+        
+        # 3. Regenerate
+        from app.services.recurrence import generate_recurring_instances
+        generate_recurring_instances(
+            session=session,
+            parent_event=event,
+            weekdays=new_weekdays or [], # If None, might need to fetch from existing? 
+            # Note: If updating, user usually sends the full week list. 
+            # If they don't send weekdays, we might assume NO weekdays selected? 
+            # Safest is to treat it as "Use what's provided".
+            recurrence_end_date=new_recurrence_end or event_data.recurrence_end_date
+        )
 
     # Validate category if being updated
     if "category_id" in update_data:
