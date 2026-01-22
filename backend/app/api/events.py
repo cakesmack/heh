@@ -1320,7 +1320,12 @@ def update_event(
             )
             session.add(new_showtime)
 
+    # Exclude transient fields and explicitly handled relationships from generic update
+    excluded_fields = {"frequency", "weekdays", "recurrence_end_date", "showtimes"}
     for field, value in update_data.items():
+        if field in excluded_fields:
+            continue
+            
         if field in ("venue_id", "organizer_profile_id") and value is not None:
             value = normalize_uuid(value)
         setattr(event, field, value)
