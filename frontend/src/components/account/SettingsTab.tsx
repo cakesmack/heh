@@ -83,7 +83,7 @@ export function SettingsTab({ categories }: SettingsTabProps) {
       // Fetch categories
       try {
         const catRes = await followsAPI.getFollowedCategories();
-        console.log('Categories response:', catRes);
+
         setFollowedCategories(catRes.categories || []);
       } catch (error) {
         console.error('Failed to load followed categories:', error);
@@ -92,7 +92,7 @@ export function SettingsTab({ categories }: SettingsTabProps) {
       // Fetch venues
       try {
         const venueRes = await followsAPI.getFollowedVenues();
-        console.log('Venues response:', venueRes);
+
         setFollowedVenues(venueRes.venues || []);
       } catch (error) {
         console.error('Failed to load followed venues:', error);
@@ -101,7 +101,7 @@ export function SettingsTab({ categories }: SettingsTabProps) {
       // Fetch groups
       try {
         const groupRes = await followsAPI.getFollowedGroups();
-        console.log('Groups response:', groupRes);
+
         setFollowedGroups(groupRes.groups || []);
       } catch (error) {
         console.error('Failed to load followed groups:', error);

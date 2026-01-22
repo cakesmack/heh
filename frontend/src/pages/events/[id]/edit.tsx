@@ -312,10 +312,8 @@ export default function EditEventPage() {
 
         // FIX: Use ref to get CURRENT formData (not stale closure)
         const currentFormData = formDataRef.current;
-        console.log('[handleSubmit] Using currentFormData from ref:', {
-            date_start: currentFormData.date_start,
-            date_end: currentFormData.date_end
-        });
+
+
 
         try {
             // Validate required fields based on location tab
@@ -433,13 +431,7 @@ export default function EditEventPage() {
                 map_display_label: currentFormData.map_display_label || null,
             };
 
-            // DEBUG: Log exact payload being sent
-            console.log('=== UPDATE EVENT PAYLOAD ===');
-            console.log('Event ID:', id);
-            console.log('date_start:', eventData.date_start);
-            console.log('date_end:', eventData.date_end);
-            console.log('ticket_url:', eventData.ticket_url);
-            console.log('Full payload:', JSON.stringify(eventData, null, 2));
+
 
             await api.events.update(id as string, eventData);
 

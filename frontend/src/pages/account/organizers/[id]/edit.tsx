@@ -99,7 +99,7 @@ export default function EditOrganizerPage() {
                     setInvites(invitesData || []);
                 } catch (err) {
                     // May fail if user is EDITOR - that's OK
-                    console.log('Failed to fetch invites (may not have permission)');
+
                 }
             } catch (err) {
                 setError('Failed to load organizer profile');

@@ -19,7 +19,7 @@ export default function AnalyticsProvider({ children }: { children: React.ReactN
             return;
         }
 
-        console.log("Analytics Consent GRANTED - Scripts Initializing...");
+
 
         const handleRouteChange = (url: string) => {
             analytics.pageView(url);

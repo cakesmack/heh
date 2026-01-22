@@ -14,7 +14,13 @@ build/
 
 # Archive folders (cleanup scripts)
 scripts/_archive/
+scripts/archive/
 backend/scripts/_archive/
+backend/scripts/archive/
+
+# Env Examples
+.env.example
+*.env.example
 
 # Scrapers
 

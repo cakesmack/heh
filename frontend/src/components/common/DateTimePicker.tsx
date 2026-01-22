@@ -80,12 +80,12 @@ export default function DateTimePicker({
 
   // Handlers now use current state values correctly
   const handleDateChange = useCallback((newDate: string) => {
-    console.log('[DateTimePicker] handleDateChange called:', { newDate, hourValue, minuteValue });
+
     if (newDate) {
       // Use current state values
       setDateValue(newDate);
       const newValue = `${newDate}T${hourValue}:${minuteValue}`;
-      console.log('[DateTimePicker] Calling onChange with:', newValue);
+
       onChange(newValue);
     } else {
       setDateValue('');
@@ -94,21 +94,21 @@ export default function DateTimePicker({
   }, [hourValue, minuteValue, onChange]);
 
   const handleHourChange = useCallback((newHour: string) => {
-    console.log('[DateTimePicker] handleHourChange called:', { newHour, dateValue, minuteValue });
+
     if (dateValue) {
       setHourValue(newHour);
       const newValue = `${dateValue}T${newHour}:${minuteValue}`;
-      console.log('[DateTimePicker] Calling onChange with:', newValue);
+
       onChange(newValue);
     }
   }, [dateValue, minuteValue, onChange]);
 
   const handleMinuteChange = useCallback((newMinute: string) => {
-    console.log('[DateTimePicker] handleMinuteChange called:', { newMinute, dateValue, hourValue });
+
     if (dateValue) {
       setMinuteValue(newMinute);
       const newValue = `${dateValue}T${hourValue}:${newMinute}`;
-      console.log('[DateTimePicker] Calling onChange with:', newValue);
+
       onChange(newValue);
     }
   }, [dateValue, hourValue, onChange]);
