@@ -68,7 +68,7 @@ export default function OrganizerProfilePage() {
     const [events, setEvents] = useState<EventResponse[]>([]);
     const [eventsTotal, setEventsTotal] = useState(0);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const [canEdit, setCanEdit] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -98,6 +98,7 @@ export default function OrganizerProfilePage() {
         }
     };
 
+    // 1. Fetch Organizer Data
     useEffect(() => {
         if (!slug) return;
 
@@ -117,23 +118,6 @@ export default function OrganizerProfilePage() {
                     } catch (err) {
                         console.error('Error fetching events:', err);
                     }
-
-                    // Check permissions if logged in
-                    if (isAuthenticated && user) {
-                        // Check if creator (robust fallback)
-                        if (organizerData.user_id === user.id) {
-                            setCanEdit(true);
-                        } else {
-                            try {
-                                const membership = await api.groups.checkMembership(organizerData.id);
-                                if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
-                                    setCanEdit(true);
-                                }
-                            } catch (err) {
-                                // Not a member or error checking - ignore
-                            }
-                        }
-                    }
                 }
             } catch (err) {
                 console.error('Error fetching organizer:', err);
@@ -145,6 +129,37 @@ export default function OrganizerProfilePage() {
 
         fetchData();
     }, [slug]);
+
+    // 2. Check Permissions (Reactive to Auth State)
+    useEffect(() => {
+        const checkPermissions = async () => {
+            if (!organizer || !isAuthenticated || !user) {
+                setCanEdit(false);
+                return;
+            }
+
+            // Check if creator (robust fallback) with safe string comparison
+            if (String(organizer.user_id) === String(user.id)) {
+                setCanEdit(true);
+                return;
+            }
+
+            // Check membership role
+            try {
+                const membership = await api.groups.checkMembership(organizer.id);
+                if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
+                    setCanEdit(true);
+                } else {
+                    setCanEdit(false);
+                }
+            } catch (err) {
+                // Not a member or error checking - ignore
+                setCanEdit(false);
+            }
+        };
+
+        checkPermissions();
+    }, [organizer, isAuthenticated, user]);
 
     const handleLoadMore = async () => {
         if (!organizer?.id || isLoadingMore) return;
@@ -167,7 +182,8 @@ export default function OrganizerProfilePage() {
         }
     };
 
-    if (isLoading) {
+    // 3. Loading State blocks render to prevent "Guest View" flash
+    if (isLoading || authLoading) {
         return (
             <div className="min-h-screen bg-gray-50 py-12">
                 <div className="max-w-4xl mx-auto px-4 text-center">
