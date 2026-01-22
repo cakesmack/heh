@@ -17,8 +17,15 @@ export default function FeaturedVenues() {
     useEffect(() => {
         const fetchVenues = async () => {
             try {
-                // Fetch popular/featured venues - limit to 8 for single row feel
-                const data = await venuesAPI.list({ limit: 8, sort_by: 'activity' });
+                // Fetch popular/featured venues - limit to 12, sort by activity, verified only
+                const data = await venuesAPI.list({
+                    limit: 12,
+                    sort_by: 'activity',
+                    sort_dir: 'desc',
+                    status: 'VERIFIED',
+                    has_image: true,
+                    min_events: 1
+                });
                 setVenues(data.venues || []);
             } catch (error) {
                 console.error('Failed to fetch venues:', error);
@@ -40,7 +47,7 @@ export default function FeaturedVenues() {
                     className="flex overflow-x-auto gap-6 pb-4 px-4"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                         <div key={i} className="shrink-0 flex flex-col items-center">
                             <div className="w-24 h-24 rounded-lg bg-gray-200 animate-pulse" />
                             <div className="w-20 h-4 mt-3 rounded bg-gray-200 animate-pulse" />
