@@ -180,6 +180,17 @@ export default function OrganizerProfilePage() {
         }
     };
 
+    // Check permissions
+    useEffect(() => {
+        if (user && organizer) {
+            const isOwner = user.id === organizer.user_id;
+            const isAdmin = user.is_admin;
+            setCanEdit(isOwner || isAdmin);
+        } else {
+            setCanEdit(false);
+        }
+    }, [user, organizer]);
+
     // 3. Loading State blocks render to prevent "Guest View" flash
     if (isLoading || authLoading) {
         return (
