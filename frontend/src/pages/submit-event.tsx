@@ -103,6 +103,14 @@ export default function SubmitEventPage() {
     if (user) fetchOrganizers();
   }, [user]);
 
+  // Handle URL parameters
+  useEffect(() => {
+    if (router.isReady && router.query.organizer_profile_id) {
+      const profileId = router.query.organizer_profile_id as string;
+      setFormData(prev => ({ ...prev, organizer_profile_id: profileId }));
+    }
+  }, [router.isReady, router.query]);
+
   const handleVenueChange = (venueId: string, venue: VenueResponse | null) => {
     setFormData(prev => ({ ...prev, venue_id: venueId }));
   };

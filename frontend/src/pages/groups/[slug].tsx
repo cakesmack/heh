@@ -271,7 +271,7 @@ export default function OrganizerProfilePage() {
                             {canEdit && (
                                 <>
                                     <Link
-                                        href={`/events/create?organizer_profile_id=${organizer.id}`}
+                                        href={`/submit-event?organizer_profile_id=${organizer.id}`}
                                         className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none"
                                     >
                                         <PlusIcon className="w-4 h-4 mr-2" />
