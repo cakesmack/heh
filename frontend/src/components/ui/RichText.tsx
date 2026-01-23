@@ -56,7 +56,7 @@ export default function RichText({ content, className = '' }: RichTextProps) {
     });
 
     return (
-        <div className={`whitespace-pre-wrap break-words ${className}`}>
+        <div className={`whitespace-pre-wrap break-words w-full max-w-full overflow-hidden ${className}`}>
             {elements}
         </div>
     );

@@ -529,7 +529,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                     content={showFullDescription || event.description.length <= 400
                       ? event.description
                       : `${event.description.slice(0, 400)}...`}
-                    className="text-gray-700 leading-relaxed"
+                    className="text-gray-700 leading-relaxed break-words w-full max-w-full overflow-hidden"
                   />
                   {event.description.length > 400 && (
                     <button
