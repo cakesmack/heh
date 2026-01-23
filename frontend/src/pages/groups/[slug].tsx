@@ -82,7 +82,7 @@ export default function OrganizerProfilePage() {
     const [events, setEvents] = useState<EventResponse[]>([]);
     const [eventsTotal, setEventsTotal] = useState(0);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'about'>('upcoming');
+    const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
     const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const [canEdit, setCanEdit] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -116,7 +116,7 @@ export default function OrganizerProfilePage() {
     // 4. Fetch events based on activeTab
     const fetchEvents = async (reset = false) => {
         if (!organizer?.id) return;
-        if (activeTab === 'about') return;
+
 
         try {
             const currentCount = reset ? 0 : events.length;
@@ -348,13 +348,105 @@ export default function OrganizerProfilePage() {
 
             </div>
 
+            {/* About Section (Always Visible) */}
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    {/* About Section (2/3 width) */}
+                    <div className="lg:col-span-2">
+                        <div className="bg-white rounded-xl shadow-sm p-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
+                            {organizer.bio ? (
+                                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{organizer.bio}</p>
+                            ) : (
+                                <p className="text-gray-500 italic">No description available.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Sidebar: Quick Info (1/3 width) */}
+                    <div className="space-y-6">
+                        {/* Contact Organizer */}
+                        {(organizer.public_email || organizer.contact_number) && (
+                            <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
+                                {organizer.contact_number && (
+                                    <div className="flex items-center text-gray-600">
+                                        <PhoneIcon className="w-5 h-5 mr-3 text-emerald-600" />
+                                        <span className="font-medium">{organizer.contact_number}</span>
+                                    </div>
+                                )}
+                                {organizer.public_email && (
+                                    <a
+                                        href={`mailto:${organizer.public_email}`}
+                                        className="w-full inline-flex items-center justify-center px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors"
+                                    >
+                                        <MailIcon className="w-5 h-5 mr-2" />
+                                        Contact Organizer
+                                    </a>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Social Links */}
+                        {hasSocials && (
+                            <div className="bg-white rounded-xl shadow-sm p-6">
+                                <h3 className="text-sm font-semibold text-gray-900 mb-4">Connect With Us</h3>
+                                <div className="space-y-3">
+                                    {(organizer.social_website || organizer.website_url) && (
+                                        <a
+                                            href={organizer.social_website || organizer.website_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center text-gray-600 hover:text-emerald-600 transition-colors"
+                                        >
+                                            <GlobeIcon className="w-5 h-5 mr-3" />
+                                            <span>Website</span>
+                                        </a>
+                                    )}
+                                    {organizer.social_facebook && (
+                                        <a
+                                            href={organizer.social_facebook}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"
+                                        >
+                                            <FacebookIcon className="w-5 h-5 mr-3" />
+                                            <span>Facebook</span>
+                                        </a>
+                                    )}
+                                    {organizer.social_instagram && (
+                                        <a
+                                            href={organizer.social_instagram}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center text-gray-600 hover:text-pink-600 transition-colors"
+                                        >
+                                            <InstagramIcon className="w-5 h-5 mr-3" />
+                                            <span>Instagram</span>
+                                        </a>
+                                    )}
+                                    {organizer.public_email && (
+                                        <a
+                                            href={`mailto:${organizer.public_email}`}
+                                            className="flex items-center text-gray-600 hover:text-emerald-600 transition-colors"
+                                        >
+                                            <MailIcon className="w-5 h-5 mr-3" />
+                                            <span>Email</span>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* Tabs */}
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 border-b border-gray-200">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                     {[
                         { id: 'upcoming', name: 'Upcoming Events' },
                         { id: 'past', name: 'Past Events' },
-                        { id: 'about', name: 'About' },
+
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -373,140 +465,49 @@ export default function OrganizerProfilePage() {
             </div>
 
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                {activeTab === 'about' ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                        {/* About Section (2/3 width) */}
-                        <div className="lg:col-span-2">
-                            <div className="bg-white rounded-xl shadow-sm p-6">
-                                <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
-                                {organizer.bio ? (
-                                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{organizer.bio}</p>
-                                ) : (
-                                    <p className="text-gray-500 italic">No description available.</p>
-                                )}
-                            </div>
-                        </div>
+                <div className="mb-12">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                            {activeTab === 'upcoming' ? 'Upcoming Events' : 'Past Events'}
+                        </h2>
+                        <span className="bg-emerald-100 text-emerald-800 text-sm font-medium px-3 py-1 rounded-full">
+                            {eventsTotal}
+                        </span>
+                    </div>
 
-                        {/* Sidebar: Quick Info (1/3 width) */}
-                        <div className="space-y-6">
-                            {/* Contact Organizer */}
-                            {(organizer.public_email || organizer.contact_number) && (
-                                <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-                                    {organizer.contact_number && (
-                                        <div className="flex items-center text-gray-600">
-                                            <PhoneIcon className="w-5 h-5 mr-3 text-emerald-600" />
-                                            <span className="font-medium">{organizer.contact_number}</span>
-                                        </div>
-                                    )}
-                                    {organizer.public_email && (
-                                        <a
-                                            href={`mailto:${organizer.public_email}`}
-                                            className="w-full inline-flex items-center justify-center px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors"
-                                        >
-                                            <MailIcon className="w-5 h-5 mr-2" />
-                                            Contact Organizer
-                                        </a>
-                                    )}
+                    {events.length > 0 ? (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {events.map((event) => (
+                                    <div key={event.id} className={activeTab === 'past' ? 'opacity-75 grayscale transition-all hover:grayscale-0 hover:opacity-100' : ''}>
+                                        <EventCard event={event} />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {events.length < eventsTotal && (
+                                <div className="mt-8 flex justify-center">
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleLoadMore}
+                                        isLoading={isLoadingMore}
+                                    >
+                                        Load More Events
+                                    </Button>
                                 </div>
                             )}
-
-                            {/* Social Links */}
-                            {hasSocials && (
-                                <div className="bg-white rounded-xl shadow-sm p-6">
-                                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Connect With Us</h3>
-                                    <div className="space-y-3">
-                                        {(organizer.social_website || organizer.website_url) && (
-                                            <a
-                                                href={organizer.social_website || organizer.website_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center text-gray-600 hover:text-emerald-600 transition-colors"
-                                            >
-                                                <GlobeIcon className="w-5 h-5 mr-3" />
-                                                <span>Website</span>
-                                            </a>
-                                        )}
-                                        {organizer.social_facebook && (
-                                            <a
-                                                href={organizer.social_facebook}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"
-                                            >
-                                                <FacebookIcon className="w-5 h-5 mr-3" />
-                                                <span>Facebook</span>
-                                            </a>
-                                        )}
-                                        {organizer.social_instagram && (
-                                            <a
-                                                href={organizer.social_instagram}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center text-gray-600 hover:text-pink-600 transition-colors"
-                                            >
-                                                <InstagramIcon className="w-5 h-5 mr-3" />
-                                                <span>Instagram</span>
-                                            </a>
-                                        )}
-                                        {organizer.public_email && (
-                                            <a
-                                                href={`mailto:${organizer.public_email}`}
-                                                className="flex items-center text-gray-600 hover:text-emerald-600 transition-colors"
-                                            >
-                                                <MailIcon className="w-5 h-5 mr-3" />
-                                                <span>Email</span>
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                        </>
+                    ) : (
+                        <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
+                            <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                            <p className="text-gray-500">
+                                {activeTab === 'upcoming'
+                                    ? 'No upcoming events scheduled.'
+                                    : 'No past events found.'}
+                            </p>
                         </div>
-                    </div>
-                ) : (
-                    <div className="mb-12">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-gray-900">
-                                {activeTab === 'upcoming' ? 'Upcoming Events' : 'Past Events'}
-                            </h2>
-                            <span className="bg-emerald-100 text-emerald-800 text-sm font-medium px-3 py-1 rounded-full">
-                                {eventsTotal}
-                            </span>
-                        </div>
-
-                        {events.length > 0 ? (
-                            <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {events.map((event) => (
-                                        <div key={event.id} className={activeTab === 'past' ? 'opacity-75 grayscale transition-all hover:grayscale-0 hover:opacity-100' : ''}>
-                                            <EventCard event={event} />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {events.length < eventsTotal && (
-                                    <div className="mt-8 flex justify-center">
-                                        <Button
-                                            variant="outline"
-                                            onClick={handleLoadMore}
-                                            isLoading={isLoadingMore}
-                                        >
-                                            Load More Events
-                                        </Button>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
-                                <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                                <p className="text-gray-500">
-                                    {activeTab === 'upcoming'
-                                        ? 'No upcoming events scheduled.'
-                                        : 'No past events found.'}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Invite Modal */}
