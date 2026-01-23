@@ -1046,7 +1046,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     // Build description
     const venueName = event.venue_name || event.location_name || 'the Highlands';
-    const baseDesc = event.description ? event.description.substring(0, 150) : 'Discover this amazing event in the Scottish Highlands!';
+
+    // Strip HTML tags for clean metadata
+    const cleanDescription = event.description
+      ? event.description.replace(/<[^>]*>?/gm, '')
+      : 'Discover this amazing event in the Scottish Highlands!';
+
+    // Truncate to keep the full meta description under roughly 160 chars + prefix
+    const baseDesc = cleanDescription.substring(0, 150);
     const description = `Join us at ${venueName} on ${formattedDate}. ${baseDesc}...`;
 
     const pageTitle = `${event.title} | Highland Events Hub`;
