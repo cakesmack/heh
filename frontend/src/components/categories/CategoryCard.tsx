@@ -25,9 +25,12 @@ export default function CategoryCard({ category }: CategoryCardProps) {
                 }}
             />
 
-            {/* Gradient Overlay (Scrim) - Uses category color from database */}
+            {/* Mobile Gradient (Black/70) - Flush Look */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent md:hidden" />
+
+            {/* Desktop Gradient (Dynamic Color) - Scrim */}
             <div
-                className="absolute inset-0"
+                className="absolute inset-0 hidden md:block"
                 style={{
                     background: `linear-gradient(to top, ${gradientColor}E6 0%, ${gradientColor}99 30%, transparent 100%)`,
                 }}
