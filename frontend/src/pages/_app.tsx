@@ -77,7 +77,7 @@ export default function App({ Component, pageProps }: AppProps) {
                 <Header />
 
                 {/* Main Content */}
-                <main className="flex-1">
+                <main className="flex-1 pb-24 md:pb-0">
                   <Component {...pageProps} />
                 </main>
 
