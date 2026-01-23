@@ -300,6 +300,9 @@ export const eventsAPI = {
       if (filters.venue_id) params.venue_id = filters.venue_id;
       if (filters.include_past) params.include_past = 'true';
       if (filters.skip !== undefined) params.skip = filters.skip;
+      if (filters.include_past) params.include_past = 'true';
+      if (filters.time_range) params.time_range = filters.time_range;
+      if (filters.skip !== undefined) params.skip = filters.skip;
       if (filters.limit !== undefined) params.limit = filters.limit;
     }
 

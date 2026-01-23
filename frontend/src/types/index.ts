@@ -433,6 +433,7 @@ export interface EventFilter {
   include_past?: boolean;
   skip?: number;
   limit?: number;
+  time_range?: 'upcoming' | 'past' | 'all';
 }
 
 export interface EventListResponse {
@@ -815,6 +816,7 @@ export interface Organizer {
   social_instagram?: string;
   social_website?: string;
   public_email?: string;
+  contact_number?: string;
   // Computed stats (from API)
   total_events_hosted?: number;
   follower_count?: number;
@@ -829,6 +831,7 @@ export interface OrganizerCreate {
   facebook_url?: string;
   instagram_url?: string;
   twitter_url?: string;
+  contact_number?: string;
 }
 
 export interface OrganizerUpdate {
@@ -840,6 +843,7 @@ export interface OrganizerUpdate {
   facebook_url?: string;
   instagram_url?: string;
   twitter_url?: string;
+  contact_number?: string;
 }
 
 export interface OrganizerListResponse {

@@ -194,6 +194,7 @@ def list_events(
     organizer_profile_id: Optional[str] = Query(None, description="Filter by organizer profile (group) ID"),
     venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
     include_past: bool = Query(False, description="Include past events"),
+    time_range: Optional[str] = Query(None, description="'upcoming', 'past', or 'all'"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=1000),
     session: Session = Depends(get_session)
@@ -213,14 +214,25 @@ def list_events(
     if category:
          print(f"[EVENTS_DEBUG] Filtering by category slug: {category}")
 
-    # Default date_from to today if not provided AND not requesting past events
-    # This prevents loading past events by default
-    if date_from is None and not include_past:
-        from datetime import datetime
+    # Handle time_range shortcuts
+    # Default behavior (if no date args provided) is 'upcoming' unless specified otherwise
+    if time_range == "past":
+        include_past = True
+        # We want events that have ENDED before now
+        # Logic applied later: Event.date_end < now
+        # Clear default date_from if it was set
+        date_from = None
+    elif time_range == "upcoming":
+        # Explicit upcoming
+        if date_from is None:
+            date_from = datetime.utcnow()
+    elif time_range == "all":
+        include_past = True
+        # No date restrictions by default
+    
+    # Legacy default: If date_from is None and not include_past, default to upcoming
+    elif date_from is None and not include_past:
         date_from = datetime.utcnow()
-        # Note: We do NOT default date_to here. 
-        # API clients (like the Map) must explicitly request a date range if they want to limit it at the backend level.
-        # This ensures pages like Homepage/Magazine Grid can fetch ALL future events paginated.
         print(f"[EVENTS_DEBUG] No start date provided. Defaulting to Today: {date_from}")
 
     query = select(Event)
@@ -394,7 +406,16 @@ def list_events(
         
         # Deduplicate events that matched multiple showtimes
         # Use GROUP BY instead of distinct() to allow ordering by aggregated joined columns in Postgres
+        # Deduplicate events that matched multiple showtimes
+        # Use GROUP BY instead of distinct() to allow ordering by aggregated joined columns in Postgres
         query = query.group_by(Event.id)
+    
+    # Handle explicit Time Range filters
+    if time_range == "past":
+        # Events that have already ended
+        query = query.where(Event.date_end < datetime.utcnow())
+        # Sort past events by date_start DESC (newest past event first)
+        query = query.order_by(Event.date_start.desc())
     elif not include_past:
         # By default, exclude past events (using date_end to not cut off ongoing events)
         query = query.where(Event.date_end >= datetime.utcnow())

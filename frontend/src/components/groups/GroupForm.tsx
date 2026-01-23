@@ -19,6 +19,7 @@ export interface GroupFormData {
     social_instagram: string;
     social_website: string;
     social_linkedin: string;
+    contact_number: string;
 }
 
 interface GroupFormProps {
@@ -54,6 +55,7 @@ export default function GroupForm({
         social_instagram: '',
         social_website: '',
         social_linkedin: '',
+        contact_number: '',
     });
 
     // Initialize form data when initialData changes
@@ -279,6 +281,21 @@ export default function GroupForm({
                                 value={formData.public_email}
                                 onChange={handleChange}
                                 placeholder="contact@yourorganization.com"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="contact_number" className="block text-sm font-medium text-gray-700 mb-2">
+                                Contact Number
+                            </label>
+                            <Input
+                                id="contact_number"
+                                name="contact_number"
+                                type="tel"
+                                value={formData.contact_number}
+                                onChange={handleChange}
+                                placeholder="+44 1234 567890"
                                 disabled={isLoading}
                             />
                         </div>

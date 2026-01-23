@@ -16,6 +16,7 @@ class OrganizerBase(BaseModel):
     social_instagram: Optional[str] = None
     social_website: Optional[str] = None
     public_email: Optional[str] = None
+    contact_number: Optional[str] = None
 
 class OrganizerCreate(OrganizerBase):
     pass
@@ -34,6 +35,7 @@ class OrganizerUpdate(BaseModel):
     social_instagram: Optional[str] = None
     social_website: Optional[str] = None
     public_email: Optional[str] = None
+    contact_number: Optional[str] = None
 
 class OrganizerResponse(OrganizerBase):
     id: str

@@ -141,11 +141,7 @@ export default function AdminVenues() {
     if (!mergingSourceVenue || !mergeTargetVenue) return;
 
     // Debugging: Check what we are about to send
-    console.log('Merging:', {
-      source: mergingSourceVenue,
-      target: mergeTargetVenue,
-      targetId: mergeTargetVenue.id
-    });
+
 
     if (!mergeTargetVenue.id) {
       alert('Error: Target venue has no ID. Please re-select the venue.');
