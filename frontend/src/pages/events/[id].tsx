@@ -1024,9 +1024,44 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       return { notFound: true };
     }
 
+    // --- SEO Metadata Calculation (Server-Side) ---
+    const siteUrl = 'https://www.highlandeventshub.co.uk';
+    const canonicalUrl = `${siteUrl}/events/${event.id}`;
+
+    // Ensure absolute image URL
+    let ogImageUrl = 'https://res.cloudinary.com/dakq1xwn1/image/upload/w_1200,h_630,c_fill,q_auto/v1767454232/highland_events/events/lhxbivhjsqpwn1hsbz5x.jpg'; // fallback
+    if (event.image_url) {
+      ogImageUrl = event.image_url.startsWith('http')
+        ? event.image_url
+        : `${siteUrl}${event.image_url}`;
+    }
+
+    // Format date for description
+    const eventDate = new Date(event.date_start);
+    const formattedDate = eventDate.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    });
+
+    // Build description
+    const venueName = event.venue_name || event.location_name || 'the Highlands';
+    const baseDesc = event.description ? event.description.substring(0, 150) : 'Discover this amazing event in the Scottish Highlands!';
+    const description = `Join us at ${venueName} on ${formattedDate}. ${baseDesc}...`;
+
+    const pageTitle = `${event.title} | Highland Events Hub`;
+
     return {
       props: {
         initialEvent: event,
+        // Pass meta prop to _app.tsx
+        meta: {
+          title: pageTitle,
+          description: description,
+          url: canonicalUrl,
+          image: ogImageUrl,
+          type: 'event',
+        }
       },
     };
   } catch (err: any) {
