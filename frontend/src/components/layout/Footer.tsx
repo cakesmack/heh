@@ -26,11 +26,11 @@ const MailIcon = ({ className }: { className?: string }) => (
 
 export function Footer() {
   return (
-    <footer className="bg-slate-900 mt-auto pb-20 md:pb-0">
+    <footer className="bg-slate-900 mt-auto pb-24 md:pb-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
-          {/* Column 1: Brand */}
-          <div className="sm:col-span-2 lg:col-span-1">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8 lg:gap-8">
+          {/* Column 1: Brand - Full width on mobile */}
+          <div className="col-span-2 lg:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
               <span className="text-2xl">⛰️</span>
               <span className="text-xl font-bold text-white">Highland Events Hub</span>
@@ -42,25 +42,25 @@ export function Footer() {
 
           {/* Column 2: Explore */}
           <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Explore</h3>
-            <ul className="space-y-3">
+            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-4">Explore</h3>
+            <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/events" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/events" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Browse Events
                 </Link>
               </li>
               <li>
-                <Link href="/map" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/map" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Venues Map
                 </Link>
               </li>
               <li>
-                <Link href="/groups" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/groups" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Community Groups
                 </Link>
               </li>
@@ -69,44 +69,44 @@ export function Footer() {
 
           {/* Column 3: Company */}
           <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Company</h3>
-            <ul className="space-y-3">
+            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-4">Company</h3>
+            <ul className="space-y-2">
               <li>
-                <Link href="/about" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/about" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Contact Support
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="/terms#refund-policy" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/terms#refund-policy" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Refund & Cancellation Policy
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/cookies" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/cookies" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                   Cookie Policy
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 4: Socials */}
-          <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Socials</h3>
+          {/* Column 4: Socials - Full width on mobile */}
+          <div className="col-span-2 lg:col-span-1">
+            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-4">Socials</h3>
             <div className="flex space-x-4 mb-4">
               <a
                 href="https://instagram.com"
@@ -129,7 +129,7 @@ export function Footer() {
             </div>
             <a
               href="mailto:contact@highlandeventshub.co.uk"
-              className="text-gray-400 hover:text-white transition-colors text-sm flex items-center"
+              className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm flex items-center"
             >
               <MailIcon className="w-4 h-4 mr-2" />
               contact@highlandeventshub.co.uk
@@ -139,7 +139,7 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-slate-700">
-          <p className="text-sm text-gray-500 text-center">
+          <p className="text-xs sm:text-sm text-gray-500 text-center">
             © 2026 Highland Events Hub. Built in the Highlands.
           </p>
         </div>
