@@ -81,10 +81,8 @@ export default function App({ Component, pageProps }: AppProps) {
                   <Component {...pageProps} />
                 </main>
 
-                {/* Footer - Hidden on mobile */}
-                <div className="hidden md:block">
-                  <Footer />
-                </div>
+                {/* Footer */}
+                <Footer />
 
                 {/* Bottom Navigation Bar - Mobile only */}
                 <div className="md:hidden">

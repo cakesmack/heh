@@ -150,25 +150,25 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
     <div className="min-h-screen bg-gray-50">
       <Head>
         <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
-        <link rel="canonical" href={canonicalUrl} />
+        <meta name="description" content={pageDescription} key="description" />
+        <link rel="canonical" href={canonicalUrl} key="canonical" />
 
         {/* Open Graph / Facebook / WhatsApp */}
-        <meta property="og:type" content="event" />
-        <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:title" content={event.title} />
-        <meta property="og:description" content={pageDescription} />
-        <meta property="og:image" content={ogImageUrl} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:site_name" content="Highland Events Hub" />
+        <meta property="og:type" content="event" key="og-type" />
+        <meta property="og:url" content={canonicalUrl} key="og-url" />
+        <meta property="og:title" content={event.title} key="og-title" />
+        <meta property="og:description" content={pageDescription} key="og-description" />
+        <meta property="og:image" content={ogImageUrl} key="og-image" />
+        <meta property="og:image:width" content="1200" key="og-image-width" />
+        <meta property="og:image:height" content="630" key="og-image-height" />
+        <meta property="og:site_name" content="Highland Events Hub" key="og-site-name" />
 
         {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@HighlandEvents" />
-        <meta name="twitter:title" content={event.title} />
-        <meta name="twitter:description" content={pageDescription} />
-        <meta name="twitter:image" content={ogImageUrl} />
+        <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
+        <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
+        <meta name="twitter:title" content={event.title} key="twitter-title" />
+        <meta name="twitter:description" content={pageDescription} key="twitter-description" />
+        <meta name="twitter:image" content={ogImageUrl} key="twitter-image" />
       </Head>
 
       {/* Cinematic Hero */}

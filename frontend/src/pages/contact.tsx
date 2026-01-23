@@ -14,7 +14,7 @@ export default function ContactPage() {
                 </p>
                 <a
                     href="mailto:contact@highlandeventshub.co.uk"
-                    className="text-emerald-600 hover:text-emerald-700 font-medium text-xl"
+                    className="inline-block px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg rounded-full shadow-lg transition-transform hover:scale-105"
                 >
                     contact@highlandeventshub.co.uk
                 </a>
