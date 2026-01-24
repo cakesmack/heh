@@ -14,7 +14,7 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue, VenueStatus
-from app.models.checkin import CheckIn
+
 from app.models.venue_claim import VenueClaim
 from app.models.venue_invite import VenueInvite
 from app.models.venue_staff import VenueStaff, VenueRole
@@ -122,8 +122,8 @@ def get_admin_stats(
         select(func.count(Event.id)).where(Event.date_end < now)
     ).one()
 
-    # Total check-ins
-    total_checkins = session.exec(select(func.count(CheckIn.id))).one()
+    # Total check-ins (Feature removed)
+    total_checkins = 0
 
     # Pending Reports
     pending_reports = session.exec(select(func.count(Report.id)).where(Report.status == "pending")).one()
@@ -348,10 +348,8 @@ def list_users(
             select(func.count(Event.id)).where(Event.organizer_id == user.id)
         ).one() or 0
 
-        # Count check-ins by this user
-        checkin_count = session.exec(
-            select(func.count(CheckIn.id)).where(CheckIn.user_id == user.id)
-        ).one() or 0
+        # Count check-ins by this user (Feature removed)
+        checkin_count = 0
 
         user_responses.append(AdminUserResponse(
             id=str(user.id),
@@ -393,7 +391,7 @@ def toggle_trusted_organizer(
     
     # Calculate stats for response
     event_count = session.exec(select(func.count(Event.id)).where(Event.organizer_id == user.id)).one() or 0
-    checkin_count = session.exec(select(func.count(CheckIn.id)).where(CheckIn.user_id == user.id)).one() or 0
+    checkin_count = 0
     
     return AdminUserResponse(
         id=str(user.id),
@@ -477,10 +475,8 @@ def toggle_user_admin(
         select(func.count(Event.id)).where(Event.organizer_id == user.id)
     ).one() or 0
 
-    # Count check-ins
-    checkin_count = session.exec(
-        select(func.count(CheckIn.id)).where(CheckIn.user_id == user.id)
-    ).one() or 0
+    # Count check-ins (Feature removed)
+    checkin_count = 0
 
     return AdminUserResponse(
         id=str(user.id),
@@ -541,9 +537,7 @@ def update_user(
     event_count = session.exec(
         select(func.count(Event.id)).where(Event.organizer_id == user.id)
     ).one() or 0
-    checkin_count = session.exec(
-        select(func.count(CheckIn.id)).where(CheckIn.user_id == user.id)
-    ).one() or 0
+    checkin_count = 0
     
     return AdminUserResponse(
         id=str(user.id),
@@ -569,7 +563,6 @@ def delete_user(
     from app.models.bookmark import Bookmark
     from app.models.follow import Follow
     from app.models.group_member import GroupMember
-    from app.models.checkin import CheckIn
     from app.models.venue_staff import VenueStaff
     from app.models.venue_claim import VenueClaim
     from app.models.password_reset import PasswordResetToken
@@ -606,10 +599,7 @@ def delete_user(
     for m in memberships:
         session.delete(m)
     
-    # Check-ins
-    checkins = session.exec(select(CheckIn).where(CheckIn.user_id == normalized_id)).all()
-    for c in checkins:
-        session.delete(c)
+
     
     # Venue staff
     staff = session.exec(select(VenueStaff).where(VenueStaff.user_id == normalized_id)).all()

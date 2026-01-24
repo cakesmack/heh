@@ -282,7 +282,7 @@ def get_current_user_profile(
     Requires valid JWT token.
     """
     # Count user statistics
-    total_checkins = len(current_user.check_ins)
+    total_checkins = 0
     total_events_submitted = len(current_user.submitted_events)
 
     return UserProfile(

@@ -46,7 +46,7 @@ __all__ = [
     "EventTag",
     # Event
     "Event",
-    "Event",
+
     # Promotion
     "Promotion",
     "DiscountType",

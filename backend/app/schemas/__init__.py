@@ -70,7 +70,7 @@ __all__ = [
     "VenueResponse",
     "VenueFilter",
     "VenueListResponse",
-    "VenueListResponse",
+
     # Promotion
     "PromotionCreate",
     "PromotionUpdate",
