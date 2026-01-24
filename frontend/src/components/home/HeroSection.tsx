@@ -116,18 +116,15 @@ export default function HeroSection() {
 
     return (
         <section
-            className="relative h-[80vh] min-h-[600px] flex items-end pb-20 overflow-hidden bg-stone-dark group"
+            className="relative py-6 px-4 md:px-8 bg-stone-dark overflow-hidden group"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Depth Stack Grid Layout */}
-            {/* gap-0: Removed gap to allow negative margins to pull columns together seamlessly */}
-            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-[0.8fr_1.4fr_0.8fr] h-full gap-0 p-4 md:p-6 bg-stone-dark items-center">
+            {/* Main Container: Rounded Triptych */}
+            <div className="relative w-full max-w-[1600px] mx-auto h-[600px] md:h-[650px] rounded-3xl overflow-hidden flex flex-row gap-1 bg-stone-900 shadow-2xl">
 
-                {/* Left Column (Desktop Only) */}
-                {/* h-[85%]: Smaller height for staggered look */}
-                {/* Left Column (Desktop Only) - Depth Stack Side */}
-                <div className="hidden md:block relative h-[90%] w-full -mr-12 lg:-mr-24 z-10 brightness-50 hover:brightness-100 blur-[1px] hover:blur-0 transition-all duration-500 ease-out rounded-2xl overflow-hidden shadow-lg group/side transform hover:scale-105 hover:z-30">
+                {/* Left Panel (25%) */}
+                <div className="hidden md:block w-1/4 h-full relative transition-all duration-700">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -140,15 +137,14 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-black/40" />
+                                <div className="absolute inset-0 bg-black/30 backdrop-brightness-75 transition-all duration-500 group-hover:backdrop-brightness-90" />
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Center Column (Main - The Hero) */}
-                {/* Center Column (Main - The Hero) - Depth Stack Top */}
-                <div className="relative h-full w-full rounded-2xl overflow-hidden shadow-2xl z-20 transform transition-transform duration-700 border border-white/5 ring-1 ring-white/10">
+                {/* Center Panel (50% on desktop, 100% on mobile) */}
+                <div className="w-full md:w-1/2 h-full relative">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -161,40 +157,40 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                {/* Text Readability Gradient: Strong at bottom to support text */}
-                                <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                                {/* Text Readability Gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/10" />
                             </div>
                         );
                     })}
 
                     {/* Content Overlay */}
-                    <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-20">
-                        <div className="animate-slide-up max-w-2xl mt-auto pb-12 sm:pb-20 md:mt-0 md:pb-0">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-20">
+                        <div className="animate-slide-up max-w-xl">
                             <div className="flex items-center justify-center gap-3 mb-6">
                                 {!isWelcome && (
-                                    <Badge variant="warning" className="bg-yellow-500/90 text-white border-none backdrop-blur-sm shadow-xl px-4 py-1.5 text-sm font-bold tracking-wide">
-                                        FEATURED EVENT
+                                    <Badge variant="warning" className="bg-amber-500 text-white border-none shadow-lg px-4 py-1 text-sm font-bold tracking-wider uppercase">
+                                        Featured
                                     </Badge>
                                 )}
                             </div>
 
-                            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-6 tracking-tight leading-[1.1] drop-shadow-2xl">
+                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight leading-tight drop-shadow-xl">
                                 {isWelcome && title === 'Discover the Highlands' ? (
-                                    <>Discover the <span className="text-emerald-400 drop-shadow-lg">Highlands</span></>
+                                    <>Discover the <span className="text-emerald-400">Highlands</span></>
                                 ) : (
                                     title
                                 )}
                             </h1>
 
-                            <div className="w-24 h-1.5 bg-emerald-500 mx-auto mb-8 rounded-full shadow-lg"></div>
+                            <div className="w-16 h-1 bg-emerald-500 mx-auto mb-6 rounded-full"></div>
 
-                            <p className="text-lg md:text-xl text-gray-100 mb-10 line-clamp-3 font-medium drop-shadow-lg max-w-lg mx-auto leading-relaxed text-shadow-sm">
+                            <p className="text-lg md:text-xl text-gray-200 mb-8 line-clamp-3 font-medium drop-shadow-md max-w-md mx-auto leading-relaxed">
                                 {subtitle}
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <Link href={link}>
-                                    <Button variant="primary" size="lg" className="shadow-2xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[200px] text-lg py-4 rounded-xl transition-transform hover:-translate-y-1">
+                                    <Button variant="primary" size="lg" className="shadow-xl bg-emerald-600 hover:bg-emerald-500 border-none text-white min-w-[180px] py-3.5 rounded-xl font-bold tracking-wide transition-all hover:scale-105">
                                         {ctaText}
                                     </Button>
                                 </Link>
@@ -204,7 +200,7 @@ export default function HeroSection() {
                                             const el = document.getElementById('categories');
                                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                                         }}
-                                        className="px-8 py-4 rounded-xl border-2 border-white/30 bg-white/5 text-white font-bold hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-md min-w-[200px] shadow-lg hover:-translate-y-1"
+                                        className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold border border-white/20 backdrop-blur-md transition-all min-w-[180px]"
                                     >
                                         Browse Categories
                                     </button>
@@ -214,10 +210,8 @@ export default function HeroSection() {
                     </div>
                 </div>
 
-                {/* Right Column (Desktop Only) */}
-                {/* h-[85%]: Smaller height for staggered look */}
-                {/* Right Column (Desktop Only) - Depth Stack Side */}
-                <div className="hidden md:block relative h-[90%] w-full -ml-12 lg:-ml-24 z-10 brightness-50 hover:brightness-100 blur-[1px] hover:blur-0 transition-all duration-500 ease-out rounded-2xl overflow-hidden shadow-lg group/side transform hover:scale-105 hover:z-30">
+                {/* Right Panel (25%) */}
+                <div className="hidden md:block w-1/4 h-full relative transition-all duration-700">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_right || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -230,61 +224,47 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-black/40" />
+                                <div className="absolute inset-0 bg-black/30 backdrop-brightness-75 transition-all duration-500 group-hover:backdrop-brightness-90" />
                             </div>
                         );
                     })}
                 </div>
             </div>
 
-            {/* Navigation Buttons (Desktop Only - positioned over side columns) */}
+            {/* Navigation Overlay (Absolute to Section) */}
             {slides.length > 1 && (
                 <>
                     <button
                         onClick={prevSlide}
-                        className="hidden md:flex absolute left-0 inset-y-0 w-[15%] bg-black/0 hover:bg-black/20 transition-colors z-30 items-center justify-center text-white/50 hover:text-white"
-                        aria-label="Previous slide"
+                        className="hidden md:flex absolute left-8 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/30 hover:bg-black/50 backdrop-blur-md rounded-full items-center justify-center text-white/70 hover:text-white transition-all z-30"
+                        aria-label="Previous"
                     >
-                        <svg className="w-12 h-12 drop-shadow-lg transform -translate-x-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
                     <button
                         onClick={nextSlide}
-                        className="hidden md:flex absolute right-0 inset-y-0 w-[15%] bg-black/0 hover:bg-black/20 transition-colors z-30 items-center justify-center text-white/50 hover:text-white"
-                        aria-label="Next slide"
+                        className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/30 hover:bg-black/50 backdrop-blur-md rounded-full items-center justify-center text-white/70 hover:text-white transition-all z-30"
+                        aria-label="Next"
                     >
-                        <svg className="w-12 h-12 drop-shadow-lg transform translate-x-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                         </svg>
                     </button>
                 </>
             )}
 
-            {/* Progress Bar Indicators */}
+            {/* Progress Bars */}
             {slides.length > 1 && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 sm:gap-3 z-30">
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-2 z-30">
                     {slides.map((_, index) => (
                         <button
                             key={index}
                             onClick={() => setCurrentIndex(index)}
-                            className="relative h-1 w-8 sm:w-12 md:w-16 rounded-full bg-white/30 overflow-hidden cursor-pointer hover:bg-white/40 transition-colors"
+                            className={`h-1.5 rounded-full transition-all duration-300 ${index === currentIndex ? 'w-8 bg-emerald-500' : 'w-2 bg-white/30 hover:bg-white/50'}`}
                             aria-label={`Go to slide ${index + 1}`}
-                        >
-                            <div
-                                key={`progress-${index}-${currentIndex}`}
-                                className={`absolute inset-0 rounded-full ${index === currentIndex
-                                    ? 'bg-emerald-500 animate-progress-fill'
-                                    : index < currentIndex
-                                        ? 'bg-white/80'
-                                        : 'bg-transparent'
-                                    }`}
-                                style={{
-                                    width: index === currentIndex ? '100%' : index < currentIndex ? '100%' : '0%',
-                                    animation: index === currentIndex && !isPaused ? 'progressFill 5s linear forwards' : 'none',
-                                }}
-                            />
-                        </button>
+                        />
                     ))}
                 </div>
             )}
