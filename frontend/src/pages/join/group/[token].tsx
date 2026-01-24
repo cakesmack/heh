@@ -36,12 +36,22 @@ export default function JoinGroupPage() {
             setGroupId(response.group_id);
             toast.success('Joined group successfully!');
 
-            // Redirect after a short delay
-            setTimeout(() => {
-                router.push(`/groups/${response.group_id}`); // Note: This assumes we can redirect to ID, but usually we use slug. 
-                // The API returns group_id. We might need to fetch the group to get the slug, or just redirect to account/organizers
-                router.push('/account');
-            }, 2000);
+            // Fetch group details to get slug for redirect
+            try {
+                const group = await api.organizers.get(response.group_id);
+                // Redirect after a short delay
+                setTimeout(() => {
+                    const targetSlug = group.slug || response.group_id; // Fallback to ID if no slug
+                    router.push(`/groups/${targetSlug}`);
+                }, 2000);
+            } catch (fetchErr) {
+                console.error('Failed to fetch group details:', fetchErr);
+                // Fallback redirect if fetch fails
+                setTimeout(() => {
+                    router.push(`/groups/${response.group_id}`);
+                }, 2000);
+            }
+
         } catch (err) {
             console.error('Failed to join group:', err);
             setError(err instanceof Error ? err.message : 'Failed to join group. The invite may be invalid or expired.');
