@@ -21,73 +21,7 @@ from app.schemas.group_member import (
 router = APIRouter()
 
 
-def get_user_group_role(
-    session: Session,
-    group_id: str,
-    user_id: str,
-    group: Optional[Organizer] = None,
-    user: Optional[User] = None
-) -> Optional[GroupRole]:
-    """
-    Get the user's role in a group.
-    Returns the role if the user is a member, or OWNER if they're the creator.
-    Global Admins are treated as OWNERs.
-    Returns None if the user has no access.
-    """
-    # Check global admin status first
-    if user and user.is_admin:
-        return GroupRole.OWNER
-        
-    if not user:
-        user = session.get(User, user_id)
-        if user and user.is_admin:
-            return GroupRole.OWNER
-
-    # Check if creator (legacy owner)
-    if group and group.user_id == user_id:
-        return GroupRole.OWNER
-    
-    # Check group_members table
-    member = session.exec(
-        select(GroupMember).where(
-            GroupMember.group_id == group_id,
-            GroupMember.user_id == user_id
-        )
-    ).first()
-    
-    return member.role if member else None
-
-
-def require_group_role(
-    session: Session,
-    group_id: str,
-    user: User,
-    allowed_roles: List[GroupRole],
-    group: Optional[Organizer] = None
-) -> GroupRole:
-    """
-    Verify user has one of the allowed roles. Raises 403 if not.
-    Returns the user's role.
-    """
-    role = get_user_group_role(session, group_id, user.id, group, user)
-    
-    if role is None:
-        # Check explicitly for superuser fallback (redundant but safe)
-        if user.is_admin:
-            return GroupRole.OWNER
-        raise HTTPException(status_code=403, detail="Not a member of this group")
-    
-    # Global admins bypass role checks (they are effectively OWNERs)
-    if user.is_admin:
-        return GroupRole.OWNER
-
-    if role not in allowed_roles:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Requires one of: {', '.join([r.value for r in allowed_roles])}"
-        )
-    
-    return role
+from app.core.permissions import get_user_group_role, require_group_role
 
 
 # =============================================================================

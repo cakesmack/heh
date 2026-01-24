@@ -738,20 +738,17 @@ def create_event(
                 detail="Organizer profile (group) not found"
             )
         
-        # Check if user is a member of this group (any role can create events)
-        is_creator = organizer_profile.user_id == current_user.id
-        if not is_creator:
-            member = session.exec(
-                select(GroupMember).where(
-                    GroupMember.group_id == organizer_profile_id_normalized,
-                    GroupMember.user_id == current_user.id
-                )
-            ).first()
-            if not member:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You must be a member of this group to create events for it"
-                )
+        # Verify permission using shared logic (handles God Mode)
+        from app.core.permissions import require_group_role
+        from app.models.group_member import GroupRole
+
+        require_group_role(
+            session, 
+            organizer_profile_id_normalized, 
+            current_user, 
+            [GroupRole.OWNER, GroupRole.ADMIN, GroupRole.EDITOR], # Any member can create
+            organizer_profile
+        )
 
     # Validate category
     category_id_normalized = None
