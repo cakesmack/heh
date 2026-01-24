@@ -120,17 +120,18 @@ export default function HeroSection() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Staggered Triptych Grid Layout */}
-            {/* items-center: Ensures the side columns float in the middle vertically */}
-            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-[1fr_1.3fr_1fr] h-full gap-4 md:gap-6 p-4 md:p-6 bg-stone-dark items-center">
+            {/* Depth Stack Grid Layout */}
+            {/* gap-0: Removed gap to allow negative margins to pull columns together seamlessly */}
+            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-[0.8fr_1.4fr_0.8fr] h-full gap-0 p-4 md:p-6 bg-stone-dark items-center justify-items-center">
 
                 {/* Left Column (Desktop Only) */}
                 {/* h-[85%]: Smaller height for staggered look */}
-                <div className="hidden md:block relative h-[85%] hover:h-[90%] transition-all duration-500 ease-out rounded-2xl overflow-hidden shadow-lg group/side">
+                {/* Left Column (Desktop Only) - Depth Stack Side */}
+                <div className="hidden md:block relative h-[90%] -mr-12 lg:-mr-24 z-10 brightness-50 hover:brightness-100 blur-[1px] hover:blur-0 transition-all duration-500 ease-out rounded-2xl overflow-hidden shadow-lg group/side transform hover:scale-105 hover:z-30">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
-                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg'); // Fallback for paid slots (could add left/right support later)
+                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
                         const img = getOptimizedImage(rawImg, 800);
 
                         return (
@@ -139,16 +140,15 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                {/* Atmosphere: Darker default (60%), lightens on hover (20%) */}
-                                <div className="absolute inset-0 bg-black/60 group-hover/side:bg-black/20 transition-colors duration-500" />
+                                <div className="absolute inset-0 bg-black/40" />
                             </div>
                         );
                     })}
                 </div>
 
                 {/* Center Column (Main - The Hero) */}
-                {/* h-full: Using full available height. z-10: Lifted up. Scale: Subtly larger. */}
-                <div className="relative h-full rounded-2xl overflow-hidden shadow-2xl z-10 md:transform md:scale-[1.02] transition-transform duration-700 border border-white/5">
+                {/* Center Column (Main - The Hero) - Depth Stack Top */}
+                <div className="relative h-full w-full rounded-2xl overflow-hidden shadow-2xl z-20 transform transition-transform duration-700 border border-white/5 ring-1 ring-white/10">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -216,7 +216,8 @@ export default function HeroSection() {
 
                 {/* Right Column (Desktop Only) */}
                 {/* h-[85%]: Smaller height for staggered look */}
-                <div className="hidden md:block relative h-[85%] hover:h-[90%] transition-all duration-500 ease-out rounded-2xl overflow-hidden shadow-lg group/side">
+                {/* Right Column (Desktop Only) - Depth Stack Side */}
+                <div className="hidden md:block relative h-[90%] -ml-12 lg:-ml-24 z-10 brightness-50 hover:brightness-100 blur-[1px] hover:blur-0 transition-all duration-500 ease-out rounded-2xl overflow-hidden shadow-lg group/side transform hover:scale-105 hover:z-30">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_right || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -229,8 +230,7 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                {/* Atmosphere: Darker default (60%), lightens on hover (20%) */}
-                                <div className="absolute inset-0 bg-black/60 group-hover/side:bg-black/20 transition-colors duration-500" />
+                                <div className="absolute inset-0 bg-black/40" />
                             </div>
                         );
                     })}
