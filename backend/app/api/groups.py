@@ -25,13 +25,24 @@ def get_user_group_role(
     session: Session,
     group_id: str,
     user_id: str,
-    group: Optional[Organizer] = None
+    group: Optional[Organizer] = None,
+    user: Optional[User] = None
 ) -> Optional[GroupRole]:
     """
     Get the user's role in a group.
     Returns the role if the user is a member, or OWNER if they're the creator.
+    Global Admins are treated as OWNERs.
     Returns None if the user has no access.
     """
+    # Check global admin status first
+    if user and user.is_admin:
+        return GroupRole.OWNER
+        
+    if not user:
+        user = session.get(User, user_id)
+        if user and user.is_admin:
+            return GroupRole.OWNER
+
     # Check if creator (legacy owner)
     if group and group.user_id == user_id:
         return GroupRole.OWNER
@@ -58,11 +69,18 @@ def require_group_role(
     Verify user has one of the allowed roles. Raises 403 if not.
     Returns the user's role.
     """
-    role = get_user_group_role(session, group_id, user.id, group)
+    role = get_user_group_role(session, group_id, user.id, group, user)
     
     if role is None:
+        # Check explicitly for superuser fallback (redundant but safe)
+        if user.is_admin:
+            return GroupRole.OWNER
         raise HTTPException(status_code=403, detail="Not a member of this group")
     
+    # Global admins bypass role checks (they are effectively OWNERs)
+    if user.is_admin:
+        return GroupRole.OWNER
+
     if role not in allowed_roles:
         raise HTTPException(
             status_code=403,
@@ -210,17 +228,21 @@ def join_group(
         return {"message": "Already a member", "group_id": invite.group_id}
 
     # Add member as EDITOR by default
-    member = GroupMember(
-        group_id=invite.group_id,
-        user_id=current_user.id,
-        role=GroupRole.EDITOR
-    )
-    session.add(member)
-    
-    # Delete invite (one-time use)
-    session.delete(invite)
-    
-    session.commit()
+    try:
+        member = GroupMember(
+            group_id=invite.group_id,
+            user_id=current_user.id,
+            role=GroupRole.EDITOR
+        )
+        session.add(member)
+        
+        # Delete invite (one-time use)
+        session.delete(invite)
+        
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail="Failed to join group")
     
     return {"message": "Joined group successfully", "group_id": invite.group_id}
 
@@ -328,8 +350,8 @@ def remove_member(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    # ADMIN cannot remove OWNER
-    if caller_role == GroupRole.ADMIN and member.role == GroupRole.OWNER:
+    # ADMIN cannot remove OWNER (unless caller is global admin)
+    if caller_role == GroupRole.ADMIN and member.role == GroupRole.OWNER and not current_user.is_admin:
         raise HTTPException(
             status_code=403,
             detail="Admins cannot remove owners"
@@ -430,7 +452,7 @@ def check_membership(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    role = get_user_group_role(session, group_id, current_user.id, group)
+    role = get_user_group_role(session, group_id, current_user.id, group, current_user)
     
     if role is None:
         return {"is_member": False, "role": None}
