@@ -343,7 +343,7 @@ export default function OrganizerProfilePage() {
                         {canEdit && (
                             <>
                                 <Link
-                                    href={`/events/create?organizer_profile_id=${organizer.id}`}
+                                    href={`/submit-event?organizer_profile_id=${organizer.id}`}
                                     className="inline-flex items-center p-2 bg-emerald-600 text-white shadow-sm text-sm font-medium rounded-md hover:bg-emerald-700 focus:outline-none"
                                     title="Create Event"
                                 >
