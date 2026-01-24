@@ -182,13 +182,36 @@ export default function OrganizerProfilePage() {
 
     // Check permissions
     useEffect(() => {
-        if (user && organizer) {
-            const isOwner = user.id === organizer.user_id;
-            const isAdmin = user.is_admin;
-            setCanEdit(isOwner || isAdmin);
-        } else {
-            setCanEdit(false);
-        }
+        const checkPermissions = async () => {
+            if (user && organizer) {
+                // 1. Owner check
+                const isOwner = user.id === organizer.user_id;
+                // 2. Global Admin check
+                const isGlobalAdmin = user.is_admin;
+
+                if (isOwner || isGlobalAdmin) {
+                    setCanEdit(true);
+                    return;
+                }
+
+                // 3. Group Member role check (Admin or Editor)
+                try {
+                    const membership = await api.groups.checkMembership(organizer.id);
+                    if (membership && (membership.role === 'admin' || membership.role === 'editor')) {
+                        setCanEdit(true);
+                    } else {
+                        setCanEdit(false);
+                    }
+                } catch (err) {
+                    // Not a member or error
+                    setCanEdit(false);
+                }
+            } else {
+                setCanEdit(false);
+            }
+        };
+
+        checkPermissions();
     }, [user, organizer]);
 
     // 3. Loading State blocks render to prevent "Guest View" flash

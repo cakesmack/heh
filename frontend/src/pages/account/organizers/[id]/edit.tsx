@@ -235,7 +235,7 @@ export default function EditOrganizerPage() {
         }
     };
 
-    const canManageTeam = userRole === 'owner' || userRole === 'admin';
+    const canManageTeam = userRole === 'owner' || userRole === 'admin' || userRole === 'editor';
     const isOwner = userRole === 'owner';
 
     if (authLoading || isLoading) {
