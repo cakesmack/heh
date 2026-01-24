@@ -316,63 +316,72 @@ export default function EditOrganizerPage() {
                         <Card>
                             <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Members</h3>
                             <div className="space-y-3">
-                                {members.map((member) => {
-                                    const isCreator = member.user_id === organizerUserId;
-                                    const isSelf = member.user_id === user?.id;
-                                    const roleColors = ROLE_COLORS[member.role] || ROLE_COLORS.editor;
+                                {(() => {
+                                    // Ghost Mode: Filter out Global Admins from the list
+                                    const visibleMembers = members.filter(member => !member.is_admin);
 
                                     return (
-                                        <div
-                                            key={member.user_id}
-                                            className="flex items-center justify-between bg-gray-50 p-4 rounded-lg"
-                                        >
-                                            <div className="flex items-center">
-                                                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold mr-3">
-                                                    {(member.user_username || member.user_email || '?').charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-900">
-                                                        {member.user_username || member.user_email || 'Unknown'}
-                                                        {isSelf && <span className="text-gray-500 ml-1">(you)</span>}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                {/* Role Badge / Selector */}
-                                                {isOwner && !isCreator ? (
-                                                    <select
-                                                        value={member.role}
-                                                        onChange={(e) => handleRoleChange(member.user_id, e.target.value as GroupRole)}
-                                                        className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
-                                                    >
-                                                        <option value="admin">Admin</option>
-                                                        <option value="editor">Editor</option>
-                                                    </select>
-                                                ) : (
-                                                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${roleColors.bg} ${roleColors.text}`}>
-                                                        {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                                                    </span>
-                                                )}
+                                        <>
+                                            {visibleMembers.map((member) => {
+                                                const isCreator = member.user_id === organizerUserId;
+                                                const isSelf = member.user_id === user?.id;
+                                                const roleColors = ROLE_COLORS[member.role] || ROLE_COLORS.editor;
 
-                                                {/* Remove Button */}
-                                                {canManageTeam && !isCreator && !isSelf && (
-                                                    <button
-                                                        onClick={() => handleRemoveMember(member.user_id, member.user_email)}
-                                                        className="text-red-600 hover:text-red-800 p-1"
-                                                        title="Remove member"
+                                                return (
+                                                    <div
+                                                        key={member.user_id}
+                                                        className="flex items-center justify-between bg-gray-50 p-4 rounded-lg"
                                                     >
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
+                                                        <div className="flex items-center">
+                                                            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold mr-3">
+                                                                {(member.user_username || member.user_email || '?').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium text-gray-900">
+                                                                    {member.user_username || member.user_email || 'Unknown'}
+                                                                    {isSelf && <span className="text-gray-500 ml-1">(you)</span>}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            {/* Role Badge / Selector */}
+                                                            {isOwner && !isCreator ? (
+                                                                <select
+                                                                    value={member.role}
+                                                                    onChange={(e) => handleRoleChange(member.user_id, e.target.value as GroupRole)}
+                                                                    className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                                                                >
+                                                                    <option value="admin">Admin</option>
+                                                                    <option value="editor">Editor</option>
+                                                                </select>
+                                                            ) : (
+                                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${roleColors.bg} ${roleColors.text}`}>
+                                                                    {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                                                                </span>
+                                                            )}
+
+                                                            {/* Remove Button */}
+                                                            {canManageTeam && !isCreator && !isSelf && (
+                                                                <button
+                                                                    onClick={() => handleRemoveMember(member.user_id, member.user_email)}
+                                                                    className="text-red-600 hover:text-red-800 p-1"
+                                                                    title="Remove member"
+                                                                >
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {visibleMembers.length === 0 && (
+                                                <p className="text-sm text-gray-500 text-center py-4">No additional team members assigned.</p>
+                                            )}
+                                        </>
                                     );
-                                })}
-                                {members.length === 0 && (
-                                    <p className="text-sm text-gray-500 text-center py-4">No team members yet.</p>
-                                )}
+                                })()}
                             </div>
                         </Card>
 

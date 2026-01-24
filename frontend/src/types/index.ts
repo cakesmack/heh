@@ -864,6 +864,7 @@ export interface GroupMember {
   joined_at: string;
   user_email?: string;
   user_username?: string;
+  is_admin?: boolean;
 }
 
 export interface GroupInvite {
