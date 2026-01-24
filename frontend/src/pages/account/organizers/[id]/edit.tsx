@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
-import { AuthGuard } from '@/components/auth/AuthGuard';
+import { AuthGuard } from '@/components/common/AuthGuard';
 import { Spinner } from '@/components/common/Spinner';
 import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';

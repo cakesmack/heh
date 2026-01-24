@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { AuthGuard } from '@/components/auth/AuthGuard';
+import { AuthGuard } from '@/components/common/AuthGuard';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import AdminHealthStrip from '@/components/admin/AdminHealthStrip';

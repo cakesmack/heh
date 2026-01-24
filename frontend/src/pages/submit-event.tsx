@@ -12,7 +12,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, apiFetch } from '@/lib/api';
-import { AuthGuard } from '@/components/auth/AuthGuard';
+import { AuthGuard } from '@/components/common/AuthGuard';
 import { VenueResponse, Category, Organizer, ShowtimeCreate, Tag, EventCreate } from '@/types';
 import { Button } from '@/components/common/Button';
 import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';

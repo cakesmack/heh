@@ -7,7 +7,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
-import { AuthGuard } from '@/components/auth/AuthGuard';
+import { AuthGuard } from '@/components/common/AuthGuard';
 import { Button } from '@/components/ui/button';
 import GroupForm, { GroupFormData } from '@/components/groups/GroupForm';
 

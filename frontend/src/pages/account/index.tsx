@@ -10,7 +10,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, analyticsAPI } from '@/lib/api';
-import { AuthGuard } from '@/components/auth/AuthGuard';
+import { AuthGuard } from '@/components/common/AuthGuard';
 import { EventResponse, UserDashboardStats, VenueClaim, OrganizerSummary, Category } from '@/types';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
