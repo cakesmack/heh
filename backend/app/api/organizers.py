@@ -205,6 +205,24 @@ def delete_organizer(
             detail="Only the group owner can delete this organizer"
         )
         
+    # Manual Cascade Delete for related records
+    # 1. Delete Members
+    from app.models.group_member import GroupMember
+    session.exec(select(GroupMember).where(GroupMember.group_id == organizer_id))
+    # We need to delete them individually or use delete statements if supported by SQLModel/SQLAlchemy setup
+    # Using direct delete statements is more efficient
+    from sqlalchemy import delete
+    session.exec(delete(GroupMember).where(GroupMember.group_id == organizer_id))
+    
+    # 2. Delete Invites
+    from app.models.group_invite import GroupInvite
+    session.exec(delete(GroupInvite).where(GroupInvite.group_id == organizer_id))
+    
+    # 3. Delete Follows
+    from app.models.follow import Follow
+    session.exec(delete(Follow).where(Follow.target_id == organizer_id, Follow.target_type == "group"))
+
+    # 4. Delete Organizer
     session.delete(organizer)
     session.commit()
     return None
