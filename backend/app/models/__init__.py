@@ -9,7 +9,6 @@ from .venue_category import VenueCategory
 from .category import Category
 from .tag import Tag, EventTag
 from .event import Event
-from .checkin import CheckIn
 from .promotion import Promotion, DiscountType
 from .payment import Payment, PaymentStatus
 from .hero import HeroSlot
@@ -47,8 +46,7 @@ __all__ = [
     "EventTag",
     # Event
     "Event",
-    # Check-in
-    "CheckIn",
+    "Event",
     # Promotion
     "Promotion",
     "DiscountType",

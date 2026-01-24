@@ -30,13 +30,7 @@ from .venue import (
     VenueListResponse,
 )
 
-# Check-in schemas
-from .checkin import (
-    CheckInRequest,
-    CheckInResponse,
-    CheckInHistory,
-    CheckInStatsResponse,
-)
+
 
 # Promotion schemas
 from .promotions import (
@@ -76,11 +70,7 @@ __all__ = [
     "VenueResponse",
     "VenueFilter",
     "VenueListResponse",
-    # Check-in
-    "CheckInRequest",
-    "CheckInResponse",
-    "CheckInHistory",
-    "CheckInStatsResponse",
+    "VenueListResponse",
     # Promotion
     "PromotionCreate",
     "PromotionUpdate",
