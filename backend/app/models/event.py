@@ -14,7 +14,6 @@ from .event_participating_venue import EventParticipatingVenue
 if TYPE_CHECKING:
     from .user import User
     from .venue import Venue
-    from .checkin import CheckIn
     from .category import Category
     from .tag import Tag
     from .bookmark import Bookmark
@@ -129,7 +128,6 @@ class Event(SQLModel, table=True):
     )
     organizer: "User" = Relationship(back_populates="submitted_events")
     organizer_profile: Optional["Organizer"] = Relationship(back_populates="events")
-    check_ins: List["CheckIn"] = Relationship(back_populates="event")
     category_rel: Optional["Category"] = Relationship(back_populates="events")
     tags: List["Tag"] = Relationship(back_populates="events", link_model=EventTag)
     bookmarks: List["Bookmark"] = Relationship(back_populates="event")

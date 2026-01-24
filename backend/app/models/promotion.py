@@ -54,7 +54,7 @@ class Promotion(SQLModel, table=True):
     discount_value: Optional[int] = Field(default=None)  # Percentage or fixed amount
 
     # Requirements
-    requires_checkin: bool = Field(default=True)
+    # Check-in requirement removed to support feature purge
 
     # Validity
     expires_at: Optional[datetime] = Field(default=None, index=True)

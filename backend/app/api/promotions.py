@@ -103,7 +103,7 @@ def create_promotion(
         description=promo_data.description,
         discount_type=promo_data.discount_type,
         discount_value=promo_data.discount_value,
-        requires_checkin=promo_data.requires_checkin,
+        # Check-in requirement removed
         expires_at=promo_data.expires_at,
         active=promo_data.active
     )

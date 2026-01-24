@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlmodel import Session, select
 
 from app.models.promotion import Promotion
-from app.models.checkin import CheckIn
+
 
 
 def get_active_promotions(
@@ -40,27 +40,7 @@ def get_active_promotions(
         query = query.where(Promotion.venue_id == venue_id)
 
     promotions = session.exec(query).all()
-
-    # If user_id provided, filter by eligibility (has checked in)
-    if user_id:
-        eligible_promotions = []
-        for promo in promotions:
-            if not promo.requires_checkin:
-                eligible_promotions.append(promo)
-            else:
-                # Check if user has checked in at this venue
-                has_checkin = session.exec(
-                    select(CheckIn)
-                    .join(CheckIn.event)
-                    .where(CheckIn.user_id == user_id)
-                    .where(CheckIn.event.has(venue_id=promo.venue_id))
-                ).first()
-
-                if has_checkin:
-                    eligible_promotions.append(promo)
-
-        return eligible_promotions
-
+    # Logic for filtering by check-in eligibility has been removed
     return promotions
 
 
@@ -91,45 +71,8 @@ def is_promotion_unlocked(
     if promotion.expires_at and promotion.expires_at < datetime.utcnow():
         return False
 
-    # If no check-in required, it's automatically unlocked
-    if not promotion.requires_checkin:
-        return True
-
-    # Check if user has checked in at this venue
-    has_checkin = session.exec(
-        select(CheckIn)
-        .join(CheckIn.event)
-        .where(CheckIn.user_id == user_id)
-        .where(CheckIn.event.has(venue_id=promotion.venue_id))
-    ).first()
-
-    return has_checkin is not None
+    # Logic for check-in requirement has been removed. All active promotions are unlocked.
+    return True
 
 
-def get_promotion_for_venue_checkin(
-    session: Session,
-    venue_id: UUID,
-    user_id: UUID
-) -> Optional[Promotion]:
-    """
-    Get the first active promotion for a venue that gets unlocked upon check-in.
 
-    Args:
-        session: Database session
-        venue_id: Venue UUID
-        user_id: User UUID
-
-    Returns:
-        Promotion object if available, None otherwise
-    """
-    now = datetime.utcnow()
-
-    promotion = session.exec(
-        select(Promotion)
-        .where(Promotion.venue_id == venue_id)
-        .where(Promotion.active == True)
-        .where(Promotion.requires_checkin == True)
-        .where((Promotion.expires_at == None) | (Promotion.expires_at > now))
-    ).first()
-
-    return promotion

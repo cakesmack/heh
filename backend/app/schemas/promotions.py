@@ -16,7 +16,7 @@ class PromotionCreate(BaseModel):
     description: str = Field(min_length=1, max_length=1000)
     discount_type: DiscountType = DiscountType.OTHER
     discount_value: Optional[int] = Field(None, ge=0)
-    requires_checkin: bool = True
+
     expires_at: Optional[datetime] = None
     active: bool = True
 
@@ -27,7 +27,7 @@ class PromotionUpdate(BaseModel):
     description: Optional[str] = Field(None, min_length=1, max_length=1000)
     discount_type: Optional[DiscountType] = None
     discount_value: Optional[int] = Field(None, ge=0)
-    requires_checkin: Optional[bool] = None
+
     expires_at: Optional[datetime] = None
     active: Optional[bool] = None
 
@@ -40,7 +40,7 @@ class PromotionResponse(BaseModel):
     description: str
     discount_type: DiscountType
     discount_value: Optional[int]
-    requires_checkin: bool
+
     expires_at: Optional[datetime]
     active: bool
     created_at: datetime

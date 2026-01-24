@@ -8,7 +8,6 @@ from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
 
 if TYPE_CHECKING:
-    from .checkin import CheckIn
     from .event import Event
     from .venue import Venue
     from .payment import Payment
@@ -59,7 +58,6 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    check_ins: list["CheckIn"] = Relationship(back_populates="user")
     submitted_events: list["Event"] = Relationship(back_populates="organizer")
     owned_venues: list["Venue"] = Relationship(back_populates="owner")
     payments: list["Payment"] = Relationship(back_populates="user")
