@@ -2,15 +2,26 @@
  * Create Organizer Profile Page
  */
 import { useState } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
+import { AuthGuard } from '@/components/auth/AuthGuard';
+import { Button } from '@/components/ui/button';
 import GroupForm, { GroupFormData } from '@/components/groups/GroupForm';
 
 export default function CreateOrganizerPage() {
+    return (
+        <AuthGuard>
+            <CreateOrganizerContent />
+        </AuthGuard>
+    );
+}
+
+function CreateOrganizerContent() {
     const router = useRouter();
-    const { isAuthenticated, isLoading: authLoading } = useAuth();
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -45,18 +56,7 @@ export default function CreateOrganizerPage() {
         }
     };
 
-    if (authLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-            </div>
-        );
-    }
 
-    if (!isAuthenticated) {
-        router.push('/auth/login?redirect=/account/organizers/create');
-        return null;
-    }
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">

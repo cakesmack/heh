@@ -3,16 +3,19 @@
  * Features tabbed interface for Profile Details and Team Management
  */
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
+import { AuthGuard } from '@/components/auth/AuthGuard';
+import { Spinner } from '@/components/common/Spinner';
 import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
-import { Spinner } from '@/components/common/Spinner';
 import GroupForm, { GroupFormData } from '@/components/groups/GroupForm';
 import { GroupMember, GroupInvite, GroupRole } from '@/types';
+import { toast } from 'react-hot-toast';
 
 // Role badge colors
 const ROLE_COLORS: Record<GroupRole, { bg: string; text: string }> = {

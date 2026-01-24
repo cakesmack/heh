@@ -6,6 +6,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+import { useRouter } from 'next/router';
+import { toast } from 'react-hot-toast';
 import { api } from '@/lib/api';
 import type { User, LoginRequest, RegisterRequest } from '@/types';
 
@@ -31,6 +33,7 @@ interface AuthProviderProps {
  * Wrap your app with this to provide authentication context
  */
 export function AuthProvider({ children }: AuthProviderProps) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -99,13 +102,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [refreshUser]);
 
+
   /**
    * Logout user
    */
   const logout = useCallback(() => {
     api.auth.logout();
     setUser(null);
-  }, []);
+    toast.success('Logged out successfully. See you soon!');
+    router.push('/');
+  }, [router]);
 
   /**
    * Initialize auth state on mount

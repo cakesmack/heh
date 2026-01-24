@@ -10,12 +10,21 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, analyticsAPI } from '@/lib/api';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { EventResponse, UserDashboardStats, VenueClaim, OrganizerSummary, Category } from '@/types';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
 import { SettingsTab } from '@/components/account/SettingsTab';
 
 export default function AccountPage() {
+  return (
+    <AuthGuard>
+      <AccountPageContent />
+    </AuthGuard>
+  );
+}
+
+function AccountPageContent() {
   const router = useRouter();
   const { user, isAuthenticated, logout, refreshUser } = useAuth();
   const [dashboardStats, setDashboardStats] = useState<UserDashboardStats | null>(null);

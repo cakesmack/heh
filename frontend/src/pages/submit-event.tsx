@@ -7,11 +7,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, apiFetch } from '@/lib/api';
-import { VenueResponse, Category, Organizer, ShowtimeCreate } from '@/types';
+import { AuthGuard } from '@/components/auth/AuthGuard';
+import { VenueResponse, Category, Organizer, ShowtimeCreate, Tag, EventCreate } from '@/types';
 import { Button } from '@/components/common/Button';
 import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';
 
