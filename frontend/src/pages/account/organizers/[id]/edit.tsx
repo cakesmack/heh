@@ -332,7 +332,6 @@ export default function EditOrganizerPage() {
                                                         {member.user_username || member.user_email || 'Unknown'}
                                                         {isSelf && <span className="text-gray-500 ml-1">(you)</span>}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">{member.user_email}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
