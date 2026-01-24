@@ -1,4 +1,4 @@
-```javascript
+
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -190,7 +190,7 @@ function AdminDashboardContent() {
           ].map((action) => (
             <Link key={action.label} href={action.href}>
               <button className="w-full group p-4 bg-white hover:bg-gray-50 rounded-2xl border border-gray-100 shadow-sm transition-all duration-200 flex items-center gap-4">
-                <div className={`p - 2.5 rounded - xl ${ action.color } text - white shadow - lg shadow - ${ action.color.split('-')[1] } -100 group - hover: scale - 110 transition - transform`}>
+                <div className={`p - 2.5 rounded - xl ${action.color} text - white shadow - lg shadow - ${action.color.split('-')[1]} -100 group - hover: scale - 110 transition - transform`}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={action.icon} />
                   </svg>
