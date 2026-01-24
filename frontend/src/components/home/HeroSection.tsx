@@ -116,15 +116,15 @@ export default function HeroSection() {
 
     return (
         <section
-            className="relative py-6 px-4 md:px-8 bg-stone-dark overflow-hidden group"
+            className="relative w-full bg-stone-dark overflow-hidden group"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Main Container: Asymmetrical Split Grid */}
-            <div className="relative w-full max-w-[1600px] mx-auto h-[600px] rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-1 bg-stone-900 shadow-2xl">
+            {/* Main Container: Full Width Asymmetrical Grid */}
+            <div className="relative w-full h-[600px] md:h-[700px] grid grid-cols-1 md:grid-cols-2 bg-stone-900">
 
                 {/* Left Column (Full Height) */}
-                <div className="relative w-full h-full overflow-hidden group">
+                <div className="relative w-full h-full overflow-hidden group border-b md:border-b-0 md:border-r border-white/10">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -137,17 +137,17 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-black/30 transition-all duration-700 group-hover:bg-black/20" />
+                                <div className="absolute inset-0 bg-black/20 transition-all duration-700 group-hover:bg-black/10" />
                             </div>
                         );
                     })}
                 </div>
 
                 {/* Right Column (Split Vertically) */}
-                <div className="hidden md:flex flex-col h-full gap-1">
+                <div className="hidden md:flex flex-col h-full">
 
                     {/* Top Right (Half Height) */}
-                    <div className="relative w-full h-1/2 overflow-hidden group">
+                    <div className="relative w-full h-1/2 overflow-hidden group border-b border-white/10">
                         {slides.map((slide, index) => {
                             const rawImg = isWelcomeSlide(slide)
                                 ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -160,7 +160,7 @@ export default function HeroSection() {
                                     className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                     style={{ backgroundImage: `url(${img})` }}
                                 >
-                                    <div className="absolute inset-0 bg-black/30 transition-all duration-700 group-hover:bg-black/20" />
+                                    <div className="absolute inset-0 bg-black/20 transition-all duration-700 group-hover:bg-black/10" />
                                 </div>
                             );
                         })}
@@ -180,7 +180,7 @@ export default function HeroSection() {
                                     className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                     style={{ backgroundImage: `url(${img})` }}
                                 >
-                                    <div className="absolute inset-0 bg-black/30 transition-all duration-700 group-hover:bg-black/20" />
+                                    <div className="absolute inset-0 bg-black/20 transition-all duration-700 group-hover:bg-black/10" />
                                 </div>
                             );
                         })}
@@ -188,7 +188,7 @@ export default function HeroSection() {
                 </div>
 
                 {/* Content Overlay (Centered Over Everything) */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-20 pointer-events-none">
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-30 pointer-events-none">
                     {/* Pointer events none on container so clicks pass through to images? No, images aren't links here. Buttons are. Re-enable pointer events on inner content. */}
                     <div className="animate-slide-up max-w-2xl pointer-events-auto">
                         <div className="flex items-center justify-center gap-3 mb-6">
