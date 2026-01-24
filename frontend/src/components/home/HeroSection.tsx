@@ -124,7 +124,7 @@ export default function HeroSection() {
             <div className="relative w-full h-[600px] md:h-[700px] grid grid-cols-1 md:grid-cols-2 bg-stone-900">
 
                 {/* Left Column (Full Height) */}
-                <div className="relative w-full h-full overflow-hidden group border-b md:border-b-0 md:border-r border-white/10">
+                <div className="relative w-full h-full overflow-hidden group border-b md:border-b-0 md:border-r border-white/20">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -137,7 +137,7 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-black/20 transition-all duration-700 group-hover:bg-black/10" />
+                                <div className="absolute inset-0 bg-black/40 z-10 transition-all duration-700 group-hover:bg-black/30" />
                             </div>
                         );
                     })}
@@ -147,7 +147,7 @@ export default function HeroSection() {
                 <div className="hidden md:flex flex-col h-full">
 
                     {/* Top Right (Half Height) */}
-                    <div className="relative w-full h-1/2 overflow-hidden group border-b border-white/10">
+                    <div className="relative w-full h-1/2 overflow-hidden group border-b border-white/20">
                         {slides.map((slide, index) => {
                             const rawImg = isWelcomeSlide(slide)
                                 ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
@@ -160,7 +160,7 @@ export default function HeroSection() {
                                     className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                     style={{ backgroundImage: `url(${img})` }}
                                 >
-                                    <div className="absolute inset-0 bg-black/20 transition-all duration-700 group-hover:bg-black/10" />
+                                    <div className="absolute inset-0 bg-black/40 z-10 transition-all duration-700 group-hover:bg-black/30" />
                                 </div>
                             );
                         })}
@@ -180,7 +180,7 @@ export default function HeroSection() {
                                     className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                     style={{ backgroundImage: `url(${img})` }}
                                 >
-                                    <div className="absolute inset-0 bg-black/20 transition-all duration-700 group-hover:bg-black/10" />
+                                    <div className="absolute inset-0 bg-black/40 z-10 transition-all duration-700 group-hover:bg-black/30" />
                                 </div>
                             );
                         })}
