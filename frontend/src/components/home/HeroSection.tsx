@@ -120,16 +120,16 @@ export default function HeroSection() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Main Container: Rounded Triptych */}
-            <div className="relative w-full max-w-[1600px] mx-auto h-[600px] md:h-[650px] rounded-3xl overflow-hidden flex flex-row gap-1 bg-stone-900 shadow-2xl">
+            {/* Main Container: Asymmetrical Split Grid */}
+            <div className="relative w-full max-w-[1600px] mx-auto h-[600px] rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-1 bg-stone-900 shadow-2xl">
 
-                {/* Left Panel (25%) */}
-                <div className="hidden md:block w-1/4 h-full relative transition-all duration-700">
+                {/* Left Column (Full Height) */}
+                <div className="relative w-full h-full overflow-hidden group">
                     {slides.map((slide, index) => {
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
                             : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
-                        const img = getOptimizedImage(rawImg, 800);
+                        const img = getOptimizedImage(rawImg, 1280);
 
                         return (
                             <div
@@ -137,97 +137,101 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                                 style={{ backgroundImage: `url(${img})` }}
                             >
-                                <div className="absolute inset-0 bg-black/30 backdrop-brightness-75 transition-all duration-500 group-hover:backdrop-brightness-90" />
+                                <div className="absolute inset-0 bg-black/30 transition-all duration-700 group-hover:bg-black/20" />
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Center Panel (50% on desktop, 100% on mobile) */}
-                <div className="w-full md:w-1/2 h-full relative">
-                    {slides.map((slide, index) => {
-                        const rawImg = isWelcomeSlide(slide)
-                            ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
-                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
-                        const img = getOptimizedImage(rawImg, 1280);
+                {/* Right Column (Split Vertically) */}
+                <div className="hidden md:flex flex-col h-full gap-1">
 
-                        return (
-                            <div
-                                key={`main-${index}`}
-                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-                                style={{ backgroundImage: `url(${img})` }}
-                            >
-                                {/* Text Readability Gradient */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/10" />
-                            </div>
-                        );
-                    })}
+                    {/* Top Right (Half Height) */}
+                    <div className="relative w-full h-1/2 overflow-hidden group">
+                        {slides.map((slide, index) => {
+                            const rawImg = isWelcomeSlide(slide)
+                                ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
+                                : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
+                            const img = getOptimizedImage(rawImg, 800);
 
-                    {/* Content Overlay */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-20">
-                        <div className="animate-slide-up max-w-xl">
-                            <div className="flex items-center justify-center gap-3 mb-6">
-                                {!isWelcome && (
-                                    <Badge variant="warning" className="bg-amber-500 text-white border-none shadow-lg px-4 py-1 text-sm font-bold tracking-wider uppercase">
-                                        Featured
-                                    </Badge>
-                                )}
-                            </div>
+                            return (
+                                <div
+                                    key={`top-right-${index}`}
+                                    className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                                    style={{ backgroundImage: `url(${img})` }}
+                                >
+                                    <div className="absolute inset-0 bg-black/30 transition-all duration-700 group-hover:bg-black/20" />
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight leading-tight drop-shadow-xl">
-                                {isWelcome && title === 'Discover the Highlands' ? (
-                                    <>Discover the <span className="text-emerald-400">Highlands</span></>
-                                ) : (
-                                    title
-                                )}
-                            </h1>
+                    {/* Bottom Right (Half Height) */}
+                    <div className="relative w-full h-1/2 overflow-hidden group">
+                        {slides.map((slide, index) => {
+                            const rawImg = isWelcomeSlide(slide)
+                                ? ((slide as HeroSlot).image_override_right || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
+                                : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
+                            const img = getOptimizedImage(rawImg, 800);
 
-                            <div className="w-16 h-1 bg-emerald-500 mx-auto mb-6 rounded-full"></div>
-
-                            <p className="text-lg md:text-xl text-gray-200 mb-8 line-clamp-3 font-medium drop-shadow-md max-w-md mx-auto leading-relaxed">
-                                {subtitle}
-                            </p>
-
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <Link href={link}>
-                                    <Button variant="primary" size="lg" className="shadow-xl bg-emerald-600 hover:bg-emerald-500 border-none text-white min-w-[180px] py-3.5 rounded-xl font-bold tracking-wide transition-all hover:scale-105">
-                                        {ctaText}
-                                    </Button>
-                                </Link>
-                                {isWelcome && (
-                                    <button
-                                        onClick={() => {
-                                            const el = document.getElementById('categories');
-                                            if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                        }}
-                                        className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold border border-white/20 backdrop-blur-md transition-all min-w-[180px]"
-                                    >
-                                        Browse Categories
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                            return (
+                                <div
+                                    key={`bottom-right-${index}`}
+                                    className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                                    style={{ backgroundImage: `url(${img})` }}
+                                >
+                                    <div className="absolute inset-0 bg-black/30 transition-all duration-700 group-hover:bg-black/20" />
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* Right Panel (25%) */}
-                <div className="hidden md:block w-1/4 h-full relative transition-all duration-700">
-                    {slides.map((slide, index) => {
-                        const rawImg = isWelcomeSlide(slide)
-                            ? ((slide as HeroSlot).image_override_right || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
-                            : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
-                        const img = getOptimizedImage(rawImg, 800);
+                {/* Content Overlay (Centered Over Everything) */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 sm:p-12 z-20 pointer-events-none">
+                    {/* Pointer events none on container so clicks pass through to images? No, images aren't links here. Buttons are. Re-enable pointer events on inner content. */}
+                    <div className="animate-slide-up max-w-2xl pointer-events-auto">
+                        <div className="flex items-center justify-center gap-3 mb-6">
+                            {!isWelcome && (
+                                <Badge variant="warning" className="bg-amber-500 text-white border-none shadow-lg px-4 py-1 text-sm font-bold tracking-wider uppercase">
+                                    Featured
+                                </Badge>
+                            )}
+                        </div>
 
-                        return (
-                            <div
-                                key={`right-${index}`}
-                                className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-                                style={{ backgroundImage: `url(${img})` }}
-                            >
-                                <div className="absolute inset-0 bg-black/30 backdrop-brightness-75 transition-all duration-500 group-hover:backdrop-brightness-90" />
-                            </div>
-                        );
-                    })}
+                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-6 tracking-tight leading-[1.1] drop-shadow-2xl">
+                            {isWelcome && title === 'Discover the Highlands' ? (
+                                <>Discover the <span className="text-emerald-400 drop-shadow-lg">Highlands</span></>
+                            ) : (
+                                title
+                            )}
+                        </h1>
+
+                        <div className="w-20 h-1.5 bg-emerald-500 mx-auto mb-8 rounded-full shadow-lg"></div>
+
+                        <p className="text-lg md:text-xl text-gray-100 mb-10 line-clamp-3 font-medium drop-shadow-lg max-w-lg mx-auto leading-relaxed text-shadow-sm">
+                            {subtitle}
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Link href={link}>
+                                <Button variant="primary" size="lg" className="shadow-2xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[200px] text-lg py-4 rounded-xl transition-transform hover:-translate-y-1">
+                                    {ctaText}
+                                </Button>
+                            </Link>
+                            {isWelcome && (
+                                <button
+                                    onClick={() => {
+                                        const el = document.getElementById('categories');
+                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="px-8 py-4 rounded-xl border-2 border-white/30 bg-white/5 text-white font-bold hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-md min-w-[200px] shadow-lg hover:-translate-y-1"
+                                >
+                                    Browse Categories
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
