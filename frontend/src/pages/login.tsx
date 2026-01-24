@@ -29,7 +29,7 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && router.isReady) {
-      const returnTo = (router.query.returnTo as string) || '/account';
+      const returnTo = (router.query.redirect as string) || (router.query.returnTo as string) || '/account';
       router.push(returnTo);
     }
   }, [isAuthenticated, router.isReady, router.query, router]);
@@ -223,7 +223,7 @@ export default function LoginPage() {
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
               <Link
-                href={`/register${router.query.returnTo ? `?returnTo=${encodeURIComponent(router.query.returnTo as string)}` : ''}`}
+                href={`/register${router.query.redirect ? `?redirect=${encodeURIComponent(router.query.redirect as string)}` : router.query.returnTo ? `?returnTo=${encodeURIComponent(router.query.returnTo as string)}` : ''}`}
                 className="font-medium text-emerald-600 hover:text-emerald-700"
               >
                 Create one now
