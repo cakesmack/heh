@@ -221,7 +221,8 @@ def list_members(
             role=member.role.value,
             joined_at=member.joined_at,
             user_email=user.email if user else None,
-            user_username=user.username if user else None
+            user_username=user.username if user else None,
+            is_admin=user.is_admin if user else False
         ))
 
     # Also include the creator as OWNER if not already in members
@@ -235,7 +236,8 @@ def list_members(
                 role=GroupRole.OWNER.value,
                 joined_at=group.created_at,
                 user_email=creator.email,
-                user_username=creator.username
+                user_username=creator.username,
+                is_admin=creator.is_admin
             ))
 
     return result

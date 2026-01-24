@@ -14,6 +14,7 @@ class GroupMemberResponse(BaseModel):
     joined_at: datetime
     user_email: Optional[str] = None
     user_username: Optional[str] = None
+    is_admin: bool = False # Global admin status for Ghost Mode filtering
 
     class Config:
         from_attributes = True
