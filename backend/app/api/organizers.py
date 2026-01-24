@@ -33,8 +33,19 @@ def list_organizers(
     query = select(Organizer)
     
     if user_id:
-        query = query.where(Organizer.user_id == normalize_uuid(user_id))
+        from sqlmodel import or_
+        user_uuid = normalize_uuid(user_id)
         
+        # Subquery for memberships
+        member_subquery = select(GroupMember.group_id).where(GroupMember.user_id == user_uuid)
+        
+        query = query.where(
+            or_(
+                Organizer.user_id == user_uuid,
+                Organizer.id.in_(member_subquery)
+            )
+        )
+
     # Count total
     count_query = select(func.count()).select_from(query.subquery())
     total = session.exec(count_query).one()

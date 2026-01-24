@@ -46,7 +46,7 @@ def create_invite(
     # Verify user is OWNER or ADMIN
     require_group_role(
         session, group_id, current_user,
-        [GroupRole.OWNER, GroupRole.ADMIN],
+        [GroupRole.OWNER, GroupRole.ADMIN, GroupRole.EDITOR],
         group
     )
 
