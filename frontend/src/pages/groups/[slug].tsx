@@ -1,4 +1,5 @@
 import { useRouter } from 'next/router';
+import { GroupTeamList } from '@/components/groups/GroupTeamList';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -82,7 +83,8 @@ export default function OrganizerProfilePage() {
     const [events, setEvents] = useState<EventResponse[]>([]);
     const [eventsTotal, setEventsTotal] = useState(0);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+    const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'team'>('upcoming');
+    const [isMember, setIsMember] = useState(false);
     const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const [canEdit, setCanEdit] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -189,24 +191,34 @@ export default function OrganizerProfilePage() {
                 // 2. Global Admin check
                 const isGlobalAdmin = user.is_admin;
 
+                // Determine if user is a member (for visibility of Members tab)
+                if (isOwner) {
+                    setIsMember(true);
+                }
+
                 if (isOwner || isGlobalAdmin) {
                     setCanEdit(true);
-                    return;
                 }
 
                 // 3. Group Member role check (Admin or Editor)
                 try {
                     const membership = await api.groups.checkMembership(organizer.id);
-                    // Case-insensitive role check - works with both 'admin'/'ADMIN' etc.
+                    // Case-insensitive role check
                     const role = membership?.role?.toLowerCase();
+
+                    if (membership && membership.is_member) {
+                        setIsMember(true);
+                    }
+
                     if (membership && ['admin', 'editor', 'owner'].includes(role)) {
                         setCanEdit(true);
-                    } else {
+                    } else if (!isOwner && !isGlobalAdmin) {
                         setCanEdit(false);
                     }
                 } catch (err) {
                     // Not a member or error
                     setCanEdit(false);
+                    if (!isOwner) setIsMember(false);
                 }
             } else {
                 setCanEdit(false);
@@ -471,6 +483,7 @@ export default function OrganizerProfilePage() {
                     {[
                         { id: 'upcoming', name: 'Upcoming Events' },
                         { id: 'past', name: 'Past Events' },
+                        ...(isMember ? [{ id: 'team', name: 'Members' }] : [])
 
                     ].map((tab) => (
                         <button
@@ -491,46 +504,52 @@ export default function OrganizerProfilePage() {
 
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mb-12">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">
-                            {activeTab === 'upcoming' ? 'Upcoming Events' : 'Past Events'}
-                        </h2>
-                        <span className="bg-emerald-100 text-emerald-800 text-sm font-medium px-3 py-1 rounded-full">
-                            {eventsTotal}
-                        </span>
-                    </div>
-
-                    {events.length > 0 ? (
+                    {activeTab === 'team' ? (
+                        <GroupTeamList organizerId={organizer.id} />
+                    ) : (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {events.map((event) => (
-                                    <div key={event.id} className={activeTab === 'past' ? 'opacity-75 grayscale transition-all hover:grayscale-0 hover:opacity-100' : ''}>
-                                        <EventCard event={event} />
-                                    </div>
-                                ))}
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900">
+                                    {activeTab === 'upcoming' ? 'Upcoming Events' : 'Past Events'}
+                                </h2>
+                                <span className="bg-emerald-100 text-emerald-800 text-sm font-medium px-3 py-1 rounded-full">
+                                    {eventsTotal}
+                                </span>
                             </div>
 
-                            {events.length < eventsTotal && (
-                                <div className="mt-8 flex justify-center">
-                                    <Button
-                                        variant="outline"
-                                        onClick={handleLoadMore}
-                                        isLoading={isLoadingMore}
-                                    >
-                                        Load More Events
-                                    </Button>
+                            {events.length > 0 ? (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {events.map((event) => (
+                                            <div key={event.id} className={activeTab === 'past' ? 'opacity-75 grayscale transition-all hover:grayscale-0 hover:opacity-100' : ''}>
+                                                <EventCard event={event} />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {events.length < eventsTotal && (
+                                        <div className="mt-8 flex justify-center">
+                                            <Button
+                                                variant="outline"
+                                                onClick={handleLoadMore}
+                                                isLoading={isLoadingMore}
+                                            >
+                                                Load More Events
+                                            </Button>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
+                                    <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                                    <p className="text-gray-500">
+                                        {activeTab === 'upcoming'
+                                            ? 'No upcoming events scheduled.'
+                                            : 'No past events found.'}
+                                    </p>
                                 </div>
                             )}
                         </>
-                    ) : (
-                        <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
-                            <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                            <p className="text-gray-500">
-                                {activeTab === 'upcoming'
-                                    ? 'No upcoming events scheduled.'
-                                    : 'No past events found.'}
-                            </p>
-                        </div>
                     )}
                 </div>
             </div>
