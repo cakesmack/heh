@@ -255,10 +255,7 @@ export default function SubmitEventPage() {
         is_all_day: formData.is_all_day,
         age_restriction: formData.age_restriction || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
-        age_restriction: formData.age_restriction || undefined,
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
         organizer_profile_id: selectedOrganizer || undefined, // Use explicit selection
-        is_recurring: formData.is_recurring,
         is_recurring: formData.is_recurring,
         frequency: formData.is_recurring ? formData.frequency : undefined,
         recurrence_end_date: (formData.is_recurring && formData.ends_on === 'date') ? new Date(formData.recurrence_end_date).toISOString() : undefined,
