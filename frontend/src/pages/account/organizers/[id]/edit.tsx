@@ -17,11 +17,11 @@ import GroupForm, { GroupFormData } from '@/components/groups/GroupForm';
 import { GroupMember, GroupInvite, GroupRole } from '@/types';
 import { toast } from 'react-hot-toast';
 
-// Role badge colors
-const ROLE_COLORS: Record<GroupRole, { bg: string; text: string }> = {
-    owner: { bg: 'bg-purple-100', text: 'text-purple-800' },
-    admin: { bg: 'bg-blue-100', text: 'text-blue-800' },
-    editor: { bg: 'bg-gray-100', text: 'text-gray-800' },
+// Role badge colors - keys are uppercase to match backend API
+const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
+    OWNER: { bg: 'bg-purple-100', text: 'text-purple-800' },
+    ADMIN: { bg: 'bg-blue-100', text: 'text-blue-800' },
+    EDITOR: { bg: 'bg-gray-100', text: 'text-gray-800' },
 };
 
 export default function EditOrganizerPage() {
@@ -235,8 +235,10 @@ export default function EditOrganizerPage() {
         }
     };
 
-    const canManageTeam = userRole === 'owner' || userRole === 'admin' || userRole === 'editor';
-    const isOwner = userRole === 'owner';
+    // Case-insensitive role check + site admin bypass
+    const normalizedRole = userRole?.toUpperCase();
+    const canManageTeam = user?.is_admin || normalizedRole === 'OWNER' || normalizedRole === 'ADMIN' || normalizedRole === 'EDITOR';
+    const isOwner = user?.is_admin || normalizedRole === 'OWNER';
 
     if (authLoading || isLoading) {
         return (

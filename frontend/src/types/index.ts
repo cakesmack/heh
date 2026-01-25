@@ -855,7 +855,7 @@ export interface OrganizerListResponse {
 // GROUP MEMBER TYPES (Team Management)
 // ============================================================
 
-export type GroupRole = 'owner' | 'admin' | 'editor';
+export type GroupRole = 'OWNER' | 'ADMIN' | 'EDITOR';
 
 export interface GroupMember {
   group_id: string;
