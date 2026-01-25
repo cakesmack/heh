@@ -50,7 +50,7 @@ def check_db_roles(session: Session = Depends(get_session)):
         return {"STATUS": "ERROR", "DETAILS": str(e), "TRACEBACK": traceback.format_exc()}
 
 
-@router.post("/debug/add-admin-role")
+@router.get("/debug/add-admin-role")
 def add_admin_role(session: Session = Depends(get_session)):
     """
     Adds the missing ADMIN value to the PostgreSQL grouprole enum.
