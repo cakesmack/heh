@@ -326,12 +326,18 @@ def update_member_role(
 
     # Validate new role
     try:
-        new_role = GroupRole(role_update.role.lower())
+        # Robust case-insensitive check
+        new_role = GroupRole(role_update.role.upper()) 
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid role. Must be one of: {', '.join([r.value for r in GroupRole])}"
-        )
+        try:
+             # Try lowercase if upper fails (though usually Enums are upper or strict)
+             new_role = GroupRole(role_update.role.lower())
+        except ValueError:
+            valid_roles = ", ".join([r.value for r in GroupRole])
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid role '{role_update.role}'. Must be one of: {valid_roles}"
+            )
 
     # Cannot change the group creator's role
     if user_id == group.user_id:
@@ -352,10 +358,16 @@ def update_member_role(
         raise HTTPException(status_code=404, detail="Member not found")
 
     # Update role
-    member.role = new_role
-    session.add(member)
-    session.commit()
-    session.refresh(member)
+    try:
+        member.role = new_role
+        session.add(member)
+        session.commit()
+        session.refresh(member)
+    except Exception as e:
+        session.rollback()
+        # Log the error for admin/debugging
+        print(f"Error updating member role: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update member role")
 
     # Return with user details
     user = session.get(User, member.user_id)
@@ -365,7 +377,8 @@ def update_member_role(
         role=member.role.value,
         joined_at=member.joined_at,
         user_email=user.email if user else None,
-        user_username=user.username if user else None
+        user_username=user.username if user else None,
+        is_admin=user.is_admin if user else False
     )
 
 
