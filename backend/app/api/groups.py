@@ -50,6 +50,23 @@ def check_db_roles(session: Session = Depends(get_session)):
         return {"STATUS": "ERROR", "DETAILS": str(e), "TRACEBACK": traceback.format_exc()}
 
 
+@router.post("/debug/add-admin-role")
+def add_admin_role(session: Session = Depends(get_session)):
+    """
+    Adds the missing ADMIN value to the PostgreSQL grouprole enum.
+    """
+    from sqlalchemy import text
+    try:
+        connection = session.connection()
+        # Add ADMIN to the enum type
+        connection.execute(text("ALTER TYPE grouprole ADD VALUE IF NOT EXISTS 'ADMIN'"))
+        session.commit()
+        return {"STATUS": "SUCCESS", "MESSAGE": "ADMIN role added to PostgreSQL enum"}
+    except Exception as e:
+        import traceback
+        return {"STATUS": "ERROR", "DETAILS": str(e), "TRACEBACK": traceback.format_exc()}
+
+
 # =============================================================================
 # INVITE ENDPOINTS
 # =============================================================================
@@ -350,11 +367,10 @@ def update_member_role(
         group
     )
 
-    # Validate new role
+    # Validate new role - DB enum uses uppercase ("OWNER", "ADMIN", "EDITOR")
     try:
-        # DB Enum is strictly lowercase ("admin", "editor", "owner")
-        # Ensure we construct the Enum from a lowercase string
-        normalized_role = role_update.role.lower()
+        # Convert input to uppercase to match DB enum format
+        normalized_role = role_update.role.upper()
         new_role = GroupRole(normalized_role)
     except ValueError:
         valid_roles = ", ".join([r.value for r in GroupRole])
@@ -381,12 +397,8 @@ def update_member_role(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    # Convert role to Title Case - DB enum appears to use "Admin", "Editor", "Owner"
-    # .capitalize() converts "admin" -> "Admin" or "ADMIN" -> "Admin"
-    if hasattr(new_role, 'value'):
-        role_to_save = new_role.value.capitalize()  # "admin" -> "Admin"
-    else:
-        role_to_save = str(new_role).capitalize()  # Fallback: Title Case string
+    # DB enum is uppercase - use the value directly
+    role_to_save = new_role.value  # This is now "ADMIN", "EDITOR", or "OWNER"
     
     # Sanity check: print what we're actually sending
     print(f"DEBUG: Saving role_to_save='{role_to_save}' (type={type(role_to_save).__name__})")
@@ -396,11 +408,11 @@ def update_member_role(
         from sqlmodel import update
         from sqlalchemy import type_coerce, String
         
-        # Force SQLAlchemy to treat this as a plain string, preventing auto-conversion to uppercase Enum Name
+        # Force SQLAlchemy to treat this as a plain string
         statement = update(GroupMember).where(
             GroupMember.group_id == group_id,
             GroupMember.user_id == user_id
-        ).values(role=type_coerce(role_to_save, String))  # Bypass Enum serialization entirely
+        ).values(role=type_coerce(role_to_save, String))
         session.exec(statement)
         session.commit()
         

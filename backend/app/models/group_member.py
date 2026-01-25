@@ -8,9 +8,9 @@ if TYPE_CHECKING:
     from .organizer import Organizer
 
 class GroupRole(str, Enum):
-    OWNER = "owner"
-    ADMIN = "admin"
-    EDITOR = "editor"
+    OWNER = "OWNER"
+    ADMIN = "ADMIN"
+    EDITOR = "EDITOR"
 
 class GroupMember(SQLModel, table=True):
     """
