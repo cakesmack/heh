@@ -144,10 +144,10 @@ export default function HeroSection() {
                     {/* Gradient Overlay for Text Readability */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-10" />
 
-                    {/* Content Layer (Left Aligned) */}
-                    <div className="absolute inset-0 z-20 flex flex-col justify-center items-start p-8 md:p-12 lg:p-16">
-                        <div className="animate-slide-up max-w-xl">
-                            <div className="flex items-center gap-3 mb-6">
+                    {/* Content Layer (Responsive Alignment) */}
+                    <div className="absolute inset-0 z-20 flex flex-col justify-center items-center text-center md:items-start md:text-left p-6 md:p-12 lg:p-16">
+                        <div className="animate-slide-up max-w-xl w-full">
+                            <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
                                 {!isWelcome && (
                                     <Badge variant="warning" className="bg-amber-500 text-white border-none shadow-lg px-4 py-1.5 text-sm font-bold tracking-wider uppercase">
                                         Featured
@@ -155,7 +155,7 @@ export default function HeroSection() {
                                 )}
                             </div>
 
-                            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-6 tracking-tight leading-[1.1] drop-shadow-2xl text-left">
+                            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-6 tracking-tight leading-[1.1] drop-shadow-2xl">
                                 {isWelcome && title === 'Discover the Highlands' ? (
                                     <>Discover the <span className="text-emerald-400 drop-shadow-lg">Highlands</span></>
                                 ) : (
@@ -163,15 +163,15 @@ export default function HeroSection() {
                                 )}
                             </h1>
 
-                            <div className="w-20 h-1.5 bg-emerald-500 mb-8 rounded-full shadow-lg"></div>
+                            <div className="w-20 h-1.5 bg-emerald-500 mb-8 rounded-full shadow-lg mx-auto md:mx-0"></div>
 
-                            <p className="text-lg md:text-xl text-gray-100 mb-10 line-clamp-3 font-medium drop-shadow-lg leading-relaxed text-shadow-sm text-left">
+                            <p className="text-lg md:text-xl text-gray-100 mb-10 line-clamp-3 font-medium drop-shadow-lg leading-relaxed text-shadow-sm">
                                 {subtitle}
                             </p>
 
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <Link href={link}>
-                                    <Button variant="primary" size="lg" className="shadow-2xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[180px] text-lg py-4 rounded-xl transition-transform hover:-translate-y-1">
+                            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                                <Link href={link} className="w-full md:w-auto">
+                                    <Button variant="primary" size="lg" className="w-full md:w-auto shadow-2xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[180px] text-lg py-4 rounded-xl transition-transform hover:-translate-y-1">
                                         {ctaText}
                                     </Button>
                                 </Link>
@@ -181,7 +181,7 @@ export default function HeroSection() {
                                             const el = document.getElementById('categories');
                                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                                         }}
-                                        className="px-8 py-4 rounded-xl border-2 border-white/30 bg-white/5 text-white font-bold hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-md min-w-[180px] shadow-lg hover:-translate-y-1"
+                                        className="w-full md:w-auto px-8 py-4 rounded-xl border-2 border-white/30 bg-white/5 text-white font-bold hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-md min-w-[180px] shadow-lg hover:-translate-y-1"
                                     >
                                         Browse Categories
                                     </button>
