@@ -35,15 +35,19 @@ def check_db_roles(session: Session = Depends(get_session)):
     """
     from sqlalchemy import text
     try:
-        # This SQL query asks Postgres for the valid values of the 'grouprole' enum
-        result = session.exec(text("SELECT unnest(enum_range(NULL::grouprole))")).all()
+        # Use connection.execute for raw SQL instead of session.exec
+        connection = session.connection()
+        result = connection.execute(text("SELECT unnest(enum_range(NULL::grouprole))"))
+        rows = result.fetchall()
+        values = [row[0] for row in rows]
         return {
             "STATUS": "SUCCESS",
-            "VALID_DB_VALUES": result,
+            "VALID_DB_VALUES": values,
             "MESSAGE": "Please update your Python Code to match these values exactly."
         }
     except Exception as e:
-        return {"STATUS": "ERROR", "DETAILS": str(e)}
+        import traceback
+        return {"STATUS": "ERROR", "DETAILS": str(e), "TRACEBACK": traceback.format_exc()}
 
 
 # =============================================================================
