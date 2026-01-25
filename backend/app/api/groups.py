@@ -357,7 +357,8 @@ def update_member_role(
 
     # Update role
     try:
-        member.role = new_role
+        # Assign the string value ("admin") explicitly to avoid SQLAlchemy serializing likely Enum name ("ADMIN")
+        member.role = new_role.value
         session.add(member)
         session.commit()
         session.refresh(member)
