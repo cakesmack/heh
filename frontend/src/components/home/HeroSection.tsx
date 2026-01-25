@@ -116,23 +116,21 @@ export default function HeroSection() {
 
     return (
         <section
-            className="w-full bg-stone-dark overflow-hidden py-4 px-4 sm:px-6 lg:px-8"
+            className="w-full bg-black overflow-hidden"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-2 h-auto lg:h-[600px]">
+            {/* Main Grid: Full Width, Tiny Gap for Cinema Effect */}
+            <div className="w-full h-[600px] lg:h-[700px] grid grid-cols-1 lg:grid-cols-3 gap-1 bg-black">
 
-                {/* 1. The Big Left Card (The Hero) */}
-                <div className="lg:col-span-2 relative h-[500px] lg:h-full overflow-hidden rounded-3xl group cursor-pointer">
+                {/* 1. The Big Left Panel (The Hero) */}
+                <div className="lg:col-span-2 relative h-[500px] lg:h-full w-full overflow-hidden group cursor-pointer">
                     {/* Background Image with Zoom Effect */}
                     {slides.length > 0 && (slides.map((slide, index) => {
-                        // Only render current slide to save resources or render all for transitions?
-                        // "Bento" usually implies static cards, but here we still have a slideshow.
-                        // Let's keep the slideshow logic for the MAIN card.
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
                             : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
-                        const img = getOptimizedImage(rawImg, 1280);
+                        const img = getOptimizedImage(rawImg, 1600); // Higher res for full width
 
                         return (
                             <div
@@ -140,38 +138,39 @@ export default function HeroSection() {
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
                             >
                                 <div
-                                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                                    className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-105"
                                     style={{ backgroundImage: `url(${img})` }}
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
+                                {/* Gradient: Heavy bottom for text readability */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10" />
                             </div>
                         );
                     }))}
 
                     {/* Content Layer */}
-                    <div className="absolute bottom-0 left-0 p-8 lg:p-12 w-full z-20 flex flex-col items-start text-left">
-                        <div className="animate-slide-up max-w-2xl">
+                    <div className="absolute bottom-0 left-0 p-8 lg:p-16 w-full z-20 flex flex-col items-start text-left">
+                        <div className="animate-slide-up w-full max-w-4xl">
                             {!isWelcome && (
-                                <Badge variant="warning" className="mb-4 bg-amber-500 text-white border-none shadow-lg px-3 py-1 text-xs font-bold tracking-wider uppercase inline-block">
+                                <Badge variant="warning" className="mb-6 bg-amber-500 text-white border-none shadow-lg px-4 py-1.5 text-sm font-bold tracking-widest uppercase inline-block">
                                     Featured Event
                                 </Badge>
                             )}
 
-                            <h1 className="text-4xl lg:text-6xl font-bold text-white mb-4 leading-tight tracking-tight drop-shadow-xl">
+                            <h1 className="text-5xl lg:text-8xl font-black text-white mb-6 uppercase tracking-tighter leading-none drop-shadow-2xl">
                                 {isWelcome && title === 'Discover the Highlands' ? (
-                                    <>Highland <span className="text-emerald-400">Events Hub</span></>
+                                    <>Highland <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Events Hub</span></>
                                 ) : (
                                     title
                                 )}
                             </h1>
 
-                            <p className="text-gray-200 text-lg lg:text-xl mb-8 max-w-lg font-medium drop-shadow-md leading-relaxed line-clamp-3">
+                            <p className="text-gray-200 text-lg lg:text-2xl mb-10 max-w-2xl font-medium drop-shadow-md leading-relaxed line-clamp-3">
                                 {subtitle}
                             </p>
 
-                            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                                 <Link href={link} className="w-full sm:w-auto">
-                                    <Button variant="primary" size="lg" className="w-full sm:w-auto shadow-xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[160px] py-3.5 rounded-xl font-semibold transition-transform hover:-translate-y-0.5">
+                                    <Button variant="primary" size="lg" className="w-full sm:w-auto shadow-2xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[200px] py-4 rounded-none uppercase tracking-widest font-bold text-lg transition-all hover:scale-105">
                                         {ctaText}
                                     </Button>
                                 </Link>
@@ -181,7 +180,7 @@ export default function HeroSection() {
                                             const el = document.getElementById('categories');
                                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                                         }}
-                                        className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 hover:border-white/50 transition-all backdrop-blur-md min-w-[160px] shadow-lg hover:-translate-y-0.5"
+                                        className="w-full sm:w-auto px-8 py-4 rounded-none border-2 border-white bg-transparent text-white font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-all backdrop-blur-sm min-w-[200px] shadow-lg hover:scale-105"
                                     >
                                         Browse Categories
                                     </button>
@@ -192,21 +191,12 @@ export default function HeroSection() {
                 </div>
 
                 {/* 2. The Right Stack (The Vibe) */}
-                <div className="hidden lg:flex flex-col gap-2 h-full">
+                <div className="hidden lg:flex flex-col h-full gap-1 w-full">
+
                     {/* Top Right Card */}
-                    <div className="relative h-1/2 w-full overflow-hidden rounded-3xl group">
-                        {/* We use slide[1] or fallback to Welcome Left Image if not enough slides */}
+                    <div className="relative h-1/2 w-full overflow-hidden group cursor-pointer">
+                        {/* Next Slide or Placeholder */}
                         {(() => {
-                            // If we have a slide at index 1 (likely "featured"), show it.
-                            // Otherwise show a nice fallback or mapped slide.
-                            // Ideally, we'd cycle these too, or just show the next ones in queue.
-                            // Let's try to show slides[(currentIndex + 1) % len] and slides[(currentIndex + 2) % len] to keep it dynamic?
-                            // Or just static placeholders if user wants "Live Music" / "Local Culture"?
-                            // The user prompt asked for "The Right Stack... Cards (Top & Bottom)... Images... Same group-hover effect".
-
-                            // Let's use the next slide in the rotation for variety, or distinct slides if available.
-                            // Given fetching logic `slides` typically has 1 welcome + up to 4 paid.
-
                             const nextIndex1 = (currentIndex + 1) % (slides.length || 1);
                             const slide1 = slides[nextIndex1];
 
@@ -218,13 +208,15 @@ export default function HeroSection() {
                             return (
                                 <>
                                     <div
-                                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
                                         style={{ backgroundImage: `url(${img1})` }}
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent transition-opacity group-hover:opacity-90" />
-                                    <div className="absolute bottom-4 left-4">
-                                        <span className="text-white font-medium text-xs sm:text-sm bg-black/30 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
-                                            Live Events
+                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-500" />
+
+                                    {/* Centered Label Override */}
+                                    <div className="absolute inset-0 flex items-center justify-center z-20">
+                                        <span className="text-white text-2xl font-bold uppercase tracking-widest border-2 border-white px-8 py-3 transition-transform duration-500 group-hover:scale-110 backdrop-blur-sm bg-black/10">
+                                            Live Music
                                         </span>
                                     </div>
                                 </>
@@ -233,10 +225,9 @@ export default function HeroSection() {
                     </div>
 
                     {/* Bottom Right Card */}
-                    <div className="relative h-1/2 w-full overflow-hidden rounded-3xl group">
+                    <div className="relative h-1/2 w-full overflow-hidden group cursor-pointer">
                         {(() => {
                             const nextIndex2 = (currentIndex + 2) % (slides.length || 1);
-                            // Avoid duplicate if len=2? default handles it
                             const slide2 = slides[nextIndex2];
 
                             const rawImg2 = slide2
@@ -247,12 +238,14 @@ export default function HeroSection() {
                             return (
                                 <>
                                     <div
-                                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
                                         style={{ backgroundImage: `url(${img2})` }}
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent transition-opacity group-hover:opacity-90" />
-                                    <div className="absolute bottom-4 left-4">
-                                        <span className="text-white font-medium text-xs sm:text-sm bg-black/30 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-500" />
+
+                                    {/* Centered Label Override */}
+                                    <div className="absolute inset-0 flex items-center justify-center z-20">
+                                        <span className="text-white text-2xl font-bold uppercase tracking-widest border-2 border-white px-8 py-3 transition-transform duration-500 group-hover:scale-110 backdrop-blur-sm bg-black/10">
                                             Local Culture
                                         </span>
                                     </div>
@@ -261,25 +254,11 @@ export default function HeroSection() {
                         })()}
                     </div>
                 </div>
-
-                {/* Mobile Stack: Show a simplified version of right stack below? 
-                    User prompt: "Right side is stacked (1 col)." 
-                    "Buttons: Stacked on mobile (w-full)..."
-                    Currently I hid the right column on mobile (`hidden lg:flex`).
-                    If we want it visible, we can make it display below.
-                    However, usually Bento grids collapse to just the main hero on mobile to save vertical space, 
-                    or show the secondary tiles as squares below.
-                    The previous Hero implementation didn't show the right column on mobile either (hidden md:flex).
-                    I'll keep `hidden lg:flex` for now to focus on the main content unless user asks otherwise.
-                */}
             </div>
 
-            {/* Progress Indicators - Positioned bottom-left relative to Main Card? 
-                Actually, simpler to hide them in Bento or put them floating in the main card.
-                Let's put them inside the main card, bottom right or bottom center.
-            */}
+            {/* Progress Indicators - Minimalist, Bottom Left */}
             {slides.length > 1 && (
-                <div className="absolute bottom-8 lg:bottom-12 left-1/2 lg:left-auto lg:right-12 -translate-x-1/2 lg:translate-x-0 flex gap-1.5 z-30">
+                <div className="absolute bottom-8 lg:bottom-16 left-8 lg:left-16 flex gap-3 z-30">
                     {slides.map((_, index) => (
                         <button
                             key={index}
