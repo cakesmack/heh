@@ -25,6 +25,28 @@ from app.core.permissions import get_user_group_role, require_group_role
 
 
 # =============================================================================
+# DEBUG ENDPOINT - Temporary for enum diagnosis
+# =============================================================================
+
+@router.get("/debug/check-roles")
+def check_db_roles(session: Session = Depends(get_session)):
+    """
+    Asks the database directly: 'What roles do you accept?'
+    """
+    from sqlalchemy import text
+    try:
+        # This SQL query asks Postgres for the valid values of the 'grouprole' enum
+        result = session.exec(text("SELECT unnest(enum_range(NULL::grouprole))")).all()
+        return {
+            "STATUS": "SUCCESS",
+            "VALID_DB_VALUES": result,
+            "MESSAGE": "Please update your Python Code to match these values exactly."
+        }
+    except Exception as e:
+        return {"STATUS": "ERROR", "DETAILS": str(e)}
+
+
+# =============================================================================
 # INVITE ENDPOINTS
 # =============================================================================
 
