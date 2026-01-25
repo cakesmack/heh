@@ -355,11 +355,12 @@ def update_member_role(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    # FORCE extract the lowercase string value - explicitly use .value from Enum
+    # Convert role to Title Case - DB enum appears to use "Admin", "Editor", "Owner"
+    # .capitalize() converts "admin" -> "Admin" or "ADMIN" -> "Admin"
     if hasattr(new_role, 'value'):
-        role_to_save = new_role.value  # Extracts "admin" from GroupRole.ADMIN
+        role_to_save = new_role.value.capitalize()  # "admin" -> "Admin"
     else:
-        role_to_save = str(new_role).lower()  # Fallback: lowercase string
+        role_to_save = str(new_role).capitalize()  # Fallback: Title Case string
     
     # Sanity check: print what we're actually sending
     print(f"DEBUG: Saving role_to_save='{role_to_save}' (type={type(role_to_save).__name__})")
