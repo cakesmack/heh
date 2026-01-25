@@ -355,13 +355,22 @@ def update_member_role(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    # Update role - pass the lowercase string value directly to avoid ORM enum serialization issues
+    # FORCE extract the lowercase string value - explicitly use .value from Enum
+    if hasattr(new_role, 'value'):
+        role_to_save = new_role.value  # Extracts "admin" from GroupRole.ADMIN
+    else:
+        role_to_save = str(new_role).lower()  # Fallback: lowercase string
+    
+    # Sanity check: print what we're actually sending
+    print(f"DEBUG: Saving role_to_save='{role_to_save}' (type={type(role_to_save).__name__})")
+    
+    # Update role with the explicit lowercase string
     try:
         from sqlmodel import update
         statement = update(GroupMember).where(
             GroupMember.group_id == group_id,
             GroupMember.user_id == user_id
-        ).values(role=normalized_role)  # Use the lowercase string, not the Enum object
+        ).values(role=role_to_save)  # MUST be lowercase string like "admin"
         session.exec(statement)
         session.commit()
         
