@@ -326,18 +326,16 @@ def update_member_role(
 
     # Validate new role
     try:
-        # Robust case-insensitive check
-        new_role = GroupRole(role_update.role.upper()) 
+        # DB Enum is strictly lowercase ("admin", "editor", "owner")
+        # Ensure we construct the Enum from a lowercase string
+        normalized_role = role_update.role.lower()
+        new_role = GroupRole(normalized_role)
     except ValueError:
-        try:
-             # Try lowercase if upper fails (though usually Enums are upper or strict)
-             new_role = GroupRole(role_update.role.lower())
-        except ValueError:
-            valid_roles = ", ".join([r.value for r in GroupRole])
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid role '{role_update.role}'. Must be one of: {valid_roles}"
-            )
+        valid_roles = ", ".join([r.value for r in GroupRole])
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid role '{role_update.role}'. Must be one of: {valid_roles}"
+        )
 
     # Cannot change the group creator's role
     if user_id == group.user_id:
