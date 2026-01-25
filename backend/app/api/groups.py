@@ -357,11 +357,16 @@ def update_member_role(
 
     # Update role
     try:
-        # Assign the string value ("admin") explicitly to avoid SQLAlchemy serializing likely Enum name ("ADMIN")
-        member.role = new_role.value
-        session.add(member)
-        session.commit()
+        # Use simple string interpolation for the update to ensure we send the lowercase value
+        # This bypasses SQLAlchemy's Enum TypeDecorator which is serializing by Name ("ADMIN")
+        from sqlmodel import text
+        statement = text("UPDATE group_members SET role=:role WHERE group_id=:group_id AND user_id=:user_id")
+        session.exec(statement, params={"role": new_role.value, "group_id": group_id, "user_id": user_id})
+        
+        # We need to expire the object so it reloads from DB if accessed again
         session.refresh(member)
+        
+        session.commit()
     except Exception as e:
         session.rollback()
         # Log the error for admin/debugging
