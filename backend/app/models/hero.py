@@ -21,12 +21,19 @@ class HeroSlot(SQLModel, table=True):
     # Linked Event
     event_id: Optional[str] = Field(default=None, foreign_key="events.id")
     
+    # New Link Field (Independent of Event)
+    link: Optional[str] = Field(default=None, max_length=500)
+    
     # Overrides
     image_override: Optional[str] = Field(default=None, max_length=500)
     image_override_left: Optional[str] = Field(default=None, max_length=500)
     image_override_right: Optional[str] = Field(default=None, max_length=500)
     title_override: Optional[str] = Field(default=None, max_length=255)
     cta_override: Optional[str] = Field(default=None, max_length=100)
+    
+    # Badge Info
+    badge_text: Optional[str] = Field(default=None, max_length=50)
+    badge_color: str = Field(default="emerald")  # emerald, amber, blue, etc.
     
     # Styling & Behavior
     overlay_style: str = Field(default="dark")  # 'dark', 'light', 'gradient'

@@ -7,228 +7,240 @@ import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
 import ImageUpload from '@/components/common/ImageUpload';
+import { toast } from 'react-hot-toast';
 
-/**
- * Welcome Slide Manager
- * 
- * Manages ONLY Slide 1 (The Welcome Slide).
- * All other slots (2-5) are strictly "Direct Fetch" from paid FeaturedBookings
- * and are not managed via this interface.
- */
 export default function HeroManager() {
-    const [welcomeSlot, setWelcomeSlot] = useState<HeroSlot | null>(null);
+    const [slots, setSlots] = useState<HeroSlot[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [editingWelcome, setEditingWelcome] = useState<HeroSlot | null>(null);
 
     useEffect(() => {
-        fetchWelcomeSlot();
+        fetchSlots();
     }, []);
 
-    const fetchWelcomeSlot = async () => {
+    const fetchSlots = async () => {
         try {
             const data = await heroAPI.list();
-            // Find position 1 or type welcome
-            const slot = data.find(s => s.position === 1 || s.type === 'welcome');
-            setWelcomeSlot(slot || null);
+            // Ensure we sort by position just in case
+            const sorted = data.sort((a, b) => a.position - b.position);
+            setSlots(sorted);
         } catch (err) {
             console.error('Failed to fetch slots:', err);
-            setError('Failed to load welcome settings');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSaveWelcome = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editingWelcome) return;
-
+    const handleSave = async (id: number, data: Partial<HeroSlot>) => {
         try {
-            await heroAPI.update(editingWelcome.id, {
-                type: 'welcome',
-                image_override: editingWelcome.image_override || null,
-                image_override_left: editingWelcome.image_override_left || null,
-                image_override_right: editingWelcome.image_override_right || null,
-                title_override: editingWelcome.title_override || null,
-                cta_override: editingWelcome.cta_override || null,
-            });
-            setEditingWelcome(null);
-            await fetchWelcomeSlot();
+            await heroAPI.update(id, data);
+            toast.success('Slot updated successfully');
+            fetchSlots();
         } catch (err) {
-            console.error('Failed to save:', err);
-            alert('Failed to save welcome slide');
+            console.error('Failed to update slot:', err);
+            toast.error('Failed to update slot');
         }
     };
 
     if (loading) {
         return (
             <AdminGuard>
-                <AdminLayout title="Welcome Slide Manager">
+                <AdminLayout title="Magazine Grid Manager">
                     <div className="flex justify-center py-12"><Spinner /></div>
                 </AdminLayout>
             </AdminGuard>
         );
     }
 
+    const mainSlot = slots.find(s => s.position === 0);
+    const sideSlots = slots.filter(s => s.position > 0 && s.position < 4);
+
     return (
         <AdminGuard>
-            <AdminLayout title="Welcome Slide Manager">
-                {/* Header */}
-                <div className="mb-8">
+            <AdminLayout title="Magazine Grid Manager">
+                <div className="mb-6">
                     <p className="text-gray-600">
-                        Manage the static <strong>Welcome Slide</strong> (Slide 1) of the homepage carousel.
+                        Manage the <strong>4-Slot Magazine Grid</strong> on the homepage.
                         <br />
-                        Slides 2-5 are automatically populated by active <strong>Paid Featured Events</strong> (Hero Home).
+                        <strong>Slot 0:</strong> Main Hero (Left). <strong>Slots 1-3:</strong> Side Stack (Right).
                     </p>
                 </div>
 
-                {error && <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left Column: MAIN HERO (Slot 0) */}
+                    <div className="lg:col-span-2">
+                        <h2 className="text-xl font-bold mb-4 text-emerald-800">Main Hero</h2>
+                        {mainSlot ? (
+                            <SlotEditor slot={mainSlot} onSave={handleSave} isMain={true} />
+                        ) : (
+                            <div className="p-4 bg-red-50 text-red-600 rounded">Error: Main Slot (0) not found. Run migration.</div>
+                        )}
+                    </div>
 
-                {/* Welcome Slide (Editable) */}
-                <div className="max-w-3xl">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">1</span>
-                        Welcome Slide Configuration
-                    </h2>
-
-                    {editingWelcome ? (
-                        <Card className="p-6 border-2 border-emerald-500">
-                            <form onSubmit={handleSaveWelcome} className="space-y-4">
-                                {/* Images Grid - 3 Columns */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-                                    {/* Left Column (Desktop) */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Left Image (Desktop)</label>
-                                        <ImageUpload
-                                            folder="hero"
-                                            currentImageUrl={editingWelcome.image_override_left}
-                                            onUpload={(result) => setEditingWelcome({ ...editingWelcome, image_override_left: result.url })}
-                                            onRemove={() => setEditingWelcome({ ...editingWelcome, image_override_left: undefined })}
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">Side column image.</p>
-                                    </div>
-
-                                    {/* Main Column (Mobile + Desktop) */}
-                                    <div className="relative">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="block text-sm font-bold text-emerald-700">Main Image *</label>
-                                            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">Required</span>
-                                        </div>
-                                        <ImageUpload
-                                            folder="hero"
-                                            currentImageUrl={editingWelcome.image_override}
-                                            onUpload={(result) => setEditingWelcome({ ...editingWelcome, image_override: result.url })}
-                                            onRemove={() => setEditingWelcome({ ...editingWelcome, image_override: undefined })}
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">Center image. Visible on all devices.</p>
-                                    </div>
-
-                                    {/* Right Column (Desktop) */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Right Image (Desktop)</label>
-                                        <ImageUpload
-                                            folder="hero"
-                                            currentImageUrl={editingWelcome.image_override_right}
-                                            onUpload={(result) => setEditingWelcome({ ...editingWelcome, image_override_right: result.url })}
-                                            onRemove={() => setEditingWelcome({ ...editingWelcome, image_override_right: undefined })}
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">Side column image.</p>
-                                    </div>
-                                </div>
-
-                                <div className="border-t pt-4 mt-2"></div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Title</label>
-                                    <input
-                                        type="text"
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                        value={editingWelcome.title_override || ''}
-                                        onChange={e => setEditingWelcome({ ...editingWelcome, title_override: e.target.value })}
-                                        placeholder="Discover the Highlands"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Button Text</label>
-                                    <input
-                                        type="text"
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                        value={editingWelcome.cta_override || ''}
-                                        onChange={e => setEditingWelcome({ ...editingWelcome, cta_override: e.target.value })}
-                                        placeholder="Find an Event"
-                                    />
-                                </div>
-                                <div className="flex justify-end gap-2 pt-4">
-                                    <Button variant="outline" onClick={() => setEditingWelcome(null)}>Cancel</Button>
-                                    <Button type="submit">Save Changes</Button>
-                                </div>
-                            </form>
-                        </Card>
-                    ) : (
-                        <Card className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex gap-6">
-                                    <div className="flex gap-2">
-                                        {/* Triptych Preview */}
-                                        <div className="flex shrink-0 w-64 h-28 bg-gray-100 rounded overflow-hidden border border-gray-200">
-                                            {/* Left */}
-                                            <div className="w-1/4 h-full bg-gray-200 border-r border-white/20 relative">
-                                                {welcomeSlot?.image_override_left && (
-                                                    <img src={welcomeSlot.image_override_left} className="w-full h-full object-cover opacity-70" alt="Left" />
-                                                )}
-                                            </div>
-                                            {/* Center */}
-                                            <div className="w-2/4 h-full bg-gray-300 relative">
-                                                {welcomeSlot?.image_override ? (
-                                                    <img src={welcomeSlot.image_override} className="w-full h-full object-cover" alt="Main" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No Main Image</div>
-                                                )}
-                                            </div>
-                                            {/* Right */}
-                                            <div className="w-1/4 h-full bg-gray-200 border-l border-white/20 relative">
-                                                {welcomeSlot?.image_override_right && (
-                                                    <img src={welcomeSlot.image_override_right} className="w-full h-full object-cover opacity-70" alt="Right" />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div>
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Title</span>
-                                            <p className="text-lg font-bold text-gray-900">
-                                                {welcomeSlot?.title_override || 'Discover the Highlands'}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Button</span>
-                                            <p className="text-gray-700">
-                                                {welcomeSlot?.cta_override || 'Find an Event'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <Button onClick={() => welcomeSlot && setEditingWelcome(welcomeSlot)}>
-                                    Edit Settings
-                                </Button>
-                            </div>
-                        </Card>
-                    )}
-                </div>
-
-                {/* Automation Note */}
-                <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-100 flex items-start gap-3">
-                    <svg className="w-6 h-6 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                        <h3 className="font-semibold text-blue-900">What about other slides?</h3>
-                        <p className="text-sm text-blue-800 mt-1">
-                            Additional slides are automatically generated from active <strong>Featured Bookings</strong>.
-                            When an organizer pays for a "Hero Homepage" slot, their event will automatically appear in carousel slots 2, 3, 4, or 5.
-                        </p>
+                    {/* Right Column: SIDE STACK (Slots 1, 2, 3) */}
+                    <div className="space-y-6">
+                        <h2 className="text-xl font-bold mb-4 text-emerald-800">Side Stack</h2>
+                        {sideSlots.map((slot) => (
+                            <SlotEditor key={slot.id} slot={slot} onSave={handleSave} isMain={false} />
+                        ))}
+                        {sideSlots.length === 0 && (
+                            <div className="p-4 bg-red-50 text-red-600 rounded">Error: Side Slots (1-3) not found. Run migration.</div>
+                        )}
                     </div>
                 </div>
             </AdminLayout>
         </AdminGuard>
+    );
+}
+
+/**
+ * Reusable Editor for a Single Slot
+ */
+function SlotEditor({ slot, onSave, isMain }: { slot: HeroSlot; onSave: (id: number, data: Partial<HeroSlot>) => Promise<void>; isMain: boolean }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [formData, setFormData] = useState<Partial<HeroSlot>>({
+        title_override: slot.title_override || '',
+        link: slot.link || '',
+        badge_text: slot.badge_text || '',
+        badge_color: slot.badge_color || 'emerald',
+        cta_override: slot.cta_override || '',
+        image_override: slot.image_override || '',
+    });
+
+    const handleChange = (field: keyof HeroSlot, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await onSave(slot.id, formData);
+        setIsEditing(false);
+    };
+
+    if (!isEditing) {
+        // Read-Only Preview Card
+        return (
+            <Card className="p-4 group relative hover:shadow-md transition-shadow">
+                <div className="absolute top-2 right-2">
+                    <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>Edit</Button>
+                </div>
+
+                <div className="flex gap-4">
+                    {/* Thumbnail */}
+                    <div className={`shrink-0 bg-gray-100 rounded overflow-hidden ${isMain ? 'w-32 h-20' : 'w-20 h-20'}`}>
+                        {slot.image_override ? (
+                            <img src={slot.image_override} className="w-full h-full object-cover" alt="Slot" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">No Image</div>
+                        )}
+                    </div>
+
+                    {/* Details */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">#{slot.position}</span>
+                            {slot.badge_text && (
+                                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-${formData.badge_color}-100 text-${formData.badge_color}-700`}>
+                                    {slot.badge_text}
+                                </span>
+                            )}
+                        </div>
+                        <h3 className="font-bold text-gray-900 line-clamp-1">{slot.title_override || 'Untitled Slot'}</h3>
+                        {slot.link && <p className="text-xs text-blue-600 truncate max-w-[200px]">{slot.link}</p>}
+                    </div>
+                </div>
+            </Card>
+        );
+    }
+
+    // Edit Form
+    return (
+        <Card className={`p-4 border-2 border-emerald-500 ${isMain ? '' : ''}`}>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                    <span className="font-bold text-sm text-emerald-800">Editing Slot #{slot.position}</span>
+                    <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} type="button">Cancel</Button>
+                        <Button size="sm" type="submit">Save</Button>
+                    </div>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Image</label>
+                    <ImageUpload
+                        folder="hero"
+                        currentImageUrl={formData.image_override}
+                        onUpload={(res) => handleChange('image_override', res.url)}
+                        onRemove={() => handleChange('image_override', null)}
+                    />
+                </div>
+
+                {/* Fields */}
+                <div className={isMain ? "grid grid-cols-2 gap-4" : "space-y-3"}>
+                    <div className="col-span-2">
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Title</label>
+                        <input
+                            type="text"
+                            required
+                            className="w-full rounded border-gray-300 text-sm"
+                            value={formData.title_override || ''}
+                            onChange={(e) => handleChange('title_override', e.target.value)}
+                            placeholder="e.g. Discover the Highlands"
+                        />
+                    </div>
+
+                    <div className="col-span-2">
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Link URL</label>
+                        <input
+                            type="text"
+                            className="w-full rounded border-gray-300 text-sm"
+                            value={formData.link || ''}
+                            onChange={(e) => handleChange('link', e.target.value)}
+                            placeholder="/events/xyz or https://..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Badge Text</label>
+                        <input
+                            type="text"
+                            className="w-full rounded border-gray-300 text-sm"
+                            value={formData.badge_text || ''}
+                            onChange={(e) => handleChange('badge_text', e.target.value)}
+                            placeholder="e.g. Featured"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Badge Color</label>
+                        <select
+                            className="w-full rounded border-gray-300 text-sm"
+                            value={formData.badge_color}
+                            onChange={(e) => handleChange('badge_color', e.target.value)}
+                        >
+                            <option value="emerald">Emerald (Green)</option>
+                            <option value="amber">Amber (Orange)</option>
+                            <option value="blue">Blue</option>
+                            <option value="rose">Rose (Red)</option>
+                            <option value="purple">Purple</option>
+                            <option value="gray">Gray</option>
+                        </select>
+                    </div>
+
+                    {isMain && (
+                        <div className="col-span-2">
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Button Text</label>
+                            <input
+                                type="text"
+                                className="w-full rounded border-gray-300 text-sm"
+                                value={formData.cta_override || ''}
+                                onChange={(e) => handleChange('cta_override', e.target.value)}
+                                placeholder="Find an Event"
+                            />
+                        </div>
+                    )}
+                </div>
+            </form>
+        </Card>
     );
 }

@@ -612,6 +612,11 @@ export interface HeroSlot {
   image_override_right?: string;
   title_override?: string;
   cta_override?: string;
+  // New Fields
+  link?: string;
+  badge_text?: string;
+  badge_color?: string; // Default 'emerald'
+
   overlay_style: 'dark' | 'light' | 'gradient';
   is_active: boolean;
   start_date?: string;
@@ -628,6 +633,11 @@ export interface HeroSlotCreate {
   image_override_right?: string;
   title_override?: string;
   cta_override?: string;
+  // New Fields
+  link?: string;
+  badge_text?: string;
+  badge_color?: string;
+
   overlay_style?: string;
   is_active?: boolean;
   start_date?: string;
@@ -642,6 +652,11 @@ export interface HeroSlotUpdate {
   image_override_right?: string;
   title_override?: string;
   cta_override?: string;
+  // New Fields
+  link?: string;
+  badge_text?: string;
+  badge_color?: string;
+
   overlay_style?: string;
   is_active?: boolean;
   start_date?: string;

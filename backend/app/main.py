@@ -67,6 +67,31 @@ async def lifespan(app: FastAPI):
             session.exec(text("""
                 ALTER TABLE venues ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT FALSE;
             """))
+            
+            # Hero 4-Slot Magazine Migration
+            session.exec(text("""
+                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS link VARCHAR(500);
+            """))
+            session.exec(text("""
+                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_text VARCHAR(50);
+            """))
+            session.exec(text("""
+                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_color VARCHAR(50) DEFAULT 'emerald';
+            """))
+            
+            # Initialize 4 Fixed Slots (0-3)
+            for i in range(4):
+                # Check directly via SQL to avoid model mismatches during migration
+                result = session.exec(text(f"SELECT id FROM hero_slots WHERE position = {i}")).first()
+                if not result:
+                    session.exec(text(f"""
+                        INSERT INTO hero_slots (position, type, is_active, badge_color, overlay_style)
+                        VALUES ({i}, 'spotlight_event', false, 'emerald', 'dark')
+                    """))
+                    logger.info(f"Initialized Hero Slot position {i}")
+
+            session.commit()
+            logger.info("Migration complete: Hero system updated (Fields added + Slots 0-3 initialized)")
             session.commit()
             logger.info("Migration complete: Added website_url and is_all_day columns to events table")
     except Exception as e:

@@ -15,6 +15,9 @@ class HeroSlotBase(BaseModel):
     image_override_right: Optional[str] = None
     title_override: Optional[str] = None
     cta_override: Optional[str] = None
+    link: Optional[str] = None
+    badge_text: Optional[str] = None
+    badge_color: str = "emerald"
     overlay_style: str = "dark"
     is_active: bool = True
     start_date: Optional[datetime] = None
@@ -31,6 +34,9 @@ class HeroSlotUpdate(BaseModel):
     image_override_right: Optional[str] = None
     title_override: Optional[str] = None
     cta_override: Optional[str] = None
+    link: Optional[str] = None
+    badge_text: Optional[str] = None
+    badge_color: Optional[str] = None
     overlay_style: Optional[str] = None
     is_active: Optional[bool] = None
     start_date: Optional[datetime] = None
