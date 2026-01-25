@@ -355,17 +355,19 @@ def update_member_role(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    # Update role
+    # Update role using SQLModel update() - this goes through the ORM layer
+    # which properly handles enum serialization (same as the working INSERT)
     try:
-        # Use explicit type cast for PostgreSQL enum
-        from sqlmodel import text
-        statement = text("UPDATE group_members SET role=CAST(:role AS grouprole) WHERE group_id=:group_id AND user_id=:user_id")
-        session.exec(statement, params={"role": new_role.value, "group_id": group_id, "user_id": user_id})
-        
-        # We need to expire the object so it reloads from DB if accessed again
-        session.refresh(member)
-        
+        from sqlmodel import update
+        statement = update(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == user_id
+        ).values(role=new_role)
+        session.exec(statement)
         session.commit()
+        
+        # Refresh to get updated data
+        session.refresh(member)
     except Exception as e:
         session.rollback()
         # Log the error for admin/debugging
