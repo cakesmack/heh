@@ -357,10 +357,9 @@ def update_member_role(
 
     # Update role
     try:
-        # Use simple string interpolation for the update to ensure we send the lowercase value
-        # This bypasses SQLAlchemy's Enum TypeDecorator which is serializing by Name ("ADMIN")
+        # Use explicit type cast for PostgreSQL enum
         from sqlmodel import text
-        statement = text("UPDATE group_members SET role=:role WHERE group_id=:group_id AND user_id=:user_id")
+        statement = text("UPDATE group_members SET role=CAST(:role AS grouprole) WHERE group_id=:group_id AND user_id=:user_id")
         session.exec(statement, params={"role": new_role.value, "group_id": group_id, "user_id": user_id})
         
         # We need to expire the object so it reloads from DB if accessed again
