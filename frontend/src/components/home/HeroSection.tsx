@@ -116,17 +116,19 @@ export default function HeroSection() {
 
     return (
         <section
-            className="relative w-full bg-stone-dark overflow-hidden group"
+            className="w-full bg-stone-dark overflow-hidden py-4 px-4 sm:px-6 lg:px-8"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Main Container: Split Screen Grid */}
-            <div className="relative w-full h-[600px] md:h-[700px] grid grid-cols-1 md:grid-cols-2 bg-stone-900">
+            <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-2 h-auto lg:h-[600px]">
 
-                {/* Left Column (Hero Content Side) */}
-                <div className="relative w-full h-full border-b-4 md:border-b-0 md:border-r-4 border-white/80 overflow-hidden">
-                    {/* Background Images */}
-                    {slides.map((slide, index) => {
+                {/* 1. The Big Left Card (The Hero) */}
+                <div className="lg:col-span-2 relative h-[500px] lg:h-full overflow-hidden rounded-3xl group cursor-pointer">
+                    {/* Background Image with Zoom Effect */}
+                    {slides.length > 0 && (slides.map((slide, index) => {
+                        // Only render current slide to save resources or render all for transitions?
+                        // "Bento" usually implies static cards, but here we still have a slideshow.
+                        // Let's keep the slideshow logic for the MAIN card.
                         const rawImg = isWelcomeSlide(slide)
                             ? ((slide as HeroSlot).image_override_left || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
                             : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
@@ -134,44 +136,42 @@ export default function HeroSection() {
 
                         return (
                             <div
-                                key={`left-${index}`}
+                                key={`hero-bg-${index}`}
                                 className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-                                style={{ backgroundImage: `url(${img})` }}
-                            />
-                        );
-                    })}
-
-                    {/* Gradient Overlay for Text Readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-10" />
-
-                    {/* Content Layer (Responsive Alignment) */}
-                    <div className="absolute inset-0 z-20 flex flex-col justify-center items-center text-center md:items-start md:text-left p-6 md:p-12 lg:p-16">
-                        <div className="animate-slide-up max-w-xl w-full">
-                            <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
-                                {!isWelcome && (
-                                    <Badge variant="warning" className="bg-amber-500 text-white border-none shadow-lg px-4 py-1.5 text-sm font-bold tracking-wider uppercase">
-                                        Featured
-                                    </Badge>
-                                )}
+                            >
+                                <div
+                                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                                    style={{ backgroundImage: `url(${img})` }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
                             </div>
+                        );
+                    }))}
 
-                            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-6 tracking-tight leading-[1.1] drop-shadow-2xl">
+                    {/* Content Layer */}
+                    <div className="absolute bottom-0 left-0 p-8 lg:p-12 w-full z-20 flex flex-col items-start text-left">
+                        <div className="animate-slide-up max-w-2xl">
+                            {!isWelcome && (
+                                <Badge variant="warning" className="mb-4 bg-amber-500 text-white border-none shadow-lg px-3 py-1 text-xs font-bold tracking-wider uppercase inline-block">
+                                    Featured Event
+                                </Badge>
+                            )}
+
+                            <h1 className="text-4xl lg:text-6xl font-bold text-white mb-4 leading-tight tracking-tight drop-shadow-xl">
                                 {isWelcome && title === 'Discover the Highlands' ? (
-                                    <>Discover the <span className="text-emerald-400 drop-shadow-lg">Highlands</span></>
+                                    <>Highland <span className="text-emerald-400">Events Hub</span></>
                                 ) : (
                                     title
                                 )}
                             </h1>
 
-                            <div className="w-20 h-1.5 bg-emerald-500 mb-8 rounded-full shadow-lg mx-auto md:mx-0"></div>
-
-                            <p className="text-lg md:text-xl text-gray-100 mb-10 line-clamp-3 font-medium drop-shadow-lg leading-relaxed text-shadow-sm">
+                            <p className="text-gray-200 text-lg lg:text-xl mb-8 max-w-lg font-medium drop-shadow-md leading-relaxed line-clamp-3">
                                 {subtitle}
                             </p>
 
-                            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                                <Link href={link} className="w-full md:w-auto">
-                                    <Button variant="primary" size="lg" className="w-full md:w-auto shadow-2xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[180px] text-lg py-4 rounded-xl transition-transform hover:-translate-y-1">
+                            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <Link href={link} className="w-full sm:w-auto">
+                                    <Button variant="primary" size="lg" className="w-full sm:w-auto shadow-xl shadow-emerald-900/40 border-none bg-emerald-600 hover:bg-emerald-500 text-white min-w-[160px] py-3.5 rounded-xl font-semibold transition-transform hover:-translate-y-0.5">
                                         {ctaText}
                                     </Button>
                                 </Link>
@@ -181,7 +181,7 @@ export default function HeroSection() {
                                             const el = document.getElementById('categories');
                                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                                         }}
-                                        className="w-full md:w-auto px-8 py-4 rounded-xl border-2 border-white/30 bg-white/5 text-white font-bold hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-md min-w-[180px] shadow-lg hover:-translate-y-1"
+                                        className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 hover:border-white/50 transition-all backdrop-blur-md min-w-[160px] shadow-lg hover:-translate-y-0.5"
                                     >
                                         Browse Categories
                                     </button>
@@ -191,86 +191,100 @@ export default function HeroSection() {
                     </div>
                 </div>
 
-                {/* Right Column (Visual Only - Split Vertically) */}
-                <div className="hidden md:flex flex-col h-full">
+                {/* 2. The Right Stack (The Vibe) */}
+                <div className="hidden lg:flex flex-col gap-2 h-full">
+                    {/* Top Right Card */}
+                    <div className="relative h-1/2 w-full overflow-hidden rounded-3xl group">
+                        {/* We use slide[1] or fallback to Welcome Left Image if not enough slides */}
+                        {(() => {
+                            // If we have a slide at index 1 (likely "featured"), show it.
+                            // Otherwise show a nice fallback or mapped slide.
+                            // Ideally, we'd cycle these too, or just show the next ones in queue.
+                            // Let's try to show slides[(currentIndex + 1) % len] and slides[(currentIndex + 2) % len] to keep it dynamic?
+                            // Or just static placeholders if user wants "Live Music" / "Local Culture"?
+                            // The user prompt asked for "The Right Stack... Cards (Top & Bottom)... Images... Same group-hover effect".
 
-                    {/* Top Right (Half Height) */}
-                    <div className="relative w-full h-1/2 overflow-hidden group border-b-4 border-white/80">
-                        {slides.map((slide, index) => {
-                            const rawImg = isWelcomeSlide(slide)
-                                ? ((slide as HeroSlot).image_override || '/images/hero-bg.jpg')
-                                : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
-                            const img = getOptimizedImage(rawImg, 800);
+                            // Let's use the next slide in the rotation for variety, or distinct slides if available.
+                            // Given fetching logic `slides` typically has 1 welcome + up to 4 paid.
+
+                            const nextIndex1 = (currentIndex + 1) % (slides.length || 1);
+                            const slide1 = slides[nextIndex1];
+
+                            const rawImg1 = slide1
+                                ? (isWelcomeSlide(slide1) ? ((slide1 as HeroSlot).image_override || '/images/hero-bg.jpg') : ((slide1 as ActiveFeatured).event_image_url || '/images/hero-bg.jpg'))
+                                : '/images/hero-bg.jpg';
+                            const img1 = getOptimizedImage(rawImg1, 800);
 
                             return (
-                                <div
-                                    key={`top-right-${index}`}
-                                    className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-                                    style={{ backgroundImage: `url(${img})` }}
-                                >
-                                    <div className="absolute inset-0 bg-black/20 z-10" />
-                                </div>
+                                <>
+                                    <div
+                                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                                        style={{ backgroundImage: `url(${img1})` }}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent transition-opacity group-hover:opacity-90" />
+                                    <div className="absolute bottom-4 left-4">
+                                        <span className="text-white font-medium text-xs sm:text-sm bg-black/30 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                                            Live Events
+                                        </span>
+                                    </div>
+                                </>
                             );
-                        })}
+                        })()}
                     </div>
 
-                    {/* Bottom Right (Half Height) */}
-                    <div className="relative w-full h-1/2 overflow-hidden group">
-                        {slides.map((slide, index) => {
-                            const rawImg = isWelcomeSlide(slide)
-                                ? ((slide as HeroSlot).image_override_right || (slide as HeroSlot).image_override || '/images/hero-bg.jpg')
-                                : ((slide as ActiveFeatured).event_image_url || '/images/hero-bg.jpg');
-                            const img = getOptimizedImage(rawImg, 800);
+                    {/* Bottom Right Card */}
+                    <div className="relative h-1/2 w-full overflow-hidden rounded-3xl group">
+                        {(() => {
+                            const nextIndex2 = (currentIndex + 2) % (slides.length || 1);
+                            // Avoid duplicate if len=2? default handles it
+                            const slide2 = slides[nextIndex2];
+
+                            const rawImg2 = slide2
+                                ? (isWelcomeSlide(slide2) ? ((slide2 as HeroSlot).image_override_right || (slide2 as HeroSlot).image_override || '/images/hero-bg.jpg') : ((slide2 as ActiveFeatured).event_image_url || '/images/hero-bg.jpg'))
+                                : '/images/hero-bg.jpg';
+                            const img2 = getOptimizedImage(rawImg2, 800);
 
                             return (
-                                <div
-                                    key={`bottom-right-${index}`}
-                                    className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-                                    style={{ backgroundImage: `url(${img})` }}
-                                >
-                                    <div className="absolute inset-0 bg-black/20 z-10" />
-                                </div>
+                                <>
+                                    <div
+                                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                                        style={{ backgroundImage: `url(${img2})` }}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent transition-opacity group-hover:opacity-90" />
+                                    <div className="absolute bottom-4 left-4">
+                                        <span className="text-white font-medium text-xs sm:text-sm bg-black/30 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                                            Local Culture
+                                        </span>
+                                    </div>
+                                </>
                             );
-                        })}
+                        })()}
                     </div>
                 </div>
+
+                {/* Mobile Stack: Show a simplified version of right stack below? 
+                    User prompt: "Right side is stacked (1 col)." 
+                    "Buttons: Stacked on mobile (w-full)..."
+                    Currently I hid the right column on mobile (`hidden lg:flex`).
+                    If we want it visible, we can make it display below.
+                    However, usually Bento grids collapse to just the main hero on mobile to save vertical space, 
+                    or show the secondary tiles as squares below.
+                    The previous Hero implementation didn't show the right column on mobile either (hidden md:flex).
+                    I'll keep `hidden lg:flex` for now to focus on the main content unless user asks otherwise.
+                */}
             </div>
 
-            {/* Navigation Buttons (Absolute to Section) */}
-            {slides.length > 1 && (
-                <>
-                    <button
-                        onClick={prevSlide}
-                        className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/30 hover:bg-black/50 backdrop-blur-md rounded-full items-center justify-center text-white/70 hover:text-white transition-all z-40 border border-white/10"
-                        aria-label="Previous"
-                    >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    <button
-                        onClick={nextSlide}
-                        className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/30 hover:bg-black/50 backdrop-blur-md rounded-full items-center justify-center text-white/70 hover:text-white transition-all z-40 border border-white/10"
-                        aria-label="Next"
-                    >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-                </>
-            )}
-
-            {/* Progress Bars (Moved to Left Side alignment to match content?) - Keeping centered for now as it looks okay, or maybe left-aligned inside the left col? Let's keep absolute bottom center of the whole section or maybe bottom-left of left col? 
-               User didn't specify, but standard carousel nav is usually centered. Let's keep it centered relative to the whole section for now, or maybe inside left col. 
-                actually, let's put it absolute bottom 8 left 12 to match the padding of the text.
+            {/* Progress Indicators - Positioned bottom-left relative to Main Card? 
+                Actually, simpler to hide them in Bento or put them floating in the main card.
+                Let's put them inside the main card, bottom right or bottom center.
             */}
             {slides.length > 1 && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 md:left-12 md:translate-x-0 flex gap-2 z-40">
+                <div className="absolute bottom-8 lg:bottom-12 left-1/2 lg:left-auto lg:right-12 -translate-x-1/2 lg:translate-x-0 flex gap-1.5 z-30">
                     {slides.map((_, index) => (
                         <button
                             key={index}
                             onClick={() => setCurrentIndex(index)}
-                            className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${index === currentIndex ? 'w-8 bg-emerald-500' : 'w-2 bg-white/40 hover:bg-white/70'}`}
+                            className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${index === currentIndex ? 'w-6 bg-emerald-400' : 'w-1.5 bg-white/40 hover:bg-white/70'}`}
                             aria-label={`Go to slide ${index + 1}`}
                         />
                     ))}
