@@ -40,20 +40,7 @@ export default function EventBasicDetails({
                 </ul>
             }
         >
-            {organizers.length > 0 && (
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Post as Organizer</label>
-                    <select
-                        name="organizer_profile_id"
-                        value={formData.organizer_profile_id}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border rounded-lg"
-                    >
-                        <option value="">Myself ({userEmail})</option>
-                        {organizers.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}
-                    </select>
-                </div>
-            )}
+            {/* Organizer Selection Moved to Top Level */}
 
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Event Title *</label>
@@ -93,6 +80,6 @@ export default function EventBasicDetails({
             </div>
 
             <TagInput selectedTags={selectedTags} onChange={setSelectedTags} maxTags={5} />
-        </FormSection>
+        </FormSection >
     );
 }

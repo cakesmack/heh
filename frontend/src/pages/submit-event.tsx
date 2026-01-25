@@ -23,6 +23,7 @@ import EventBasicDetails from '@/components/events/form-sections/EventBasicDetai
 import EventLocationSection from '@/components/events/form-sections/EventLocationSection';
 import EventScheduleSection from '@/components/events/form-sections/EventScheduleSection';
 import EventTicketingSection from '@/components/events/form-sections/EventTicketingSection';
+import OrganizerSelector from '@/components/events/OrganizerSelector';
 
 export default function SubmitEventPage() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function SubmitEventPage() {
     ticket_url: '',
     website_url: '',
     age_restriction: '',
-    organizer_profile_id: '',
+    organizer_profile_id: '', // Will be synched with selectedOrganizer
     is_recurring: false,
     is_all_day: false,
     frequency: 'WEEKLY',
@@ -74,6 +75,13 @@ export default function SubmitEventPage() {
   const [successMessage, setSuccessMessage] = useState<{ type: 'published' | 'pending' | 'duplicate'; eventId: string } | null>(null);
   const [isLocationValid, setIsLocationValid] = useState(true);
 
+  // Organizer Selection State
+  // null = not selected (validation error if submitting)
+  // '' = Myself
+  // 'id' = Group ID
+  const [selectedOrganizer, setSelectedOrganizer] = useState<string | null>(null);
+  const [organizerError, setOrganizerError] = useState<string | undefined>(undefined);
+
   // Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
@@ -94,7 +102,16 @@ export default function SubmitEventPage() {
       if (user) {
         try {
           const response = await apiFetch<any>(`/api/organizers?user_id=${user.id}`);
-          setOrganizers(response.organizers || []);
+          const orgs = response.organizers || [];
+          setOrganizers(orgs);
+
+          // Logic: Default to 'Myself' ONLY if they have 0 groups.
+          // Otherwise force selection.
+          if (orgs.length === 0) {
+            setSelectedOrganizer('');
+          } else {
+            setSelectedOrganizer(null);
+          }
         } catch (err) {
           console.error('Error fetching organizers:', err);
         }
@@ -169,9 +186,23 @@ export default function SubmitEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setOrganizerError(undefined);
     setIsLoading(true);
 
     try {
+      // Validation: Organizer
+      if (selectedOrganizer === null) {
+        setOrganizerError("Please select who is hosting this event.");
+        // Scroll to top
+        const element = document.getElementById('organizer-selector');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        throw new Error("Please select an organizer.");
+      }
+
       if (locationTab === 'main') {
         if (locationMode === 'venue' && !formData.venue_id) throw new Error('Please select a venue');
         if (locationMode === 'custom') {
@@ -224,7 +255,10 @@ export default function SubmitEventPage() {
         is_all_day: formData.is_all_day,
         age_restriction: formData.age_restriction || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
-        organizer_profile_id: formData.organizer_profile_id || undefined,
+        age_restriction: formData.age_restriction || undefined,
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        organizer_profile_id: selectedOrganizer || undefined, // Use explicit selection
+        is_recurring: formData.is_recurring,
         is_recurring: formData.is_recurring,
         frequency: formData.is_recurring ? formData.frequency : undefined,
         recurrence_end_date: (formData.is_recurring && formData.ends_on === 'date') ? new Date(formData.recurrence_end_date).toISOString() : undefined,
@@ -309,6 +343,18 @@ export default function SubmitEventPage() {
           </div>
 
           <div className="space-y-6">
+
+            < OrganizerSelector
+              user={user}
+              organizers={organizers}
+              selectedId={selectedOrganizer || ''} // Pass '' if null to avoid controlled/uncontrolled warning, though component handles it? actually component expects string.
+              onChange={(id) => {
+                setSelectedOrganizer(id);
+                setOrganizerError(undefined);
+              }}
+              error={organizerError}
+            />
+
             <EventMediaSection
               imageUrl={formData.image_url}
               onUpload={handleImageUpload}
