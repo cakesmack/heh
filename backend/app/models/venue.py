@@ -78,6 +78,9 @@ class Venue(SQLModel, table=True):
     has_parking: bool = Field(default=False)
     serves_food: bool = Field(default=False)
     amenities_notes: Optional[str] = Field(default=None, max_length=500)
+    
+    # Discovery Logic
+    is_dismissed: bool = Field(default=False)  # Hidden from rising lists but still active
 
     # Social Media Links
     social_facebook: Optional[str] = Field(default=None, max_length=255)

@@ -1369,6 +1369,7 @@ def get_unverified_venues(
         select(Venue, func.count(Event.id).label("event_count"))
         .join(Event, Event.venue_id == Venue.id)  # Inner join forces > 0 events
         .where(Venue.status == VenueStatus.UNVERIFIED)
+        .where(Venue.is_dismissed == False)          # Filter dismissed
         # .where(Event.date_end >= today)           # Removed to show ANY unverified with events
         .group_by(Venue.id)
         .having(func.count(Event.id) > 0)
@@ -1389,6 +1390,41 @@ def get_unverified_venues(
         ))
         
     return response
+
+
+@router.post("/venues/{venue_id}/dismiss")
+def dismiss_venue(
+    venue_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Dismiss a venue from the Rising Locations list.
+    Does not delete the venue, just hides it from the dashboard.
+    """
+    from app.core.utils import normalize_uuid
+    
+    try:
+        if "-" not in venue_id and len(venue_id) == 32:
+             # Normalize if needed, though session.get usually handles if string matches PK
+             pass
+        venue = session.get(Venue, venue_id)
+    except Exception:
+        venue = None
+        
+    if not venue:
+        # Try normalized
+        n_id = venue_id.replace("-", "")
+        venue = session.get(Venue, n_id)
+        
+    if not venue:
+        raise HTTPException(status_code=404, detail="Venue not found")
+        
+    venue.is_dismissed = True
+    session.add(venue)
+    session.commit()
+    
+    return {"status": "dismissed", "venue_id": venue.id}
 
 
 @router.get("/emergency-migrate")

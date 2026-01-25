@@ -1,11 +1,13 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import Modal from '../Modal';
 import { Card } from '../../common/Card';
 import { Button } from '../../common/Button';
 import { EditVenueModal } from '../../venues/EditVenueModal';
+import { toast } from 'react-hot-toast';
 
 interface UnverifiedVenue {
     id: string;
@@ -58,6 +60,21 @@ export default function RisingLocationsWidget() {
         // If we were viewing all, refresh that list too
         if (isViewAllOpen) {
             fetchAllVenues();
+        }
+    };
+
+    const handleDismiss = async (venueId: string) => {
+        try {
+            await api.post(`/api/admin/venues/${venueId}/dismiss`, {});
+
+            // Optimistic update
+            setVenues(prev => prev.filter(v => v.id !== venueId));
+            setAllVenues(prev => prev.filter(v => v.id !== venueId));
+
+            toast.success('Venue dismissed from list');
+        } catch (error) {
+            console.error('Failed to dismiss venue', error);
+            toast.error('Failed to dismiss venue');
         }
     };
 
@@ -118,13 +135,24 @@ export default function RisingLocationsWidget() {
                                 </div>
                                 <p className="text-xs text-gray-500 truncate">{venue.address}</p>
                             </div>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setSelectedVenue(venue.id)}
-                            >
-                                Verify
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 h-8 w-8"
+                                    onClick={() => handleDismiss(venue.id)}
+                                    title="Dismiss from list"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setSelectedVenue(venue.id)}
+                                >
+                                    Verify
+                                </Button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -154,11 +182,22 @@ export default function RisingLocationsWidget() {
                                         <p className="text-sm text-gray-500">{venue.address}</p>
                                         <p className="text-xs text-gray-400 mt-1">Found: {new Date(venue.created_at).toLocaleDateString()}</p>
                                     </div>
-                                    <Button
-                                        onClick={() => handleVerifyClick(venue.id)}
-                                    >
-                                        Verify
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2"
+                                            onClick={() => handleDismiss(venue.id)}
+                                            title="Dismiss from list"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleVerifyClick(venue.id)}
+                                        >
+                                            Verify
+                                        </Button>
+                                    </div>
                                 </div>
                             ))
                         )}
