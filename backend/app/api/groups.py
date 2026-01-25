@@ -364,13 +364,16 @@ def update_member_role(
     # Sanity check: print what we're actually sending
     print(f"DEBUG: Saving role_to_save='{role_to_save}' (type={type(role_to_save).__name__})")
     
-    # Update role with the explicit lowercase string
+    # Update role with type_coerce to bypass SQLAlchemy's Enum type handler
     try:
         from sqlmodel import update
+        from sqlalchemy import type_coerce, String
+        
+        # Force SQLAlchemy to treat this as a plain string, preventing auto-conversion to uppercase Enum Name
         statement = update(GroupMember).where(
             GroupMember.group_id == group_id,
             GroupMember.user_id == user_id
-        ).values(role=role_to_save)  # MUST be lowercase string like "admin"
+        ).values(role=type_coerce(role_to_save, String))  # Bypass Enum serialization entirely
         session.exec(statement)
         session.commit()
         
