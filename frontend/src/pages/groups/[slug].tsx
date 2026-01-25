@@ -197,7 +197,9 @@ export default function OrganizerProfilePage() {
                 // 3. Group Member role check (Admin or Editor)
                 try {
                     const membership = await api.groups.checkMembership(organizer.id);
-                    if (membership && (membership.role === 'admin' || membership.role === 'editor')) {
+                    // Case-insensitive role check - works with both 'admin'/'ADMIN' etc.
+                    const role = membership?.role?.toLowerCase();
+                    if (membership && ['admin', 'editor', 'owner'].includes(role)) {
                         setCanEdit(true);
                     } else {
                         setCanEdit(false);
