@@ -355,14 +355,13 @@ def update_member_role(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    # Update role using SQLModel update() - this goes through the ORM layer
-    # which properly handles enum serialization (same as the working INSERT)
+    # Update role - pass the lowercase string value directly to avoid ORM enum serialization issues
     try:
         from sqlmodel import update
         statement = update(GroupMember).where(
             GroupMember.group_id == group_id,
             GroupMember.user_id == user_id
-        ).values(role=new_role)
+        ).values(role=normalized_role)  # Use the lowercase string, not the Enum object
         session.exec(statement)
         session.commit()
         
