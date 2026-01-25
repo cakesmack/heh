@@ -63,6 +63,10 @@ async def lifespan(app: FastAPI):
             session.exec(text("""
                 ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_right VARCHAR(500);
             """))
+            # Emergency Migration: Add is_dismissed to venues
+            session.exec(text("""
+                ALTER TABLE venues ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT FALSE;
+            """))
             session.commit()
             logger.info("Migration complete: Added website_url and is_all_day columns to events table")
     except Exception as e:
