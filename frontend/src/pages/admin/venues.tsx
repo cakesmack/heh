@@ -343,8 +343,8 @@ export default function AdminVenues() {
     try {
       const payload = {
         ...formData,
-        postcode: formData.postcode || undefined,
-        address_full: formData.address_full || undefined,
+        postcode: formData.postcode || '',
+        address_full: formData.address_full || '',
         image_url: formData.image_url || undefined,
       };
 
