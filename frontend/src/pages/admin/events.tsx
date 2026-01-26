@@ -417,7 +417,7 @@ export default function AdminEvents() {
     }
   };
 
-  const getStatusBadge = (status?: string) => {
+  const getStatusBadge = (status?: string | null) => {
     if (!status) return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">—</span>;
 
     const normalizedStatus = status.toUpperCase();
