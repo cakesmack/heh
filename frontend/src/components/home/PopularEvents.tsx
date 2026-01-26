@@ -80,7 +80,7 @@ export default function PopularEvents() {
         return (
             <section className="py-6 bg-stone-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
-                    <h2 className="text-2xl font-bold text-white">🔥 Top 10 This Week</h2>
+                    <h2 className="text-2xl font-bold text-white">🔥 Top 10 Popular Events</h2>
                 </div>
                 <div
                     className="flex overflow-x-auto snap-x snap-mandatory gap-2 pb-4"

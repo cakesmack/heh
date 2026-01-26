@@ -109,7 +109,7 @@ export function Footer() {
             <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-4">Socials</h3>
             <div className="flex space-x-4 mb-4">
               <a
-                href="https://instagram.com"
+                href="https://instagram.com/highlandeventshub"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
@@ -118,7 +118,7 @@ export function Footer() {
                 <InstagramIcon className="w-6 h-6" />
               </a>
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/HighlandEventsHub/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"

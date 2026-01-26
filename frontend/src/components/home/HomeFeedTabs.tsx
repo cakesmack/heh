@@ -153,7 +153,7 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                             : 'text-gray-400 hover:text-gray-600'
                             }`}
                     >
-                        🌙 Tonight
+                        Happening Today
                     </button>
                     <button
                         onClick={() => setActiveTab('feed')}
