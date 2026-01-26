@@ -303,7 +303,8 @@ export default function AdminEvents() {
         description: formData.description || undefined,
         date_start: calculatedDateStart,
         date_end: calculatedDateEnd,
-        venue_id: useManualLocation ? undefined : formData.venue_id,
+        // Fix: venue_id is required by EventCreate but allowed to be empty string if manual location used
+        venue_id: useManualLocation ? '' : formData.venue_id,
         location_name: useManualLocation ? formData.location_name : undefined,
         category_id: formData.category_id,
         price: formData.price,
@@ -314,9 +315,15 @@ export default function AdminEvents() {
       };
 
       if (editingEvent) {
-        await eventsAPI.update(editingEvent.id, payload);
+        await eventsAPI.update(editingEvent.id, {
+          ...payload,
+          venue_id: payload.venue_id || null // Update allows null to clear venue
+        });
       } else {
-        await eventsAPI.create(payload);
+        await eventsAPI.create({
+          ...payload,
+          venue_id: payload.venue_id || '' // Create requires string (empty string for no venue)
+        });
       }
       setModalOpen(false);
       fetchEvents();
