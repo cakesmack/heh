@@ -374,8 +374,8 @@ export default function EditEventPage() {
                     ...st,
                     start_time: st.start_time ? (st.start_time.length === 16 ? st.start_time + ':00' : st.start_time) : '',
                     end_time: st.end_time ? (st.end_time.length === 16 ? st.end_time + ':00' : st.end_time) : undefined,
-                    ticket_url: st.ticket_url || null, // Allow clearing
-                    notes: st.notes || null
+                    ticket_url: st.ticket_url || undefined, // Use undefined, not null
+                    notes: st.notes || undefined // Use undefined, not null
                 }));
             } else if (isMultiSession && showtimes.length === 0) {
                 throw new Error('Please add at least one showtime');
