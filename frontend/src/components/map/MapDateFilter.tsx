@@ -97,22 +97,20 @@ export default function MapDateFilter({ selectedRangeId, onRangeSelect, currentD
     };
 
     return (
-        <div className="flex items-center gap-2 -mx-4 px-4 md:mx-0 md:px-0 pb-2">
-            {/* Scrollable Presets Wrapper */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-                {filters.map((filter) => (
-                    <button
-                        key={filter.id}
-                        onClick={() => handlePresetClick(filter)}
-                        className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap border ${selectedRangeId === filter.id
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            }`}
-                    >
-                        {filter.label}
-                    </button>
-                ))}
-            </div>
+        <div className="flex items-center gap-2 overflow-x-auto flex-nowrap scrollbar-hide touch-pan-x px-4 pr-12 pb-2 -mx-4 md:mx-0 md:px-0">
+            {/* Presets */}
+            {filters.map((filter) => (
+                <button
+                    key={filter.id}
+                    onClick={() => handlePresetClick(filter)}
+                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap border ${selectedRangeId === filter.id
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                >
+                    {filter.label}
+                </button>
+            ))}
 
             {/* Separator Line */}
             <div className="h-6 w-px bg-gray-300 mx-1 flex-shrink-0 hidden md:block" />
