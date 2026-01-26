@@ -125,8 +125,6 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
     return now >= start && now <= end;
   };
 
-  const pageTitle = `${event.title} | Highland Events Hub`;
-
   // Format date for OG description
   const eventDate = new Date(event.date_start);
   const formattedOgDate = eventDate.toLocaleDateString('en-GB', {
@@ -139,7 +137,8 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
   const venueName = event.venue_name || event.location_name || 'the Highlands';
   const pageDescription = `Join us at ${venueName} on ${formattedOgDate}. ${event.description ? event.description.substring(0, 100) : 'Discover this amazing event in the Scottish Highlands!'}`;
 
-  // Ensure image URL is absolute (required for OG tags)
+  // SEO: Dynamic Title (Title | Venue | Date | Site Name)
+  const pageTitle = `${event.title} at ${venueName} | ${formattedOgDate} | Highland Events Hub`;
   const siteUrl = 'https://www.highlandeventshub.co.uk';
   const ogImageUrl = event.image_url
     ? (event.image_url.startsWith('http') ? event.image_url : `${siteUrl}${event.image_url}`)
@@ -166,9 +165,55 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
         <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
-        <meta name="twitter:title" content={event.title} key="twitter-title" />
+        <meta name="twitter:title" content={pageTitle} key="twitter-title" />
         <meta name="twitter:description" content={pageDescription} key="twitter-description" />
         <meta name="twitter:image" content={ogImageUrl} key="twitter-image" />
+
+        {/* JSON-LD Structured Data for Google Events Pack */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Event",
+              "name": event.title,
+              "startDate": event.date_start,
+              "endDate": event.date_end,
+              "eventStatus": "https://schema.org/EventScheduled",
+              "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+              "location": {
+                "@type": "Place",
+                "name": venueName,
+                "address": {
+                  "@type": "PostalAddress",
+                  "streetAddress": event.location_name || venueName,
+                  "addressRegion": "Highlands",
+                  "addressCountry": "UK"
+                },
+                "geo": (event.latitude && event.longitude) ? {
+                  "@type": "GeoCoordinates",
+                  "latitude": event.latitude,
+                  "longitude": event.longitude
+                } : undefined
+              },
+              "image": [ogImageUrl],
+              "description": event.description ? event.description.replace(/<[^>]*>?/gm, '') : pageDescription,
+              "offers": {
+                "@type": "Offer",
+                "url": event.ticket_url || canonicalUrl,
+                "price": event.price || 0,
+                "priceCurrency": "GBP",
+                "availability": "https://schema.org/InStock",
+                "validFrom": event.created_at
+              },
+              "organizer": {
+                "@type": "Organization",
+                "name": event.organizer_profile?.name || "Highland Events Hub",
+                "url": siteUrl
+              }
+            })
+          }}
+        />
       </Head>
 
       {/* Cinematic Hero */}
@@ -197,7 +242,7 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
               <>
                 <img
                   src={event.image_url}
-                  alt={event.title}
+                  alt={`${event.title} at ${venueName}`}
                   className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors duration-300">
