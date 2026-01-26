@@ -144,38 +144,48 @@ export default function MapDateFilter({ selectedRangeId, onRangeSelect, currentD
                     )}
                 </button>
 
-                {/* Date Picker Popover */}
+                {/* Date Picker Modal Overlay */}
                 {isCustomOpen && (
-                    <div className="absolute top-full right-0 mt-3 p-4 bg-white rounded-xl shadow-2xl border border-gray-200 z-[100] min-w-[320px]">
-                        <DayPicker
-                            mode="range"
-                            selected={tempRange}
-                            onSelect={setTempRange}
-                            disabled={{ before: today }}
-                            styles={{
-                                caption: { color: '#047857' } // Emerald-700
-                            }}
-                            modifiersClassNames={{
-                                selected: 'bg-emerald-600 text-white hover:bg-emerald-700',
-                                today: 'text-emerald-600 font-bold'
-                            }}
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[90]"
+                            onClick={() => setIsCustomOpen(false)}
                         />
-                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
-                            <button
-                                onClick={() => setIsCustomOpen(false)}
-                                className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleCustomApply}
-                                disabled={!tempRange?.from || !tempRange?.to}
-                                className="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Apply Range
-                            </button>
+
+                        {/* Modal */}
+                        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl border border-gray-200 z-[100] min-w-[320px] p-4">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 px-2">Select Date Range</h3>
+                            <DayPicker
+                                mode="range"
+                                selected={tempRange}
+                                onSelect={setTempRange}
+                                disabled={{ before: today }}
+                                styles={{
+                                    caption: { color: '#047857' } // Emerald-700
+                                }}
+                                modifiersClassNames={{
+                                    selected: 'bg-emerald-600 text-white hover:bg-emerald-700',
+                                    today: 'text-emerald-600 font-bold'
+                                }}
+                            />
+                            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
+                                <button
+                                    onClick={() => setIsCustomOpen(false)}
+                                    className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCustomApply}
+                                    disabled={!tempRange?.from || !tempRange?.to}
+                                    className="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Apply Range
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
         </div>
