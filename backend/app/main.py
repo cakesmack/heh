@@ -7,7 +7,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import SQLModel
 
@@ -203,15 +203,34 @@ app.include_router(cron.router, prefix="/api")
 # SPA Catch-All Route
 # Must be the LAST route to avoid overshadowing API endpoints
 @app.get("/{rest_of_path:path}", tags=["SPA"])
-async def spa_catch_all(rest_of_path: str):
+async def spa_catch_all(request: Request, rest_of_path: str):
     """
     Catch-all route for Single Page Application (SPA) client-side routing.
     
     Logic:
-    1. If the requested path corresponds to a real file in 'static/', serve it.
-    2. Otherwise, serve 'index.html' (allowing the frontend router to handle the path).
-    3. Handles root "/" requests (rest_of_path="") by serving index.html.
+    1. If request is for API (starts with 'api/'), bypass SPA logic:
+       - If missing trailing slash, redirect to slash-appended URL (standard FastAPI behavior).
+       - Otherwise, return 404 (do NOT serve index.html for API errors).
+    2. If the requested path corresponds to a real file in 'static/', serve it.
+    3. Otherwise, serve 'index.html' (allowing the frontend router to handle the path).
     """
+    # 0. Special handling for API routes (prevent swallowing by catch-all)
+    if rest_of_path.startswith("api/"):
+        # Mimic FastAPI's standard behavior: Redirect if missing trailing slash
+        if not rest_of_path.endswith("/"):
+            new_path = request.url.path
+            if not new_path.endswith("/"):
+                new_path += "/"
+            
+            query = request.url.query
+            if query:
+                new_path += f"?{query}"
+                
+            return RedirectResponse(url=new_path)
+            
+        # If it has a slash but didn't match any router, it's a real 404
+        return JSONResponse(status_code=404, content={"detail": "API Endpoint not found"})
+
     # 1. Check if it's a file in static directory
     if rest_of_path:
         file_path = os.path.join(static_dir, rest_of_path)
