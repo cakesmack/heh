@@ -7,7 +7,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import SQLModel
 
@@ -158,16 +158,13 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 # Root endpoint
-@app.get("/", tags=["Health"])
-def root():
+@app.get("/", tags=["Initial Load"])
+async def root():
     """
-    Health check endpoint.
+    Serve the Single Page Application (SPA) entry point.
+    Matches the root path regardless of query parameters (e.g., ?fbclid=...).
     """
-    return {
-        "message": "Highland Events Hub API",
-        "status": "running",
-        "version": "1.0.0"
-    }
+    return FileResponse(os.path.join(static_dir, "index.html"))
 
 
 # Include all routers
