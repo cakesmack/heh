@@ -150,6 +150,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+# Static Files Mounts
+# ------------------------------------------------------------
+
+# Explicit Root Route (Must be before any catch-all mounts)
+# This handles the homepage specifically, ignoring query params like ?fbclid=...
+@app.get("/", tags=["Initial Load"])
+async def root():
+    return FileResponse(os.path.join(static_dir, "index.html"))
+
 # Mount static files for uploads (create directory if it doesn't exist)
 static_dir = "static"
 if not os.path.exists(static_dir):
