@@ -354,49 +354,19 @@ export interface EventResponse extends Event {
 
 export interface EventCreate {
   title: string;
-  description?: string;
+  description?: string | null;
   date_start: string;
-  date_end: string;
-  venue_id: string;
+  date_end: string | null;
+  venue_id: string | null;
   category_id: string;
   price?: number | string;  // Can be number or text like "Free", "£5-£10"
-  image_url?: string;
+  image_url?: string | null;
   tags?: string[];
   // Phase 2.10 additions
-  ticket_url?: string;
-  website_url?: string;
+  ticket_url?: string | null;
+  website_url?: string | null;
   is_all_day?: boolean;
-  age_restriction?: number | string;  // Can be number (18) or string ("18+")
-  location_name?: string;
-  // Phase 2.3 additions
-  organizer_profile_id?: string;
-  recurrence_rule?: string;
-  is_recurring?: boolean;
-  frequency?: string;
-  recurrence_end_date?: string;
-  participating_venue_ids?: string[];
-  latitude?: number;
-  longitude?: number;
-  showtimes?: ShowtimeCreate[];
-}
-
-export interface EventUpdate {
-  title?: string;
-  description?: string;
-  date_start?: string;
-  date_end?: string;
-  venue_id?: string | null;  // Allow null to clear venue
-  category_id?: string;
-  price?: number | string;
-  image_url?: string;
-  featured?: boolean;
-  featured_until?: string;
-  tags?: string[];
-  // Phase 2.10 additions
-  ticket_url?: string;
-  website_url?: string;
-  is_all_day?: boolean;
-  age_restriction?: string;
+  age_restriction?: number | string | null;  // Can be number (18) or string ("18+")
   location_name?: string | null;
   // Phase 2.3 additions
   organizer_profile_id?: string;
@@ -408,6 +378,44 @@ export interface EventUpdate {
   latitude?: number | null;
   longitude?: number | null;
   showtimes?: ShowtimeCreate[];
+  // Map Display
+  map_display_lat?: number | null;
+  map_display_lng?: number | null;
+  map_display_label?: string | null;
+}
+
+export interface EventUpdate {
+  title?: string;
+  description?: string | null;
+  date_start?: string;
+  date_end?: string | null;
+  venue_id?: string | null;  // Allow null to clear venue
+  category_id?: string;
+  price?: number | string;
+  image_url?: string | null;
+  featured?: boolean;
+  featured_until?: string;
+  tags?: string[];
+  // Phase 2.10 additions
+  ticket_url?: string | null;
+  website_url?: string | null;
+  is_all_day?: boolean;
+  age_restriction?: number | string | null;
+  location_name?: string | null;
+  // Phase 2.3 additions
+  organizer_profile_id?: string | null;
+  recurrence_rule?: string | null;
+  is_recurring?: boolean;
+  frequency?: string | null;
+  recurrence_end_date?: string | null;
+  participating_venue_ids?: string[];
+  latitude?: number | null;
+  longitude?: number | null;
+  showtimes?: ShowtimeCreate[];
+  // Map Display
+  map_display_lat?: number | null;
+  map_display_lng?: number | null;
+  map_display_label?: string | null;
 }
 
 export interface EventFilter {

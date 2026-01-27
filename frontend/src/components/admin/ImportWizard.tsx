@@ -243,9 +243,9 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                 title: event.title,
                 description: event.description,
                 date_start: event.date_start,
-                date_end: event.date_end,
+                date_end: event.date_end || null,
                 image_url: event.image_url,
-                ticket_url: event.ticket_url,
+                ticket_url: event.ticket_url || null,
                 price_display: event.price_display || "Variable",
                 min_price: event.min_price || 0,
                 min_age: event.min_age || 0,
@@ -559,11 +559,56 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date/Time</label>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="block text-sm font-medium text-gray-700">End Date/Time</label>
+                                                <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!currentEvent.date_end}
+                                                        onChange={(e) => updateCurrentEvent({ date_end: e.target.checked ? undefined : currentEvent.date_start })}
+                                                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                                    />
+                                                    No end time
+                                                </label>
+                                            </div>
                                             <input
                                                 type="datetime-local"
                                                 value={currentEvent.date_end?.slice(0, 16) || ''}
                                                 onChange={(e) => updateCurrentEvent({ date_end: e.target.value })}
+                                                disabled={!currentEvent.date_end}
+                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Ticket URL</label>
+                                        <input
+                                            type="url"
+                                            value={currentEvent.ticket_url || ''}
+                                            onChange={(e) => updateCurrentEvent({ ticket_url: e.target.value })}
+                                            placeholder="https://..."
+                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Price Display</label>
+                                            <input
+                                                type="text"
+                                                value={currentEvent.price_display || ''}
+                                                onChange={(e) => updateCurrentEvent({ price_display: e.target.value })}
+                                                placeholder="e.g. £15 / Free"
+                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Min Age (0+)</label>
+                                            <input
+                                                type="number"
+                                                value={currentEvent.min_age || 0}
+                                                onChange={(e) => updateCurrentEvent({ min_age: parseInt(e.target.value) || 0 })}
                                                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
                                             />
                                         </div>

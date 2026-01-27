@@ -204,7 +204,7 @@ export default function OrganizerProfilePage() {
                 try {
                     const membership = await api.groups.checkMembership(organizer.id);
                     // Case-insensitive role check
-                    const role = membership?.role?.toLowerCase();
+                    const role = membership?.role?.toLowerCase() || '';
 
                     if (membership && membership.is_member) {
                         setIsMember(true);

@@ -80,7 +80,7 @@ export default function PopularEvents() {
         return (
             <section className="py-6 bg-stone-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
-                    <h2 className="text-2xl font-bold text-white">🔥 Top 10 Popular Events</h2>
+                    <h2 className="text-2xl font-bold text-white">🔥 Top 10 Most Popular</h2>
                 </div>
                 <div
                     className="flex overflow-x-auto snap-x snap-mandatory gap-2 pb-4"
@@ -102,7 +102,7 @@ export default function PopularEvents() {
         <section className="py-6 bg-stone-900">
             {/* Title in container */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">🔥 Top 10 This Week</h2>
+                <h2 className="text-2xl font-bold text-white">🔥 Top 10 Popular Most Popular</h2>
                 <Link href="/events" className="text-amber-400 hover:text-amber-300 font-medium text-sm">
                     View All →
                 </Link>

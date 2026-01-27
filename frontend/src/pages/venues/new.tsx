@@ -250,7 +250,7 @@ export default function NewVenuePage() {
                 name: formData.name,
                 description: formData.description || undefined,
                 address: formData.address,
-                postcode: formData.postcode || undefined,
+                postcode: formData.postcode || '',
                 latitude: formData.latitude,
                 longitude: formData.longitude,
                 category_id: formData.category_id,

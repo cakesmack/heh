@@ -366,10 +366,11 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async () =>
     }
 
     if (heroImage) {
+      const imgUrl = String(heroImage);
       // Ensure absolute URL
-      const socialImage = heroImage.startsWith('http')
-        ? heroImage
-        : `${SITE_URL}${heroImage}`;
+      const socialImage = imgUrl.startsWith('http')
+        ? imgUrl
+        : `${SITE_URL}${imgUrl}`;
 
       // Optimize image for WhatsApp (1200x630)
       const optimizedImage = socialImage.includes('cloudinary') && !socialImage.includes('w_')
