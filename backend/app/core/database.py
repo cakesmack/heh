@@ -73,9 +73,9 @@ def run_migrations():
             logger.warning(f"Migration note: {e}")
 
 
-# Run migrations IMMEDIATELY at import time (before any requests)
-# This ensures the database schema is ready before FastAPI starts accepting requests
-run_migrations()
+# run_migrations()  <-- MOVED TO main.py LIFESPAN
+# We do not run this at import time anymore to prevent blocking startup.
+
 
 
 def create_db_and_tables():

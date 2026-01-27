@@ -11,8 +11,16 @@ from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import SQLModel
 
+# VERBOSE LOGGING FOR DEBUGGING
+print("--- [STARTUP] Loading modules... ---")
+
 from app.core.config import settings
-from app.core.database import engine, check_db_connection
+# Force simple print to ensure visibility in standard output logs immediately
+if settings.DATABASE_URL:
+    safe_url = settings.DATABASE_URL.replace(settings.DATABASE_URL.split("@")[0], "postgres://****")
+    print(f"--- [STARTUP] DATABASE_URL detected: {safe_url} ---")
+
+from app.core.database import engine, check_db_connection, run_migrations
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -28,77 +36,104 @@ async def lifespan(app: FastAPI):
     Application lifespan manager.
     Handles startup and shutdown events.
     """
+    print("--- [LIFESPAN] Starting lifespan manager... ---")
+    
     # Startup: Verify database connection with retry
+    # WRAPPED IN TRY/EXCEPT TO PREVENT CRASH ON DB FAILURE
     try:
         logger.info("Checking database connection...")
+        print("--- [LIFESPAN] Checking database connection... ---")
+        # Attempt connection but don't crash if it fails
         check_db_connection()
         logger.info("Database connection successful")
+        print("--- [LIFESPAN] Database connection successful. ---")
     except Exception as e:
-        logger.error(f"Database connection failed after retries: {e}")
+        logger.error(f"Database connection failed: {e}")
+        print(f"--- [LIFESPAN] WARNING: Database connection failed: {e} ---")
+        print("--- [LIFESPAN] Continuing startup without Database... ---")
         # Continue startup - individual requests will fail gracefully
 
-    # Create database tables
-    # Import all models explicitly to ensure they're registered with SQLModel metadata
-    from app.models import VenueInvite, EventClaim  # New ownership/claiming tables
-    SQLModel.metadata.create_all(engine)
-    logger.info("Database tables created/verified (including venue_invites, event_claims)")
-    
-    # Inline Migration: Add website_url and is_all_day to events table
-    from sqlalchemy import text
-    from app.core.database import get_session
+    # Create database tables & Run Migrations
+    # WRAPPED IN TRY/EXCEPT
     try:
-        with next(get_session()) as session:
-            # Add website_url column if it doesn't exist
-            session.exec(text("""
-                ALTER TABLE events ADD COLUMN IF NOT EXISTS website_url VARCHAR(500);
-            """))
-            # Add is_all_day column if it doesn't exist
-            session.exec(text("""
-                ALTER TABLE events ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN DEFAULT FALSE;
-            """))
-            # Triptych Hero Migration
-            session.exec(text("""
-                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_left VARCHAR(500);
-            """))
-            session.exec(text("""
-                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_right VARCHAR(500);
-            """))
-            # Emergency Migration: Add is_dismissed to venues
-            session.exec(text("""
-                ALTER TABLE venues ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT FALSE;
-            """))
-            
-            # Hero 4-Slot Magazine Migration
-            session.exec(text("""
-                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS link VARCHAR(500);
-            """))
-            session.exec(text("""
-                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_text VARCHAR(50);
-            """))
-            session.exec(text("""
-                ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_color VARCHAR(50) DEFAULT 'emerald';
-            """))
-            
-            # Initialize 4 Fixed Slots (0-3)
-            for i in range(4):
-                # Check directly via SQL to avoid model mismatches during migration
-                result = session.exec(text(f"SELECT id FROM hero_slots WHERE position = {i}")).first()
-                if not result:
-                    session.exec(text(f"""
-                        INSERT INTO hero_slots (position, type, is_active, badge_color, overlay_style)
-                        VALUES ({i}, 'spotlight_event', false, 'emerald', 'dark')
-                    """))
-                    logger.info(f"Initialized Hero Slot position {i}")
+        if settings.DATABASE_URL:
+             # Ensure correct scheme for SQLAlchemy
+             if settings.DATABASE_URL.startswith("postgres://"):
+                 logger.info("Sanitizing Database URL scheme...")
+        
+        # Import all models explicitly to ensure they're registered with SQLModel metadata
+        from app.models import VenueInvite, EventClaim
+        
+        print("--- [LIFESPAN] Creating database tables... ---")
+        SQLModel.metadata.create_all(engine)
+        logger.info("Database tables created/verified")
+        
+        print("--- [LIFESPAN] Running migrations... ---")
+        run_migrations()
+        logger.info("Migrations complete")
+        
+        # Inline Migration: Add website_url and is_all_day to events table
+        from sqlalchemy import text
+        from app.core.database import get_session
+        
+        # We put inline migrations in a separate try block to avoid blocking valid startup
+        try:
+            with next(get_session()) as session:
+                 # Add website_url column if it doesn't exist
+                session.exec(text("""
+                    ALTER TABLE events ADD COLUMN IF NOT EXISTS website_url VARCHAR(500);
+                """))
+                # Add is_all_day column if it doesn't exist
+                session.exec(text("""
+                    ALTER TABLE events ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN DEFAULT FALSE;
+                """))
+                # Triptych Hero Migration
+                session.exec(text("""
+                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_left VARCHAR(500);
+                """))
+                session.exec(text("""
+                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_right VARCHAR(500);
+                """))
+                # Emergency Migration: Add is_dismissed to venues
+                session.exec(text("""
+                    ALTER TABLE venues ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT FALSE;
+                """))
+                
+                # Hero 4-Slot Magazine Migration
+                session.exec(text("""
+                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS link VARCHAR(500);
+                """))
+                session.exec(text("""
+                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_text VARCHAR(50);
+                """))
+                session.exec(text("""
+                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_color VARCHAR(50) DEFAULT 'emerald';
+                """))
+                
+                # Initialize 4 Fixed Slots (0-3)
+                for i in range(4):
+                    # Check directly via SQL to avoid model mismatches during migration
+                    result = session.exec(text(f"SELECT id FROM hero_slots WHERE position = {i}")).first()
+                    if not result:
+                        session.exec(text(f"""
+                            INSERT INTO hero_slots (position, type, is_active, badge_color, overlay_style)
+                            VALUES ({i}, 'spotlight_event', false, 'emerald', 'dark')
+                        """))
+                        logger.info(f"Initialized Hero Slot position {i}")
+    
+                session.commit()
+                logger.info("Inline Migrations complete")
+        except Exception as e:
+             logger.warning(f"Inline Migration skipped/failed (non-critical): {e}")
 
-            session.commit()
-            logger.info("Migration complete: Hero system updated (Fields added + Slots 0-3 initialized)")
-            session.commit()
-            logger.info("Migration complete: Added website_url and is_all_day columns to events table")
     except Exception as e:
-        logger.warning(f"Migration skipped or failed (columns may already exist): {e}")
+        logger.error(f"Failed to initialize database (Tables/Migrations): {e}")
+        print(f"--- [LIFESPAN] CRITICAL WARNING: Database initialization failed: {e} ---")
+        # We still yield to let the app start
     
     # Database initialized
     logger.info("Application startup complete.")
+    print("--- [LIFESPAN] Startup complete. Ready to serve requests. ---")
 
     yield
 
@@ -107,6 +142,8 @@ async def lifespan(app: FastAPI):
 
 
 
+
+print("--- [STARTUP] Initializing FastAPI App... ---")
 app = FastAPI(
     title="Highland Events Hub API",
     description="Event discovery platform for the Scottish Highlands with location-based features",
