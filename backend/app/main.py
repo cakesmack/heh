@@ -158,13 +158,7 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 # Root endpoint
-@app.get("/", tags=["Initial Load"])
-async def root():
-    """
-    Serve the Single Page Application (SPA) entry point.
-    Matches the root path regardless of query parameters (e.g., ?fbclid=...).
-    """
-    return FileResponse(os.path.join(static_dir, "index.html"))
+
 
 
 # Include all routers
@@ -195,4 +189,32 @@ app.include_router(notifications.router)
 app.include_router(email_testing.router, prefix="/api/admin/email-testing", tags=["Admin Email Testing"])
 app.include_router(admin_import.router, prefix="/api/admin", tags=["Admin Import"])
 app.include_router(cron.router, prefix="/api")
+
+
+# SPA Catch-All Route
+# Must be the LAST route to avoid overshadowing API endpoints
+@app.get("/{rest_of_path:path}", tags=["SPA"])
+async def spa_catch_all(rest_of_path: str):
+    """
+    Catch-all route for Single Page Application (SPA) client-side routing.
+    
+    Logic:
+    1. If the requested path corresponds to a real file in 'static/', serve it.
+    2. Otherwise, serve 'index.html' (allowing the frontend router to handle the path).
+    3. Handles root "/" requests (rest_of_path="") by serving index.html.
+    """
+    # 1. Check if it's a file in static directory
+    if rest_of_path:
+        file_path = os.path.join(static_dir, rest_of_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+
+    # 2. Fallback to index.html for SPA routing (and root /)
+    # This ensures messy URLs (e.g., /?fbclid=...) receive the app entry point
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    # 3. Last resource: return 404 if index.html is missing (e.g. build issue)
+    return JSONResponse(status_code=404, content={"detail": "Frontend build not found"})
 
