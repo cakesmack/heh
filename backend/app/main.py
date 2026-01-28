@@ -121,6 +121,12 @@ async def lifespan(app: FastAPI):
                         """))
                         logger.info(f"Initialized Hero Slot position {i}")
     
+                # Backfill created_at for Magazine Feed (Just Added)
+                # Ensure all events have a created_at date for sorting
+                session.exec(text("""
+                    UPDATE events SET created_at = date_start WHERE created_at IS NULL;
+                """))
+                
                 session.commit()
                 logger.info("Inline Migrations complete")
         except Exception as e:

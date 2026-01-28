@@ -20,7 +20,9 @@ def deduplicate_recurring_events(
     base_query: Select,
     limit: Optional[int] = None,
     offset: int = 0,
+    offset: int = 0,
     order_by_featured: bool = True,
+    sort_field: str = "date",  # "date" or "created"
     excluded_series_ids: Optional[List[str]] = None
 ) -> tuple[List[Event], int]:
     """
@@ -40,6 +42,7 @@ def deduplicate_recurring_events(
         limit: Max number of results
         offset: Number of results to skip
         order_by_featured: Whether to order by featured status first
+        sort_field: Field to sort by ("date" or "created")
         excluded_series_ids: Series IDs to exclude from results
 
     Returns:
@@ -86,9 +89,16 @@ def deduplicate_recurring_events(
         events_query = select(Event).where(Event.id.in_(dedup_ids))
 
         if order_by_featured:
-            events_query = events_query.order_by(Event.featured.desc(), Event.date_start.asc())
+            if sort_field == "created":
+                # For "Just Added", we want newest created first
+                events_query = events_query.order_by(Event.featured.desc(), Event.created_at.desc())
+            else:
+                events_query = events_query.order_by(Event.featured.desc(), Event.date_start.asc())
         else:
-            events_query = events_query.order_by(Event.date_start.asc())
+            if sort_field == "created":
+                events_query = events_query.order_by(Event.created_at.desc())
+            else:
+                events_query = events_query.order_by(Event.date_start.asc())
 
         # Apply pagination
         if offset:
@@ -108,9 +118,15 @@ def deduplicate_recurring_events(
 
         # Apply ordering
         if order_by_featured:
-            query = query.order_by(Event.featured.desc(), func.min(Event.date_start))
+            if sort_field == "created":
+                query = query.order_by(Event.featured.desc(), Event.created_at.desc())
+            else:
+                query = query.order_by(Event.featured.desc(), func.min(Event.date_start))
         else:
-            query = query.order_by(func.min(Event.date_start))
+            if sort_field == "created":
+                query = query.order_by(Event.created_at.desc())
+            else:
+                query = query.order_by(func.min(Event.date_start))
 
         # Apply pagination
         if offset:
@@ -127,8 +143,10 @@ def deduplicate_recurring_events_simple(
     session: Session,
     base_query: Select,
     limit: int,
+    limit: int,
     excluded_series_ids: Optional[List[str]] = None,
-    order_by_featured: bool = True
+    order_by_featured: bool = True,
+    sort_field: str = "date"
 ) -> List[Event]:
     """
     Simplified version that just returns events without total count.
@@ -138,7 +156,9 @@ def deduplicate_recurring_events_simple(
         session=session,
         base_query=base_query,
         limit=limit,
+        limit=limit,
         excluded_series_ids=excluded_series_ids,
-        order_by_featured=order_by_featured
+        order_by_featured=order_by_featured,
+        sort_field=sort_field
     )
     return events

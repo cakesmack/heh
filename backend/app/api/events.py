@@ -194,7 +194,9 @@ def list_events(
     organizer_profile_id: Optional[str] = Query(None, description="Filter by organizer profile (group) ID"),
     venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
     include_past: bool = Query(False, description="Include past events"),
+    include_past: bool = Query(False, description="Include past events"),
     time_range: Optional[str] = Query(None, description="'upcoming', 'past', or 'all'"),
+    sort_by: str = Query("date", description="Sort by 'date' (default) or 'created'"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=1000),
     session: Session = Depends(get_session)
@@ -509,6 +511,12 @@ def list_events(
         ))
         query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
         
+        # Override sort if created_at requested
+        if sort_by == "created":
+             query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.created_at.desc())
+        else:
+             query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
+        
         # Only apply DB pagination if NOT doing a radius search
         if not is_radius_search:
             # Get total count via query if pagination is handled by DB
@@ -532,7 +540,8 @@ def list_events(
             base_query=query,
             limit=None if is_radius_search else limit,
             offset=0 if is_radius_search else skip,
-            order_by_featured=True
+            order_by_featured=True,
+            sort_field=sort_by
         )
 
     print(f"[NEAR_ME_DEBUG] Events found after DB query: {len(events)} (Total from DB/Dedup: {total})")

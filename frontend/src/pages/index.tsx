@@ -68,7 +68,8 @@ export default function HomePage({ }: HomePageProps) {
   } = useEvents({
     filters: {
       limit: 16, // Carousel (up to 3) + 12 grid items + buffer
-      skip: 0
+      skip: 0,
+      sort_by: 'created' // "Just Added" Logic
     },
     autoFetch: true, // Auto fetch on mount
   });

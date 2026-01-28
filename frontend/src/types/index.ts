@@ -441,6 +441,7 @@ export interface EventFilter {
   include_past?: boolean;
   skip?: number;
   limit?: number;
+  sort_by?: string;
   time_range?: 'upcoming' | 'past' | 'all';
 }
 
