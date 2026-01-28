@@ -123,8 +123,17 @@ async def lifespan(app: FastAPI):
     
                 # Backfill created_at for Magazine Feed (Just Added)
                 # Ensure all events have a created_at date for sorting
+                # Backfill created_at for Magazine Feed (Just Added)
+                # Ensure all events have a created_at date for sorting.
+                # FIX: Clamp to NOW() to prevent future events from burying new creations.
                 session.exec(text("""
-                    UPDATE events SET created_at = date_start WHERE created_at IS NULL;
+                    UPDATE events 
+                    SET created_at = CASE 
+                        WHEN created_at IS NULL THEN LEAST(date_start, NOW())
+                        WHEN created_at > NOW() THEN NOW()
+                        ELSE created_at
+                    END
+                    WHERE created_at IS NULL OR created_at > NOW();
                 """))
                 
                 session.commit()
