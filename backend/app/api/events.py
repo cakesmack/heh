@@ -194,7 +194,7 @@ def list_events(
     organizer_profile_id: Optional[str] = Query(None, description="Filter by organizer profile (group) ID"),
     venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
     include_past: bool = Query(False, description="Include past events"),
-    include_past: bool = Query(False, description="Include past events"),
+
     time_range: Optional[str] = Query(None, description="'upcoming', 'past', or 'all'"),
     sort_by: str = Query("date", description="Sort by 'date' (default) or 'created'"),
     skip: int = Query(default=0, ge=0),
