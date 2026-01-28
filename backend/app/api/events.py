@@ -509,9 +509,6 @@ def list_events(
             (FeaturedBooking.slot_type == SlotType.HERO_HOME, 3),
             else_=4
         ))
-        query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
-        
-        # Override sort if created_at requested
         if sort_by == "created":
              query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.created_at.desc())
         else:
