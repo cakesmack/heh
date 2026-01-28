@@ -20,7 +20,7 @@ def deduplicate_recurring_events(
     base_query: Select,
     limit: Optional[int] = None,
     offset: int = 0,
-    offset: int = 0,
+
     order_by_featured: bool = True,
     sort_field: str = "date",  # "date" or "created"
     excluded_series_ids: Optional[List[str]] = None
@@ -143,7 +143,7 @@ def deduplicate_recurring_events_simple(
     session: Session,
     base_query: Select,
     limit: int,
-    limit: int,
+
     excluded_series_ids: Optional[List[str]] = None,
     order_by_featured: bool = True,
     sort_field: str = "date"
@@ -156,7 +156,7 @@ def deduplicate_recurring_events_simple(
         session=session,
         base_query=base_query,
         limit=limit,
-        limit=limit,
+
         excluded_series_ids=excluded_series_ids,
         order_by_featured=order_by_featured,
         sort_field=sort_field
