@@ -304,6 +304,7 @@ export const eventsAPI = {
       if (filters.time_range) params.time_range = filters.time_range;
       if (filters.skip !== undefined) params.skip = filters.skip;
       if (filters.limit !== undefined) params.limit = filters.limit;
+      if (filters.sort_by) params.sort_by = filters.sort_by;
     }
 
     const queryString = buildQueryString(params);
