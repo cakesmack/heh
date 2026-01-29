@@ -511,6 +511,8 @@ def list_events(
         ))
         if sort_by == "created":
              query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.created_at.desc())
+        elif sort_by == "random":
+             query = query.order_by(pinned_priority.asc(), Event.featured.desc(), sa_func.random())
         else:
              query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
         

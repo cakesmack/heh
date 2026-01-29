@@ -92,8 +92,15 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
             const fetchUpcoming = async () => {
                 setIsLoadingUpcoming(true);
                 try {
+                    // Calculate range: Now to 7 days from now
+                    const now = new Date();
+                    const sevenDaysFromNow = new Date(now);
+                    sevenDaysFromNow.setDate(now.getDate() + 7);
+
                     const data = await eventsAPI.list({
-                        time_range: 'upcoming',
+                        date_from: now.toISOString(),
+                        date_to: sevenDaysFromNow.toISOString(),
+                        sort_by: 'random',
                         limit: 13 // 1 Hero + 12 Grid Items
                     });
                     setUpcomingEvents(data.events || []);

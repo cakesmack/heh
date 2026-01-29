@@ -92,11 +92,15 @@ def deduplicate_recurring_events(
             if sort_field == "created":
                 # For "Just Added", we want newest created first
                 events_query = events_query.order_by(Event.featured.desc(), Event.created_at.desc())
+            elif sort_field == "random":
+                events_query = events_query.order_by(Event.featured.desc(), func.random())
             else:
                 events_query = events_query.order_by(Event.featured.desc(), Event.date_start.asc())
         else:
             if sort_field == "created":
                 events_query = events_query.order_by(Event.created_at.desc())
+            elif sort_field == "random":
+                events_query = events_query.order_by(func.random())
             else:
                 events_query = events_query.order_by(Event.date_start.asc())
 
@@ -120,11 +124,15 @@ def deduplicate_recurring_events(
         if order_by_featured:
             if sort_field == "created":
                 query = query.order_by(Event.featured.desc(), Event.created_at.desc())
+            elif sort_field == "random":
+                query = query.order_by(Event.featured.desc(), func.random())
             else:
                 query = query.order_by(Event.featured.desc(), func.min(Event.date_start))
         else:
             if sort_field == "created":
                 query = query.order_by(Event.created_at.desc())
+            elif sort_field == "random":
+                query = query.order_by(func.random())
             else:
                 query = query.order_by(func.min(Event.date_start))
 
