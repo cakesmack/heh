@@ -46,7 +46,6 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
         );
     }
 
-    // Format Date: Fri 30 Jan
     // Format Date Range
     const formatDateRange = (start: string, end: string) => {
         const d1 = new Date(start);
@@ -145,7 +144,7 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
                             left: '50%',
                             transform: 'translateX(-50%)',
                             width: '90%',
-                            height: '60%', // Fixed height to leave room for footer
+                            height: '60%', // Fixed height as requested
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
@@ -182,13 +181,13 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
 
                             {/* Row 1: Badges */}
                             <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-                                {/* Date Badge */}
-                                <div className="bg-white text-black rounded-md px-3 py-1 font-bold uppercase text-xl">
+                                {/* Date Badge - ROUNDED FULL */}
+                                <div className="bg-white text-black rounded-full px-4 py-1 font-bold uppercase text-xl">
                                     {formatDateRange(event.date_start, event.date_end)}
                                 </div>
-                                {/* Category Badge */}
+                                {/* Category Badge - ROUNDED FULL */}
                                 <div
-                                    className="text-white rounded-md px-3 py-1 font-bold uppercase text-xl"
+                                    className="text-white rounded-full px-4 py-1 font-bold uppercase text-xl"
                                     style={{ backgroundColor: (event.category as any)?.gradient_color || '#22c55e' }}
                                 >
                                     {categoryName}
@@ -217,7 +216,7 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
                                 {venueName}
                             </div>
 
-                            {/* Row 4: Logo (Bottom Right Anchor) */}
+                            {/* Row 4: Logo (Bottom Right Anchor) - SIMPLIFIED */}
                             <div style={{
                                 position: 'absolute',
                                 bottom: '40px',
@@ -227,17 +226,15 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
                                 alignItems: 'flex-end',
                                 textAlign: 'right'
                             }}>
+                                {/* Removed HIGHLAND EVENTS HUB text, kept only URL */}
                                 <p style={{
-                                    color: '#22c55e',
-                                    fontSize: '24px',
+                                    color: '#22c55e', // Brand Green
+                                    fontSize: '18px', // text-lg
                                     fontWeight: 'bold',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
                                     marginBottom: '0px'
                                 }}>
-                                    HIGHLAND EVENTS HUB
-                                </p>
-                                <p style={{ color: '#d1d5db', fontSize: '16px' }}>
                                     highlandeventshub.co.uk
                                 </p>
                             </div>
