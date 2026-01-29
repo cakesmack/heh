@@ -765,8 +765,8 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 </Card>
               )}
 
-              {/* Admin Tools (Only for specific admin) */}
-              {user && user.email === 'craig@hisltd.co.uk' && (
+              {/* Admin Tools (Visible to any Admin) */}
+              {user && user.is_admin && (
                 <Card className="border-l-4 border-l-purple-500 bg-purple-50">
                   <h3 className="text-lg font-bold text-gray-900 mb-2">Admin Tools</h3>
                   <div className="space-y-2">
