@@ -765,6 +765,24 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
                 </Card>
               )}
 
+              {/* Admin Tools (Only for specific admin) */}
+              {user && user.email === 'craig@hisltd.co.uk' && (
+                <Card className="border-l-4 border-l-purple-500 bg-purple-50">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Admin Tools</h3>
+                  <div className="space-y-2">
+                    <a
+                      href={`/social/${event.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors"
+                    >
+                      <span className="text-xl">🎨</span>
+                      Generate Poster
+                    </a>
+                  </div>
+                </Card>
+              )}
+
               {/* Time & Date Sidebar Card */}
               <div id="dates-sidebar" className="transition-all duration-1000">
                 <Card>
