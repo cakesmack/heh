@@ -47,14 +47,26 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
     }
 
     // Format Date: Fri 30 Jan
-    const eventDate = new Date(event.date_start);
-    const dateStr = eventDate.toLocaleDateString('en-GB', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short'
-    });
+    // Format Date Range
+    const formatDateRange = (start: string, end: string) => {
+        const d1 = new Date(start);
+        const d2 = new Date(end);
+        // Check if dates are different (ignoring time, or if > 24 hours)
+        // Simple check: are they on the same day?
+        const isSameDay = d1.getDate() === d2.getDate() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getFullYear() === d2.getFullYear();
+
+        if (!isSameDay && d2 > d1) {
+            const f1 = d1.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            const f2 = d2.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            return `${f1} - ${f2}`;
+        }
+        return d1.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    };
 
     const venueName = event.venue_name || event.location_name || 'The Highlands';
+    const categoryName = event.category?.name || 'Event';
 
     // Resolve image URL
     const imageUrl = event.image_url
@@ -153,7 +165,7 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
                             />
                         </div>
 
-                        {/* Layer 3: Footer Content */}
+                        {/* Layer 3: Footer Content - UPDATED LAYOUT */}
                         <div style={{
                             position: 'absolute',
                             bottom: 0,
@@ -162,44 +174,54 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
                             height: '35%',
                             background: 'linear-gradient(to top, #000 20%, transparent 100%)',
                             display: 'flex',
-                            alignItems: 'flex-end',
-                            justifyContent: 'space-between',
-                            padding: '50px 60px', // Horizontal padding
+                            flexDirection: 'column',
+                            justifyContent: 'flex-end',
+                            padding: '40px',
                             zIndex: 20
                         }}>
 
-                            {/* Left Side: Info */}
-                            <div style={{ maxWidth: '65%' }}>
-                                <p style={{
-                                    color: '#22c55e',
-                                    fontSize: '32px',
-                                    fontWeight: 'bold',
-                                    marginBottom: '10px',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.05em'
-                                }}>
-                                    {dateStr}
-                                </p>
-                                <h1 style={{
-                                    color: 'white',
-                                    fontSize: '56px',
-                                    fontWeight: 'bold',
-                                    lineHeight: '1.1',
-                                    marginBottom: '16px'
-                                }}>
-                                    {event.title}
-                                </h1>
-                                <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af', fontSize: '28px', fontWeight: '500' }}>
-                                    <svg style={{ width: '32px', height: '32px', marginRight: '10px', color: '#22c55e' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    {venueName}
+                            {/* Row 1: Badges */}
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                                {/* Date Badge */}
+                                <div className="bg-white text-black rounded-md px-3 py-1 font-bold uppercase text-xl">
+                                    {formatDateRange(event.date_start, event.date_end)}
+                                </div>
+                                {/* Category Badge */}
+                                <div
+                                    className="text-white rounded-md px-3 py-1 font-bold uppercase text-xl"
+                                    style={{ backgroundColor: (event.category as any)?.gradient_color || '#22c55e' }}
+                                >
+                                    {categoryName}
                                 </div>
                             </div>
 
-                            {/* Right Side: Branding */}
+                            {/* Row 2: Title (Full Width) */}
+                            <h1 style={{
+                                color: 'white',
+                                fontSize: '3rem', // Approx 48px
+                                fontWeight: 'bold',
+                                lineHeight: '1.1',
+                                marginTop: '16px', // mt-4
+                                width: '100%',
+                            }}>
+                                {event.title}
+                            </h1>
+
+                            {/* Row 3: Venue */}
                             <div style={{
+                                color: '#9ca3af', // text-gray-400
+                                fontSize: '1.5rem',
+                                marginTop: '8px',
+                                fontWeight: '500'
+                            }}>
+                                {venueName}
+                            </div>
+
+                            {/* Row 4: Logo (Bottom Right Anchor) */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '40px',
+                                right: '40px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'flex-end',
@@ -211,7 +233,7 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
                                     fontWeight: 'bold',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
-                                    marginBottom: '4px'
+                                    marginBottom: '0px'
                                 }}>
                                     HIGHLAND EVENTS HUB
                                 </p>
