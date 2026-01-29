@@ -19,12 +19,11 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
             return;
         }
 
-        // Force exact dimensions to ignore the screen scaling/transform
+        // Capture specific 1080x1080 size ignoring screen scale
         toPng(posterRef.current, {
             width: 1080,
             height: 1080,
             pixelRatio: 1,
-            // Ensure cross-origin images are handled
             cacheBust: true,
         })
             .then((dataUrl) => {
@@ -56,6 +55,7 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
     });
 
     const venueName = event.venue_name || event.location_name || 'The Highlands';
+    const categoryName = event.category?.name || 'Event';
 
     // Resolve image URL
     const imageUrl = event.image_url
@@ -71,8 +71,8 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
 
             {/* Controls */}
             <div className="bg-white p-4 rounded-xl shadow-2xl mb-8 w-full max-w-md z-50">
-                <h1 className="text-xl font-bold text-gray-900 mb-2">Social Media Asset Generator</h1>
-                <p className="text-sm text-gray-500 mb-4">Preview scaled to 50%. Download will be full 1080x1080 HD.</p>
+                <h1 className="text-xl font-bold text-gray-900 mb-2">Poster Generator</h1>
+                <p className="text-sm text-gray-500 mb-4">Preview scaled to 50%. Download is 1080x1080 grid layout.</p>
 
                 <button
                     onClick={downloadPoster}
@@ -89,103 +89,110 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
             </div>
 
             {/* 
-        PREVIEW CONTAINER 
-        Centers the scaled poster
+        PREVIEW WRAPPER
+        Centers the poster and scales it down for viewing 
       */}
-            <div className="flex items-center justify-center p-10 overflow-hidden w-full h-full">
+            <div className="flex items-center justify-center overflow-hidden w-full pb-20">
 
-                {/* 
-            THE POSTER (Target Ref) 
-            Strict 1080x1080
-          */}
-                <div
-                    ref={posterRef}
-                    className="relative bg-black shadow-2xl overflow-hidden flex-shrink-0"
-                    style={{
-                        width: '1080px',
-                        height: '1080px',
-                        // This transform is ONLY for the preview on screen
-                        transform: 'scale(0.5)',
-                        transformOrigin: 'top center',
-                        marginBottom: '-540px' // Compensate for scale
-                    }}
-                >
+                {/* Scale Container - Transforms the view but Ref is inside */}
+                <div style={{ transform: 'scale(0.5)', transformOrigin: 'top center', marginBottom: '-540px' }}>
 
-                    {/* Layer 1: Backdrop (Blurred) */}
-                    <div className="absolute inset-0 z-0">
-                        <img
-                            src={imageUrl}
-                            alt="Background"
-                            crossOrigin="anonymous"
-                            className="w-full h-full object-cover"
-                            style={{ filter: 'blur(40px) brightness(0.7)' }}
-                        />
-                    </div>
-
-                    {/* Layer 2: Hero Image (Big & High) */}
+                    {/* 
+                THE POSTER (Target Ref) 
+                Strict 1080x1080
+                Flex Column Layout
+              */}
                     <div
-                        className="absolute z-10 flex items-center justify-center"
+                        ref={posterRef}
                         style={{
-                            top: '45%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: '90%',
-                            height: '100%',
-                            maxHeight: '75%'
+                            width: '1080px',
+                            height: '1080px',
+                            backgroundColor: '#111',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden',
+                            position: 'relative'
                         }}
                     >
-                        <img
-                            src={imageUrl}
-                            alt="Event Flyer"
-                            crossOrigin="anonymous"
-                            className="w-auto h-auto max-w-full max-h-full object-contain rounded-[20px]"
-                            style={{
-                                boxShadow: '0 30px 60px rgba(0,0,0,0.6)'
-                            }}
-                        />
-                    </div>
 
-                    {/* Layer 3: Gradient Footer */}
-                    <div
-                        className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
-                        style={{
-                            height: '40%',
-                            background: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.8) 50%, transparent 100%)'
-                        }}
-                    />
+                        {/* 
+                   TOP SECTION: IMAGE (75%)
+                */}
+                        <div style={{ height: '75%', width: '100%', position: 'relative' }}>
+                            <img
+                                src={imageUrl}
+                                alt="Event"
+                                crossOrigin="anonymous"
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                }}
+                            />
+                            {/* Optional subtle gradient at bottom of image to blend */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: '150px',
+                                background: 'linear-gradient(to bottom, transparent, #1a1a1a)'
+                            }} />
+                        </div>
 
-                    {/* Layer 4: Text Info */}
-                    <div className="absolute bottom-[40px] left-[60px] right-[60px] z-30 flex flex-col justify-end text-white">
+                        {/* 
+                   BOTTOM SECTION: FOOTER (25%)
+                   Gradient Background
+                */}
+                        <div style={{
+                            height: '25%',
+                            width: '100%',
+                            background: 'linear-gradient(to bottom, #1a1a1a, #000000)',
+                            padding: '40px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            position: 'relative'
+                        }}>
 
-                        {/* Date & Title */}
-                        <div className="mb-4">
-                            <p className="text-emerald-400 font-bold text-4xl uppercase tracking-wider mb-2 drop-shadow-md">
-                                {dateStr}
-                            </p>
-                            <h1 className="text-[70px] font-black leading-[1.1] drop-shadow-lg line-clamp-2">
+                            {/* Category Pill */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <span className="bg-emerald-500 text-black font-bold px-4 py-1 rounded-full uppercase tracking-wider text-xl inline-block">
+                                    {categoryName}
+                                </span>
+                            </div>
+
+                            {/* Title */}
+                            <h1 style={{
+                                fontSize: '60px',
+                                fontWeight: '900',
+                                color: 'white',
+                                lineHeight: '1.1',
+                                marginBottom: '10px',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                            }}>
                                 {event.title}
                             </h1>
-                        </div>
 
-                        {/* Venue */}
-                        <div className="flex items-center text-gray-300 text-4xl font-medium mb-8">
-                            <svg className="w-8 h-8 mr-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            {venueName}
-                        </div>
+                            {/* Date & Venue */}
+                            <p style={{ fontSize: '30px', color: '#9ca3af', fontWeight: '500' }}>
+                                <span className="text-emerald-400 font-bold">{dateStr}</span>
+                                <span className="mx-3">•</span>
+                                {venueName}
+                            </p>
 
-                        {/* Watermark Logo */}
-                        <div className="absolute bottom-4 right-0 opacity-60">
-                            <div className="text-right">
-                                <p className="text-emerald-500 font-bold text-2xl uppercase tracking-[0.2em] leading-none">Highland</p>
-                                <p className="text-white font-bold text-2xl uppercase tracking-[0.2em] leading-none">Events Hub</p>
+                            {/* Watermark Logo (Bottom Right of Footer) */}
+                            <div style={{ position: 'absolute', bottom: '30px', right: '40px', opacity: 0.6, textAlign: 'right' }}>
+                                <p className="text-emerald-500 font-bold text-xl uppercase tracking-[0.2em] leading-none">Highland</p>
+                                <p className="text-white font-bold text-xl uppercase tracking-[0.2em] leading-none">Events Hub</p>
                             </div>
+
                         </div>
 
                     </div>
-
                 </div>
             </div>
         </div>
@@ -199,14 +206,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const baseUrl = `${protocol}://${host}`;
 
     try {
-        // Use backend API port 8003 as discovered
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
         const res = await fetch(`${backendUrl}/api/events/${id}`);
 
         if (!res.ok) {
-            // Fallback for docker internal or mismatched port scenarios, 
-            // though 8003 should work based on previous error fix.
-            // If this fails, we return generic error.
             console.error(`Failed to fetch event: ${res.statusText}`);
             throw new Error(`Failed to fetch event: ${res.status}`);
         }
