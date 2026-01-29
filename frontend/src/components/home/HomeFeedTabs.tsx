@@ -11,7 +11,7 @@ interface HomeFeedTabsProps {
 }
 
 export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) {
-    const [activeTab, setActiveTab] = useState<'latest' | 'upcoming' | 'feed'>('latest');
+    const [activeTab, setActiveTab] = useState<'latest' | 'upcoming' | 'feed'>('upcoming');
     const [feedEvents, setFeedEvents] = useState<EventResponse[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
     const [isLoadingFeed, setIsLoadingFeed] = useState(false);
@@ -140,15 +140,6 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-center space-x-8 mb-8 border-b border-gray-100">
                     <button
-                        onClick={() => setActiveTab('latest')}
-                        className={`pb-4 text-lg font-bold transition-colors relative ${activeTab === 'latest'
-                            ? 'text-emerald-900 border-b-2 border-emerald-600'
-                            : 'text-gray-400 hover:text-gray-600'
-                            }`}
-                    >
-                        Latest Events
-                    </button>
-                    <button
                         onClick={() => setActiveTab('upcoming')}
                         className={`pb-4 text-lg font-bold transition-colors relative flex items-center ${activeTab === 'upcoming'
                             ? 'text-emerald-900 border-b-2 border-emerald-600'
@@ -156,6 +147,15 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                             }`}
                     >
                         Upcoming Events
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('latest')}
+                        className={`pb-4 text-lg font-bold transition-colors relative ${activeTab === 'latest'
+                            ? 'text-emerald-900 border-b-2 border-emerald-600'
+                            : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                    >
+                        Latest Events
                     </button>
                     <button
                         onClick={() => setActiveTab('feed')}
@@ -176,22 +176,7 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
 
             {/* Content Body - Full Width */}
             <div className="min-h-[400px]">
-                {activeTab === 'latest' ? (
-                    <>
-                        <MagazineGrid events={mergedLatestEvents} carouselEvents={magazineBookingEvents} hideHeader={true} hideFooter={true} />
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 text-center">
-                            <Link
-                                href="/events"
-                                className="inline-flex items-center text-emerald-600 font-semibold hover:text-emerald-700"
-                            >
-                                View All Events
-                                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                </svg>
-                            </Link>
-                        </div>
-                    </>
-                ) : activeTab === 'upcoming' ? (
+                {activeTab === 'upcoming' ? (
                     // Upcoming Tab Content
                     <div className="animate-fade-in">
                         {isLoadingUpcoming ? (
@@ -235,6 +220,21 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                             </>
                         )}
                     </div>
+                ) : activeTab === 'latest' ? (
+                    <>
+                        <MagazineGrid events={mergedLatestEvents} carouselEvents={magazineBookingEvents} hideHeader={true} hideFooter={true} />
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 text-center">
+                            <Link
+                                href="/events"
+                                className="inline-flex items-center text-emerald-600 font-semibold hover:text-emerald-700"
+                            >
+                                View All Events
+                                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                </svg>
+                            </Link>
+                        </div>
+                    </>
                 ) : (
                     // Feed Tab Content
                     <div className="animate-fade-in">
