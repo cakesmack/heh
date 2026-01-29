@@ -176,8 +176,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         // For this environment, let's assume valid access to the public API url or internal.
 
         // Let's rely on standard fetch to the backend service.
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${backendUrl}/api/v1/events/${id}`);
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
+        const res = await fetch(`${backendUrl}/api/events/${id}`);
 
         if (!res.ok) {
             throw new Error(`Failed to fetch event: ${res.statusText}`);
