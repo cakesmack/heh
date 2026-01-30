@@ -57,6 +57,7 @@ export default function AdminVenues() {
     social_linkedin: '',
     social_tiktok: '',
     website_url: '',
+    status: 'VERIFIED',
   });
   const [isPostcodeValid, setIsPostcodeValid] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -258,6 +259,7 @@ export default function AdminVenues() {
       social_linkedin: '',
       social_tiktok: '',
       website_url: '',
+      status: 'VERIFIED',
     });
     setError(null);
     setIsPostcodeValid(true);
@@ -291,6 +293,7 @@ export default function AdminVenues() {
       social_linkedin: venue.social_linkedin || '',
       social_tiktok: venue.social_tiktok || '',
       website_url: venue.website_url || '',
+      status: venue.status || 'VERIFIED',
     });
     setError(null);
     setIsPostcodeValid(venue.postcode ? isHIERegion(venue.postcode) : true);
@@ -655,6 +658,18 @@ export default function AdminVenues() {
             />
 
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                >
+                  <option value="UNVERIFIED">Unverified (Draft)</option>
+                  <option value="VERIFIED">Verified (Live)</option>
+                  <option value="ARCHIVED">Archived</option>
+                </select>
+              </div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                 <input

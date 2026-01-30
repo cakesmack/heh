@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import Modal from '@/components/admin/Modal';
 import ImageUpload from '@/components/common/ImageUpload';
 import PlacesAutocomplete from '@/components/maps/PlacesAutocomplete';
@@ -20,6 +21,7 @@ interface EditVenueModalProps {
 }
 
 export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenueModalProps) {
+    const { user } = useAuth();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -166,18 +168,20 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select
-                                value={formData.status}
-                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
-                            >
-                                <option value="UNVERIFIED">Unverified (Draft)</option>
-                                <option value="VERIFIED">Verified (Live)</option>
-                                <option value="ARCHIVED">Archived</option>
-                            </select>
-                        </div>
+                        {user?.is_admin && (
+                            <div className="col-span-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select
+                                    value={formData.status}
+                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                                >
+                                    <option value="UNVERIFIED">Unverified (Draft)</option>
+                                    <option value="VERIFIED">Verified (Live)</option>
+                                    <option value="ARCHIVED">Archived</option>
+                                </select>
+                            </div>
+                        )}
 
                         <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
