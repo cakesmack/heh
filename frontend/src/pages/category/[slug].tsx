@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react';
-import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
+import { useState, useEffect, useCallback, useRef } from 'react'; // Added useCallback, useRef
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import { api, eventsAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
-import { useEvents } from '@/hooks/useEvents';
+// Removed useEvents hook
 import { EventList } from '@/components/events/EventList';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
 import { Category, EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { Badge } from '@/components/common/Badge';
+
+const EVENTS_PER_PAGE = 12;
 
 export default function CategoryPage() {
     const router = useRouter();
@@ -20,30 +21,52 @@ export default function CategoryPage() {
     const [isLoadingCategory, setIsLoadingCategory] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Event fetching
-    const {
-        events,
-        total,
-        isLoading: isLoadingEvents,
-        isLoadingMore,
-        hasMore,
-        error: eventsError,
-        fetchEvents,
-        loadMore
-    } = useEvents({ autoFetch: false, limit: 20 });
+    // Manual Event Fetching State
+    const [displayedEvents, setDisplayedEvents] = useState<EventResponse[]>([]);
+    const [total, setTotal] = useState(0);
+    const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [eventsError, setEventsError] = useState<string | null>(null);
+    const [currentFilters, setCurrentFilters] = useState<EventFilter>({});
     const [initialFilters, setInitialFilters] = useState<Partial<EventFilter>>({});
 
-    // Infinite Scroll
-    const { ref, isIntersecting } = useIntersectionObserver({ threshold: 0.1 });
-
-    useEffect(() => {
-        if (isIntersecting && hasMore && !isLoadingMore && !isLoadingEvents) {
-            loadMore();
-        }
-    }, [isIntersecting, hasMore, isLoadingMore, isLoadingEvents, loadMore]);
+    // Ref for infinite scroll sentinel
+    const loadMoreRef = useRef<HTMLDivElement>(null);
 
     // Category Pinned Events (paid featured)
     const [pinnedEvents, setPinnedEvents] = useState<EventResponse[]>([]);
+
+    // Fetch Events Logic
+    const fetchEvents = useCallback(async (filters: EventFilter, append = false) => {
+        if (append) {
+            setIsLoadingMore(true);
+        } else {
+            setIsLoadingEvents(true);
+            setDisplayedEvents([]);
+        }
+        setEventsError(null);
+
+        try {
+            const response = await eventsAPI.list({
+                ...filters,
+                limit: EVENTS_PER_PAGE,
+                skip: append ? displayedEvents.length : 0,
+            });
+
+            if (append) {
+                setDisplayedEvents(prev => [...prev, ...response.events]);
+            } else {
+                setDisplayedEvents(response.events);
+            }
+            setTotal(response.total);
+            setCurrentFilters(filters);
+        } catch (err) {
+            setEventsError(err instanceof Error ? err.message : 'Failed to fetch events');
+        } finally {
+            setIsLoadingEvents(false);
+            setIsLoadingMore(false);
+        }
+    }, [displayedEvents.length]);
 
     // Fetch Category Details
     useEffect(() => {
@@ -62,7 +85,7 @@ export default function CategoryPage() {
                 setInitialFilters(filters);
 
                 // Fetch normal events for this category
-                fetchEvents(filters);
+                fetchEvents(filters); // Use new manual fetch
             } catch (err) {
                 console.error('Failed to fetch category:', err);
                 setError('Category not found');
@@ -72,7 +95,27 @@ export default function CategoryPage() {
         };
 
         fetchCategory();
-    }, [slug]);
+    }, [slug]); // Removing fetchEvents from dep array to avoid loops, basically init on slug change
+
+    // Infinite scroll with Intersection Observer
+    useEffect(() => {
+        const hasMore = displayedEvents.length < total;
+        if (!loadMoreRef.current || isLoadingMore || isLoadingEvents || !hasMore) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+                    fetchEvents(currentFilters, true);
+                }
+            },
+            { threshold: 0.1, rootMargin: '100px' }
+        );
+
+        observer.observe(loadMoreRef.current);
+
+        return () => observer.disconnect();
+    }, [displayedEvents.length, total, isLoadingMore, isLoadingEvents, currentFilters, fetchEvents]);
+
 
     // Follow logic
     const { user } = useAuth();
@@ -199,6 +242,8 @@ export default function CategoryPage() {
             </div>
         );
     }
+
+    const hasMore = displayedEvents.length < total;
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -338,13 +383,19 @@ export default function CategoryPage() {
                         )}
                     </div>
 
-                    <EventList events={events} isLoading={isLoadingEvents} error={eventsError} />
+                    <EventList events={displayedEvents} isLoading={isLoadingEvents} error={eventsError} />
 
-                    {/* Infinite Scroll Trigger */}
-                    {!isLoadingEvents && !eventsError && (
-                        <div ref={ref} className="py-8 flex justify-center h-20">
+                    {/* Infinite Scroll Sentinel & Loading Indicator */}
+                    {hasMore && !isLoadingEvents && !eventsError && (
+                        <div ref={loadMoreRef} className="mt-8 flex justify-center py-4">
                             {isLoadingMore && (
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                                <div className="flex items-center gap-2 text-gray-500">
+                                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span>Loading more events...</span>
+                                </div>
                             )}
                         </div>
                     )}
