@@ -43,8 +43,12 @@ export default function CategoryGrid() {
                 Desktop: Standard Grid with Hybrid Radius (Sharp corners)
             */}
         <div className="grid grid-cols-2 gap-0 md:grid-cols-2 lg:grid-cols-4 w-full">
-          {categories.map((category) => (
-            <div key={category.id} className="h-40 sm:h-48 md:h-72 rounded-none overflow-hidden relative">
+          {categories.map((category, index) => (
+            <div
+              key={category.id}
+              className={`h-40 sm:h-48 md:h-72 rounded-none overflow-hidden relative ${index >= 8 ? 'lg:col-span-2' : ''
+                }`}
+            >
               <CategoryCard category={category} />
             </div>
           ))}
