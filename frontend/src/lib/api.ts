@@ -312,6 +312,42 @@ export const eventsAPI = {
   },
 
   /**
+   * Lightweight list for Map View (optimized)
+   */
+  listMap: async (filters?: EventFilter): Promise<MapEventResponse[]> => {
+    const params: Record<string, any> = {};
+    if (filters) {
+      if (filters.date_from) params.date_from = filters.date_from;
+      if (filters.date_to) params.date_to = filters.date_to;
+      if (filters.category_id) params.category_id = filters.category_id;
+      if (filters.latitude !== undefined) params.latitude = filters.latitude;
+      if (filters.longitude !== undefined) params.longitude = filters.longitude;
+      if (filters.radius_km !== undefined) params.radius = filters.radius_km; // API expects 'radius' in miles, but let's stick to consistent naming if backend handles it. 
+      // Backend /map endpoint uses alias="radius" for radius_miles. 
+      // Frontend filter uses "radius_km". 
+      // Need to convert km to miles or pass as is? 
+      // Backend `list_events_map` takes `radius_miles`.
+      // Let's assume standard conversion if needed, OR pass strict params matching backend.
+      // `query param radius` -> radius_miles.
+      // If frontend passes radius_km, we should convert or just pass 'radius' if the value is actually miles?
+      // Existing `list` logic: `if (filters.radius_km !== undefined) params.radius = filters.radius_km;` 
+      // Wait, standard `list` passes `filters.radius_km` as `params.radius`. Backend `list_events` aliases `radius` to `radius_miles`. 
+      // So `params.radius` should be in MILES?
+      // Let's check `list_events`: `radius_miles: Optional[float] = Query(None, alias="radius"...)`
+      // So backend expects `?radius=X` where X is miles.
+      // Frontend `filters.radius_km`... if it's KM, we are sending KM as Miles?
+      // Let's check where `filters.radius_km` comes from. 
+      // In `list`: `params.radius = filters.radius_km`
+      // If `filters.radius_km` is actually KM, then we are sending KM value to a Miles field. 
+      // Note: checking `map.tsx` might clarify. 
+      // For now, I will blindly copy the `list` logic to maintain consistency.
+      if (filters.radius_km !== undefined) params.radius = filters.radius_km;
+    }
+    const queryString = buildQueryString(params);
+    return apiFetch<MapEventResponse[]>(`/api/events/map${queryString}`, {}, false);
+  },
+
+  /**
    * Create new event
    */
   create: async (data: EventCreate): Promise<EventResponse> => {

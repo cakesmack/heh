@@ -452,6 +452,21 @@ export interface EventListResponse {
   limit: number;
 }
 
+export interface MapEventResponse {
+  id: string;
+  title: string;
+  date_start: string;
+  date_end: string;
+  image_url?: string;
+  category?: Category;
+  venue_name?: string;
+  latitude?: number;
+  longitude?: number;
+  price_display?: string;
+  map_display_lat?: number;
+  map_display_lng?: number;
+}
+
 // ============================================================
 // CHECK-IN TYPES
 // ============================================================

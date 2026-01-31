@@ -45,9 +45,9 @@ export function MapPage() {
   // Explicitly default to Next 7 Days (Backend no longer does this automatically)
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
     start: today,
-    end: endOfDay(addDays(today, 30)) // Default: Next 30 Days
+    end: endOfDay(addDays(today, 7)) // Optimized: Default to Next 7 Days for performance
   });
-  const [selectedRangeId, setSelectedRangeId] = useState<string>('month');
+  const [selectedRangeId, setSelectedRangeId] = useState<string>('week');
   const [customDate, setCustomDate] = useState<string>(''); // For custom date picker
 
   // Map Interaction State
@@ -102,11 +102,13 @@ export function MapPage() {
         };
 
         const [eventsResponse, categoriesResponse] = await Promise.all([
-          eventsAPI.list(eventFilters),
+          eventsAPI.listMap(eventFilters),
           categoriesAPI.list(),
         ]);
 
-        setEvents(eventsResponse.events);
+        // Cast to EventResponse[] as MapEventResponse is a compatible subset for the map view's needs
+        // (This avoids rewriting all child components to accept a union type)
+        setEvents(eventsResponse as unknown as EventResponse[]);
         setCategories(categoriesResponse.categories);
       } catch (err) {
         console.error('Failed to fetch map data:', err);

@@ -222,3 +222,25 @@ class EventListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+class MapEventResponse(BaseModel):
+    """Lightweight Event schema for Map View optimization."""
+    id: UUID
+    title: str
+    date_start: datetime
+    date_end: datetime
+    image_url: Optional[str] = None
+    category: Optional[CategoryResponse] = None
+    venue_name: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    price_display: Optional[str] = None
+    
+    # Map Display Point
+    map_display_lat: Optional[float] = None
+    map_display_lng: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+

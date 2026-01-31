@@ -138,7 +138,7 @@ export function ClusteredEventMarkers({
                 // Use GridAlgorithm with settings tuned for the map
                 algorithm: new GridAlgorithm({
                     gridSize: 20,// Reduced from 60 to show more individual pins ("popcorn effect")
-                    maxZoom: 10  // Stop clustering sooner (at zoom 14) so groups break apart earlier
+                    maxZoom: 20  // Ensure clustering persists at high zoom for identical locations ("Same Venue" stacking fix)
                 }),
                 // Custom click handler to show popup or zoom
                 onClusterClick: (event, cluster, mapInstance) => {
@@ -167,7 +167,7 @@ export function ClusteredEventMarkers({
                     });
 
                     const currentZoom = mapInstance.getZoom() || 0;
-                    const isMaxZoom = currentZoom >= 15; // Max zoom for clustering is 16, so 15 is "near max"
+                    const isMaxZoom = currentZoom >= 19; // Max zoom is 20, so 19 is "near max"
 
                     // Check if bounds are very tight (effectively same location)
                     const ne = bounds.getNorthEast();
@@ -305,6 +305,7 @@ export function ClusteredEventMarkers({
                                     src={selectedEvent.image_url}
                                     alt={selectedEvent.title}
                                     className="w-full h-full object-cover"
+                                    loading="lazy"
                                 />
                             </div>
                         ) : (
@@ -397,6 +398,7 @@ export function ClusteredEventMarkers({
                                                 src={event.image_url}
                                                 alt=""
                                                 className="w-full h-full object-cover"
+                                                loading="lazy"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-300">
