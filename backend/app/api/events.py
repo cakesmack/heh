@@ -245,9 +245,13 @@ def list_events(
     if organizer_id:
         # Organizer can see their own pending, published, rejected, and draft events
         query = query.where(Event.status.in_(["published", "pending", "rejected", "draft"]))
-    else:
         # Public listing - only published
         query = query.where(Event.status == "published")
+
+    # If sorting by 'created' (Recently Added), filter out child recurring instances
+    # We only want to show the Parent event to prevent flooding the feed with duplicate instances
+    if sort_by == 'created':
+        query = query.where(Event.parent_event_id == None)
 
     # Track joins to avoid duplicates
     venue_joined = False
