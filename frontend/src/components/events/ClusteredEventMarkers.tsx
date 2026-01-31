@@ -137,8 +137,8 @@ export function ClusteredEventMarkers({
                 map,
                 // Use GridAlgorithm with settings tuned for the map
                 algorithm: new GridAlgorithm({
-                    gridSize: 60,  // Default grid size
-                    maxZoom: 16,   // Stop clustering at zoom 16 (street level)
+                    gridSize: 30,  // Reduced from 60 to show more individual pins ("popcorn effect")
+                    maxZoom: 14,   // Stop clustering sooner (at zoom 14) so groups break apart earlier
                 }),
                 // Custom click handler to show popup or zoom
                 onClusterClick: (event, cluster, mapInstance) => {
