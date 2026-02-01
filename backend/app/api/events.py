@@ -243,6 +243,10 @@ def list_events_map(
         # Populate Category (Manual mapping due to field name mismatch: category_rel -> category)
         if not resp.category and event.category_rel:
              resp.category = CategoryResponse.model_validate(event.category_rel)
+
+        # Force populate location_name (ensure it carries over)
+        if not resp.location_name and event.location_name:
+             resp.location_name = event.location_name
         
         responses.append(resp)
         
