@@ -425,6 +425,14 @@ export function ClusteredEventMarkers({
                                                 ? format(new Date(event.date_start), 'EEE, MMM d • h:mm a')
                                                 : 'Date TBD'}
                                         </p>
+
+                                        {/* Venue */}
+                                        {(event.venue_name || event.location_name) && (
+                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                                                {event.venue_name || event.location_name}
+                                            </p>
+                                        )}
+
                                         {event.category && (
                                             <span
                                                 className="inline-block px-1.5 py-0.5 text-xs font-medium rounded text-white mt-1"
