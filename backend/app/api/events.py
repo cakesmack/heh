@@ -175,6 +175,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
 @router.get("/map", response_model=List[MapEventResponse])
 @limiter.limit("60/minute")
 def list_events_map(
+    request: Request,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     category_id: Optional[str] = None,
