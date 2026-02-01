@@ -239,6 +239,10 @@ def list_events_map(
         # Populate computed Venue Name if missing from event
         if not resp.venue_name and event.venue:
              resp.venue_name = event.venue.name
+
+        # Populate Category (Manual mapping due to field name mismatch: category_rel -> category)
+        if not resp.category and event.category_rel:
+             resp.category = CategoryResponse.model_validate(event.category_rel)
         
         responses.append(resp)
         
