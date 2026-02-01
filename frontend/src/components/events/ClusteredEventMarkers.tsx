@@ -145,6 +145,9 @@ export function ClusteredEventMarkers({
                     const clusterMarkers = cluster.markers || [];
                     const clusterPosition = cluster.position;
 
+                    // Close any open single event popup
+                    setSelectedEventId(null);
+
                     // Improved Event Lookup: Use memoized map to lookup ID from marker instance
                     const eventsInCluster = clusterMarkers
                         .map(m => {
@@ -261,6 +264,9 @@ export function ClusteredEventMarkers({
 
     // Handle marker click
     const handleMarkerClick = useCallback((event: EventResponse) => {
+        // Close any open cluster popup
+        setClusterPopup(null);
+
         setSelectedEventId(event.id);
         onEventClick?.(event);
         onMarkerClick?.({
@@ -343,14 +349,14 @@ export function ClusteredEventMarkers({
                                     : 'Date TBD'}
                             </p>
 
-                            {/* Venue */}
-                            {selectedEvent.venue_name && (
+                            {/* Venue - with improved fallback logic */}
+                            {(selectedEvent.venue_name || selectedEvent.location_name) && (
                                 <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
-                                    {selectedEvent.venue_name}
+                                    {selectedEvent.venue_name || selectedEvent.location_name}
                                 </p>
                             )}
 

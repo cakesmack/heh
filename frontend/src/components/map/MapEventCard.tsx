@@ -75,7 +75,7 @@ export default function MapEventCard({
                         <span className="truncate">
                             {event.participating_venues && event.participating_venues.length > 0
                                 ? `${event.participating_venues.length} Participating Venues`
-                                : event.venue_name || 'Unknown Venue'}
+                                : event.venue_name || event.location_name || 'Unknown Venue'}
                         </span>
                     </div>
                 </div>
