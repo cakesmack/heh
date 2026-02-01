@@ -29,8 +29,10 @@ from app.schemas.event import (
     EventListResponse,
     EventResponse,
     EventListResponse,
+    EventListResponse,
     EventFilter,
-    OrganizerProfileResponse
+    OrganizerProfileResponse,
+    MapEventResponse
 )
 from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
@@ -168,6 +170,78 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
         response.organizer_profile = OrganizerProfileResponse.model_validate(event.organizer_profile)
 
     return response
+
+
+@router.get("/map", response_model=List[MapEventResponse])
+@limiter.limit("60/minute")
+def list_events_map(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    category_id: Optional[str] = None,
+    latitude: Optional[float] = Query(None, description="User latitude"),
+    longitude: Optional[float] = Query(None, description="User longitude"),
+    radius_miles: Optional[float] = Query(None, alias="radius", description="Search radius in miles"),
+    session: Session = Depends(get_session)
+):
+    """
+    Lean endpoint for Map View. Returns flattened list of events.
+    Optimized for performance: selects only essential columns.
+    """
+    from sqlalchemy.orm import selectinload
+    
+    # 1. Base Query with minimal relationships (Join Category for color/name)
+    query = select(Event).options(
+        selectinload(Event.category_rel), 
+        selectinload(Event.venue)
+    )
+    
+    # 2. Status Filter
+    query = query.where(Event.status == "published")
+    
+    # 3. Date Filter (Simplified: Overlap logic)
+    if not date_from:
+        date_from = datetime.utcnow()
+        
+    if date_to:
+         # Overlap: start <= to AND end >= from
+        query = query.where((Event.date_start <= date_to) & (Event.date_end >= date_from))
+    else:
+        # Just upcoming
+        query = query.where(Event.date_end >= date_from)
+        
+    # 4. Category Filter
+    if category_id:
+        query = query.where(Event.category_id == normalize_uuid(category_id))
+        
+    # 5. Radius Filter
+    if latitude is not None and longitude is not None and radius_miles:
+        radius_km = radius_miles * 1.60934
+        min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius_km)
+        
+        # Simple BBox filter for speed (SQL-side)
+        query = query.where(
+            (Event.latitude.between(min_lat, max_lat)) & 
+            (Event.longitude.between(min_lon, max_lon))
+        )
+
+    # 6. Select Limit (Safety)
+    query = query.limit(1000)
+
+    # 7. Execute
+    events = session.exec(query).all()
+    
+    # 8. Build lightweight responses
+    responses = []
+    for event in events:
+        resp = MapEventResponse.model_validate(event)
+        
+        # Populate computed Venue Name if missing from event
+        if not resp.venue_name and event.venue:
+             resp.venue_name = event.venue.name
+        
+        responses.append(resp)
+        
+    return responses
 
 
 @router.get("", response_model=EventListResponse)
