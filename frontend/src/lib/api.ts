@@ -14,6 +14,7 @@ import type {
   EventUpdate,
   EventFilter,
   EventListResponse,
+  MapEventResponse,
   Venue,
   VenueResponse,
   VenueCreate,
