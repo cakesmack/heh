@@ -460,6 +460,7 @@ export interface MapEventResponse {
   image_url?: string;
   category?: Category;
   venue_name?: string;
+  location_name?: string;
   latitude?: number;
   longitude?: number;
   price_display?: string;

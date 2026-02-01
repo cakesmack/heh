@@ -235,6 +235,7 @@ class MapEventResponse(BaseModel):
     venue_name: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    location_name: Optional[str] = None
     price_display: Optional[str] = None
     
     # Map Display Point
