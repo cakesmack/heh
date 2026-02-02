@@ -16,7 +16,7 @@ import type { MapMarker } from '@/components/events/GoogleMapView';
 import MapDateFilter, { DateRange } from '@/components/map/MapDateFilter';
 import MapSidebar from '@/components/map/MapSidebar';
 import MapEventCard from '@/components/map/MapEventCard'; // For mobile modal
-import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
 
 // Dynamically import GoogleMapView to avoid SSR issues
 const GoogleMapView = dynamic(() => import('@/components/events/GoogleMapView'), {
