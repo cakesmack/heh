@@ -264,6 +264,7 @@ def list_events(
     tag: Optional[str] = Query(None, description="Single tag slug/name for filtering"),
     q: Optional[str] = Query(None, description="Search query for title/description"),
     location: Optional[str] = Query(None, description="Search query for location (name, address, postcode)"),
+    city_filter: Optional[str] = Query(None, description="Strict filter by city name (for SEO pages)"),
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     age_restriction: Optional[str] = Query(None, description="Filter by age restriction"),
@@ -295,6 +296,7 @@ def list_events(
     - q: Search in title and description
     - location: Search in venue name, address, postcode, and event location fields
     - age_restriction: Filter by age restriction
+    - city_filter: Strict SEO filter for city pages
     """
     if category:
          print(f"[EVENTS_DEBUG] Filtering by category slug: {category}")
@@ -402,8 +404,25 @@ def list_events(
             Tag, EventTag.tag_id == Tag.id
         ).where(Tag.name.in_(tag_list))
 
-    # Search query (title, description, venue name, venue address, venue postcode, tags) - OMNIBAR
-    if q:
+    # --- SCENARIO B: SEO Page (Strict City Filter) ---
+    if city_filter:
+        print(f"[EVENTS_DEBUG] SEO City Filter: {city_filter}")
+        city_term = f"%{city_filter}%"
+        
+        if not venue_joined:
+            query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+            venue_joined = True
+            
+        # Strict logic: Venue City OR Venue Name OR Event Location Name
+        # Do NOT search descriptions or titles
+        query = query.where(
+            (Venue.city.ilike(city_term)) |
+            (Venue.name.ilike(city_term)) |
+            (Event.location_name.ilike(city_term))
+        )
+
+    # --- SCENARIO A: Standard Search (if no city_filter) ---
+    elif q:
         search_term = f"%{q}%"
         # Generate slugified version for tag matching (e.g., "Live Music" -> "live-music")
         search_slug = normalize_tag_name(q)
@@ -438,7 +457,8 @@ def list_events(
 
     # Location Search (venue name, address, postcode, event location fields)
     # Only apply text-based location search if GPS coordinates are NOT provided
-    if location and (latitude is None or longitude is None):
+    # AND if city_filter is NOT active (city_filter takes precedence)
+    if location and (latitude is None or longitude is None) and not city_filter:
         loc_term = f"%{location}%"
         if not venue_joined:
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)

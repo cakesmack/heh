@@ -4,6 +4,7 @@
  */
 
 import Link from 'next/link';
+import PopularLocations from '../PopularLocations';
 
 // Social Icons
 const InstagramIcon = ({ className }: { className?: string }) => (
@@ -136,6 +137,8 @@ export function Footer() {
             </a>
           </div>
         </div>
+
+        <PopularLocations />
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-slate-700">

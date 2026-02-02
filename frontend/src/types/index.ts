@@ -443,6 +443,7 @@ export interface EventFilter {
   limit?: number;
   sort_by?: string;
   time_range?: 'upcoming' | 'past' | 'all';
+  city_filter?: string;
 }
 
 export interface EventListResponse {
