@@ -6,7 +6,7 @@
  */
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { format, isSameDay, startOfDay, endOfDay, addDays, nextSaturday, nextSunday } from 'date-fns';
@@ -16,7 +16,41 @@ import type { MapMarker } from '@/components/events/GoogleMapView';
 import MapDateFilter, { DateRange } from '@/components/map/MapDateFilter';
 import MapSidebar from '@/components/map/MapSidebar';
 import MapEventCard from '@/components/map/MapEventCard'; // For mobile modal
-import ErrorBoundary from '../components/ui/ErrorBoundary';
+// ErrorBoundary defined inline to resolve build import issues
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 p-4 min-h-[300px]">
+          <div className="bg-white p-6 rounded-lg shadow-md max-w-md text-center">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Map Temporarily Unavailable</h2>
+            <p className="text-gray-500 mb-4">We encountered an issue displaying the map. Please look at the list view or try refreshing the page.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Dynamically import GoogleMapView to avoid SSR issues
 const GoogleMapView = dynamic(() => import('@/components/events/GoogleMapView'), {
