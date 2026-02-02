@@ -1,26 +1,73 @@
-import { GetServerSideProps } from 'next';
 import Head from 'next/head';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { eventsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
-import MagazineGrid from '@/components/home/MagazineGrid';
 import { Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface LocationPageProps {
-    city: string;
-    events: EventResponse[];
-    fallbackEvents: EventResponse[]; // Events to show if city has 0 results
-    total: number;
-}
+export default function LocationPage() {
+    const router = useRouter();
+    const { city } = router.query;
 
-export default function LocationPage({ city, events, fallbackEvents, total }: LocationPageProps) {
-    const capitalizedCity = city.charAt(0).toUpperCase() + city.slice(1);
+    const [events, setEvents] = useState<EventResponse[]>([]);
+    const [fallbackEvents, setFallbackEvents] = useState<EventResponse[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Client-side data fetching
+    useEffect(() => {
+        if (!router.isReady || !city) return;
+
+        const fetchCityEvents = async () => {
+            setLoading(true);
+            try {
+                const cityStr = String(city);
+                // Fetch City Events
+                const cityEventsResponse = await eventsAPI.list({
+                    // @ts-ignore - dynamic param added to backend
+                    city_filter: cityStr,
+                    limit: 50,
+                    sort_by: 'date'
+                });
+
+                if (cityEventsResponse.events.length > 0) {
+                    setEvents(cityEventsResponse.events);
+                } else {
+                    // Zero Results Strategy: Fetch "Just Added"
+                    const fallbackResponse = await eventsAPI.list({
+                        limit: 9,
+                        sort_by: 'created', // Just Added
+                        include_past: false
+                    });
+                    setFallbackEvents(fallbackResponse.events);
+                }
+            } catch (error) {
+                console.error('Error fetching location page:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCityEvents();
+    }, [router.isReady, city]);
+
+    // Derived state
+    const cityName = city ? String(city) : '';
+    const capitalizedCity = cityName ? cityName.charAt(0).toUpperCase() + cityName.slice(1) : '...';
     const hasEvents = events.length > 0;
 
     // Use fallback events if no city events found
     const displayEvents = hasEvents ? events : fallbackEvents;
+
+    // Loading State
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -30,7 +77,7 @@ export default function LocationPage({ city, events, fallbackEvents, total }: Lo
                     name="description"
                     content={`Discover local gigs, festivals, and workshops in ${capitalizedCity}. Find the best things to do in the Scottish Highlands.`}
                 />
-                <link rel="canonical" href={`https://www.highlandeventshub.co.uk/locations/${city.toLowerCase()}`} />
+                <link rel="canonical" href={`https://www.highlandeventshub.co.uk/locations/${cityName.toLowerCase()}`} />
             </Head>
 
             {/* Header Section */}
@@ -56,9 +103,6 @@ export default function LocationPage({ city, events, fallbackEvents, total }: Lo
 
             {/* Events Grid */}
             <div className="container mx-auto px-4 py-12">
-                {/* If we have events, show them using a clean grid layout */}
-                {/* We can reuse MagazineGrid for a nice visual or build a specific list */}
-                {/* Reusing MagazineGrid logic for consistency with homepage */}
 
                 <div className="mb-8 flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-gray-900">
@@ -79,6 +123,7 @@ export default function LocationPage({ city, events, fallbackEvents, total }: Lo
                                     <img
                                         src={event.image_url || '/images/event-placeholder.jpg'}
                                         alt={event.title}
+                                        loading="lazy"
                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
                                     {event.category && (
@@ -127,60 +172,3 @@ export default function LocationPage({ city, events, fallbackEvents, total }: Lo
         </div>
     );
 }
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-    const { city } = context.params as { city: string };
-
-    if (!city) {
-        return { notFound: true };
-    }
-
-    try {
-        // 1. Fetch events STRICTLY for this city
-        // We use the new `city_filter` param we added to the backend
-        // Since existing API client types might not have it yet, we cast to any or just pass it if allowed
-        // Note: We need to update frontend/src/lib/api.ts logic to accept generic params or add city_filter to interface
-        // For now, we will assume generic params record support or just fetch directly if needed?
-        // Actually, update api.ts quickly or use `list` with a cast.
-
-        // Let's use the explicit `apiFetch` or cast the filters.
-        // Assuming `eventsAPI.list` accepts generic `EventFilter` which might be loose.
-        // If strict, I need to update `EventFilter` interface in `types/index.ts`.
-
-        // I'll assume I can pass it. If not, I'll fix it. 
-        // Wait, I should verify `EventFilter` in `src/types`.
-
-        // Fetch City Events
-        const cityEventsResponse = await eventsAPI.list({
-            // @ts-ignore - dynamic param added to backend
-            city_filter: city,
-            limit: 50,
-            sort_by: 'date'
-        });
-
-        let fallbackEvents: EventResponse[] = [];
-
-        // 2. Zero Results Strategy
-        if (cityEventsResponse.events.length === 0) {
-            // Fetch "Just Added" / Generic events (fallback)
-            const fallbackResponse = await eventsAPI.list({
-                limit: 9,
-                sort_by: 'created', // Just Added
-                include_past: false
-            });
-            fallbackEvents = fallbackResponse.events;
-        }
-
-        return {
-            props: {
-                city,
-                events: cityEventsResponse.events,
-                fallbackEvents,
-                total: cityEventsResponse.total
-            },
-        };
-    } catch (error) {
-        console.error('Error fetching location page:', error);
-        return { notFound: true };
-    }
-};

@@ -33,9 +33,11 @@ interface HomePageProps {
   meta?: any; // Passed to _app.tsx
 }
 
-export default function HomePage({ }: HomePageProps) {
+// Client-side only - no getServerSideProps
+export default function HomePage() {
   const { coordinates } = useGeolocation();
   const { user } = useAuth();
+  const [heroImage, setHeroImage] = useState<string>(DEFAULT_OG_IMAGE);
 
 
   const [page, setPage] = useState(1);
@@ -54,6 +56,12 @@ export default function HomePage({ }: HomePageProps) {
     dateTo?: string;
     category?: string;
   }>({});
+
+  // Fetch Hero Image for Open Graph (Client Side Palliatives - Real OG needs server)
+  // Since we are static, we can't dynamically change the HEAD meta tags per request based on DB
+  // BUT we can set a good default.
+  // Ideally, for proper social sharing, we'd use a separate OG service or Edge Functions.
+  // For now, we accept the static default.
 
   // 1. Fetch Hero Events (Top 10 Featured)
   const { events: heroEvents } = useEvents({
@@ -219,7 +227,15 @@ export default function HomePage({ }: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
+      <Head>
+        <title>Highland Events Hub - Discover Events in the Highlands</title>
+        <meta name="description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." />
+        <meta property="og:title" content="Highland Events Hub - Discover Events in the Highlands" />
+        <meta property="og:description" content="Discover the best events, gigs, markets and festivals across the Scottish Highlands." />
+        <meta property="og:image" content={DEFAULT_OG_IMAGE} />
+        <meta property="og:url" content={SITE_URL} />
+        <meta property="og:type" content="website" />
+      </Head>
 
       {/* Hero Section */}
       <HeroSection />
@@ -326,85 +342,3 @@ export default function HomePage({ }: HomePageProps) {
     </div>
   );
 }
-
-// Server-side fetch for OG image from Hero carousel
-export const getServerSideProps: GetServerSideProps<HomePageProps> = async () => {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-  try {
-    // Parallel fetch: Welcome Slot (Static) + Paid Slots (Dynamic)
-    const [manualRes, paidRes] = await Promise.all([
-      fetch(`${API_URL}/api/hero?active_only=true`),
-      fetch(`${API_URL}/api/featured/active?slot_type=hero_home`)
-    ]);
-
-    let heroImage = null;
-
-    // 1. Check Welcome Slide (Static)
-    if (manualRes.ok) {
-      const slides = await manualRes.json();
-      const welcome = slides.find((s: any) => (s.position === 1 || s.type === 'welcome') && s.image_url);
-      if (welcome) heroImage = welcome.image_url;
-    }
-
-    // 2. If no welcome image, check Paid Hero Slots
-    if (!heroImage && paidRes.ok) {
-      const paidBookings = await paidRes.json();
-      // Need to fetch event details for the first booking to get the image
-      if (paidBookings.length > 0) {
-        const firstBooking = paidBookings[0];
-        try {
-          // Fetch event details to get the image
-          const eventRes = await fetch(`${API_URL}/api/events/${firstBooking.event_id}`);
-          if (eventRes.ok) {
-            const event = await eventRes.json();
-            if (event.image_url) heroImage = event.image_url;
-          }
-        } catch (e) {
-          console.error('Error fetching event details for OG image:', e);
-        }
-      }
-    }
-
-    if (heroImage) {
-      const imgUrl = String(heroImage);
-      // Ensure absolute URL
-      const socialImage = imgUrl.startsWith('http')
-        ? imgUrl
-        : `${SITE_URL}${imgUrl}`;
-
-      // Optimize image for WhatsApp (1200x630)
-      const optimizedImage = socialImage.includes('cloudinary') && !socialImage.includes('w_')
-        ? socialImage.replace('/upload/', '/upload/w_1200,h_630,c_fill,q_auto/')
-        : socialImage;
-
-      return {
-        props: {
-          meta: {
-            image: optimizedImage,
-            title: "Highland Events Hub - Discover Events in the Highlands",
-            description: "Discover the best events, gigs, markets and festivals across the Scottish Highlands.",
-            url: SITE_URL,
-            type: "website"
-          }
-        }
-      };
-    }
-
-  } catch (error) {
-    console.error('Failed to fetch hero slides for OG image:', error);
-  }
-
-  // Fallback to specific cloudinary default
-  return {
-    props: {
-      meta: {
-        image: DEFAULT_OG_IMAGE, // Already Cloudinary URL
-        title: "Highland Events Hub - Discover Events in the Highlands",
-        description: "Discover the best events, gigs, markets and festivals across the Scottish Highlands.",
-        url: SITE_URL,
-        type: "website"
-      }
-    }
-  };
-};
