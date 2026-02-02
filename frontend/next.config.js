@@ -12,7 +12,6 @@ const nextConfig = {
             },
         ],
     },
-    output: 'export',
     trailingSlash: true, // Recommended for static sites
 
 }

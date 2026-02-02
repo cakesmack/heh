@@ -1,73 +1,70 @@
 import Head from 'next/head';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { eventsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 import { Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
+import { GetServerSideProps } from 'next';
 
-export default function LocationPage() {
-    const router = useRouter();
-    const { city } = router.query;
+interface LocationPageProps {
+    city: string;
+    initialEvents: EventResponse[];
+    fallbackEvents: EventResponse[];
+    hasEvents: boolean;
+}
 
-    const [events, setEvents] = useState<EventResponse[]>([]);
-    const [fallbackEvents, setFallbackEvents] = useState<EventResponse[]>([]);
-    const [loading, setLoading] = useState(true);
+export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (context) => {
+    const { city } = context.params as { city: string };
+    const cityStr = String(city);
 
-    // Client-side data fetching
-    useEffect(() => {
-        if (!router.isReady || !city) return;
+    let initialEvents: EventResponse[] = [];
+    let fallbackEvents: EventResponse[] = [];
 
-        const fetchCityEvents = async () => {
-            setLoading(true);
-            try {
-                const cityStr = String(city);
-                // Fetch City Events
-                const cityEventsResponse = await eventsAPI.list({
-                    // @ts-ignore - dynamic param added to backend
-                    city_filter: cityStr,
-                    limit: 50,
-                    sort_by: 'date'
-                });
+    try {
+        // 1. Fetch Events for the City
+        const cityEventsResponse = await eventsAPI.list({
+            // @ts-ignore - dynamic param handled by backend
+            city_filter: cityStr,
+            limit: 50,
+            sort_by: 'date'
+        });
+        initialEvents = cityEventsResponse.events;
 
-                if (cityEventsResponse.events.length > 0) {
-                    setEvents(cityEventsResponse.events);
-                } else {
-                    // Zero Results Strategy: Fetch "Just Added"
-                    const fallbackResponse = await eventsAPI.list({
-                        limit: 9,
-                        sort_by: 'created', // Just Added
-                        include_past: false
-                    });
-                    setFallbackEvents(fallbackResponse.events);
-                }
-            } catch (error) {
-                console.error('Error fetching location page:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
+        // 2. Fetch Fallback "Just Added" if no events found
+        if (initialEvents.length === 0) {
+            const fallbackResponse = await eventsAPI.list({
+                limit: 9,
+                sort_by: 'created', // Just Added
+                include_past: false
+            });
+            fallbackEvents = fallbackResponse.events;
+        }
 
-        fetchCityEvents();
-    }, [router.isReady, city]);
+    } catch (error) {
+        console.error('SSR Error fetching location page:', error);
+        // In case of API failure, we can return empty arrays or handle error state
+    }
 
-    // Derived state
+    return {
+        props: {
+            city: cityStr,
+            initialEvents,
+            fallbackEvents,
+            hasEvents: initialEvents.length > 0,
+        }
+    };
+};
+
+export default function LocationPage({ city, initialEvents, fallbackEvents, hasEvents }: LocationPageProps) {
+    // Use state for any future client-side interactivity (filtering, etc.)
+    const [events] = useState<EventResponse[]>(initialEvents);
+
+    // Derived vars
     const cityName = city ? String(city) : '';
     const capitalizedCity = cityName ? cityName.charAt(0).toUpperCase() + cityName.slice(1) : '...';
-    const hasEvents = events.length > 0;
-
-    // Use fallback events if no city events found
     const displayEvents = hasEvents ? events : fallbackEvents;
-
-    // Loading State
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -78,6 +75,13 @@ export default function LocationPage() {
                     content={`Discover local gigs, festivals, and workshops in ${capitalizedCity}. Find the best things to do in the Scottish Highlands.`}
                 />
                 <link rel="canonical" href={`https://www.highlandeventshub.co.uk/locations/${cityName.toLowerCase()}`} />
+
+                {/* Open Graph */}
+                <meta property="og:title" content={`Events in ${capitalizedCity} | Highland Events Hub`} />
+                <meta property="og:description" content={`Check out the latest events in ${capitalizedCity}.`} />
+                {hasEvents && events[0]?.image_url && (
+                    <meta property="og:image" content={events[0].image_url} />
+                )}
             </Head>
 
             {/* Header Section */}
