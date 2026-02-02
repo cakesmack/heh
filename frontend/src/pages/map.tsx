@@ -16,6 +16,7 @@ import type { MapMarker } from '@/components/events/GoogleMapView';
 import MapDateFilter, { DateRange } from '@/components/map/MapDateFilter';
 import MapSidebar from '@/components/map/MapSidebar';
 import MapEventCard from '@/components/map/MapEventCard'; // For mobile modal
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
 // Dynamically import GoogleMapView to avoid SSR issues
 const GoogleMapView = dynamic(() => import('@/components/events/GoogleMapView'), {
@@ -130,8 +131,18 @@ export function MapPage() {
   // Filter events by category locally
   // (Date filtering is handled by backend refetch for efficiency/correctness with recurrence)
   const filteredEvents = useMemo(() => {
-    if (!selectedCategory) return events;
-    return events.filter(event => event.category?.id === selectedCategory);
+    // Base list of events to filter
+    const baseEvents = selectedCategory
+      ? events.filter(event => event.category?.id === selectedCategory)
+      : events;
+
+    // STRICT DEFENSIVE CODING: Filter out invalid coordinates to prevent map crashes
+    return baseEvents.filter(e =>
+      typeof e.latitude === 'number' &&
+      typeof e.longitude === 'number' &&
+      !isNaN(e.latitude) &&
+      !isNaN(e.longitude)
+    );
   }, [events, selectedCategory]);
 
   // Handle marker click
@@ -238,45 +249,47 @@ export function MapPage() {
 
         {/* Right Panel - Map */}
         <div className="flex-1 relative">
-          <GoogleMapView
-            events={filteredEvents}
-            venues={[]}
-            showEvents={true}
-            showVenues={false}
-            onMarkerClick={handleMarkerClick}
-            onMapClick={closeMobileModal}
-            onEventClick={(event) => {
-              setSelectedMarkerId(event.id);
+          <ErrorBoundary>
+            <GoogleMapView
+              events={filteredEvents}
+              venues={[]}
+              showEvents={true}
+              showVenues={false}
+              onMarkerClick={handleMarkerClick}
+              onMapClick={closeMobileModal}
+              onEventClick={(event) => {
+                setSelectedMarkerId(event.id);
 
-              // On desktop, scroll to list item
-              if (!isMobile) {
-                const card = document.getElementById(`event-card-${event.id}`);
-                if (card) {
-                  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // On desktop, scroll to list item
+                if (!isMobile) {
+                  const card = document.getElementById(`event-card-${event.id}`);
+                  if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                } else {
+                  // On mobile, find all events at this location/day
+                  const eventsAtLocation = filteredEvents.filter(e =>
+                    e.latitude != null && e.longitude != null &&
+                    event.latitude != null && event.longitude != null &&
+                    Math.abs(e.latitude - event.latitude) < 0.0001 &&
+                    Math.abs(e.longitude - event.longitude) < 0.0001
+                  );
+                  setSelectedEvents(eventsAtLocation);
                 }
-              } else {
-                // On mobile, find all events at this location/day
-                const eventsAtLocation = filteredEvents.filter(e =>
-                  e.latitude != null && e.longitude != null &&
-                  event.latitude != null && event.longitude != null &&
-                  Math.abs(e.latitude - event.latitude) < 0.0001 &&
-                  Math.abs(e.longitude - event.longitude) < 0.0001
-                );
-                setSelectedEvents(eventsAtLocation);
-              }
-            }}
-            selectedMarkerId={selectedMarkerId}
-            hoveredEventId={hoveredEventId}
-            isMobile={isMobile}
-            focusEventId={focusEventId}
-            onFocusComplete={() => setFocusEventId(null)}
-            onClusterClick={(clusterEvents) => {
-              if (isMobile) {
-                setSelectedEvents(clusterEvents);
-              }
-            }}
-            className="absolute inset-0"
-          />
+              }}
+              selectedMarkerId={selectedMarkerId}
+              hoveredEventId={hoveredEventId}
+              isMobile={isMobile}
+              focusEventId={focusEventId}
+              onFocusComplete={() => setFocusEventId(null)}
+              onClusterClick={(clusterEvents) => {
+                if (isMobile) {
+                  setSelectedEvents(clusterEvents);
+                }
+              }}
+              className="absolute inset-0"
+            />
+          </ErrorBoundary>
 
           {/* Mobile Event Preview Card - shows when marker is tapped on mobile */}
           {selectedEvents.length > 0 && isMobile && (

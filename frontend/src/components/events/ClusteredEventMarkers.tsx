@@ -98,11 +98,21 @@ export function ClusteredEventMarkers({
     // Robust mapping of Marker -> EventID using refs to avoid closure staleness
     const markerToEventId = useMemo(() => new Map<google.maps.marker.AdvancedMarkerElement, string>(), []);
     const [markers, setMarkers] = useState<{ [key: string]: Marker }>({});
+
+    // Safety check: Filter invalid events again to be absolutely sure
+    const validEvents = useMemo(() => {
+        return (events || []).filter(e =>
+            e &&
+            typeof e.latitude === 'number' && typeof e.longitude === 'number' &&
+            !isNaN(e.latitude) && !isNaN(e.longitude)
+        );
+    }, [events]);
+
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
     const selectedEvent = useMemo(
-        () => events.find(e => e.id === selectedEventId) || null,
-        [events, selectedEventId]
+        () => validEvents.find(e => e.id === selectedEventId) || null,
+        [validEvents, selectedEventId]
     );
 
     // Get Google Map instance
@@ -154,7 +164,7 @@ export function ClusteredEventMarkers({
                             const marker = m as google.maps.marker.AdvancedMarkerElement;
                             const eventId = markerToEventId.get(marker);
                             if (!eventId) return null;
-                            return events.find(e => e.id === eventId);
+                            return validEvents.find(e => e.id === eventId);
                         })
                         .filter((e): e is EventResponse => !!e);
 
@@ -224,7 +234,7 @@ export function ClusteredEventMarkers({
                 clustererInstance.setMap(null);
             }
         };
-    }, [map, events, markerToEventId]);
+    }, [map, validEvents, markerToEventId]);
 
     // Update clusterer when markers change
     useEffect(() => {
@@ -286,7 +296,7 @@ export function ClusteredEventMarkers({
     return (
         <>
             {/* Render all event markers */}
-            {events.map(event => (
+            {validEvents.map(event => (
                 <EventMarkerWithRef
                     key={event.id}
                     event={event}
