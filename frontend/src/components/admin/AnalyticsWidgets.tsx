@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Modal from './Modal';
 import { AdminAnalyticsSummary, MissedOpportunitiesResponse, SupplyGap, QualityIssue, CategoryMixStats, OrganizerEventStats } from '@/types';
@@ -92,12 +93,23 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
         setClearing(true);
         try {
             await analyticsAPI.clearMissedOpportunities();
-            window.location.reload(); // Simple refresh for now
+            window.location.reload();
         } catch (e) {
             console.error(e);
             alert("Failed to clear history");
         } finally {
             setClearing(false);
+        }
+    };
+
+    const handleDeleteTerm = async (term: string) => {
+        if (!confirm(`Delete "${term}" from history?`)) return;
+        try {
+            await analyticsAPI.deleteMissedOpportunity(term);
+            window.location.reload();
+        } catch (e) {
+            console.error('Failed to delete term', e);
+            alert('Failed to delete term');
         }
     };
 
@@ -116,17 +128,26 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
                 </div>
                 <div className="mt-4 space-y-3">
                     {topGaps.map((gap, i) => (
-                        <div key={`${gap.type}-${gap.term}`} className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
+                        <div key={`${gap.type}-${gap.term}`} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <span className="text-[10px] font-bold text-gray-400 w-4">{i + 1}.</span>
                                 <div className="flex flex-col min-w-0">
                                     <span className="text-xs text-gray-700 truncate font-medium">"{gap.term}"</span>
                                     {/* <span className="text-[9px] text-gray-400 uppercase tracking-tighter">{gap.type}</span> */}
                                 </div>
                             </div>
-                            <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded">
-                                {gap.count}×
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded">
+                                    {gap.count}×
+                                </span>
+                                <button
+                                    onClick={() => handleDeleteTerm(gap.term)}
+                                    className="p-1 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Remove term"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
+                            </div>
                         </div>
                     ))}
                     {topGaps.length === 0 && (
@@ -173,11 +194,20 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
                                     </h3>
                                     <div className="space-y-2">
                                         {missed.missing_topics.map((gap, i) => (
-                                            <div key={gap.term} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100/50">
+                                            <div key={gap.term} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100/50 group">
                                                 <span className="text-sm text-gray-700 font-medium">"{gap.term}"</span>
-                                                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">
-                                                    {gap.count}×
-                                                </span>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">
+                                                        {gap.count}×
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleDeleteTerm(gap.term)}
+                                                        className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                        title="Remove term"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                         {missed.missing_topics.length === 0 && (

@@ -344,6 +344,41 @@ def clear_missed_opportunities(
             
     session.commit()
     
+
+    return None
+
+
+@router.delete("/missed-opportunities/{term}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_missed_opportunity_term(
+    term: str,
+    admin: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Delete a specific failed search term from history.
+    Requires Admin privileges.
+    """
+    if not admin.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get all failed search logs
+    logs = session.exec(
+        select(AnalyticsEvent)
+        .where(AnalyticsEvent.event_type == "search_query")
+    ).all()
+    
+    deleted_count = 0
+    # Filter in Python because metadata is JSON
+    for log in logs:
+        if log.event_metadata and log.event_metadata.get('result_count', 1) == 0:
+            log_term = log.event_metadata.get('term', '')
+            # Case-insensitive match
+            if log_term.lower() == term.lower():
+                session.delete(log)
+                deleted_count += 1
+            
+    session.commit()
+    
     return None
 
 

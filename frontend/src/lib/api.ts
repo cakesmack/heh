@@ -1004,6 +1004,10 @@ export const analyticsAPI = {
     return apiFetch<void>('/api/analytics/missed-opportunities', { method: 'DELETE' });
   },
 
+  async deleteMissedOpportunity(term: string): Promise<void> {
+    return apiFetch<void>(`/api/analytics/missed-opportunities/${encodeURIComponent(term)}`, { method: 'DELETE' });
+  },
+
   async getSupplyGaps(threshold: number = 3, days: number = 30): Promise<SupplyGap[]> {
     return apiFetch<SupplyGap[]>(`/api/analytics/supply-gaps?threshold=${threshold}&days=${days}`);
   },
