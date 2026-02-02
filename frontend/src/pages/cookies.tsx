@@ -42,15 +42,32 @@ export default function CookiesPage() {
 
                     {/* Section 3 */}
                     <section>
-                        <h2 className="text-xl font-bold text-gray-900 mb-3">3. What We Do NOT Use</h2>
-                        <ul className="list-disc list-inside text-gray-600 space-y-2">
-                            <li>
-                                <strong>No Tracking Cookies:</strong> We do not currently use Google Analytics, Facebook Pixel, or other third-party tracking software.
-                            </li>
-                            <li>
-                                <strong>No Advertising Cookies:</strong> We do not sell your browsing data to advertisers.
-                            </li>
+                        <h2 className="text-xl font-bold text-gray-900 mb-3">3. Analytics & Third-Party Cookies</h2>
+                        <p className="text-gray-600 mb-3">
+                            We use Google Analytics to help us understand how our website is being used. This allows us to see how many people are visiting, which pages are most popular, and where our traffic is coming from. This information helps us improve the site and ensure it works well for everyone.
+                        </p>
+                        <p className="text-gray-600 mb-3">
+                            Google Analytics uses cookies to collect this data. These cookies store information such as:
+                        </p>
+                        <ul className="list-disc list-inside text-gray-600 space-y-2 mb-3">
+                            <li>The time of your visit.</li>
+                            <li>Whether you have visited the site before.</li>
+                            <li>Which site referred you to the web page.</li>
                         </ul>
+                        <p className="text-gray-600 mb-3">
+                            <strong>Your Privacy:</strong> The data collected is anonymized. We do not use Google Analytics to collect any Personally Identifiable Information (PII) such as your name, email address, or phone number. We cannot identify you personally from this data.
+                        </p>
+                        <p className="text-gray-600">
+                            <strong>Opting Out:</strong> If you prefer not to share this data, you can disable cookies in your browser settings. Google also offers a browser add-on to opt out of Google Analytics tracking across all websites, which you can find{' '}
+                            <a
+                                href="https://tools.google.com/dlpage/gaoptout"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-emerald-600 hover:underline"
+                            >
+                                here
+                            </a>.
+                        </p>
                     </section>
 
                     {/* Section 4 */}
