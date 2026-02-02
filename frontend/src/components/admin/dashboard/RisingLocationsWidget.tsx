@@ -124,7 +124,7 @@ export default function RisingLocationsWidget() {
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {venues.map((venue) => (
+                    {venues.slice(0, 5).map((venue) => (
                         <div key={venue.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                             <div className="min-w-0 flex-1 mr-4">
                                 <div className="flex items-center gap-2 mb-1">
