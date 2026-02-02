@@ -1,18 +1,48 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
-import { GetServerSideProps } from 'next';
+import { useRouter } from 'next/router';
 import { toPng } from 'html-to-image';
 import { EventResponse } from '@/types';
 import Link from 'next/link';
+import { eventsAPI } from '@/lib/api';
 
-interface SocialPosterPageProps {
-    event: EventResponse | null;
-    error?: string;
-    baseUrl: string;
-}
-
-export default function SocialPosterPage({ event, error, baseUrl }: SocialPosterPageProps) {
+export default function SocialPosterPage() {
+    const router = useRouter();
+    const { id } = router.query;
     const posterRef = useRef<HTMLDivElement>(null);
+
+    const [event, setEvent] = useState<EventResponse | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [baseUrl, setBaseUrl] = useState('');
+
+    useEffect(() => {
+        // Set base URL client-side
+        if (typeof window !== 'undefined') {
+            setBaseUrl(window.location.origin);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!router.isReady || !id) return;
+
+        const fetchEvent = async () => {
+            setLoading(true);
+            try {
+                // Use the API client instead of raw fetch
+                const eventData = await eventsAPI.get(String(id));
+                setEvent(eventData);
+            } catch (err) {
+                console.error('Error fetching event for social poster:', err);
+                setError('Could not load event data.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEvent();
+    }, [router.isReady, id]);
+
 
     const downloadPoster = useCallback(() => {
         if (posterRef.current === null) {
@@ -37,6 +67,14 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
                 alert('Error generating image. Check console.');
             });
     }, [event?.id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+            </div>
+        );
+    }
 
     if (error || !event) {
         return (
@@ -247,38 +285,3 @@ export default function SocialPosterPage({ event, error, baseUrl }: SocialPoster
         </div>
     );
 }
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-    const { id } = context.params as { id: string };
-    const protocol = context.req.headers['x-forwarded-proto'] || 'http';
-    const host = context.req.headers.host;
-    const baseUrl = `${protocol}://${host}`;
-
-    try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
-        const res = await fetch(`${backendUrl}/api/events/${id}`);
-
-        if (!res.ok) {
-            console.error(`Failed to fetch event: ${res.statusText}`);
-            throw new Error(`Failed to fetch event: ${res.status}`);
-        }
-
-        const event = await res.json();
-
-        return {
-            props: {
-                event,
-                baseUrl
-            },
-        };
-    } catch (error) {
-        console.error('Error fetching event for social poster:', error);
-        return {
-            props: {
-                event: null,
-                error: 'Could not load event data. Backend may be unreachable.',
-                baseUrl
-            },
-        };
-    }
-};

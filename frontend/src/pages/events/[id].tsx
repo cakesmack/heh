@@ -8,7 +8,6 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
-import { GetServerSideProps } from 'next';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/common/Card';
@@ -32,22 +31,42 @@ const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), {
 // Dynamic import for AccommodationMap (Stay22) - heavy iframe, lazy loaded
 const AccommodationMap = dynamic(() => import('@/components/events/AccommodationMap'), { ssr: false });
 
-interface EventDetailPageProps {
-  initialEvent: EventResponse | null;
-  error?: string;
-}
-
-export default function EventDetailPage({ initialEvent, error: serverError }: EventDetailPageProps) {
+export default function EventDetailPage() {
   const router = useRouter();
+  const { id } = router.query;
   const { isAuthenticated, user } = useAuth();
   const { trackEventView, trackTicketClick } = useAnalytics();
 
-  const [event, setEvent] = useState<EventResponse | null>(initialEvent);
+  const [event, setEvent] = useState<EventResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [imageLightboxOpen, setImageLightboxOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Only for client-side refetches
   const [bookmarkCount, setBookmarkCount] = useState<number>(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
+
+  // Fetch Event Data (Client-Side)
+  useEffect(() => {
+    if (!router.isReady || !id) return;
+
+    const fetchEvent = async () => {
+      setLoading(true);
+      try {
+        const eventId = String(id);
+        const data = await api.events.get(eventId);
+        setEvent(data);
+      } catch (err: any) {
+        console.error('Error fetching event:', err);
+        setError(err.message || 'Failed to load event');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
+  }, [router.isReady, id]);
+
 
   // Fetch bookmark count for social proof
   useEffect(() => {
@@ -95,21 +114,21 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
     });
   };
 
-  // Loading state (fallback for router navigation if needed, though SSR handles initial load)
-  if (router.isFallback) {
+  // Loading state
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
+      <div className="min-h-screen bg-gray-50 py-12 flex items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
   }
 
-  if (serverError || !event) {
+  if (error || !event) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Event Not Found</h1>
-          <p className="text-gray-600 mb-6">{serverError || 'This event does not exist.'}</p>
+          <p className="text-gray-600 mb-6">{error || 'This event does not exist.'}</p>
           <Link href="/events" className="text-emerald-600 hover:text-emerald-700">
             ← Back to Events
           </Link>
@@ -1070,77 +1089,3 @@ export default function EventDetailPage({ initialEvent, error: serverError }: Ev
     </div >
   );
 }
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { id } = context.params || {};
-
-  if (!id || typeof id !== 'string') {
-    return { notFound: true };
-  }
-
-  try {
-    // Import API dynamically to avoid build-time issues if any
-    const { api } = await import('@/lib/api');
-    const event = await api.events.get(id);
-
-    if (!event) {
-      return { notFound: true };
-    }
-
-    // --- SEO Metadata Calculation (Server-Side) ---
-    const siteUrl = 'https://www.highlandeventshub.co.uk';
-    const canonicalUrl = `${siteUrl}/events/${event.id}`;
-
-    // Ensure absolute image URL
-    let ogImageUrl = 'https://res.cloudinary.com/dakq1xwn1/image/upload/w_1200,h_630,c_fill,q_auto/v1767454232/highland_events/events/lhxbivhjsqpwn1hsbz5x.jpg'; // fallback
-    if (event.image_url) {
-      ogImageUrl = event.image_url.startsWith('http')
-        ? event.image_url
-        : `${siteUrl}${event.image_url}`;
-    }
-
-    // Format date for description
-    const eventDate = new Date(event.date_start);
-    const formattedDate = eventDate.toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    });
-
-    // Build description
-    const venueName = event.venue_name || event.location_name || 'the Highlands';
-
-    // Strip HTML tags for clean metadata
-    const cleanDescription = event.description
-      ? event.description.replace(/<[^>]*>?/gm, '')
-      : 'Discover this amazing event in the Scottish Highlands!';
-
-    // Truncate to keep the full meta description under roughly 160 chars + prefix
-    const baseDesc = cleanDescription.substring(0, 150);
-    const description = `Join us at ${venueName} on ${formattedDate}. ${baseDesc}...`;
-
-    const pageTitle = `${event.title} | Highland Events Hub`;
-
-    return {
-      props: {
-        initialEvent: event,
-        // Pass meta prop to _app.tsx
-        meta: {
-          title: pageTitle,
-          description: description,
-          url: canonicalUrl,
-          image: ogImageUrl,
-          type: 'event',
-        }
-      },
-    };
-  } catch (err: any) {
-    console.error('Error fetching event for SSR:', err);
-    return {
-      props: {
-        initialEvent: null,
-        error: err.message || 'Failed to load event',
-      },
-    };
-  }
-};
