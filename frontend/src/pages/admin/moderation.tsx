@@ -5,6 +5,7 @@ import { moderationAPI } from '@/lib/api';
 import { Report, EventResponse } from '@/types';
 import Link from 'next/link';
 import DuplicateDiffModal from '@/components/admin/DuplicateDiffModal';
+import ReportItem from '@/components/admin/ReportItem';
 
 export default function AdminModeration() {
     const [reports, setReports] = useState<Report[]>([]);
@@ -205,57 +206,17 @@ export default function AdminModeration() {
                                         No pending reports. Good job!
                                     </div>
                                 ) : (
-                                    reports.map((report) => (
-                                        <div key={report.id} className="bg-white rounded-lg shadow p-6">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${report.target_type === 'event' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                                                            }`}>
-                                                            {report.target_type}
-                                                        </span>
-                                                        <span className="text-sm text-gray-500">
-                                                            Reported on {new Date(report.created_at).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                    <h3 className="text-lg font-medium text-gray-900 mb-1">
-                                                        Reason: {report.reason}
-                                                    </h3>
-                                                    {report.details && (
-                                                        <p className="text-gray-600 mb-4 bg-gray-50 p-3 rounded text-sm">
-                                                            "{report.details}"
-                                                        </p>
-                                                    )}
-                                                    <div className="text-sm text-gray-500">
-                                                        Target ID: <Link href={`/${report.target_type}s/${report.target_id}`} className="text-emerald-600 hover:underline" target="_blank">{report.target_id}</Link>
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleResolveReport(report.id, 'dismiss')}
-                                                        className="px-3 py-1 text-sm text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
-                                                    >
-                                                        Dismiss
-                                                    </button>
-                                                    {report.reason === 'Potential Duplicate' ? (
-                                                        <button
-                                                            onClick={() => handleReviewConflict(report)}
-                                                            className="px-3 py-1 text-sm text-white bg-blue-600 rounded hover:bg-blue-700"
-                                                        >
-                                                            Review Conflict
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleResolveReport(report.id, 'resolve')}
-                                                            className="px-3 py-1 text-sm text-white bg-red-600 rounded hover:bg-red-700"
-                                                        >
-                                                            Resolve (Take Action)
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
+                                    <div className="space-y-4">
+                                        {reports.map((report) => (
+                                            <ReportItem
+                                                key={report.id}
+                                                report={report}
+                                                onDismiss={(id) => handleResolveReport(id, 'dismiss')}
+                                                onResolve={(id) => handleResolveReport(id, 'resolve')}
+                                                onReviewConflict={handleReviewConflict}
+                                            />
+                                        ))}
+                                    </div>
                                 )}
                             </>
                         )}
