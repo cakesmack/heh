@@ -666,23 +666,7 @@ def list_events(
     )
 
 # ... (create_event remains similar but with priority fix below) ...
-@router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-def create_event(
-    event_data: EventCreate,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-    background_tasks: BackgroundTasks = None
-):
-    # ... (Validation code same as before, jump to status logic) ...
-    # Placeholder for start of function to match Replace tool
-    # I will replace the whole function to ensure logic is 100% correct in the snippet
-    # Since I cannot use "Replace" with a partial match in the middle easily without context
-    # I will rely on the previous View to guide me, but the previous View output ended at 1204
-    # which is AFTER get_event. create_event starts at 831.
-    # I will re-issue the `create_event` part properly.
-    # Actually, the replacement above is likely too big for one chunk and might fail formatted.
-    # I will split the `list_events` replacement from `create_event`.
-    pass
+
 
 
 
