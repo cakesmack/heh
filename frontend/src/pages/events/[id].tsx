@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
+import { GetServerSideProps } from 'next';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/common/Card';
@@ -31,24 +32,31 @@ const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), {
 // Dynamic import for AccommodationMap (Stay22) - heavy iframe, lazy loaded
 const AccommodationMap = dynamic(() => import('@/components/events/AccommodationMap'), { ssr: false });
 
-export default function EventDetailPage() {
+interface EventDetailPageProps {
+  initialEvent?: EventResponse | null;
+  serverError?: string;
+  baseUrl?: string;
+}
+
+export default function EventDetailPage({ initialEvent, serverError, baseUrl }: EventDetailPageProps) {
   const router = useRouter();
   const { id } = router.query;
   const { isAuthenticated, user } = useAuth();
   const { trackEventView, trackTicketClick } = useAnalytics();
 
-  const [event, setEvent] = useState<EventResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [event, setEvent] = useState<EventResponse | null>(initialEvent || null);
+  const [loading, setLoading] = useState(!initialEvent);
+  const [error, setError] = useState<string | null>(serverError || null);
 
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [imageLightboxOpen, setImageLightboxOpen] = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState<number>(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
-  // Fetch Event Data (Client-Side)
+  // Fetch Event Data (Client-Side Fallback)
   useEffect(() => {
-    if (!router.isReady || !id) return;
+    // Only fetch if we don't have an event and we have an ID
+    if (event || !router.isReady || !id) return;
 
     const fetchEvent = async () => {
       setLoading(true);
@@ -65,8 +73,7 @@ export default function EventDetailPage() {
     };
 
     fetchEvent();
-  }, [router.isReady, id]);
-
+  }, [router.isReady, id, event]);
 
   // Fetch bookmark count for social proof
   useEffect(() => {
@@ -158,7 +165,7 @@ export default function EventDetailPage() {
 
   // SEO: Dynamic Title (Title | Venue | Date | Site Name)
   const pageTitle = `${event.title} at ${venueName} | ${formattedOgDate} | Highland Events Hub`;
-  const siteUrl = 'https://www.highlandeventshub.co.uk';
+  const siteUrl = baseUrl || 'https://www.highlandeventshub.co.uk';
   const ogImageUrl = event.image_url
     ? (event.image_url.startsWith('http') ? event.image_url : `${siteUrl}${event.image_url}`)
     : `${siteUrl}/images/og-default.jpg`;
