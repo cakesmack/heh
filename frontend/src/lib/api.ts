@@ -1060,6 +1060,18 @@ export const moderationAPI = {
       }),
     });
   },
+
+  resolveDuplicate: async (reportId: number, decision: 'KEEP_ORIGINAL' | 'REPLACE_WITH_NEW', newEventId: string, existingEventId: string) => {
+    return apiFetch('/api/moderation/resolve-duplicate', {
+      method: 'POST',
+      body: JSON.stringify({
+        report_id: reportId,
+        decision,
+        new_event_id: newEventId,
+        existing_event_id: existingEventId
+      }),
+    });
+  },
 };
 
 export const recommendationsAPI = {

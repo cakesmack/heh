@@ -313,3 +313,71 @@ def notify_interested_users(event: Event, session: Session):
         
     except Exception as e:
         logger.error(f"Error notifying interested users for event {event.id}: {e}")
+
+# --- Duplicate Resolution ---
+
+class DuplicateResolutionRequest(BaseModel):
+    report_id: int
+    decision: str  # KEEP_ORIGINAL | REPLACE_WITH_NEW
+    new_event_id: str
+    existing_event_id: str
+
+@router.post("/resolve-duplicate")
+def resolve_duplicate(
+    resolution: DuplicateResolutionRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Resolve a duplicate conflict by either keeping the original or replacing it with the new one.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # 1. Fetch Entities
+    report = session.get(Report, resolution.report_id)
+    new_event = session.get(Event, resolution.new_event_id)
+    existing_event = session.get(Event, resolution.existing_event_id)
+
+    if not report or not new_event or not existing_event:
+        raise HTTPException(status_code=404, detail="One or more entities not found")
+
+    # 2. Execute Decision
+    if resolution.decision == "KEEP_ORIGINAL":
+        # Reject the new one
+        new_event.status = "rejected"
+        new_event.moderation_reason = f"Duplicate of {existing_event.id}"
+        
+        # Log
+        logger.info(f"[DUPLICATE_RESOLVE] Kept Original {existing_event.id}. Rejected New {new_event.id}.")
+        
+        # Notify Organizer of rejection
+        if new_event.organizer:
+             # (Reuse existing notification logic if possible, or simple email)
+             pass
+
+    elif resolution.decision == "REPLACE_WITH_NEW":
+        # Archive the old one
+        existing_event.status = "archived"
+        
+        # Publish the new one
+        new_event.status = "published"
+        new_event.moderation_reason = None # Clear any duplicate flags
+        
+        logger.info(f"[DUPLICATE_RESOLVE] Replaced Original {existing_event.id} with New {new_event.id}.")
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid decision")
+
+    # 3. Resolve Report
+    report.status = "resolved"
+    report.resolved_at = datetime.utcnow()
+    report.resolved_by = str(current_user.id)
+    report.details = f"{report.details or ''} | Resolution: {resolution.decision}"
+
+    session.add(report)
+    session.add(new_event)
+    session.add(existing_event)
+    session.commit()
+
+    return {"status": "success", "decision": resolution.decision}

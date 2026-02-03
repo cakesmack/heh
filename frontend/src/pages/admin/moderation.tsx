@@ -44,12 +44,70 @@ export default function AdminModeration() {
         fetchData();
     }, []);
 
+    // Report Resolution State
+    const [resolveReportId, setResolveReportId] = useState<number | null>(null);
+
     const handleResolveReport = async (reportId: number, action: 'resolve' | 'dismiss') => {
         try {
             await moderationAPI.resolveReport(reportId, action);
             setReports(reports.filter(r => r.id !== reportId));
         } catch (err) {
             alert('Failed to update report');
+        }
+    };
+
+    const handleReviewConflict = async (report: Report) => {
+        if (!report.details) return;
+        try {
+            const details = JSON.parse(report.details);
+            const matchedEventId = details.matched_event_id;
+
+            // We need the NEW event details to show in the modal.
+            // Check if it's already in pendingEvents
+            let newEvent = pendingEvents.find(e => e.id === report.target_id);
+
+            if (!newEvent) {
+                // Fetch it if not in list
+                // Note: The new endpoint for getting a single event might be needed if it's not pending?
+                // Or acts as get(id). eventsAPI.get(id) should work.
+                const { eventsAPI } = await import('@/lib/api');
+                newEvent = await eventsAPI.get(report.target_id);
+            }
+
+            if (newEvent && matchedEventId) {
+                setDuplicateEvent(newEvent);
+                setDuplicateMatchId(matchedEventId);
+                setResolveReportId(report.id); // Mark that we are resolving THIS report
+                setDuplicateModalOpen(true);
+            }
+        } catch (e) {
+            console.error("Failed to parse report details", e);
+            alert("Could not load duplicate details.");
+        }
+    };
+
+    const handleResolveDuplicateDecision = async (decision: 'KEEP_ORIGINAL' | 'REPLACE_WITH_NEW') => {
+        if (!resolveReportId || !duplicateEvent || !duplicateMatchId) return;
+
+        try {
+            await moderationAPI.resolveDuplicate(
+                resolveReportId,
+                decision,
+                duplicateEvent.id,
+                duplicateMatchId
+            );
+
+            // Cleanup UI
+            setReports(reports.filter(r => r.id !== resolveReportId));
+            setPendingEvents(pendingEvents.filter(e => e.id !== duplicateEvent.id)); // If it was pending, it's represented
+
+            setDuplicateModalOpen(false);
+            setDuplicateEvent(null);
+            setResolveReportId(null);
+
+        } catch (err) {
+            console.error(err);
+            alert('Failed to resolve duplicate conflict.');
         }
     };
 
@@ -85,10 +143,12 @@ export default function AdminModeration() {
     const handleOpenDuplicateCheck = (event: EventResponse, matchId: string) => {
         setDuplicateEvent(event);
         setDuplicateMatchId(matchId);
+        setResolveReportId(null); // Not resolving a report, just the event flow
         setDuplicateModalOpen(true);
     };
 
     const handleDuplicateDecision = async (eventId: string, action: 'approve' | 'reject', reason?: string) => {
+        // Standard event moderation (not report resolution)
         await handleModerateEvent(eventId, action, reason);
         setDuplicateModalOpen(false);
         setDuplicateEvent(null);
@@ -177,12 +237,21 @@ export default function AdminModeration() {
                                                     >
                                                         Dismiss
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleResolveReport(report.id, 'resolve')}
-                                                        className="px-3 py-1 text-sm text-white bg-red-600 rounded hover:bg-red-700"
-                                                    >
-                                                        Resolve (Take Action)
-                                                    </button>
+                                                    {report.reason === 'Potential Duplicate' ? (
+                                                        <button
+                                                            onClick={() => handleReviewConflict(report)}
+                                                            className="px-3 py-1 text-sm text-white bg-blue-600 rounded hover:bg-blue-700"
+                                                        >
+                                                            Review Conflict
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleResolveReport(report.id, 'resolve')}
+                                                            className="px-3 py-1 text-sm text-white bg-red-600 rounded hover:bg-red-700"
+                                                        >
+                                                            Resolve (Take Action)
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -325,6 +394,7 @@ export default function AdminModeration() {
                         matchedEventId={duplicateMatchId}
                         onApprove={(id) => handleDuplicateDecision(id, 'approve')}
                         onReject={(id, reason) => handleDuplicateDecision(id, 'reject', reason)}
+                        onResolve={resolveReportId ? handleResolveDuplicateDecision : undefined}
                     />
                 )}
             </AdminLayout>

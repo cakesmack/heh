@@ -8,8 +8,9 @@ interface DuplicateDiffModalProps {
     onClose: () => void;
     newEvent: EventResponse;
     matchedEventId: string;
-    onApprove: (id: string) => void;
-    onReject: (id: string, reason: string) => void;
+    onApprove?: (id: string) => void;
+    onReject?: (id: string, reason: string) => void;
+    onResolve?: (decision: 'KEEP_ORIGINAL' | 'REPLACE_WITH_NEW') => void;
 }
 
 export default function DuplicateDiffModal({
@@ -18,7 +19,8 @@ export default function DuplicateDiffModal({
     newEvent,
     matchedEventId,
     onApprove,
-    onReject
+    onReject,
+    onResolve
 }: DuplicateDiffModalProps) {
     const [existingEvent, setExistingEvent] = useState<EventResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -79,18 +81,38 @@ export default function DuplicateDiffModal({
 
                         <div className="flex justify-end gap-4 mt-8 pt-4 border-t">
                             <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-                            <button
-                                onClick={() => onReject(newEvent.id, `Duplicate of ${existingEvent.id}`)}
-                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 shadow-sm"
-                            >
-                                Reject (It's a Duplicate)
-                            </button>
-                            <button
-                                onClick={() => onApprove(newEvent.id)}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-sm"
-                            >
-                                Approve (Different Event)
-                            </button>
+
+                            {onResolve ? (
+                                <>
+                                    <button
+                                        onClick={() => onResolve('KEEP_ORIGINAL')}
+                                        className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-sm"
+                                    >
+                                        Keep Original (Reject New)
+                                    </button>
+                                    <button
+                                        onClick={() => onResolve('REPLACE_WITH_NEW')}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm"
+                                    >
+                                        Replace Original (Publish New)
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => onReject && onReject(newEvent.id, `Duplicate of ${existingEvent.id}`)}
+                                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 shadow-sm"
+                                    >
+                                        Reject (It's a Duplicate)
+                                    </button>
+                                    <button
+                                        onClick={() => onApprove && onApprove(newEvent.id)}
+                                        className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-sm"
+                                    >
+                                        Approve (Different Event)
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 ) : (
