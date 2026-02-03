@@ -1680,6 +1680,12 @@ def delete_event(
     for pv in participating_venues:
         session.delete(pv)
 
+    # Cleanup showtimes
+    from app.models.showtime import EventShowtime
+    showtimes = session.exec(select(EventShowtime).where(EventShowtime.event_id == event.id)).all()
+    for st in showtimes:
+        session.delete(st)
+
     # Decrement tag usage counts for main event
     event_tags = session.exec(
         select(EventTag).where(EventTag.event_id == event.id)
