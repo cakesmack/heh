@@ -140,24 +140,29 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
     
     # This is slightly expensive per-event, but necessary for the dashboard.
     # In a larger app, we would use a join or an aggregated stats table.
-    analytics = session.exec(
-        select(AnalyticsEvent)
-        .where(AnalyticsEvent.event_type.in_(["event_view", "save_event", "click_ticket"]))
-    ).all()
+    # PERFORMANCE HOTFIX: Commented out real-time analytics
+    # The previous code was fetching the entire table for every event.
+    # TODO: Replace with an optimized SQL GROUP BY query in the main list_events function.
     
+    # analytics = session.exec(
+    #    select(AnalyticsEvent)
+    #    .where(AnalyticsEvent.event_type.in_(["event_view", "save_event", "click_ticket"]))
+    # ).all()
+    
+    # Temporary placeholder to restore speed
     view_count = 0
     save_count = 0
     ticket_click_count = 0
-    
-    for ae in analytics:
-        target_id = ae.event_metadata.get("target_id") if ae.event_metadata else None
-        if target_id and target_id.replace("-", "") == normalized_id:
-            if ae.event_type == "event_view":
-                view_count += 1
-            elif ae.event_type == "save_event":
-                save_count += 1
-            elif ae.event_type == "click_ticket":
-                ticket_click_count += 1
+
+    # for ae in analytics:
+    #     target_id = ae.event_metadata.get("target_id") if ae.event_metadata else None
+    #     if target_id and target_id.replace("-", "") == normalized_id:
+    #         if ae.event_type == "event_view":
+    #             view_count += 1
+    #         elif ae.event_type == "save_event":
+    #             save_count += 1
+    #         elif ae.event_type == "click_ticket":
+    #             ticket_click_count += 1
 
     response.view_count = view_count
     response.save_count = save_count
