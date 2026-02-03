@@ -335,10 +335,12 @@ def resolve_duplicate(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # 1. Fetch Entities
-    from app.core.utils import normalize_uuid
+    # Inline normalization to avoid potential circular imports with app.core.utils
+    def _norm(u): return str(u).replace("-", "") if u else u
+    
     report = session.get(Report, resolution.report_id)
-    new_event = session.get(Event, normalize_uuid(resolution.new_event_id))
-    existing_event = session.get(Event, normalize_uuid(resolution.existing_event_id))
+    new_event = session.get(Event, _norm(resolution.new_event_id))
+    existing_event = session.get(Event, _norm(resolution.existing_event_id))
 
     if not report or not new_event or not existing_event:
         missing = []
