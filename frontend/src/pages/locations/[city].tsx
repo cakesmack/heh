@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { eventsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 import { GetServerSideProps } from 'next';
-import { EventCard } from '@/components/events/EventCard';
+import { LocationFeed } from '@/components/locations/LocationFeed';
 
 interface LocationPageProps {
     city: string;
@@ -19,11 +19,11 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
     let events: EventResponse[] = [];
 
     try {
-        // Fetch Events using the specific city_filter
+        // Fetch Events using the specific city_filter with a limit
         const res = await eventsAPI.list({
             // @ts-ignore - city_filter is now supported in API client
             city_filter: cityStr,
-            limit: 50,
+            limit: 24, // Optimized initial load
             sort_by: 'date',
             time_range: 'upcoming'
         });
@@ -63,7 +63,7 @@ export default function LocationPage({ city, events }: LocationPageProps) {
                     </h1>
                     <p className="text-gray-600 text-lg">
                         {hasEvents
-                            ? `Found ${events.length} upcoming events in ${formattedCity}.`
+                            ? `Upcoming events in ${formattedCity}.`
                             : `Checking for events in ${formattedCity}...`
                         }
                     </p>
@@ -72,11 +72,7 @@ export default function LocationPage({ city, events }: LocationPageProps) {
 
             <div className="container mx-auto px-4 py-8">
                 {hasEvents ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {events.map((event) => (
-                            <EventCard key={event.id} event={event} />
-                        ))}
-                    </div>
+                    <LocationFeed initialEvents={events} city={city} />
                 ) : (
                     <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

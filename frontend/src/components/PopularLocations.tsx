@@ -6,9 +6,14 @@ export default function PopularLocations() {
         { name: 'Inverness', slug: 'inverness' },
         { name: 'Skye', slug: 'skye' },
         { name: 'Fort William', slug: 'fort-william' },
-        { name: 'Oban', slug: 'oban' },
+        { name: 'Elgin', slug: 'elgin' },       // Fixed lowercase
         { name: 'Thurso', slug: 'thurso' },
+        { name: 'Wick', slug: 'wick' },          // New
         { name: 'Aviemore', slug: 'aviemore' },
+        { name: 'Dingwall', slug: 'dingwall' },  // New
+        { name: 'Nairn', slug: 'nairn' },        // Fixed lowercase
+        { name: 'Dornoch', slug: 'dornoch' },    // New
+        { name: 'Ullapool', slug: 'ullapool' },  // Fixed lowercase
     ];
 
     return (
