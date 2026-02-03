@@ -11,6 +11,7 @@ import Modal from '@/components/admin/Modal';
 import ImageUpload from '@/components/common/ImageUpload';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
+import StatusDropdown from '@/components/admin/StatusDropdown';
 import { eventsAPI, categoriesAPI, venuesAPI, adminEventsAPI, AdminEventItem } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 import RichTextEditor from '@/components/common/RichTextEditor';
@@ -586,8 +587,14 @@ export default function AdminEvents() {
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {event.organizer_email?.split('@')[0] || '—'}
                     </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(event.status)}
+                    <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                      <StatusDropdown
+                        eventId={event.id}
+                        currentStatus={event.status || 'pending'}
+                        onStatusChange={(newStatus) => {
+                          setEvents(prev => prev.map(e => e.id === event.id ? { ...e, status: newStatus } : e));
+                        }}
+                      />
                     </td>
                     <td className="py-3 px-4">
                       {event.is_recurring || event.parent_event_id ? (

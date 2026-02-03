@@ -129,6 +129,7 @@ class EventUpdate(BaseModel):
     frequency: Optional[str] = Field(None, description="WEEKLY, BIWEEKLY, MONTHLY")
     recurrence_end_date: Optional[datetime] = None
     weekdays: Optional[List[int]] = Field(None, description="Days of the week for recurring events (0=Mon, 6=Sun)")
+    status: Optional[str] = Field(None, description="Admin only: Update event status")
 
 
 class EventResponse(BaseModel):

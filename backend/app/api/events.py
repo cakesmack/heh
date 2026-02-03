@@ -1422,6 +1422,12 @@ def update_event(
             
         if field in ("venue_id", "organizer_profile_id") and value is not None:
             value = normalize_uuid(value)
+            
+        if field == "status":
+            if not current_user.is_admin:
+                # Silently ignore status updates from non-admins, or you could raise 403
+                continue
+                
         setattr(event, field, value)
 
     # Update geohash based on location source

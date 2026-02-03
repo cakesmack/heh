@@ -416,6 +416,7 @@ export interface EventUpdate {
   map_display_lat?: number | null;
   map_display_lng?: number | null;
   map_display_label?: string | null;
+  status?: string;
 }
 
 export interface EventFilter {
