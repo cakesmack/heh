@@ -417,15 +417,23 @@ def list_events(
         query = query.outerjoin(Venue, Event.venue_id == Venue.id)
 
         # 2. STRICT Location Filter
+        # Search efficiently using OR logic across all potential location fields
+        # This covers:
+        # - Address: "123 High St, Inverness"
+        # - Name: "Inverness Leisure Centre"
+        # - Formatted Address: "Inverness, UK"
+        # - Manual Location: "Town Hall, Inverness"
         query = query.where(
             or_(
                 col(Venue.address).ilike(f"%{city_filter}%"),
+                col(Venue.formatted_address).ilike(f"%{city_filter}%"),
                 col(Venue.name).ilike(f"%{city_filter}%"),
                 Event.location_name.ilike(f"%{city_filter}%")
             )
         )
         
         # 3. CRITICAL: EXECUTE IMMEDIATELY
+        # Return exactly what matches, even if empty. NO FALLBACKS.
         results = session.exec(query.order_by(Event.date_start.asc())).all()
         print(f"DEBUG: Found {len(results)} events for '{city_filter}'")
         
