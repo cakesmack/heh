@@ -340,7 +340,14 @@ def resolve_duplicate(
     existing_event = session.get(Event, resolution.existing_event_id)
 
     if not report or not new_event or not existing_event:
-        raise HTTPException(status_code=404, detail="One or more entities not found")
+        missing = []
+        if not report: missing.append(f"Report {resolution.report_id}")
+        if not new_event: missing.append(f"New Event {resolution.new_event_id}")
+        if not existing_event: missing.append(f"Existing Event {resolution.existing_event_id}")
+        
+        error_msg = f"Entities not found: {', '.join(missing)}"
+        logger.error(f"[DUPLICATE_RESOLVE_FAIL] {error_msg}")
+        raise HTTPException(status_code=404, detail=error_msg)
 
     # 2. Execute Decision
     if resolution.decision == "KEEP_ORIGINAL":
