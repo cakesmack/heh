@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import Optional, List
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, Request
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, col
+from sqlalchemy import or_
 from app.core.limiter import limiter
 from sqlalchemy import case
 
@@ -405,20 +406,40 @@ def list_events(
         ).where(Tag.name.in_(tag_list))
 
     # --- SCENARIO B: SEO Page (Strict City Filter) ---
+    # --- SCENARIO B: SEO Page (Strict City Filter) ---
     if city_filter:
-        print(f"[EVENTS_DEBUG] SEO City Filter: {city_filter}")
-        city_term = f"%{city_filter}%"
-        
-        if not venue_joined:
-            query = query.outerjoin(Venue, Event.venue_id == Venue.id)
-            venue_joined = True
-            
-        # Strict logic: Venue Address OR Venue Name OR Event Location Name
-        # Searches full address string for city name (e.g. "Inverness" in "123 High St, Inverness")
+        print(f"DEBUG: City Filter Active: '{city_filter}'")
+
+        # 1. Base Query (Reset query to ensure clean state)
+        query = select(Event).where(Event.date_end >= datetime.utcnow()).where(Event.status == "published")
+
+        # Join Venue strictly for filtering
+        query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+
+        # 2. STRICT Location Filter
         query = query.where(
-            (Venue.address.ilike(city_term)) |
-            (Venue.name.ilike(city_term)) |
-            (Event.location_name.ilike(city_term))
+            or_(
+                col(Venue.address).ilike(f"%{city_filter}%"),
+                col(Venue.name).ilike(f"%{city_filter}%"),
+                Event.location_name.ilike(f"%{city_filter}%")
+            )
+        )
+        
+        # 3. CRITICAL: EXECUTE IMMEDIATELY
+        results = session.exec(query.order_by(Event.date_start.asc())).all()
+        print(f"DEBUG: Found {len(results)} events for '{city_filter}'")
+        
+        # Build responses
+        event_responses = [
+            build_event_response(event, session, latitude, longitude)
+            for event in results
+        ]
+        
+        return EventListResponse(
+            events=event_responses,
+            total=len(results),
+            skip=skip,
+            limit=limit
         )
 
     # --- SCENARIO A: Standard Search (if no city_filter) ---
