@@ -306,6 +306,7 @@ export const eventsAPI = {
       if (filters.skip !== undefined) params.skip = filters.skip;
       if (filters.limit !== undefined) params.limit = filters.limit;
       if (filters.sort_by) params.sort_by = filters.sort_by;
+      if (filters.city_filter) params.city_filter = filters.city_filter;
     }
 
     const queryString = buildQueryString(params);
