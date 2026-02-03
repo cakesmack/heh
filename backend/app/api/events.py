@@ -416,22 +416,19 @@ def list_events(
         ).where(Tag.name.in_(tag_list))
 
     # --- SCENARIO B: SEO Page (Strict City Filter) ---
-    # --- SCENARIO B: SEO Page (Strict City Filter) ---
     if city_filter:
         print(f"DEBUG: City Filter Active: '{city_filter}'")
 
-        # 1. Base Query (Reset query to ensure clean state)
-        # RE-APPLY SECURITY FILTER HERE TOO for safety
+        # 1. Base Query
         query = select(Event).where(Event.date_end >= datetime.utcnow())
         
         if not is_admin:
-             query = query.where(Event.status == "published") # FORCE PUBLISHED
+             query = query.where(Event.status == "published")
 
         # Join Venue strictly for filtering
         query = query.outerjoin(Venue, Event.venue_id == Venue.id)
 
         # 2. STRICT Location Filter
-        # Search efficiently using OR logic across all potential location fields
         query = query.where(
             or_(
                 col(Venue.address).ilike(f"%{city_filter}%"),
@@ -441,10 +438,17 @@ def list_events(
             )
         )
         
-        # 3. CRITICAL: EXECUTE IMMEDIATELY
-        # Return exactly what matches, even if empty. NO FALLBACKS.
-        results = session.exec(query.order_by(Event.date_start.asc())).all()
-        print(f"DEBUG: Found {len(results)} events for '{city_filter}'")
+        # 3. GET TOTAL COUNT (Before slicing)
+        # Efficiently count matches so the frontend knows when to stop "Load More"
+        count_query = select(func.count()).select_from(query.subquery())
+        total = session.exec(count_query).one() or 0
+
+        # 4. APPLY PAGINATION (The Fix)
+        # Sort by date, then slice the results
+        query = query.order_by(Event.date_start.asc()).offset(skip).limit(limit)
+        
+        results = session.exec(query).all()
+        print(f"DEBUG: Returned {len(results)} events for '{city_filter}' (Skip: {skip}, Limit: {limit})")
         
         # Build responses
         event_responses = [
@@ -454,7 +458,7 @@ def list_events(
         
         return EventListResponse(
             events=event_responses,
-            total=len(results),
+            total=total,
             skip=skip,
             limit=limit
         )

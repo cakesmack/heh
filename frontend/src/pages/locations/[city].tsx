@@ -27,7 +27,16 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
             sort_by: 'date',
             time_range: 'upcoming'
         });
-        events = res.events;
+        // Flatten and reduce payload size
+        events = res.events.map(event => ({
+            ...event,
+            description: event.description ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 200) : '',
+            // Exclude heavy nested objects if they exist
+            participating_venues: undefined,
+            organizer_profile: undefined,
+            showtimes: event.showtimes ? event.showtimes.slice(0, 3) : undefined // Limit showtimes if many
+        }));
+
     } catch (error) {
         console.error('Error fetching location events:', error);
         // Fail gracefully with empty list
