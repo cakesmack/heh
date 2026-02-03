@@ -413,10 +413,11 @@ def list_events(
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)
             venue_joined = True
             
-        # Strict logic: Venue Address OR Event Location Name
+        # Strict logic: Venue Address OR Venue Name OR Event Location Name
         # Searches full address string for city name (e.g. "Inverness" in "123 High St, Inverness")
         query = query.where(
             (Venue.address.ilike(city_term)) |
+            (Venue.name.ilike(city_term)) |
             (Event.location_name.ilike(city_term))
         )
 

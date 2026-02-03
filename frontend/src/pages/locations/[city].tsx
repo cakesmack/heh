@@ -32,14 +32,10 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
         });
         initialEvents = cityEventsResponse.events;
 
-        // 2. Fetch Fallback "Just Added" if no events found
+        // 2. Fetch Fallback logic REMOVED to allow debugging strict filtering
+        // If no events found, we return empty list so user can see "0 events" instead of unrelated data.
         if (initialEvents.length === 0) {
-            const fallbackResponse = await eventsAPI.list({
-                limit: 9,
-                sort_by: 'created', // Just Added
-                include_past: false
-            });
-            fallbackEvents = fallbackResponse.events;
+            // Do nothing. strict filter returned 0.
         }
 
     } catch (error) {
