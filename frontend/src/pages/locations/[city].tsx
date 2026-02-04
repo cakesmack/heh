@@ -12,17 +12,21 @@ interface LocationPageProps {
 }
 
 // 1. Dynamic SEO & Data Fetching (Server Side)
+// 1. Dynamic SEO & Data Fetching (Server Side)
 export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (context) => {
     const { city } = context.params as { city: string };
-    const cityStr = String(city); // e.g., "inverness"
+
+    // Convert "fort-william" -> "fort william"
+    const slug = String(city);
+    const cityFilter = decodeURIComponent(slug).replace(/-/g, ' ');
 
     let events: EventResponse[] = [];
 
     try {
-        // Fetch Events using the specific city_filter with a limit
+        // Fetch Events using the CLEAN city name
         const res = await eventsAPI.list({
             // @ts-ignore - city_filter is now supported in API client
-            city_filter: cityStr,
+            city_filter: cityFilter,
             limit: 24, // Optimized initial load
             sort_by: 'date',
             time_range: 'upcoming'
@@ -31,27 +35,26 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
         events = res.events.map(event => ({
             ...event,
             description: event.description ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 200) : '',
-            // Exclude heavy nested objects if they exist
-            participating_venues: undefined,
+            participant_venues: undefined,
             organizer_profile: undefined,
-            showtimes: event.showtimes ? event.showtimes.slice(0, 3) : undefined // Limit showtimes if many
+            showtimes: event.showtimes ? event.showtimes.slice(0, 3) : undefined
         }));
 
     } catch (error) {
         console.error('Error fetching location events:', error);
-        // Fail gracefully with empty list
     }
 
     return {
         props: {
-            city: cityStr,
+            city: cityFilter, // Pass the CLEAN name to the client
             events,
         }
     };
 };
 
 export default function LocationPage({ city, events }: LocationPageProps) {
-    const formattedCity = city.charAt(0).toUpperCase() + city.slice(1);
+    // Capitalize Each Word (e.g. Fort William)
+    const formattedCity = city.replace(/\b\w/g, c => c.toUpperCase());
     const hasEvents = events.length > 0;
 
     return (
@@ -68,7 +71,7 @@ export default function LocationPage({ city, events }: LocationPageProps) {
             <div className="bg-white border-b border-gray-200 py-12">
                 <div className="container mx-auto px-4">
                     <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 mb-4 capitalize">
-                        Events in {decodeURIComponent(city)}
+                        Events in {formattedCity}
                     </h1>
                     <p className="text-gray-600 text-lg">
                         {hasEvents
