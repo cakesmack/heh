@@ -1096,3 +1096,42 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
     </div >
   );
 }
+
+export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = async (context) => {
+  const { id } = context.params as { id: string };
+
+  try {
+    // Determine API URL (Server-side)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
+
+    // Fetch Event Data directly to ensure SSR speed and isolation
+    const res = await fetch(`${apiUrl}/api/events/${id}`);
+
+    if (res.status === 404) {
+      return { notFound: true };
+    }
+
+    if (!res.ok) {
+      // Allow client-side fallback or show error
+      throw new Error(`Failed to fetch event: ${res.status} ${res.statusText}`);
+    }
+
+    const event: EventResponse = await res.json();
+
+    return {
+      props: {
+        initialEvent: event,
+        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk',
+      },
+    };
+  } catch (error) {
+    console.error('SSR Error fetching event:', error);
+    // Fallback to client-side fetching if server fails (e.g. backend down)
+    return {
+      props: {
+        initialEvent: undefined, // Let client components handle null/undefined
+        serverError: 'Failed to load event data server-side',
+      },
+    };
+  }
+};
