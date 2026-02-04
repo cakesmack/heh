@@ -1117,11 +1117,29 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
     }
 
     const event: EventResponse = await res.json();
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
+
+    // Construct rich text description safely
+    const description = event.description
+      ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...'
+      : `Join us for ${event.title} at ${event.venue_name || event.location_name || 'Highland Events Hub'}`;
+
+    const ogImage = event.image_url
+      ? (event.image_url.startsWith('http') ? event.image_url : `${baseUrl}${event.image_url}`)
+      : `${baseUrl}/images/og-default.jpg`;
 
     return {
       props: {
         initialEvent: event,
-        baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk',
+        baseUrl,
+        // Pass metadata to _app.tsx for immediate SEO
+        meta: {
+          title: `${event.title} | Highland Events Hub`,
+          description,
+          url: `${baseUrl}/events/${event.id}`,
+          image: ogImage,
+          type: 'event',
+        }
       },
     };
   } catch (error) {
