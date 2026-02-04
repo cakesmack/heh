@@ -461,6 +461,36 @@ def list_events(
         
         # 4. APPLY DATE FILTER (Time Range / Custom Dates)
         now = datetime.utcnow()
+        today = now.date()
+        from datetime import timedelta
+
+        # Resolve Presets if custom dates aren't provided
+        if not date_from and not date_to and time_range in ["today", "tomorrow", "weekend", "this_weekend"]:
+            if time_range == "today":
+                date_from = now
+                date_to = datetime(today.year, today.month, today.day, 23, 59, 59)
+            elif time_range == "tomorrow":
+                tmrw = today + timedelta(days=1)
+                date_from = datetime(tmrw.year, tmrw.month, tmrw.day, 0, 0, 0)
+                date_to = datetime(tmrw.year, tmrw.month, tmrw.day, 23, 59, 59)
+            elif time_range in ["weekend", "this_weekend"]:
+                # Logic: If today is Fri/Sat/Sun, it's "This Weekend" (Now until Sun end)
+                # Else: Next Friday until Sunday end
+                weekday = today.weekday() # Mon=0, Sun=6
+                
+                if weekday >= 4: # Fri(4), Sat(5), Sun(6)
+                    date_from = now
+                    days_until_sunday = 6 - weekday
+                    sun = today + timedelta(days=days_until_sunday)
+                    date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59)
+                else: 
+                    # Mon-Thu: Next Friday
+                    days_until_friday = 4 - weekday
+                    fri = today + timedelta(days=days_until_friday)
+                    sun = fri + timedelta(days=2)
+                    date_from = datetime(fri.year, fri.month, fri.day, 0, 0, 0)
+                    date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59)
+
         if time_range == "past":
             query = query.where(Event.date_end < now)
         elif date_from or date_to:
