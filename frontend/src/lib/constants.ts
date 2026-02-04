@@ -22,7 +22,7 @@ export const POPULAR_LOCATIONS = [
     {
         name: 'Elgin',
         slug: 'elgin',
-        imagePath: 'https://pixabay.com/images/download/efraimstochter-ruin-3712450_1920.jpg'
+        imagePath: 'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/12/41/ab/dd/kenny-lam-all-rights.jpg?w=1100&h=1100&s=1'
     },
     {
         name: 'Nairn',
@@ -37,6 +37,6 @@ export const POPULAR_LOCATIONS = [
     {
         name: 'Ullapool',
         slug: 'ullapool',
-        imagePath: 'https://www.visitscotland.com/wsimgs/Town%20Centre%2CThurso_1470281102.jpg'
+        imagePath: 'https://www.ullapool.com/img/bg-img/4.jpg'
     },
 ];

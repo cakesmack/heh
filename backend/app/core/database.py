@@ -37,10 +37,11 @@ if is_sqlite:
 else:
     engine = create_engine(
         database_url,
-        echo=settings.DEBUG,
-        pool_pre_ping=True,  # Verify connections before using
-        pool_size=5,
-        max_overflow=10,
+        echo=False,                # Keep this False for production speed
+        pool_pre_ping=True,        # CRITICAL: Auto-detect and reset stale connections
+        pool_size=20,              # INCREASED: Allow 20 simultaneous connections (was 5)
+        max_overflow=10,           # Allow 10 extra "burst" connections
+        pool_recycle=1800          # Recycle connections every 30 minutes to prevent timeouts
     )
 
 
