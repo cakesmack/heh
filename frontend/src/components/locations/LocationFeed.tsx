@@ -25,6 +25,9 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
 
     const [isFiltering, setIsFiltering] = useState(false);
 
+    // We need a ref to skip the initial fetch because `initialEvents` is already there.
+    const isMounted = React.useRef(false);
+
     // Fetch Categories on Mount
     useEffect(() => {
         const fetchCategories = async () => {
@@ -79,7 +82,6 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
             }
         };
 
-        const isMounted = React.useRef(false);
         if (isMounted.current) {
             fetchFilteredEvents();
         } else {
