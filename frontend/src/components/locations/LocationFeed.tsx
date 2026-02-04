@@ -1,4 +1,15 @@
+import React, { useState, useEffect } from 'react';
+import { EventResponse, Category } from '@/types';
+import { EventCard } from '@/components/events/EventCard';
+import { eventsAPI, categoriesAPI } from '@/lib/api';
 import { SingleDateRangePicker } from '@/components/ui/SingleDateRangePicker';
+
+interface LocationFeedProps {
+    initialEvents: EventResponse[];
+    city: string;
+}
+
+const PAGE_SIZE = 24;
 
 export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
     const [events, setEvents] = useState<EventResponse[]>(initialEvents);
