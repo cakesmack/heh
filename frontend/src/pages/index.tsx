@@ -22,6 +22,7 @@ import DiscoveryBar from '@/components/home/DiscoveryBar';
 import SearchResultsDrawer from '@/components/home/SearchResultsDrawer';
 import RecommendedEvents from '@/components/home/RecommendedEvents';
 import PopularEvents from '@/components/home/PopularEvents';
+import PopularLocations from '@/components/PopularLocations';
 import CuratedCollections from '@/components/home/CuratedCollections';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 
@@ -304,6 +305,9 @@ export default function HomePage() {
       <div id="categories">
         <CategoryGrid />
       </div>
+
+      {/* Popular Locations Grid */}
+      <PopularLocations />
 
       {/* Curated Collections */}
       <CuratedCollections />

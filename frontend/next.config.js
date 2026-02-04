@@ -2,7 +2,7 @@
 const nextConfig = {
     reactStrictMode: true,
     images: {
-        unoptimized: true, // Required for static export
+        unoptimized: true, // Keep for static export compatibility, but allow remotePatterns for future SSR
         remotePatterns: [
             {
                 protocol: 'https',
@@ -10,10 +10,15 @@ const nextConfig = {
                 port: '',
                 pathname: '/**',
             },
+            {
+                protocol: 'https',
+                hostname: 'images.unsplash.com',
+                port: '',
+                pathname: '/**',
+            },
         ],
     },
-    trailingSlash: true, // Recommended for static sites
-
+    trailingSlash: true,
 }
 
 module.exports = nextConfig
