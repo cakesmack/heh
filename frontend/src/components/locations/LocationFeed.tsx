@@ -1,21 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { EventResponse, Category } from '@/types';
-import { EventCard } from '@/components/events/EventCard';
-import { eventsAPI, categoriesAPI } from '@/lib/api';
-
-interface LocationFeedProps {
-    initialEvents: EventResponse[];
-    city: string;
-}
-
-const PAGE_SIZE = 24;
-
-const DATE_FILTERS = [
-    { label: 'Any Date', value: 'upcoming' },
-    { label: 'Today', value: 'today' },
-    { label: 'Tomorrow', value: 'tomorrow' },
-    { label: 'This Weekend', value: 'weekend' },
-];
+import { SingleDateRangePicker } from '@/components/ui/SingleDateRangePicker';
 
 export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
     const [events, setEvents] = useState<EventResponse[]>(initialEvents);
@@ -25,9 +8,9 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
     // Filter State
     const [categories, setCategories] = useState<Category[]>([]);
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [dateFilter, setDateFilter] = useState('upcoming');
-    const [customDateFrom, setCustomDateFrom] = useState('');
-    const [customDateTo, setCustomDateTo] = useState('');
+
+    // Date State (Unified)
+    const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
 
     const [isFiltering, setIsFiltering] = useState(false);
 
@@ -54,25 +37,20 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
             sort_by: 'date'
         };
 
-        if (dateFilter === 'custom') {
-            if (customDateFrom) params.date_from = new Date(customDateFrom).toISOString();
-            if (customDateTo) params.date_to = new Date(customDateTo).toISOString();
-        } else {
-            params.time_range = dateFilter;
+        if (dateRange.from) {
+            params.date_from = dateRange.from.toISOString();
         }
+        if (dateRange.to) {
+            params.date_to = dateRange.to.toISOString();
+        }
+        // If no date range, backend defaults to "upcoming" (now onwards) automatically due to our previous refactor logic?
+        // Wait, previous backend logic: "if not date_from and not date_to... default upcoming". Yes.
+
         return params;
     };
 
-    // We need a ref to skip the initial fetch because `initialEvents` is already there.
-    const isMounted = React.useRef(false);
-
     // Fetch when filters change
     useEffect(() => {
-        // Debounce simple check:
-        // If Custom is selected but no dates, maybe don't fetch or fetch everything?
-        // Let's only fetch custom if we have at least one date or if the user explicitly cleared it (which implies 'all').
-        // Actually, if 'custom' is selected and no dates, it effectively defaults to "all future" in backend logic usually, or "all".
-
         const fetchFilteredEvents = async () => {
             setIsFiltering(true);
             setLoading(true);
@@ -90,13 +68,14 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
             }
         };
 
+        const isMounted = React.useRef(false);
         if (isMounted.current) {
             fetchFilteredEvents();
         } else {
             isMounted.current = true;
         }
 
-    }, [selectedCategory, dateFilter, customDateFrom, customDateTo, city]);
+    }, [selectedCategory, dateRange, city]);
 
 
     const loadMore = async () => {
@@ -129,13 +108,13 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
             {/* Filter Bar */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row gap-4 w-full justify-between items-center">
-                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center">
                         {/* Category Dropdown */}
-                        <div className="relative">
+                        <div className="relative w-full md:w-auto">
                             <select
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="appearance-none w-full md:w-48 bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded-lg focus:outline-none focus:bg-white focus:border-emerald-500 cursor-pointer"
+                                className="appearance-none w-full md:w-56 bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 pr-8 rounded-lg focus:outline-none focus:bg-white focus:border-emerald-500 cursor-pointer text-sm font-medium"
                             >
                                 <option value="">All Categories</option>
                                 {categories.map(cat => (
@@ -147,21 +126,13 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
                             </div>
                         </div>
 
-                        {/* Date Dropdown */}
-                        <div className="relative">
-                            <select
-                                value={dateFilter}
-                                onChange={(e) => setDateFilter(e.target.value)}
-                                className="appearance-none w-full md:w-48 bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded-lg focus:outline-none focus:bg-white focus:border-emerald-500 cursor-pointer"
-                            >
-                                {DATE_FILTERS.map(date => (
-                                    <option key={date.value} value={date.value}>{date.label}</option>
-                                ))}
-                                <option value="custom">Custom Dates</option>
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                            </div>
+                        {/* Single Date Range Picker */}
+                        <div className="w-full md:w-auto">
+                            <SingleDateRangePicker
+                                dateFrom={dateRange.from}
+                                dateTo={dateRange.to}
+                                onChange={setDateRange}
+                            />
                         </div>
                     </div>
 
@@ -169,30 +140,6 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
                         {events.length} results
                     </div>
                 </div>
-
-                {/* Custom Date Inputs */}
-                {dateFilter === 'custom' && (
-                    <div className="flex flex-row gap-4 items-center bg-gray-50 p-3 rounded-lg border border-gray-200 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="flex flex-col w-1/2">
-                            <label className="text-xs text-gray-500 mb-1 ml-1 uppercase font-semibold">From</label>
-                            <input
-                                type="date"
-                                value={customDateFrom}
-                                onChange={(e) => setCustomDateFrom(e.target.value)}
-                                className="w-full bg-white border border-gray-200 text-gray-700 py-2 px-3 rounded-md focus:outline-none focus:border-emerald-500"
-                            />
-                        </div>
-                        <div className="flex flex-col w-1/2">
-                            <label className="text-xs text-gray-500 mb-1 ml-1 uppercase font-semibold">To</label>
-                            <input
-                                type="date"
-                                value={customDateTo}
-                                onChange={(e) => setCustomDateTo(e.target.value)}
-                                className="w-full bg-white border border-gray-200 text-gray-700 py-2 px-3 rounded-md focus:outline-none focus:border-emerald-500"
-                            />
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Events Grid */}
@@ -201,7 +148,7 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
                     <div className="text-center py-20">
                         <p className="text-gray-500 text-lg">No events match your selected filters.</p>
                         <button
-                            onClick={() => { setSelectedCategory(''); setDateFilter('upcoming'); setCustomDateFrom(''); setCustomDateTo(''); }}
+                            onClick={() => { setSelectedCategory(''); setDateRange({ from: null, to: null }); }}
                             className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium"
                         >
                             Clear Filters
