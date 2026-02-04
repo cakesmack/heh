@@ -425,8 +425,9 @@ def list_events(
         print(f"DEBUG: City Filter Active: '{city_filter}'")
 
         # 1. Base Query
-        query = select(Event).where(Event.date_end >= datetime.utcnow())
+        query = select(Event)
         
+        # Apply Status Filter first
         if not is_admin:
              query = query.where(Event.status == "published")
 
@@ -443,16 +444,55 @@ def list_events(
             )
         )
         
-        # 3. GET TOTAL COUNT (Before slicing)
+        # 3. APPLY CATEGORY FILTER (If provided)
+        if category:
+            category_list = [c.strip().lower() for c in category.split(",")]
+            cats = session.exec(
+                select(Category).where(
+                    (Category.slug.in_(category_list)) | 
+                    (func.lower(Category.name).in_(category_list))
+                )
+            ).all()
+            if cats:
+                cat_ids = [c.id for c in cats]
+                query = query.where(Event.category_id.in_(cat_ids))
+            else:
+                 return EventListResponse(events=[], total=0, skip=skip, limit=limit)
+        
+        # 4. APPLY DATE FILTER (Time Range / Custom Dates)
+        now = datetime.utcnow()
+        if time_range == "past":
+            query = query.where(Event.date_end < now)
+        elif date_from or date_to:
+             # Custom Range Logic (Overlap)
+            query = query.outerjoin(EventShowtime, Event.id == EventShowtime.event_id)
+            overlap_conditions = []
+            if date_from and date_to:
+                overlap_conditions.append((Event.date_start <= date_to) & (Event.date_end >= date_from))
+                # overlap_conditions.append((EventShowtime.start_time >= date_from) & (EventShowtime.start_time <= date_to))
+            elif date_from:
+                overlap_conditions.append(Event.date_end >= date_from)
+            elif date_to:
+                overlap_conditions.append(Event.date_start <= date_to)
+            
+            if overlap_conditions:
+                 query = query.where(or_(*overlap_conditions))
+        else:
+            # Default "Upcoming" behavior if no specific range
+            # (Matches standard feed behavior)
+            query = query.where(Event.date_end >= now)
+            
+        
+        # 5. GET TOTAL COUNT (Before slicing)
         # Efficiently count matches so the frontend knows when to stop "Load More"
-        count_query = select(func.count()).select_from(query.subquery())
+        count_query = select(func.count()).select_from(query.distinct().subquery())
         total = session.exec(count_query).one() or 0
 
-        # 4. APPLY PAGINATION (The Fix)
+        # 6. APPLY PAGINATION (The Fix)
         # Sort by date, then slice the results
         query = query.order_by(Event.date_start.asc()).offset(skip).limit(limit)
         
-        results = session.exec(query).all()
+        results = session.exec(query.distinct()).all()
         print(f"DEBUG: Returned {len(results)} events for '{city_filter}' (Skip: {skip}, Limit: {limit})")
         
         # Build responses

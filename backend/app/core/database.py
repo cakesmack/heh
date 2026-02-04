@@ -12,44 +12,26 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
-# Determine which database URL to use
-# Prefer pooler URL for production (Render), fallback to direct URL
-database_url = settings.DATABASE_URL_POOLER or settings.DATABASE_URL
+# 1. DATABASE URL
+# Ensure we use the correct URL from settings
+DATABASE_URL = settings.DATABASE_URL
 
-# SQLite doesn't support pooling options
-is_sqlite = database_url.startswith("sqlite")
-
-# Warn if SQLite is used in production-like environment
-if is_sqlite and os.getenv("RENDER", ""):
-    logger.warning(
-        "⚠️  SQLite detected in production environment! "
-        "This will cause data loss on container restart. "
-        "Set DATABASE_URL to a PostgreSQL connection string."
-    )
-
-# Create database engine with appropriate options
-if is_sqlite:
-    engine = create_engine(
-        database_url,
-        echo=settings.DEBUG,
-        connect_args={"check_same_thread": False},
-    )
-else:
-    engine = create_engine(
-        database_url,
-        echo=False,                # Keep this False for production speed
-        pool_pre_ping=True,        # CRITICAL: Auto-detect and reset stale connections
-        pool_size=20,              # INCREASED: Allow 20 simultaneous connections (was 5)
-        max_overflow=10,           # Allow 10 extra "burst" connections
-        pool_recycle=1800          # Recycle connections every 30 minutes to prevent timeouts
-    )
-
+# 2. THE ENGINE (High Performance Mode)
+# - pool_pre_ping=True: Auto-heals broken connections (Prevents "Closed Connection" errors)
+# - pool_size=20: Increases concurrent connections from 5 to 20.
+# - max_overflow=10: Allows 10 extra temporary connections during traffic spikes.
+# - pool_recycle=1800: Refreshes connections every 30 mins to avoid stale timeouts.
+engine = create_engine(
+    DATABASE_URL,
+    echo=False, 
+    pool_pre_ping=True, 
+    pool_size=20, 
+    max_overflow=10, 
+    pool_recycle=1800
+)
 
 def run_migrations():
     """Run any pending database migrations."""
-    if is_sqlite:
-        return  # Skip migrations for SQLite
-    
     with Session(engine) as session:
         # Add is_active column to users table if it doesn't exist
         try:
@@ -73,16 +55,9 @@ def run_migrations():
             session.rollback()
             logger.warning(f"Migration note: {e}")
 
-
-# run_migrations()  <-- MOVED TO main.py LIFESPAN
-# We do not run this at import time anymore to prevent blocking startup.
-
-
-
 def create_db_and_tables():
     """Create all database tables defined in SQLModel models."""
     SQLModel.metadata.create_all(engine)
-
 
 @retry(
     stop=stop_after_attempt(3),
@@ -101,16 +76,10 @@ def check_db_connection() -> bool:
         session.execute(text("SELECT 1"))
     return True
 
-
 def get_session() -> Generator[Session, None, None]:
     """
     Dependency function that yields a database session.
     Used with FastAPI's Depends() for automatic session management.
-
-    Usage:
-        @app.get("/items")
-        def get_items(session: Session = Depends(get_session)):
-            ...
     """
     with Session(engine) as session:
         yield session
