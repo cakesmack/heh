@@ -76,5 +76,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         console.error('Failed to generate venue sitemap routes:', error);
     }
 
-    return [...staticRoutes, ...eventRoutes, ...venueRoutes];
+    // 4. Dynamic Locations (SEO Pages)
+    // Fetch from constants or potentially DB in future. 
+    // These are high-priority landing pages.
+    const { POPULAR_LOCATIONS } = await import('@/lib/constants');
+
+    const locationRoutes: MetadataRoute.Sitemap = POPULAR_LOCATIONS.map((loc) => ({
+        url: `${baseUrl}/locations/${loc.slug}`,
+        lastModified: new Date(), // Always fresh as content is dynamic
+        changeFrequency: 'daily',
+        priority: 0.8,
+    }));
+
+    return [...staticRoutes, ...locationRoutes, ...eventRoutes, ...venueRoutes];
 }

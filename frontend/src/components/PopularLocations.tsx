@@ -1,20 +1,9 @@
 import Link from 'next/link';
 import React from 'react';
+import { POPULAR_LOCATIONS } from '@/lib/constants';
 
 export default function PopularLocations() {
-    const cities = [
-        { name: 'Inverness', slug: 'inverness' },
-        { name: 'Skye', slug: 'skye' },
-        { name: 'Fort William', slug: 'fort-william' },
-        { name: 'Elgin', slug: 'elgin' },       // Fixed lowercase
-        { name: 'Thurso', slug: 'thurso' },
-        { name: 'Wick', slug: 'wick' },          // New
-        { name: 'Aviemore', slug: 'aviemore' },
-        { name: 'Dingwall', slug: 'dingwall' },  // New
-        { name: 'Nairn', slug: 'nairn' },        // Fixed lowercase
-        { name: 'Dornoch', slug: 'dornoch' },    // New
-        { name: 'Ullapool', slug: 'ullapool' },  // Fixed lowercase
-    ];
+    const cities = POPULAR_LOCATIONS;
 
     return (
         <div className="py-6 border-t border-gray-800">
