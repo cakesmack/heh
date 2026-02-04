@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { EventResponse } from '@/types';
+import { EventResponse, Category } from '@/types';
 import { EventCard } from '@/components/events/EventCard';
-import { eventsAPI } from '@/lib/api';
+import { eventsAPI, categoriesAPI } from '@/lib/api';
 
 interface LocationFeedProps {
     initialEvents: EventResponse[];
@@ -10,21 +10,11 @@ interface LocationFeedProps {
 
 const PAGE_SIZE = 24;
 
-const CATEGORIES = [
-    { label: 'All Categories', value: '' },
-    { label: 'Music', value: 'Music' },
-    { label: 'Sport', value: 'Sport' },
-    { label: 'Arts', value: 'Arts' },
-    { label: 'Family', value: 'Family' },
-    { label: 'Nightlife', value: 'Nightlife' },
-    { label: 'Community', value: 'Community' },
-];
-
 const DATE_FILTERS = [
     { label: 'Any Date', value: 'upcoming' },
     { label: 'Today', value: 'today' },
     { label: 'Tomorrow', value: 'tomorrow' },
-    { label: 'This Weekend', value: 'this_weekend' },
+    { label: 'This Weekend', value: 'weekend' },
 ];
 
 export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
@@ -33,9 +23,23 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
     const [hasMore, setHasMore] = useState(initialEvents.length >= PAGE_SIZE);
 
     // Filter State
+    const [categories, setCategories] = useState<Category[]>([]);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [dateFilter, setDateFilter] = useState('upcoming');
     const [isFiltering, setIsFiltering] = useState(false);
+
+    // Fetch Categories on Mount
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await categoriesAPI.list(true); // Active only
+                setCategories(res.categories || []);
+            } catch (err) {
+                console.error("Failed to load categories:", err);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     // Fetch when filters change
     useEffect(() => {
@@ -50,7 +54,7 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
             try {
                 const res = await eventsAPI.list({
                     city_filter: city,
-                    category: (selectedCategory as any) || undefined,
+                    category: (selectedCategory as any) || undefined, // Send slug
                     time_range: (dateFilter as any),
                     limit: PAGE_SIZE,
                     skip: 0,
@@ -158,8 +162,9 @@ export function LocationFeed({ initialEvents, city }: LocationFeedProps) {
                             onChange={(e) => setSelectedCategory(e.target.value)}
                             className="appearance-none w-full md:w-48 bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded-lg focus:outline-none focus:bg-white focus:border-emerald-500 cursor-pointer"
                         >
-                            {CATEGORIES.map(cat => (
-                                <option key={cat.value} value={cat.value}>{cat.label}</option>
+                            <option value="">All Categories</option>
+                            {categories.map(cat => (
+                                <option key={cat.id} value={cat.slug}>{cat.name}</option>
                             ))}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
