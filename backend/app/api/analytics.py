@@ -354,6 +354,40 @@ def clear_search_history(
         session.delete(log)
             
     session.commit()
+    session.commit()
+    return None
+
+
+@router.delete("/search-insights/{term}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_search_term(
+    term: str,
+    admin: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Delete a specific search term from history.
+    Requires Admin privileges.
+    """
+    if not admin.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get all search logs
+    logs = session.exec(
+        select(AnalyticsEvent)
+        .where(AnalyticsEvent.event_type == "search_query")
+    ).all()
+    
+    deleted_count = 0
+    # Filter in Python because metadata is JSON
+    for log in logs:
+        if log.event_metadata:
+            log_term = log.event_metadata.get('term', '')
+            # Case-insensitive match
+            if log_term.lower() == term.lower():
+                session.delete(log)
+                deleted_count += 1
+            
+    session.commit()
     return None
 
 

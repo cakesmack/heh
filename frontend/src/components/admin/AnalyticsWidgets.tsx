@@ -98,6 +98,17 @@ export const SearchActivityWidget: React.FC<{ insights: { items: { term: string;
         }
     };
 
+    const handleDeleteTerm = async (term: string) => {
+        if (!confirm(`Delete "${term}" from history?`)) return;
+        try {
+            await analyticsAPI.deleteSearchInsightTerm(term);
+            window.location.reload();
+        } catch (e) {
+            console.error('Failed to delete term', e);
+            alert('Failed to delete term');
+        }
+    };
+
     return (
         <>
             <StatCard title="Search Activity" value={insights.total_volume} subtitle={`${insights.unique_terms} Unique Terms`}>
@@ -135,6 +146,13 @@ export const SearchActivityWidget: React.FC<{ insights: { items: { term: string;
                                 <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
                                     {item.count}×
                                 </span>
+                                <button
+                                    onClick={() => handleDeleteTerm(item.term)}
+                                    className="p-1 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Remove term"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -188,9 +206,18 @@ export const SearchActivityWidget: React.FC<{ insights: { items: { term: string;
                                                 </span>
                                             )}
                                         </div>
-                                        <span className="text-xs font-bold text-gray-600 bg-gray-200 px-2 py-1 rounded-lg">
-                                            {item.count} searches
-                                        </span>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-bold text-gray-600 bg-gray-200 px-2 py-1 rounded-lg">
+                                                {item.count} searches
+                                            </span>
+                                            <button
+                                                onClick={() => handleDeleteTerm(item.term)}
+                                                className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                title="Remove term"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
