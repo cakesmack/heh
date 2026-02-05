@@ -26,7 +26,6 @@ import type {
   VenueCategoryUpdate,
   VenueStaffCreate,
   VenueStaffResponse,
-  MissedOpportunitiesResponse,
   SupplyGap,
   QualityIssue,
   CategoryMixStats,
@@ -995,18 +994,35 @@ export const analyticsAPI = {
   },
 
   /**
-   * Get Missed Opportunities (failed searches grouped by type)
+   * Get search insights (failed searches, popular terms, etc.)
    */
-  getMissedOpportunities: async (days: number = 30): Promise<MissedOpportunitiesResponse> => {
-    return apiFetch<MissedOpportunitiesResponse>(`/api/analytics/missed-opportunities?days=${days}`);
+  async getSearchInsights(days: number = 30): Promise<{
+    items: {
+      term: string;
+      count: number;
+      avg_results: number;
+      is_failed: boolean;
+    }[];
+    total_volume: number;
+    unique_terms: number;
+  }> {
+    return apiFetch<{
+      items: {
+        term: string;
+        count: number;
+        avg_results: number;
+        is_failed: boolean;
+      }[];
+      total_volume: number;
+      unique_terms: number;
+    }>(`/api/analytics/search-insights?days=${days}`);
   },
 
-  async clearMissedOpportunities(): Promise<void> {
-    return apiFetch<void>('/api/analytics/missed-opportunities', { method: 'DELETE' });
-  },
-
-  async deleteMissedOpportunity(term: string): Promise<void> {
-    return apiFetch<void>(`/api/analytics/missed-opportunities/${encodeURIComponent(term)}`, { method: 'DELETE' });
+  /**
+   * Clear all search history
+   */
+  async clearSearchHistory(): Promise<void> {
+    return apiFetch<void>('/api/analytics/search-insights', { method: 'DELETE' });
   },
 
   async getSupplyGaps(threshold: number = 3, days: number = 30): Promise<SupplyGap[]> {

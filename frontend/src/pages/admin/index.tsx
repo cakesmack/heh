@@ -10,7 +10,7 @@ import { adminAPI, analyticsAPI, api } from '@/lib/api';
 import {
   AdminAnalyticsSummary,
   AdminDashboardStats,
-  MissedOpportunitiesResponse,
+  SearchInsightsResponse,
   SupplyGap,
   QualityIssue,
   CategoryMixStats,
@@ -19,7 +19,7 @@ import {
 import Link from 'next/link';
 import {
   ConversionFunnelWidget,
-  MissedOpportunitiesWidget,
+  SearchActivityWidget,
   SupplyGapWidget,
   QualityIssuesWidget,
   CategoryMixWidget,
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
 function AdminDashboardContent() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [analytics, setAnalytics] = useState<AdminAnalyticsSummary | null>(null);
-  const [missedOpportunities, setMissedOpportunities] = useState<MissedOpportunitiesResponse | null>(null);
+  const [searchInsights, setSearchInsights] = useState<SearchInsightsResponse | null>(null);
   const [supplyGaps, setSupplyGaps] = useState<SupplyGap[]>([]);
   const [qualityIssues, setQualityIssues] = useState<QualityIssue[]>([]);
   const [categoryMix, setCategoryMix] = useState<CategoryMixStats[]>([]);
@@ -54,7 +54,7 @@ function AdminDashboardContent() {
         const [
           statsData,
           analyticsData,
-          missedData,
+          insightsData,
           gapsData,
           issuesData,
           mixData,
@@ -62,7 +62,7 @@ function AdminDashboardContent() {
         ] = await Promise.all([
           adminAPI.getStats(),
           analyticsAPI.getAdminSummary(30),
-          analyticsAPI.getMissedOpportunities(30),
+          analyticsAPI.getSearchInsights(30),
           analyticsAPI.getSupplyGaps(3, 30),
           analyticsAPI.getQualityIssues(),
           analyticsAPI.getCategoryMix(),
@@ -71,7 +71,7 @@ function AdminDashboardContent() {
 
         setStats(statsData);
         setAnalytics(analyticsData);
-        setMissedOpportunities(missedData);
+        setSearchInsights(insightsData);
         setSupplyGaps(gapsData);
         setQualityIssues(issuesData);
         setCategoryMix(mixData);
@@ -142,7 +142,7 @@ function AdminDashboardContent() {
                 <CategoryMixWidget mix={categoryMix} />
               </div>
               <div className="lg:col-span-2">
-                {missedOpportunities && <MissedOpportunitiesWidget missed={missedOpportunities} />}
+                {searchInsights && <SearchActivityWidget insights={searchInsights} />}
               </div>
 
               {/* Row 3: Performance & Growth */}

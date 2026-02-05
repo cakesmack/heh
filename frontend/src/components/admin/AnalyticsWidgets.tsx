@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Modal from './Modal';
-import { AdminAnalyticsSummary, MissedOpportunitiesResponse, SupplyGap, QualityIssue, CategoryMixStats, OrganizerEventStats } from '@/types';
+import { AdminAnalyticsSummary, SupplyGap, QualityIssue, CategoryMixStats, OrganizerEventStats } from '@/types';
 import { analyticsAPI } from '@/lib/api';
 
 interface StatCardProps {
@@ -78,21 +78,17 @@ export const ConversionFunnelWidget: React.FC<{ analytics: AdminAnalyticsSummary
     );
 };
 
-export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesResponse }> = ({ missed }) => {
+export const SearchActivityWidget: React.FC<{ insights: { items: { term: string; count: number; avg_results: number; is_failed: boolean; }[]; total_volume: number; unique_terms: number; } }> = ({ insights }) => {
     const [clearing, setClearing] = React.useState(false);
     const [showAll, setShowAll] = React.useState(false);
 
-    // Only show Topic gaps, ignore Location gaps as requested
-    const allGaps = missed.missing_topics.map(t => ({ ...t, type: 'Topic' }))
-        .sort((a, b) => b.count - a.count);
-
-    const topGaps = allGaps.slice(0, 5);
+    const topItems = insights.items.slice(0, 5);
 
     const handleClear = async () => {
-        if (!confirm("Clear all failed search history? This cannot be undone.")) return;
+        if (!confirm("Clear all search history? This cannot be undone.")) return;
         setClearing(true);
         try {
-            await analyticsAPI.clearMissedOpportunities();
+            await analyticsAPI.clearSearchHistory();
             window.location.reload();
         } catch (e) {
             console.error(e);
@@ -102,64 +98,56 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
         }
     };
 
-    const handleDeleteTerm = async (term: string) => {
-        if (!confirm(`Delete "${term}" from history?`)) return;
-        try {
-            await analyticsAPI.deleteMissedOpportunity(term);
-            window.location.reload();
-        } catch (e) {
-            console.error('Failed to delete term', e);
-            alert('Failed to delete term');
-        }
-    };
-
     return (
         <>
-            <StatCard title="Missed Opportunities" value={missed.total_failed_searches} subtitle="Failed Searches">
+            <StatCard title="Search Activity" value={insights.total_volume} subtitle={`${insights.unique_terms} Unique Terms`}>
                 <div className="absolute top-4 right-4">
                     <button
                         onClick={handleClear}
-                        disabled={clearing || missed.total_failed_searches === 0}
+                        disabled={clearing || insights.total_volume === 0}
                         className="text-xs text-gray-400 hover:text-gray-900 disabled:opacity-50"
                         title="Clear History"
                     >
-                        {clearing ? "..." : "Dismiss All"}
+                        {clearing ? "..." : "Clear History"}
                     </button>
                 </div>
                 <div className="mt-4 space-y-3">
-                    {topGaps.map((gap, i) => (
-                        <div key={`${gap.type}-${gap.term}`} className="flex items-center justify-between group">
+                    {topItems.map((item, i) => (
+                        <div key={item.term} className="flex items-center justify-between group">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <span className="text-[10px] font-bold text-gray-400 w-4">{i + 1}.</span>
                                 <div className="flex flex-col min-w-0">
-                                    <span className="text-xs text-gray-700 truncate font-medium">"{gap.term}"</span>
-                                    {/* <span className="text-[9px] text-gray-400 uppercase tracking-tighter">{gap.type}</span> */}
+                                    <span className="text-xs text-gray-700 truncate font-medium">"{item.term}"</span>
+                                    {item.is_failed ? (
+                                        <span className="text-[9px] text-rose-500 font-bold flex items-center gap-1">
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                            0 Results
+                                        </span>
+                                    ) : (
+                                        <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                            {item.avg_results} Avg Found
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded">
-                                    {gap.count}×
+                                <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                                    {item.count}×
                                 </span>
-                                <button
-                                    onClick={() => handleDeleteTerm(gap.term)}
-                                    className="p-1 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors opacity-0 group-hover:opacity-100"
-                                    title="Remove term"
-                                >
-                                    <Trash2 className="w-3 h-3" />
-                                </button>
                             </div>
                         </div>
                     ))}
-                    {topGaps.length === 0 && (
-                        <p className="text-xs text-gray-400 italic text-center py-4">No content gaps detected</p>
+                    {topItems.length === 0 && (
+                        <p className="text-xs text-gray-400 italic text-center py-4">No search history</p>
                     )}
                 </div>
-                {allGaps.length > 5 && (
+                {insights.items.length > 5 && (
                     <button
                         onClick={() => setShowAll(true)}
                         className="mt-4 w-full py-2 text-[10px] font-bold text-gray-500 hover:text-gray-900 uppercase tracking-widest border-t border-gray-50 transition-colors"
                     >
-                        View All {allGaps.length} Gaps
+                        View All {insights.items.length}
                     </button>
                 )}
             </StatCard>
@@ -170,8 +158,8 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900">All Missed Opportunities</h2>
-                                <p className="text-sm text-gray-500">Failed searches from the last 30 days</p>
+                                <h2 className="text-xl font-bold text-gray-900">Search Activity</h2>
+                                <p className="text-sm text-gray-500">All search queries from the last 30 days</p>
                             </div>
                             <button
                                 onClick={() => setShowAll(false)}
@@ -183,38 +171,28 @@ export const MissedOpportunitiesWidget: React.FC<{ missed: MissedOpportunitiesRe
                             </button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6">
-                            <div className="grid grid-cols-1 gap-8">
-                                {/* Topics Section */}
-                                <div>
-                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                        </svg>
-                                        Topic Searches ({missed.missing_topics.length})
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {missed.missing_topics.map((gap, i) => (
-                                            <div key={gap.term} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100/50 group">
-                                                <span className="text-sm text-gray-700 font-medium">"{gap.term}"</span>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">
-                                                        {gap.count}×
-                                                    </span>
-                                                    <button
-                                                        onClick={() => handleDeleteTerm(gap.term)}
-                                                        className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                        title="Remove term"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {missed.missing_topics.length === 0 && (
-                                            <p className="text-sm text-gray-400 italic">No failed topic searches</p>
-                                        )}
+                            <div className="space-y-2">
+                                {insights.items.map((item) => (
+                                    <div key={item.term} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100/50 group">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm text-gray-700 font-medium">"{item.term}"</span>
+                                            {item.is_failed ? (
+                                                <span className="text-xs text-rose-500 font-medium flex items-center gap-1">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                    No results found
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                    {item.avg_results} avg. results
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-600 bg-gray-200 px-2 py-1 rounded-lg">
+                                            {item.count} searches
+                                        </span>
                                     </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                         <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end">

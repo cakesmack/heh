@@ -247,26 +247,27 @@ def get_admin_summary(
     )
 
 
-class MissedOpportunity(BaseModel):
+
+class SearchInsightItem(BaseModel):
     term: str
     count: int
+    avg_results: float
+    is_failed: bool # True if avg_results == 0
 
+class SearchInsightsResponse(BaseModel):
+    items: List[SearchInsightItem]
+    total_volume: int
+    unique_terms: int
 
-class MissedOpportunitiesResponse(BaseModel):
-    missing_locations: List[MissedOpportunity]
-    missing_topics: List[MissedOpportunity]
-    total_failed_searches: int
-
-
-@router.get("/missed-opportunities", response_model=MissedOpportunitiesResponse)
-def get_missed_opportunities(
+@router.get("/search-insights", response_model=SearchInsightsResponse)
+def get_search_insights(
     days: int = 30,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get failed searches (result_count = 0) grouped by type.
-    Helps admins identify content gaps for recruitment.
+    Get search activity insights.
+    Tracks all searches, effectively distinguishing between valid searches and dead ends.
     Requires Admin privileges.
     """
     if not current_user.is_admin:
@@ -274,112 +275,87 @@ def get_missed_opportunities(
 
     start_date = datetime.utcnow() - timedelta(days=days)
 
-    # Get all search_query events with result_count = 0
+    # Get all search_query events
     search_events = session.exec(
         select(AnalyticsEvent)
         .where(AnalyticsEvent.event_type == "search_query")
         .where(AnalyticsEvent.created_at >= start_date)
     ).all()
     
-    missing_locations: Dict[str, int] = {}
-    missing_topics: Dict[str, int] = {}
-    total_failed = 0
+    # Aggregation
+    # Term -> {count: int, total_results: int}
+    term_stats: Dict[str, Dict[str, int]] = {}
+    total_volume = 0
     
     for se in search_events:
-        if se.event_metadata and se.event_metadata.get('result_count', 1) == 0:
-            total_failed += 1
-            term = se.event_metadata.get('term', '')
-            search_type = se.event_metadata.get('type', 'keyword')
+        total_volume += 1
+        # Extract metadata safely
+        if not se.event_metadata:
+            continue
             
-            if not term:
-                continue
-                
-            if search_type == 'location':
-                missing_locations[term] = missing_locations.get(term, 0) + 1
-            else:  # keyword or mixed
-                missing_topics[term] = missing_topics.get(term, 0) + 1
+        term = se.event_metadata.get('term', '').strip()
+        if not term:
+            continue
+            
+        # Case insensitive grouping
+        term_key = term.lower()
+        
+        results = se.event_metadata.get('result_count', 0)
+        
+        if term_key not in term_stats:
+            term_stats[term_key] = {
+                "display_term": term, # Keep first casing encountered for display
+                "count": 0,
+                "total_results": 0
+            }
+            
+        term_stats[term_key]["count"] += 1
+        term_stats[term_key]["total_results"] += results
+        
+    # Convert to list
+    insights = []
+    for stats in term_stats.values():
+        avg = stats["total_results"] / stats["count"] if stats["count"] > 0 else 0
+        insights.append(SearchInsightItem(
+            term=stats["display_term"],
+            count=stats["count"],
+            avg_results=round(avg, 1),
+            is_failed=avg == 0
+        ))
+        
+    # Sort by count desc
+    insights.sort(key=lambda x: x.count, reverse=True)
     
-    # Sort by count and limit to top 100
-    sorted_locations = sorted(missing_locations.items(), key=lambda x: x[1], reverse=True)[:100]
-    sorted_topics = sorted(missing_topics.items(), key=lambda x: x[1], reverse=True)[:100]
-    
-    return MissedOpportunitiesResponse(
-        missing_locations=[MissedOpportunity(term=t, count=c) for t, c in sorted_locations],
-        missing_topics=[MissedOpportunity(term=t, count=c) for t, c in sorted_topics],
-        total_failed_searches=total_failed
+    return SearchInsightsResponse(
+        items=insights[:100], # Top 100
+        total_volume=total_volume,
+        unique_terms=len(insights)
     )
 
 
-@router.delete("/missed-opportunities", status_code=status.HTTP_204_NO_CONTENT)
-def clear_missed_opportunities(
+@router.delete("/search-insights", status_code=status.HTTP_204_NO_CONTENT)
+def clear_search_history(
     admin: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
     """
-    Clear all failed search history.
+    Clear all search history logs.
     Requires Admin privileges.
     """
     if not admin.is_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Delete where event_type='search_query' and result_count=0
-    # Note: JSON filtering in SQLModel/SQLAlchemy depends on dialect.
-    # For simplicity/compatibility, we can fetch IDs and delete, or use raw SQL.
-    # Postgres supports jsonb filtering.
-    
-    # Using fetch-and-delete loop for safety/compatibility or raw sql for speed.
-    # Given the volume might be large, raw SQL is better but requires dialect check.
-    # Let's use Python filtering for safety if volume isn't massive, or a safer direct Query.
     
     logs = session.exec(
         select(AnalyticsEvent)
         .where(AnalyticsEvent.event_type == "search_query")
     ).all()
     
-    deleted_count = 0
     for log in logs:
-        if log.event_metadata and log.event_metadata.get('result_count', 1) == 0:
-            session.delete(log)
-            deleted_count += 1
+        session.delete(log)
             
     session.commit()
-    
-
     return None
 
-
-@router.delete("/missed-opportunities/{term}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_missed_opportunity_term(
-    term: str,
-    admin: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    """
-    Delete a specific failed search term from history.
-    Requires Admin privileges.
-    """
-    if not admin.is_admin:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Get all failed search logs
-    logs = session.exec(
-        select(AnalyticsEvent)
-        .where(AnalyticsEvent.event_type == "search_query")
-    ).all()
-    
-    deleted_count = 0
-    # Filter in Python because metadata is JSON
-    for log in logs:
-        if log.event_metadata and log.event_metadata.get('result_count', 1) == 0:
-            log_term = log.event_metadata.get('term', '')
-            # Case-insensitive match
-            if log_term.lower() == term.lower():
-                session.delete(log)
-                deleted_count += 1
-            
-    session.commit()
-    
-    return None
 
 
 class OrganizerEventStats(BaseModel):

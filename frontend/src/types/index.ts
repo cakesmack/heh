@@ -765,15 +765,17 @@ export interface OrganizerSummary {
   events: OrganizerEventStats[];
 }
 
-export interface MissedOpportunity {
+export interface SearchInsightItem {
   term: string;
   count: number;
+  avg_results: number;
+  is_failed: boolean;
 }
 
-export interface MissedOpportunitiesResponse {
-  missing_locations: MissedOpportunity[];
-  missing_topics: MissedOpportunity[];
-  total_failed_searches: number;
+export interface SearchInsightsResponse {
+  items: SearchInsightItem[];
+  total_volume: number;
+  unique_terms: number;
 }
 
 // ============================================================
