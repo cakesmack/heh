@@ -18,13 +18,15 @@ def generate_recurring_instances(
 ) -> List[Event]:
     """
     Generate event instances for a recurring event using an inclusive loop.
-    Replaces older RRULE logic with explicit weekday handling for robustness.
+    
+    CRITICAL: This function must perform DATABASE operations only.
+    It does NOT send emails or notifications. Child instances are created silently.
+    Notifications are handled by the parent event creation logic only.
     
     Args:
         session: Database session
         parent_event: The master event
-        weekdays: List of weekdays (0=Mon, 6=Sun) to repeat on. 
-                  If None, relies on parent_event.recurrence_rule (legacy support) or defaults to weekly on same day.
+        weekdays: List of weekdays (0=Mon, 6=Sun) to repeat on.
         recurrence_end_date: Specific end date for the series.
         window_days: Fallback duration if no end date provided.
     """
@@ -35,9 +37,6 @@ def generate_recurring_instances(
     
     try:
         # Determine the effective end date for generation
-        # Policy: Recurrence End Date takes precedence, else Window.
-        
-        # Ensure end_date is inclusive (End of Day)
         if recurrence_end_date:
             # Set to 23:59:59 to ensure inclusive comparison
             end_date = recurrence_end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -51,32 +50,23 @@ def generate_recurring_instances(
         # Get start date
         current_date = parent_event.date_start
         
-        # If we don't have explicit weekdays, infer from start date (e.g. Weekly on that day)
-        # OR attempt to parse RRULE (Legacy). 
-        # For this refactor, we prioritize the explicit "Loop" logic requested.
+        # Infer weekdays if not provided (default to same day of week)
         effective_weekdays = weekdays
         if not effective_weekdays:
-            # improved default: repeat on the same weekday as start date
             effective_weekdays = [current_date.weekday()]
             
         # Start loop from the NEXT day (parent exists on start date)
-        # However, we must be careful. If we are "Regenerating" from a date, we might need to include that date.
-        # But usually parent event is the first one.
-        # Let's start from current_date + 1 day
         current_date = current_date + timedelta(days=1)
         
-        # Align end_date timezone with current_date (parent_start) to avoid comparison errors
+        # Align timezone for comparison
         if current_date.tzinfo is not None and current_date.tzinfo.utcoffset(current_date) is not None:
-             # current_date is aware. Ensure end_date is also aware.
              if end_date.tzinfo is None:
                  end_date = end_date.replace(tzinfo=current_date.tzinfo)
         else:
-             # current_date is naive. Ensure end_date is also naive.
              if end_date.tzinfo is not None:
                  end_date = end_date.replace(tzinfo=None)
 
-        # Performance: Pre-fetch existing start dates to avoid duplicates
-        # (Crucial for "Update" logic where we might not delete everything)
+        # Pre-fetch existing start dates to avoid duplicates
         existing_instances = session.exec(
             select(Event).where(
                 Event.parent_event_id == parent_event.id,
@@ -94,7 +84,7 @@ def generate_recurring_instances(
                     current_date += timedelta(days=1)
                     continue
 
-                # Create child event
+                # Create child event - DB ONLY, NO EMAILS
                 child_event = Event(
                     id=normalize_uuid(uuid4()),
                     title=parent_event.title,
@@ -112,12 +102,12 @@ def generate_recurring_instances(
                     min_price=parent_event.min_price,
                     image_url=parent_event.image_url,
                     ticket_url=parent_event.ticket_url,
-                    website_url=parent_event.website_url, # Ensure website_url is copied
+                    website_url=parent_event.website_url,
                     age_restriction=parent_event.age_restriction,
                     min_age=parent_event.min_age,
                     organizer_id=parent_event.organizer_id,
                     organizer_profile_id=parent_event.organizer_profile_id,
-                    status=parent_event.status,
+                    status=parent_event.status, # Inherit status, but do not trigger listeners
                     is_recurring=True,
                     parent_event_id=parent_event.id,
                     recurrence_group_id=parent_event.recurrence_group_id,
@@ -129,7 +119,7 @@ def generate_recurring_instances(
             
         if new_instances:
             session.commit()
-            logger.info(f"Generated {len(new_instances)} recurring instances for event {parent_event.id}")
+            logger.info(f"Generated {len(new_instances)} recurring instances for event {parent_event.id} (Silent/No Email)")
             
     except Exception as e:
         logger.error(f"Error generating recurring instances for {parent_event.id}: {e}")
