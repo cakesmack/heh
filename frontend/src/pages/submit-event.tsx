@@ -63,6 +63,7 @@ export default function SubmitEventPage() {
     map_display_lat: null as number | null,
     map_display_lng: null as number | null,
     map_display_label: '',
+    recurrence_rule: '',
   });
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -257,6 +258,7 @@ export default function SubmitEventPage() {
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         organizer_profile_id: selectedOrganizer || undefined, // Use explicit selection
         is_recurring: formData.is_recurring,
+        recurrence_rule: (formData.is_recurring && formData.frequency === 'CUSTOM') ? formData.recurrence_rule : undefined,
         frequency: formData.is_recurring ? formData.frequency : undefined,
         recurrence_end_date: (formData.is_recurring && formData.ends_on === 'date') ? new Date(formData.recurrence_end_date).toISOString() : undefined,
         weekdays: formData.is_recurring && formData.weekdays.length > 0 ? formData.weekdays : undefined,

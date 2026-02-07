@@ -20,6 +20,8 @@ import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomple
 import { MapPinAdjuster } from '@/components/events/MapPinAdjuster';
 import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';
 import { ShowtimeCreate } from '@/types';
+import EventScheduleSection from '@/components/events/form-sections/EventScheduleSection';
+import { rrulestr } from 'rrule';
 
 export default function EditEventPage() {
     const router = useRouter();
@@ -45,6 +47,7 @@ export default function EditEventPage() {
         organizer_profile_id: '',
         is_recurring: false,
         frequency: 'WEEKLY',
+        recurrence_rule: '',
         ends_on: 'never', // 'never' | 'date'
         recurrence_end_date: '',
         weekdays: [] as number[],  // 0=Mon, 1=Tue, ... 6=Sun
@@ -153,6 +156,7 @@ export default function EditEventPage() {
                     organizer_profile_id: eventData.organizer_profile_id || '',
                     is_recurring: eventData.is_recurring || false,
                     frequency: 'WEEKLY',
+                    recurrence_rule: eventData.recurrence_rule || '',
                     ends_on: 'never',
                     recurrence_end_date: '',
                     weekdays: [],  // Existing events don't have weekdays stored, default to empty
@@ -168,35 +172,50 @@ export default function EditEventPage() {
 
                 // Hydrate Recurrence from RRULE
                 if (eventData.is_recurring && eventData.recurrence_rule) {
-                    const rule = eventData.recurrence_rule;
-                    let freq = 'WEEKLY';
-                    let endsOn = 'never';
-                    let endDate = '';
+                    try {
+                        // Use rrule library to parse strict properties
+                        const rule = rrulestr(eventData.recurrence_rule);
 
-                    const freqMatch = rule.match(/FREQ=([A-Z]+)/);
-                    if (freqMatch) freq = freqMatch[1];
+                        // Extract basic properties for the form
+                        // Note: complex rules might not map 1:1 to the simple UI, 
+                        // but we do our best to map Frequency and Interval.
+                        const freqMap = ['YEARLY', 'MONTHLY', 'WEEKLY', 'DAILY', 'HOURLY', 'MINUTELY', 'SECONDLY'];
+                        const freqName = freqMap[rule.options.freq] || 'CUSTOM'; // Default to custom if unknown
 
-                    const untilMatch = rule.match(/UNTIL=([0-9TZ]+)/);
-                    if (untilMatch) {
-                        endsOn = 'date';
-                        // Parse YYYYMMDDTHHMMSSZ to YYYY-MM-DD
-                        const raw = untilMatch[1];
-                        if (raw.length >= 8) {
-                            const y = raw.substring(0, 4);
-                            const m = raw.substring(4, 6);
-                            const d = raw.substring(6, 8);
-                            endDate = `${y}-${m}-${d}`;
+                        setFormData(prev => ({
+                            ...prev,
+                            // If it's a standard simple frequency, use it. Otherwise CUSTOM.
+                            // The EventScheduleSection handles "CUSTOM" parsing internally if we pass the rule string?
+                            // Actually, existing Edit page logic (below) was trying to parse it manually.
+                            // The EventScheduleSection primarily sets 'frequency' and 'recurrence_rule'.
+                            // If we set 'frequency' to 'CUSTOM', it expects 'recurrence_rule' to be set.
+                            frequency: (freqName === 'WEEKLY' || freqName === 'MONTHLY' || freqName === 'BIWEEKLY') ? freqName : 'CUSTOM',
+                            recurrence_rule: eventData.recurrence_rule || '',
+                            is_recurring: true
+                        }));
+
+                        // If the rule has an UNTIL date, map it
+                        if (rule.options.until) {
+                            setFormData(prev => ({
+                                ...prev,
+                                ends_on: 'date',
+                                recurrence_end_date: formatDateForInput(rule.options.until)
+                            }));
+                        } else {
+                            setFormData(prev => ({
+                                ...prev,
+                                ends_on: 'never'
+                            }));
                         }
-                    }
 
-                    setFormData(prev => ({
-                        ...prev,
-                        frequency: freq,
-                        ends_on: endsOn,
-                        recurrence_end_date: endDate,
-                        // Note: Weekdays are not persisted in RRULE in current backend implementation
-                        // Users will need to re-select them.
-                    }));
+                    } catch (e) {
+                        console.error("Failed to parse RRULE for hydration:", e);
+                        // Fallback to manual parsing or leave as is
+                        setFormData(prev => ({ ...prev, is_recurring: true, frequency: 'CUSTOM', recurrence_rule: eventData.recurrence_rule || '' }));
+                    }
+                } else if (eventData.is_recurring) {
+                    // Recurring but no rule? Default to weekly
+                    setFormData(prev => ({ ...prev, is_recurring: true, frequency: 'WEEKLY' }));
                 }
 
                 // Hydrate participating venues
@@ -422,7 +441,9 @@ export default function EditEventPage() {
                 organizer_profile_id: currentFormData.organizer_profile_id || null,
                 is_recurring: currentFormData.is_recurring,
                 frequency: currentFormData.is_recurring ? currentFormData.frequency : null,
+                recurrence_rule: (currentFormData.is_recurring && currentFormData.frequency === 'CUSTOM') ? currentFormData.recurrence_rule : null,
                 recurrence_end_date: (currentFormData.is_recurring && currentFormData.ends_on === 'date') ? new Date(currentFormData.recurrence_end_date).toISOString() : null,
+                weekdays: (currentFormData.is_recurring && currentFormData.weekdays.length > 0) ? currentFormData.weekdays : [],
                 participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : [],
                 showtimes: showtimesPayload,
                 // Map Display
@@ -457,9 +478,9 @@ export default function EditEventPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
-                <div className="mb-8">
+                <div className="max-w-3xl mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Event</h1>
                     <p className="text-gray-600">
                         Update your event details below
@@ -727,334 +748,21 @@ export default function EditEventPage() {
                             )}
                         </div>
 
-                        {/* Event Type Toggle */}
-                        <div className="border border-gray-200 rounded-lg p-4">
-                            <label className="block text-sm font-medium text-gray-900 mb-3">
-                                Event Type
-                            </label>
-                            <div className="flex gap-4">
-                                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${!isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                                    }`}>
-                                    <input
-                                        type="radio"
-                                        name="eventType"
-                                        checked={!isMultiSession}
-                                        onChange={() => {
-                                            setIsMultiSession(false);
-                                            setShowtimes([]);
-                                        }}
-                                        className="text-emerald-600"
-                                    />
-                                    <div>
-                                        <span className="text-sm font-medium text-gray-900">Single Event</span>
-                                        <p className="text-xs text-gray-500">One start and end time</p>
-                                    </div>
-                                </label>
-                                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                                    }`}>
-                                    <input
-                                        type="radio"
-                                        name="eventType"
-                                        checked={isMultiSession}
-                                        onChange={() => {
-                                            // Push current dates to first showtime when switching
-                                            if (formData.date_start) {
-                                                setShowtimes([{
-                                                    start_time: new Date(formData.date_start).toISOString(),
-                                                    end_time: formData.date_end ? new Date(formData.date_end).toISOString() : undefined,
-                                                }]);
-                                            }
-                                            setIsMultiSession(true);
-                                        }}
-                                        className="text-emerald-600"
-                                    />
-                                    <div>
-                                        <span className="text-sm font-medium text-gray-900">Multiple Showings</span>
-                                        <p className="text-xs text-gray-500">Theatre, cinema-style</p>
-                                    </div>
-                                </label>
-                            </div>
-
-                            {/* Single Event Date Inputs */}
-                            {!isMultiSession && (
-                                <div className="mt-4 space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
-                                            <DateTimePicker
-                                                id="date_start"
-                                                name="date_start"
-                                                required
-                                                value={formData.date_start}
-                                                onChange={(val) => {
-                                                    setFormData(prev => {
-                                                        // Smart Date Sync: Update end date when start date changes
-                                                        const oldStartDate = prev.date_start ? prev.date_start.split('T')[0] : '';
-                                                        const newStartDate = val.split('T')[0];
-                                                        const currentEndDate = prev.date_end ? prev.date_end.split('T')[0] : '';
-
-                                                        // Sync end date if: empty, matches old start, or is before new start
-                                                        if (!prev.date_end || currentEndDate === oldStartDate || currentEndDate < newStartDate) {
-                                                            // Keep the time from end date if it exists, otherwise use start time + 2 hours
-                                                            const endTime = prev.date_end ? prev.date_end.split('T')[1] : val.split('T')[1];
-                                                            return {
-                                                                ...prev,
-                                                                date_start: val,
-                                                                date_end: `${newStartDate}T${endTime || '18:00'}`
-                                                            };
-                                                        } else {
-                                                            return { ...prev, date_start: val };
-                                                        }
-                                                    });
-                                                }}
-                                                disabled={isLoading}
-                                            />
-                                        </div>
-                                        {!noEndTime && (
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
-                                                <DateTimePicker
-                                                    id="date_end"
-                                                    name="date_end"
-                                                    required
-                                                    value={formData.date_end}
-                                                    onChange={(val) => {
-                                                        setFormData(prev => ({ ...prev, date_end: val }));
-                                                    }}
-                                                    min={formData.date_start}
-                                                    disabled={isLoading}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={noEndTime}
-                                            onChange={(e) => setNoEndTime(e.target.checked)}
-                                            className="rounded text-emerald-600 focus:ring-emerald-500"
-                                            disabled={isLoading}
-                                        />
-                                        <span className="text-sm text-gray-600">No specific end time</span>
-                                    </label>
-                                    {noEndTime && (
-                                        <p className="text-xs text-gray-500">End time will be set to 4 hours after start time.</p>
-                                    )}
-
-                                    {/* Recurring Event Options - Always visible toggle */}
-                                    <div className="space-y-4 pt-4 border-t border-gray-100 mt-4">
-                                        <div className="flex items-center space-x-2">
-                                            <input
-                                                type="checkbox"
-                                                id="is_recurring"
-                                                checked={formData.is_recurring}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setFormData(prev => ({ ...prev, is_recurring: checked }));
-                                                    if (!checked && originalIsRecurring) {
-                                                        if (!confirm("Turning off recurrence will delete all FUTURE instances of this event. Continue?")) {
-                                                            // Revert if cancelled
-                                                            e.preventDefault();
-                                                            setFormData(prev => ({ ...prev, is_recurring: true }));
-                                                        }
-                                                    }
-                                                }}
-                                                className="rounded text-emerald-600"
-                                            />
-                                            <label htmlFor="is_recurring" className="text-sm font-medium text-gray-900">Make this a recurring event</label>
-                                        </div>
-                                        {formData.is_recurring && originalIsRecurring && (
-                                            <p className="text-xs text-amber-600 ml-6">
-                                                Warning: Changing recurrence settings will regenerate all future events.
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {formData.is_recurring && (
-                                        <div className="pl-6 border-l-2 border-emerald-100 space-y-4">
-                                            <select
-                                                name="frequency"
-                                                value={formData.frequency}
-                                                onChange={handleChange}
-                                                className="w-full px-3 py-2 border rounded-lg"
-                                            >
-                                                <option value="WEEKLY">Weekly</option>
-                                                <option value="BIWEEKLY">Bi-Weekly</option>
-                                                <option value="MONTHLY">Monthly</option>
-                                            </select>
-
-                                            {/* Weekday Selector */}
-                                            {(formData.frequency === 'WEEKLY' || formData.frequency === 'BIWEEKLY') && (
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Repeat on these days:</label>
-                                                    <div className="flex gap-2">
-                                                        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
-                                                            <button
-                                                                key={idx}
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const newWeekdays = formData.weekdays.includes(idx)
-                                                                        ? formData.weekdays.filter(d => d !== idx)
-                                                                        : [...formData.weekdays, idx];
-                                                                    setFormData({ ...formData, weekdays: newWeekdays });
-                                                                }}
-                                                                className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${formData.weekdays.includes(idx)
-                                                                    ? 'bg-emerald-600 text-white'
-                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                                    }`}
-                                                            >
-                                                                {day}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 mt-1">Select one or more days</p>
-                                                </div>
-                                            )}
-
-                                            {/* Ends On Logic */}
-                                            <div className="space-y-2">
-                                                <label className="flex items-center">
-                                                    <input type="radio" value="never" checked={formData.ends_on === 'never'} onChange={() => setFormData({ ...formData, ends_on: 'never' })} className="mr-2" /> Never (90 days)
-                                                </label>
-                                                <label className="flex items-center">
-                                                    <input type="radio" value="date" checked={formData.ends_on === 'date'} onChange={() => setFormData({ ...formData, ends_on: 'date' })} className="mr-2" /> On Date
-                                                </label>
-                                                {formData.ends_on === 'date' && (
-                                                    <div className="ml-6">
-                                                        <DateTimePicker
-                                                            id="recurrence_end_date"
-                                                            name="recurrence_end_date"
-                                                            value={formData.recurrence_end_date}
-                                                            // @ts-ignore
-                                                            onChange={(val) => setFormData(prev => ({ ...prev, recurrence_end_date: val }))}
-                                                            min={formData.date_start}
-                                                            required={formData.ends_on === 'date'}
-                                                            disabled={isLoading}
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Multiple Showtimes Manager */}
-                            {isMultiSession && (
-                                <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded-lg">
-                                    <p className="text-sm text-gray-500">
-                                        Add performance times. The event's main dates will be calculated automatically.
-                                    </p>
-
-                                    {showtimes.map((st: ShowtimeCreate, index: number) => {
-                                        // FIX: Use Local strings directly (no conversion)
-                                        const startValue = st.start_time || '';
-                                        const endValue = st.end_time || '';
-
-                                        return (
-                                            <div key={index} className="flex items-start gap-2 bg-white p-3 rounded border">
-                                                <div className="flex-1 space-y-2">
-                                                    <div className="grid grid-cols-1 gap-4">
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 mb-1 block">Start *</label>
-                                                            <DateTimePicker
-                                                                id={`showtime_start_${index}`}
-                                                                name={`showtime_start_${index}`}
-                                                                value={startValue}
-                                                                onChange={(value) => {
-                                                                    const updated = [...showtimes];
-                                                                    // FIX: Store Local string directly
-                                                                    updated[index] = { ...updated[index], start_time: value };
-                                                                    setShowtimes(updated);
-                                                                }}
-                                                                required
-                                                                disabled={isLoading}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 mb-1 block">End *</label>
-                                                            <DateTimePicker
-                                                                id={`showtime_end_${index}`}
-                                                                name={`showtime_end_${index}`}
-                                                                value={endValue}
-                                                                onChange={(value) => {
-                                                                    const updated = [...showtimes];
-                                                                    // FIX: Store Local string directly
-                                                                    updated[index] = { ...updated[index], end_time: value };
-                                                                    setShowtimes(updated);
-                                                                }}
-                                                                min={startValue}
-                                                                required
-                                                                disabled={isLoading}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 mb-1 block">Ticket URL (optional)</label>
-                                                            <input
-                                                                type="url"
-                                                                value={st.ticket_url || ''}
-                                                                onChange={(e) => {
-                                                                    const updated = [...showtimes];
-                                                                    updated[index] = { ...updated[index], ticket_url: e.target.value || undefined };
-                                                                    setShowtimes(updated);
-                                                                }}
-                                                                className="w-full px-2 py-1 text-sm border rounded"
-                                                                placeholder="https://..."
-                                                                disabled={isLoading}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 mb-1 block">Notes (optional)</label>
-                                                            <input
-                                                                type="text"
-                                                                maxLength={255}
-                                                                value={st.notes || ''}
-                                                                onChange={(e) => {
-                                                                    const updated = [...showtimes];
-                                                                    updated[index] = { ...updated[index], notes: e.target.value || undefined };
-                                                                    setShowtimes(updated);
-                                                                }}
-                                                                className="w-full px-2 py-1 text-sm border rounded"
-                                                                placeholder="e.g. Phone only, Sold Out"
-                                                                disabled={isLoading}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowtimes(showtimes.filter((_, i) => i !== index))}
-                                                    className="text-red-500 hover:text-red-700 p-1"
-                                                    title="Remove"
-                                                    disabled={isLoading}
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const now = new Date();
-                                            setShowtimes([...showtimes, {
-                                                // FIX: Use formatDateForInput for new entries
-                                                start_time: formatDateForInput(now),
-                                                end_time: formatDateForInput(new Date(now.getTime() + 2 * 60 * 60 * 1000)),
-                                            }]);
-                                        }}
-                                        className="w-full py-2 border-2 border-dashed border-emerald-300 text-emerald-600 rounded-lg hover:bg-emerald-50 text-sm font-medium"
-                                        disabled={isLoading}
-                                    >
-                                        + Add Another Performance
-                                    </button>
-                                </div>
-                            )}
+                        {/* Event Schedule Section (Replaces manual date fields) */}
+                        <div className="border border-gray-200 rounded-lg p-1">
+                            <EventScheduleSection
+                                formData={formData}
+                                setFormData={setFormData}
+                                handleChange={handleChange}
+                                isMultiSession={isMultiSession}
+                                setIsMultiSession={setIsMultiSession}
+                                showtimes={showtimes}
+                                setShowtimes={setShowtimes}
+                                noEndTime={noEndTime}
+                                setNoEndTime={setNoEndTime}
+                                isAllDay={formData.is_all_day}
+                                setIsAllDay={(val) => setFormData(prev => ({ ...prev, is_all_day: val }))}
+                            />
                         </div>
 
                         {/* Price */}

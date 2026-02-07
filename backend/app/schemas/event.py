@@ -136,7 +136,7 @@ class EventResponse(BaseModel):
     """Schema for event response with all details."""
     id: UUID
     title: str
-    description: str
+    description: Optional[str] = None
     date_start: datetime
     date_end: datetime
     venue_id: Optional[UUID]

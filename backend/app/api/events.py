@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional, List
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, Request
-from sqlmodel import Session, select, func, col
+from sqlmodel import Session, select, func, col, update, delete
 from sqlalchemy import or_
 from app.core.limiter import limiter
 from sqlalchemy import case
@@ -913,7 +913,15 @@ def create_event(
 
     # Handle Recurrence Rule Translation
     recurrence_rule = event_data.recurrence_rule
-    if event_data.is_recurring and event_data.frequency:
+    
+    # 1. Custom Rule Provided? Use it.
+    # 1. Custom Rule Provided? Use it.
+    if event_data.is_recurring and recurrence_rule:
+        # Trust the frontend provided rule - Explicit pass for clarity
+        pass
+        
+    # 2. No Rule? Generate from Frequency (Legacy/Simple Mode)
+    elif event_data.is_recurring and event_data.frequency:
         event_data.frequency = event_data.frequency.upper()
         freq_map = {
             "WEEKLY": "FREQ=WEEKLY",
@@ -1405,10 +1413,17 @@ def update_event(
         
     # Logic for Regenerating Recursion (The "Clean Slate" Strategy)
     if recurrence_changed and event.is_recurring:
-        # 1. Update RRULE string on parent (if frequency provided)
-        # Note: We rely on generating new instances, but we should also update the RRULE for record
-        # Ideally we reconstruct it.
-        if new_frequency:
+        # 1. Update RRULE string on parent
+        # FIX: Only generate from frequency if NO new recurrence_rule is provided in this update
+        # If the frontend sent a custom rule, we trust that above all else.
+        new_recurrence_rule_in_update = update_data.get("recurrence_rule")
+        
+        if new_recurrence_rule_in_update:
+             # Use the provided custom rule
+             event.recurrence_rule = new_recurrence_rule_in_update
+             
+        elif new_frequency:
+             # Fallback: Geneate from frequency (Simple Mode)
              new_frequency = new_frequency.upper()
              base_rule = ""
              if new_frequency == "WEEKLY": base_rule = "FREQ=WEEKLY"
@@ -1597,6 +1612,66 @@ def update_event(
                 tag.usage_count += 1
 
     event.updated_at = datetime.utcnow()
+
+    # ---------------------------------------------------------
+    # Task 4: Recurring Series Propagation (Batch Update)
+    # ---------------------------------------------------------
+    if event.recurrence_group_id:
+        # 1. Bulk Update Basic Fields
+        stmt = update(Event).where(
+            Event.recurrence_group_id == event.recurrence_group_id,
+            Event.id != event.id
+        ).values(
+            title=event.title,
+            description=event.description,
+            image_url=event.image_url,
+            venue_id=event.venue_id,
+            location_name=event.location_name,
+            category_id=event.category_id,
+            price=event.price,
+            price_display=event.price_display,
+            min_price=event.min_price,
+            # Metadata consistency
+            ticket_url=event.ticket_url,
+            website_url=event.website_url,
+            is_all_day=event.is_all_day,
+            age_restriction=event.age_restriction,
+            min_age=event.min_age,
+            organizer_profile_id=event.organizer_profile_id,
+            # Map display
+            map_display_lat=event.map_display_lat,
+            map_display_lng=event.map_display_lng,
+            map_display_label=event.map_display_label,
+            # Location
+            latitude=event.latitude,
+            longitude=event.longitude,
+            geohash=event.geohash,
+            updated_at=datetime.utcnow()
+        )
+        session.exec(stmt)
+        
+        # 2. Sync Tags (if updated in this request)
+        if event_data.tags is not None:
+             # Find all other event IDs in the group
+             other_event_ids = session.exec(select(Event.id).where(
+                 Event.recurrence_group_id == event.recurrence_group_id,
+                 Event.id != event.id
+             )).all()
+             
+             if other_event_ids:
+                 # Delete existing tags for these events
+                 session.exec(delete(EventTag).where(EventTag.event_id.in_(other_event_ids)))
+                 
+
+                 # Re-apply new tags
+                 if event_data.tags: # If tags list is not empty
+                     tags_to_apply = get_or_create_tags(session, event_data.tags)
+                     
+                     for oid in other_event_ids:
+                         for tag in tags_to_apply:
+                             session.add(EventTag(event_id=oid, tag_id=tag.id))
+                             tag.usage_count += 1 
+                             session.add(tag)
 
     # Moderation Logic: 
     # 1. If published event is edited by non-trusted user, revert to pending

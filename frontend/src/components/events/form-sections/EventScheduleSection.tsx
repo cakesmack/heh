@@ -4,6 +4,14 @@ import { Input } from '@/components/common/Input';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import FormSection from '../FormSection';
 import { ShowtimeCreate } from '@/types';
+import { RRule, Frequency, Weekday } from 'rrule';
+import { useState, useEffect } from 'react';
+
+// Day mapping for RRule
+const dayMap: { [key: string]: Weekday } = {
+    'Mon': RRule.MO, 'Tue': RRule.TU, 'Wed': RRule.WE,
+    'Thu': RRule.TH, 'Fri': RRule.FR, 'Sat': RRule.SA, 'Sun': RRule.SU
+};
 
 interface EventScheduleSectionProps {
     formData: any;
@@ -32,8 +40,77 @@ export default function EventScheduleSection({
     isAllDay,
     setIsAllDay
 }: EventScheduleSectionProps) {
-    // Helper to format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input
+    // Custom Recurrence State
+    const [customFreq, setCustomFreq] = useState(Frequency.WEEKLY);
+    const [customInterval, setCustomInterval] = useState(1);
+    const [customByWeekday, setCustomByWeekday] = useState<Weekday[]>([]);
+    const [monthlyMode, setMonthlyMode] = useState<'DATE' | 'POS'>('DATE');
+    const [customBySetPos, setCustomBySetPos] = useState(1);
+    const [customPosDay, setCustomPosDay] = useState(RRule.SU.weekday);
+    const [ruleText, setRuleText] = useState('');
+
+    // Effect: Generate RRULE string when custom settings change
+    useEffect(() => {
+        if (formData.frequency !== 'CUSTOM') return;
+
+        try {
+            const options: any = {
+                freq: customFreq,
+                interval: customInterval,
+            };
+
+            // ByWeekday for Weekly
+            if (customFreq === RRule.WEEKLY && customByWeekday.length > 0) {
+                options.byweekday = customByWeekday;
+            }
+
+            // Monthly options
+            if (customFreq === RRule.MONTHLY) {
+                if (monthlyMode === 'POS') {
+                    // e.g. 1st Sunday: bysetpos=1, byweekday=SU
+                    options.bysetpos = customBySetPos;
+                    // Find the Weekday object matching customPosDay
+                    const day = Object.values(dayMap).find(d => d.weekday === customPosDay) || RRule.SU;
+                    options.byweekday = [day];
+                }
+                // default is bymonthday (date), which RRule infers from start date if not specified.
+                // But generally safer to leave it implicit or use start date. 
+                // RRule defaults to using dtstart to set the "byxxx".
+            }
+
+            // Sync UNTIL if end date is set
+            if (formData.ends_on === 'date' && formData.recurrence_end_date) {
+                options.until = new Date(formData.recurrence_end_date);
+            }
+
+            const rule = new RRule(options);
+            // Strip "RRULE:" prefix for backend consistency if desired, 
+            // but standard rrule.toString() adds it.
+            // backend/app/api/events.py currently handles "FREQ=..." manually.
+            // Let's strip "RRULE:" to send raw properties string "FREQ=WEEKLY;..."
+            const ruleStr = rule.toString().replace(/^RRULE:/, '');
+
+            // Human readable text
+            const text = rule.toText();
+            if (text) {
+                setRuleText(text.charAt(0).toUpperCase() + text.slice(1));
+            }
+
+            setFormData((prev: any) => {
+                if (prev.recurrence_rule !== ruleStr) {
+                    return { ...prev, recurrence_rule: ruleStr };
+                }
+                return prev;
+            });
+        } catch (e) {
+            console.error("Error generating RRULE:", e);
+        }
+
+    }, [customFreq, customInterval, customByWeekday, monthlyMode, customBySetPos, customPosDay, formData.frequency, formData.ends_on, formData.recurrence_end_date]);
+
+    // Format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input
     const formatDateForInput = (isoString: string | Date | undefined | null) => {
+
         if (!isoString) return '';
 
         let date: Date;
@@ -70,46 +147,81 @@ export default function EventScheduleSection({
             }
         >
             {/* Event Type Toggle */}
-            <div className="flex gap-4 mb-6">
-                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${!isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {/* Option 1: Single Event */}
+                <label className={`flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${!isMultiSession && !formData.is_recurring
+                    ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500'
+                    : 'border-gray-200 hover:border-gray-300'
                     }`}>
-                    <input
-                        type="radio"
-                        name="eventType"
-                        checked={!isMultiSession}
-                        onChange={() => {
-                            setIsMultiSession(false);
-                            setShowtimes([]);
-                        }}
-                        className="text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div>
-                        <span className="text-sm font-medium text-gray-900 block">Single Event</span>
-                        <span className="text-xs text-gray-500">One start and end time</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-900">Single Event</span>
+                        <input
+                            type="radio"
+                            name="eventType"
+                            checked={!isMultiSession && !formData.is_recurring}
+                            onChange={() => {
+                                setIsMultiSession(false);
+                                setFormData((prev: any) => ({ ...prev, is_recurring: false }));
+                                setShowtimes([]);
+                            }}
+                            className="text-emerald-600 focus:ring-emerald-500"
+                        />
                     </div>
+                    <span className="text-xs text-gray-500">One-time event with a start and end time.</span>
                 </label>
-                <label className={`flex-1 flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${isMultiSession ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+
+                {/* Option 2: Recurring Event */}
+                <label className={`flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${!isMultiSession && formData.is_recurring
+                    ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500'
+                    : 'border-gray-200 hover:border-gray-300'
                     }`}>
-                    <input
-                        type="radio"
-                        name="eventType"
-                        checked={isMultiSession}
-                        onChange={() => {
-                            // Push current dates to first showtime when switching
-                            if (formData.date_start) {
-                                setShowtimes([{
-                                    start_time: formData.date_start, // Already Local
-                                    end_time: formData.date_end || undefined, // Already Local
-                                }]);
-                            }
-                            setIsMultiSession(true);
-                        }}
-                        className="text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div>
-                        <span className="text-sm font-medium text-gray-900 block">Multiple Showings</span>
-                        <span className="text-xs text-gray-500">Theatre, cinema-style</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-900">Recurring Event</span>
+                        <input
+                            type="radio"
+                            name="eventType"
+                            checked={!isMultiSession && formData.is_recurring}
+                            onChange={() => {
+                                setIsMultiSession(false);
+                                setFormData((prev: any) => ({
+                                    ...prev,
+                                    is_recurring: true,
+                                    frequency: prev.frequency || 'WEEKLY' // Default to Weekly
+                                }));
+                                setShowtimes([]);
+                            }}
+                            className="text-emerald-600 focus:ring-emerald-500"
+                        />
                     </div>
+                    <span className="text-xs text-gray-500">Repeats on a schedule (e.g., Weekly Class).</span>
+                </label>
+
+                {/* Option 3: Multiple Showings */}
+                <label className={`flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${isMultiSession
+                    ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-900">Multiple Showings</span>
+                        <input
+                            type="radio"
+                            name="eventType"
+                            checked={isMultiSession}
+                            onChange={() => {
+                                // Push current dates to first showtime when switching
+                                if (formData.date_start) {
+                                    setShowtimes([{
+                                        start_time: formData.date_start,
+                                        end_time: formData.date_end || undefined,
+                                    }]);
+                                }
+                                setIsMultiSession(true);
+                                setFormData((prev: any) => ({ ...prev, is_recurring: false }));
+                            }}
+                            className="text-emerald-600 focus:ring-emerald-500"
+                        />
+                    </div>
+                    <span className="text-xs text-gray-500">Irregular times (e.g., Theatre Run, Cinema).</span>
                 </label>
             </div>
 
@@ -301,28 +413,29 @@ export default function EventScheduleSection({
                 </div>
             )}
 
-            <div className="mt-6 pt-6 border-t border-gray-100">
-                {/* Recurring Event Logic */}
-                <div className="flex items-center space-x-2 mb-4">
-                    <input
-                        type="checkbox"
-                        id="is_recurring"
-                        checked={formData.is_recurring}
-                        onChange={(e) => setFormData((prev: any) => ({ ...prev, is_recurring: e.target.checked }))}
-                        className="rounded text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <label htmlFor="is_recurring" className="text-sm font-medium text-gray-700">This is a recurring event</label>
-                </div>
-
-                {formData.is_recurring && (
+            {/* Recurring Event Logic */}
+            {formData.is_recurring && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
                     <div className="pl-6 border-l-2 border-emerald-100 space-y-4">
-                        <select name="frequency" value={formData.frequency} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg">
+                        <select
+                            name="frequency"
+                            value={formData.frequency}
+                            onChange={(e) => {
+                                handleChange(e);
+                                // Reset custom rule if switching away
+                                if (e.target.value !== 'CUSTOM') {
+                                    setFormData((prev: any) => ({ ...prev, recurrence_rule: '' }));
+                                }
+                            }}
+                            className="w-full px-3 py-2 border rounded-lg"
+                        >
                             <option value="WEEKLY">Weekly</option>
                             <option value="BIWEEKLY">Bi-Weekly</option>
                             <option value="MONTHLY">Monthly</option>
+                            <option value="CUSTOM">Custom Pattern</option>
                         </select>
 
-                        {/* Weekday Selector - shown for Weekly/Bi-Weekly */}
+                        {/* Standard Weekday Selector - shown for Weekly/Bi-Weekly */}
                         {(formData.frequency === 'WEEKLY' || formData.frequency === 'BIWEEKLY') && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Repeat on these days:</label>
@@ -350,15 +463,157 @@ export default function EventScheduleSection({
                             </div>
                         )}
 
+                        {/* Custom Recurrence Builder */}
+                        {formData.frequency === 'CUSTOM' && (
+                            <div className="bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200">
+                                <h4 className="text-sm font-semibold text-gray-900">Custom Rule Settings</h4>
+
+                                {/* Frequency & Interval Sentence */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-700">Repeats every</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value={customInterval}
+                                        onChange={(e) => setCustomInterval(Number(e.target.value))}
+                                        className="w-16 px-2 py-1 border rounded-md text-sm text-center"
+                                    />
+                                    <select
+                                        value={customFreq}
+                                        onChange={(e) => setCustomFreq(Number(e.target.value))}
+                                        className="px-3 py-1 border rounded-md text-sm"
+                                    >
+                                        <option value={RRule.DAILY}>Day(s)</option>
+                                        <option value={RRule.WEEKLY}>Week(s)</option>
+                                        <option value={RRule.MONTHLY}>Month(s)</option>
+                                    </select>
+                                </div>
+
+                                {/* Custom Weekly Days */}
+                                {customFreq === RRule.WEEKLY && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-2">Days of Week</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {Object.keys(dayMap).map((dayKey) => {
+                                                const d = dayMap[dayKey as keyof typeof dayMap];
+                                                const isSelected = customByWeekday.some(wd => wd.weekday === d.weekday);
+                                                return (
+                                                    <button
+                                                        key={dayKey}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (isSelected) {
+                                                                setCustomByWeekday(prev => prev.filter(wd => wd.weekday !== d.weekday));
+                                                            } else {
+                                                                setCustomByWeekday(prev => [...prev, d]);
+                                                            }
+                                                        }}
+                                                        className={`px-3 py-1 rounded-full text-xs font-medium border ${isSelected
+                                                            ? 'bg-emerald-100 border-emerald-500 text-emerald-800'
+                                                            : 'bg-white border-gray-300 text-gray-600'}`}
+                                                    >
+                                                        {dayKey}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Custom Monthly Logic */}
+                                {customFreq === RRule.MONTHLY && (
+                                    <div className="space-y-3">
+                                        <label className="block text-xs font-medium text-gray-700">Monthly On:</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="radio"
+                                                checked={monthlyMode === 'DATE'}
+                                                onChange={() => setMonthlyMode('DATE')}
+                                                className="text-emerald-600"
+                                            />
+                                            <span className="text-sm">Same Date (e.g. the 15th)</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="radio"
+                                                checked={monthlyMode === 'POS'}
+                                                onChange={() => setMonthlyMode('POS')}
+                                                className="text-emerald-600"
+                                            />
+                                            <span className="text-sm">Specific Day (e.g. 1st Sunday)</span>
+                                        </div>
+
+                                        {monthlyMode === 'POS' && (
+                                            <div className="flex gap-2 pl-6">
+                                                <select
+                                                    value={customBySetPos}
+                                                    onChange={(e) => setCustomBySetPos(Number(e.target.value))}
+                                                    className="px-2 py-1 border rounded text-sm"
+                                                >
+                                                    <option value={1}>1st</option>
+                                                    <option value={2}>2nd</option>
+                                                    <option value={3}>3rd</option>
+                                                    <option value={4}>4th</option>
+                                                    <option value={-1}>Last</option>
+                                                </select>
+                                                <select
+                                                    value={customPosDay}
+                                                    onChange={(e) => setCustomPosDay(Number(e.target.value))}
+                                                    className="px-2 py-1 border rounded text-sm"
+                                                >
+                                                    {Object.entries(dayMap).map(([label, val]) => (
+                                                        <option key={label} value={val.weekday}>{label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="p-3 bg-emerald-50 rounded-md border border-emerald-100">
+                                    <p className="text-xs text-emerald-800 font-medium">Summary:</p>
+                                    <p className="text-sm text-emerald-900">
+                                        {ruleText || '...'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Ends On Logic */}
-                        <div className="space-y-2">
-                            <label className="flex items-center"><input type="radio" value="never" checked={formData.ends_on === 'never'} onChange={() => setFormData((prev: any) => ({ ...prev, ends_on: 'never' }))} className="mr-2" /> Never (90 days)</label>
-                            <label className="flex items-center"><input type="radio" value="date" checked={formData.ends_on === 'date'} onChange={() => setFormData((prev: any) => ({ ...prev, ends_on: 'date' }))} className="mr-2" /> On Date</label>
-                            {formData.ends_on === 'date' && <Input type="date" name="recurrence_end_date" value={formData.recurrence_end_date} onChange={handleChange} />}
+                        <div className="space-y-3 pt-2">
+                            <label className="block text-sm font-bold text-gray-900">Duration / Ending</label>
+                            <div className="space-y-2">
+                                <label className="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        value="never"
+                                        checked={formData.ends_on === 'never'}
+                                        onChange={() => setFormData((prev: any) => ({ ...prev, ends_on: 'never' }))}
+                                        className="mr-2 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <span className="text-sm text-gray-700">Ongoing / No fixed end date (Limited to 90 days)</span>
+                                </label>
+                                <label className="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        value="date"
+                                        checked={formData.ends_on === 'date'}
+                                        onChange={() => setFormData((prev: any) => ({ ...prev, ends_on: 'date' }))}
+                                        className="mr-2 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <span className="text-sm text-gray-700">End on a specific date</span>
+                                </label>
+                                {formData.ends_on === 'date' && (
+                                    <div className="pl-6 mt-1">
+                                        <Input type="date" name="recurrence_end_date" value={formData.recurrence_end_date} onChange={handleChange} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </FormSection>
     );
 }

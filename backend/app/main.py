@@ -174,17 +174,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware - MUST be added first to handle preflight requests
-# Default to robust production settings, but allow override
-BACKEND_CORS_ORIGINS = os.getenv(
-    "BACKEND_CORS_ORIGINS",
-    "http://localhost:3000,http://localhost:8000,https://www.highlandeventshub.co.uk,https://highlandeventshub.co.uk" 
-)
-
-origins = [origin.strip() for origin in BACKEND_CORS_ORIGINS.split(",")]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
