@@ -446,6 +446,7 @@ export interface EventFilter {
   sort_by?: string;
   time_range?: 'upcoming' | 'past' | 'all';
   city_filter?: string;
+  is_recurring?: boolean;
 }
 
 export interface EventListResponse {

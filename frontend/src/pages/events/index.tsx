@@ -72,6 +72,7 @@ export default function EventsPage() {
     if (tag) filters.tag = tag as string;
     if (tag_names) filters.tag_names = (tag_names as string).split(',');
     if (age_restriction) filters.age_restriction = age_restriction as string;
+    if (router.query.is_recurring) filters.is_recurring = router.query.is_recurring === 'true';
 
     // Handle date logic
     if (date || date_from || date_to) {
