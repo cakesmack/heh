@@ -74,3 +74,6 @@ htmlcov/
 # Data Dumps
 *.json
 *.csv
+
+# Local Maintenance Scripts
+backend/create_admin_user.py

@@ -33,6 +33,10 @@ engine = create_engine(
 def run_migrations():
     """Run any pending database migrations."""
     with Session(engine) as session:
+        if "sqlite" in settings.DATABASE_URL:
+            logger.info("Skipping Postgres-only migrations for SQLite")
+            return
+
         # Add is_active column to users table if it doesn't exist
         try:
             session.execute(text("""

@@ -77,69 +77,72 @@ async def lifespan(app: FastAPI):
         from app.core.database import get_session
         
         # We put inline migrations in a separate try block to avoid blocking valid startup
-        try:
-            with next(get_session()) as session:
-                 # Add website_url column if it doesn't exist
-                session.exec(text("""
-                    ALTER TABLE events ADD COLUMN IF NOT EXISTS website_url VARCHAR(500);
-                """))
-                # Add is_all_day column if it doesn't exist
-                session.exec(text("""
-                    ALTER TABLE events ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN DEFAULT FALSE;
-                """))
-                # Triptych Hero Migration
-                session.exec(text("""
-                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_left VARCHAR(500);
-                """))
-                session.exec(text("""
-                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_right VARCHAR(500);
-                """))
-                # Emergency Migration: Add is_dismissed to venues
-                session.exec(text("""
-                    ALTER TABLE venues ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT FALSE;
-                """))
-                
-                # Hero 4-Slot Magazine Migration
-                session.exec(text("""
-                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS link VARCHAR(500);
-                """))
-                session.exec(text("""
-                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_text VARCHAR(50);
-                """))
-                session.exec(text("""
-                    ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_color VARCHAR(50) DEFAULT 'emerald';
-                """))
-                
-                # Initialize 4 Fixed Slots (0-3)
-                for i in range(4):
-                    # Check directly via SQL to avoid model mismatches during migration
-                    result = session.exec(text(f"SELECT id FROM hero_slots WHERE position = {i}")).first()
-                    if not result:
-                        session.exec(text(f"""
-                            INSERT INTO hero_slots (position, type, is_active, badge_color, overlay_style)
-                            VALUES ({i}, 'spotlight_event', false, 'emerald', 'dark')
-                        """))
-                        logger.info(f"Initialized Hero Slot position {i}")
-    
-                # Backfill created_at for Magazine Feed (Just Added)
-                # Ensure all events have a created_at date for sorting
-                # Backfill created_at for Magazine Feed (Just Added)
-                # Ensure all events have a created_at date for sorting.
-                # FIX: Clamp to NOW() to prevent future events from burying new creations.
-                session.exec(text("""
-                    UPDATE events 
-                    SET created_at = CASE 
-                        WHEN created_at IS NULL THEN LEAST(date_start, NOW())
-                        WHEN created_at > NOW() THEN NOW()
-                        ELSE created_at
-                    END
-                    WHERE created_at IS NULL OR created_at > NOW();
-                """))
-                
-                session.commit()
-                logger.info("Inline Migrations complete")
-        except Exception as e:
-             logger.warning(f"Inline Migration skipped/failed (non-critical): {e}")
+        if "sqlite" in settings.DATABASE_URL:
+            logger.info("Skipping Postgres-only inline migrations for SQLite")
+        else:
+            try:
+                with next(get_session()) as session:
+                     # Add website_url column if it doesn't exist
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS website_url VARCHAR(500);
+                    """))
+                    # Add is_all_day column if it doesn't exist
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN DEFAULT FALSE;
+                    """))
+                    # Triptych Hero Migration
+                    session.exec(text("""
+                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_left VARCHAR(500);
+                    """))
+                    session.exec(text("""
+                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_right VARCHAR(500);
+                    """))
+                    # Emergency Migration: Add is_dismissed to venues
+                    session.exec(text("""
+                        ALTER TABLE venues ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT FALSE;
+                    """))
+                    
+                    # Hero 4-Slot Magazine Migration
+                    session.exec(text("""
+                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS link VARCHAR(500);
+                    """))
+                    session.exec(text("""
+                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_text VARCHAR(50);
+                    """))
+                    session.exec(text("""
+                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_color VARCHAR(50) DEFAULT 'emerald';
+                    """))
+                    
+                    # Initialize 4 Fixed Slots (0-3)
+                    for i in range(4):
+                        # Check directly via SQL to avoid model mismatches during migration
+                        result = session.exec(text(f"SELECT id FROM hero_slots WHERE position = {i}")).first()
+                        if not result:
+                            session.exec(text(f"""
+                                INSERT INTO hero_slots (position, type, is_active, badge_color, overlay_style)
+                                VALUES ({i}, 'spotlight_event', false, 'emerald', 'dark')
+                            """))
+                            logger.info(f"Initialized Hero Slot position {i}")
+        
+                    # Backfill created_at for Magazine Feed (Just Added)
+                    # Ensure all events have a created_at date for sorting
+                    # Backfill created_at for Magazine Feed (Just Added)
+                    # Ensure all events have a created_at date for sorting.
+                    # FIX: Clamp to NOW() to prevent future events from burying new creations.
+                    session.exec(text("""
+                        UPDATE events 
+                        SET created_at = CASE 
+                            WHEN created_at IS NULL THEN LEAST(date_start, NOW())
+                            WHEN created_at > NOW() THEN NOW()
+                            ELSE created_at
+                        END
+                        WHERE created_at IS NULL OR created_at > NOW();
+                    """))
+                    
+                    session.commit()
+                    logger.info("Inline Migrations complete")
+            except Exception as e:
+                 logger.warning(f"Inline Migration skipped/failed (non-critical): {e}")
 
     except Exception as e:
         logger.error(f"Failed to initialize database (Tables/Migrations): {e}")
@@ -171,10 +174,17 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware - MUST be added first to handle preflight requests
+# Default to robust production settings, but allow override
+BACKEND_CORS_ORIGINS = os.getenv(
+    "BACKEND_CORS_ORIGINS",
+    "http://localhost:3000,http://localhost:8000,https://www.highlandeventshub.co.uk,https://highlandeventshub.co.uk" 
+)
+
+origins = [origin.strip() for origin in BACKEND_CORS_ORIGINS.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    # Combine settings.ALLOWED_ORIGINS with explicitly required production domains
-    allow_origins=settings.ALLOWED_ORIGINS + ["https://www.highlandeventshub.co.uk", "https://highlandeventshub.co.uk"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
