@@ -170,6 +170,7 @@ class EventResponse(BaseModel):
     recurrence_rule: Optional[str] = None
     is_recurring: bool = False
     parent_event_id: Optional[UUID] = None
+    recurrence_group_id: Optional[UUID] = None
 
     # Nested related data
     category: Optional[CategoryResponse] = None

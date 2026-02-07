@@ -323,6 +323,7 @@ export interface Event {
   recurrence_rule?: string;
   is_recurring?: boolean;
   parent_event_id?: string;
+  recurrence_group_id?: string;
 }
 
 export interface OrganizerProfileResponse {

@@ -284,6 +284,7 @@ def list_events(
     organizer_profile_id: Optional[str] = Query(None, description="Filter by organizer profile (group) ID"),
     venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
     include_past: bool = Query(False, description="Include past events"),
+    is_recurring: Optional[bool] = Query(None, description="Filter by recurrence status"),
 
     time_range: Optional[str] = Query(None, description="'upcoming', 'past', or 'all'"),
     sort_by: str = Query("date", description="Sort by 'date' (default) or 'created'"),
@@ -616,6 +617,10 @@ def list_events(
         query = query.order_by(Event.date_start.desc())
     elif not include_past:
         query = query.where(Event.date_end >= datetime.utcnow())
+
+    # Filter by recurrence status
+    if is_recurring is not None:
+        query = query.where(Event.is_recurring == is_recurring)
 
     # Filter by price range
     if price_min is not None:

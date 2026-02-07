@@ -143,6 +143,9 @@ def moderate_event(
         raise HTTPException(status_code=404, detail="Event not found")
 
     action = moderation.action
+    is_series_approval = False
+    sibling_count = 0
+
     if action == "approve":
         event.status = "published"
         # Increment organizer's trust level for successful approval
@@ -162,12 +165,41 @@ def moderate_event(
                     )
                 )
             ).all()
-            for sibling in sibling_events:
-                sibling.status = "published"
-                session.add(sibling)
-            logger.info(f"Approved {len(sibling_events)} sibling events in recurrence group {event.recurrence_group_id}")
+            
+            if sibling_events:
+                is_series_approval = True
+                sibling_count = len(sibling_events)
+                for sibling in sibling_events:
+                    sibling.status = "published"
+                    session.add(sibling)
+                logger.info(f"Approved {sibling_count} sibling events in recurrence group {event.recurrence_group_id}")
+
     elif action == "reject":
         event.status = "rejected"
+        # If rejecting a series, we might want to reject all? 
+        # For now, let's keep rejection granular or user can delete, 
+        # unless user typically wants to reject the whole series. 
+        # Let's reject ALL siblings too if it's a series rejection to prevent spamming the queue.
+        if event.recurrence_group_id:
+            from sqlalchemy import and_
+            sibling_events = session.exec(
+                select(Event).where(
+                    and_(
+                        Event.recurrence_group_id == event.recurrence_group_id,
+                        Event.id != event.id,
+                        Event.status == "pending"
+                    )
+                )
+            ).all()
+            if sibling_events:
+                is_series_approval = True # Reused flag for "series action"
+                sibling_count = len(sibling_events)
+                for sibling in sibling_events:
+                    sibling.status = "rejected"
+                    sibling.moderation_reason = moderation.rejection_reason or "Series Rejected"
+                    session.add(sibling)
+                logger.info(f"Rejected {len(sibling_events)} sibling events in recurrence group {event.recurrence_group_id}")
+
     else:
         raise HTTPException(status_code=400, detail="Invalid action")
 
@@ -179,18 +211,30 @@ def moderate_event(
     if event.organizer and event.organizer.email:
         try:
             if action == "approve":
-                resend_email_service.send_event_approved(
+                # Adjusted Subject/Body for Series
+                email_method = resend_email_service.send_event_approved
+                # We can't easily change the template *inside* the existing service without refactoring it too,
+                # but we can adjust the title passed to it.
+                display_title = event.title
+                if is_series_approval:
+                     display_title = f"{event.title} (Series - {sibling_count + 1} events)"
+
+                email_method(
                     to_email=event.organizer.email,
-                    event_title=event.title,
+                    event_title=display_title,
                     event_id=str(event.id),
                     username=event.organizer.username,
                     is_auto_approved=False
                 )
                 logger.info(f"Approval email sent to {mask_email(event.organizer.email)} for event {event.id}")
             elif action == "reject":
+                display_title = event.title
+                if is_series_approval:
+                     display_title = f"{event.title} (Series)"
+
                 resend_email_service.send_event_rejected(
                     to_email=event.organizer.email,
-                    event_title=event.title,
+                    event_title=display_title,
                     event_id=str(event.id),
                     rejection_reason=moderation.rejection_reason,
                     username=event.organizer.username
@@ -204,26 +248,38 @@ def moderate_event(
     if event.organizer_id:
         try:
             if action == "approve":
+                msg = f"Your event '{event.title}' has been approved and is now live."
+                if is_series_approval:
+                    msg = f"Your recurring event series '{event.title}' ({sibling_count + 1} events) has been approved and is now live."
+
                 create_notification(
                     session=session,
                     user_id=event.organizer_id,
                     notification_type=NotificationType.EVENT_APPROVED,
                     title="Event Approved! 🎉",
-                    message=f"Your event '{event.title}' has been approved and is now live.",
+                    message=msg,
                     link=f"/events/{event.id}"
                 )
                 logger.info(f"Approval notification created for user {event.organizer_id}")
                 
                 # Notify users who follow this event's category/venue/organizer
+                # Only notify for the main event to avoid spamming 52 notifications to followers too?
+                # Ideally we spread them out or just notify for the first one.
+                # For now, notify for THIS event. 
+                # (Siblings are approved silently regarding followers to avoid spam bloom).
                 notify_interested_users(event, session)
             elif action == "reject":
                 reason_text = f" Reason: {moderation.rejection_reason}" if moderation.rejection_reason else ""
+                msg = f"Your event '{event.title}' was not approved.{reason_text}"
+                if is_series_approval:
+                     msg = f"Your recurring event series '{event.title}' was not approved.{reason_text}"
+
                 create_notification(
                     session=session,
                     user_id=event.organizer_id,
                     notification_type=NotificationType.EVENT_REJECTED,
                     title="Event Not Approved",
-                    message=f"Your event '{event.title}' was not approved.{reason_text}",
+                    message=msg,
                     link=f"/events/{event.id}/edit"
                 )
                 logger.info(f"Rejection notification created for user {event.organizer_id}")

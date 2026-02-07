@@ -40,6 +40,7 @@ export default function AdminCollections() {
         tags: '',
         age: '',
         price: 'any', // 'any', 'free', 'paid'
+        recurrence: 'any', // 'any', 'recurring', 'single'
     });
 
     const fetchCollections = async () => {
@@ -79,6 +80,7 @@ export default function AdminCollections() {
             tags: '',
             age: '',
             price: 'any',
+            recurrence: 'any',
         });
         setQueryBuilderMode(true);
         setError(null);
@@ -122,6 +124,7 @@ export default function AdminCollections() {
                 tags: searchParams.get('tag_names') || searchParams.get('tag') || '',
                 age: searchParams.get('age_restriction') || '',
                 price: searchParams.get('price') === 'free' ? 'free' : (searchParams.get('price') === 'paid' ? 'paid' : 'any'),
+                recurrence: searchParams.get('is_recurring') === 'true' ? 'recurring' : (searchParams.get('is_recurring') === 'false' ? 'single' : 'any'),
             });
             setQueryBuilderMode(true);
         } catch (e) {
@@ -139,6 +142,8 @@ export default function AdminCollections() {
         if (qbState.tags) params.append('tag_names', qbState.tags);
         if (qbState.age) params.append('age_restriction', qbState.age);
         if (qbState.price === 'free') params.append('price', 'free');
+        if (qbState.recurrence === 'recurring') params.append('is_recurring', 'true');
+        if (qbState.recurrence === 'single') params.append('is_recurring', 'false');
 
         // Add fixed date range to URL params if set
         if (formData.fixed_start_date || formData.fixed_end_date) {
@@ -427,6 +432,44 @@ export default function AdminCollections() {
                                         </div>
                                     </div>
 
+
+                                    {/* Recurrence Filter */}
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Recurrence</label>
+                                        <div className="flex gap-4">
+                                            <label className="flex items-center text-sm text-gray-600">
+                                                <input
+                                                    type="radio"
+                                                    name="qb_recurrence"
+                                                    checked={qbState.recurrence === 'any'}
+                                                    onChange={() => setQbState({ ...qbState, recurrence: 'any' })}
+                                                    className="mr-1.5"
+                                                />
+                                                Any
+                                            </label>
+                                            <label className="flex items-center text-sm text-gray-600">
+                                                <input
+                                                    type="radio"
+                                                    name="qb_recurrence"
+                                                    checked={qbState.recurrence === 'recurring'}
+                                                    onChange={() => setQbState({ ...qbState, recurrence: 'recurring' })}
+                                                    className="mr-1.5"
+                                                />
+                                                Recurring Only
+                                            </label>
+                                            <label className="flex items-center text-sm text-gray-600">
+                                                <input
+                                                    type="radio"
+                                                    name="qb_recurrence"
+                                                    checked={qbState.recurrence === 'single'}
+                                                    onChange={() => setQbState({ ...qbState, recurrence: 'single' })}
+                                                    className="mr-1.5"
+                                                />
+                                                Single Only
+                                            </label>
+                                        </div>
+                                    </div>
+
                                     {/* Custom Date Range */}
                                     <div className="pt-3 border-t border-gray-200">
                                         <label className="block text-xs font-medium text-gray-500 mb-2">
@@ -529,6 +572,6 @@ export default function AdminCollections() {
                     </form>
                 </Modal>
             </AdminLayout>
-        </AdminGuard>
+        </AdminGuard >
     );
 }
