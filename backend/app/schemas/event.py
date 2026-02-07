@@ -213,6 +213,7 @@ class EventFilter(BaseModel):
     longitude: Optional[float] = None
     radius_km: Optional[float] = Field(None, ge=0.0)
     featured_only: Optional[bool] = False
+    is_recurring: Optional[bool] = None
     status: Optional[str] = None
     skip: int = Field(default=0, ge=0)
     limit: int = Field(default=50, ge=1, le=100)

@@ -90,6 +90,20 @@ async def lifespan(app: FastAPI):
                     session.exec(text("""
                         ALTER TABLE events ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN DEFAULT FALSE;
                     """))
+                    
+                    # Recurring Event Migrations
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;
+                    """))
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_rule VARCHAR(500);
+                    """))
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS parent_event_id VARCHAR(50);
+                    """))
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_group_id VARCHAR(50);
+                    """))
                     # Triptych Hero Migration
                     session.exec(text("""
                         ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_left VARCHAR(500);
