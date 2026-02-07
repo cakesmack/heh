@@ -25,7 +25,11 @@ interface NotificationResponse {
   unread_count: number;
 }
 
-export function NotificationCenter() {
+interface NotificationCenterProps {
+  pendingCount?: number;
+}
+
+export function NotificationCenter({ pendingCount = 0 }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -37,8 +41,26 @@ export function NotificationCenter() {
     setLoading(true);
     try {
       const response = await apiFetch<NotificationResponse>('/api/notifications?limit=10');
-      setNotifications(response.notifications);
-      setUnreadCount(response.unread_count);
+      let fetchedNotifs = response.notifications;
+      let fetchedUnread = response.unread_count;
+
+      // Inject Virtual System Alert if pending items exist
+      if (pendingCount > 0) {
+        const systemAlert: Notification = {
+          id: 'admin-action-required',
+          type: 'system_alert',
+          title: 'Action Required',
+          message: `${pendingCount} event${pendingCount > 1 ? 's' : ''} require${pendingCount === 1 ? 's' : ''} moderation`,
+          link: '/admin',
+          is_read: false,
+          created_at: new Date().toISOString()
+        };
+        fetchedNotifs = [systemAlert, ...fetchedNotifs];
+        fetchedUnread += 1; // Count system alert as unread
+      }
+
+      setNotifications(fetchedNotifs);
+      setUnreadCount(fetchedUnread);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
     } finally {
@@ -46,9 +68,13 @@ export function NotificationCenter() {
     }
   };
 
-  // Fetch on mount and when dropdown opens
+  // Allow parent to trigger re-fetch/update when pendingCount changes
   useEffect(() => {
     fetchNotifications();
+  }, [pendingCount]);
+
+  // Fetch on mount and when dropdown opens
+  useEffect(() => {
     // Refresh every 60 seconds
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
@@ -74,6 +100,8 @@ export function NotificationCenter() {
 
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
+    if (notificationId === 'admin-action-required') return; // Cannot mark system alert as read via API
+
     try {
       await apiFetch(`/api/notifications/${notificationId}/read`, { method: 'POST' });
       setNotifications(prev =>
@@ -89,8 +117,10 @@ export function NotificationCenter() {
   const markAllAsRead = async () => {
     try {
       await apiFetch('/api/notifications/read-all', { method: 'POST' });
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
+      // Don't mark system alert as read here, only real ones
+      setNotifications(prev => prev.map(n => n.type === 'system_alert' ? n : { ...n, is_read: true }));
+      // Unread count should only be system alert if it exists
+      setUnreadCount(pendingCount > 0 ? 1 : 0);
     } catch (err) {
       console.error('Failed to mark all as read:', err);
     }
@@ -115,6 +145,14 @@ export function NotificationCenter() {
   // Get icon for notification type
   const getTypeIcon = (type: string) => {
     switch (type) {
+      case 'system_alert':
+        return (
+          <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+        );
       case 'event_approved':
         return (
           <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
@@ -199,9 +237,8 @@ export function NotificationCenter() {
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${
-                    !notification.is_read ? 'bg-emerald-50/50' : ''
-                  }`}
+                  className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!notification.is_read ? 'bg-emerald-50/50' : ''
+                    } ${notification.type === 'system_alert' ? 'bg-red-50/50 hover:bg-red-50' : ''}`}
                   onClick={() => {
                     if (!notification.is_read) {
                       markAsRead(notification.id);
@@ -224,8 +261,11 @@ export function NotificationCenter() {
                         {formatTime(notification.created_at)}
                       </p>
                     </div>
-                    {!notification.is_read && (
+                    {!notification.is_read && notification.type !== 'system_alert' && (
                       <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                    )}
+                    {notification.type === 'system_alert' && (
+                      <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                     )}
                   </div>
                 </div>

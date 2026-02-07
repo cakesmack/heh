@@ -120,7 +120,7 @@ export function Header() {
 
             {isAuthenticated ? (
               <>
-                <NotificationCenter />
+                <NotificationCenter pendingCount={pendingCount} />
                 <div className="relative group">
                   <button className="flex items-center space-x-2 bg-moss-green/20 px-3 py-1.5 rounded-full border border-moss-green/30 hover:bg-moss-green/30 transition-colors">
                     <span className="text-sm font-medium text-soft-sky">
@@ -205,7 +205,7 @@ export function Header() {
 
             {/* Notification Bell */}
             {isAuthenticated && (
-              <NotificationCenter />
+              <NotificationCenter pendingCount={pendingCount} />
             )}
           </div>
         </div>
