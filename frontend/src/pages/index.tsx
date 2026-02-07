@@ -28,7 +28,7 @@ import { getDateRangeFromFilter } from '@/lib/dateUtils';
 
 // Site constants
 const SITE_URL = 'https://www.highlandeventshub.co.uk';
-const DEFAULT_OG_IMAGE = 'https://res.cloudinary.com/dakq1xwn1/image/upload/v1767454232/highland_events/events/lhxbivhjsqpwn1hsbz5x.jpg';
+const DEFAULT_OG_IMAGE = 'https://www.highlandeventshub.co.uk/images/og-preview.jpg';
 
 interface HomePageProps {
   meta?: any; // Passed to _app.tsx
