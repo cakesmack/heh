@@ -182,14 +182,25 @@ export default function EditEventPage() {
                         const freqMap = ['YEARLY', 'MONTHLY', 'WEEKLY', 'DAILY', 'HOURLY', 'MINUTELY', 'SECONDLY'];
                         const freqName = freqMap[rule.options.freq] || 'CUSTOM'; // Default to custom if unknown
 
+                        let determinedFreq = 'CUSTOM';
+
+                        // Check for simple patterns
+                        if (freqName === 'WEEKLY' && !rule.options.bysetpos) {
+                            determinedFreq = rule.options.interval === 2 ? 'BIWEEKLY' : 'WEEKLY';
+                        } else if (freqName === 'MONTHLY') {
+                            // Simple Monthly = only freq=MONTHLY (and maybe interval=1, bymonthday)
+                            // Complex Monthly = has bysetpos or specific byweekday not matching date logic
+                            if (rule.options.bysetpos || (rule.options.byweekday && rule.options.byweekday.length > 0)) {
+                                determinedFreq = 'CUSTOM';
+                            } else {
+                                determinedFreq = 'MONTHLY';
+                            }
+                        }
+
                         setFormData(prev => ({
                             ...prev,
                             // If it's a standard simple frequency, use it. Otherwise CUSTOM.
-                            // The EventScheduleSection handles "CUSTOM" parsing internally if we pass the rule string?
-                            // Actually, existing Edit page logic (below) was trying to parse it manually.
-                            // The EventScheduleSection primarily sets 'frequency' and 'recurrence_rule'.
-                            // If we set 'frequency' to 'CUSTOM', it expects 'recurrence_rule' to be set.
-                            frequency: (freqName === 'WEEKLY' || freqName === 'MONTHLY' || freqName === 'BIWEEKLY') ? freqName : 'CUSTOM',
+                            frequency: (determinedFreq === 'WEEKLY' || determinedFreq === 'MONTHLY' || determinedFreq === 'BIWEEKLY') ? determinedFreq : 'CUSTOM',
                             recurrence_rule: eventData.recurrence_rule || '',
                             is_recurring: true
                         }));

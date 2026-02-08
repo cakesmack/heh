@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Input } from '@/components/common/Input';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import FormSection from '../FormSection';
 import { ShowtimeCreate } from '@/types';
-import { RRule, Frequency, Weekday } from 'rrule';
+import { RRule, Frequency, Weekday, rrulestr } from 'rrule';
 import { useState, useEffect } from 'react';
 
 // Day mapping for RRule
@@ -48,10 +47,63 @@ export default function EventScheduleSection({
     const [customBySetPos, setCustomBySetPos] = useState(1);
     const [customPosDay, setCustomPosDay] = useState(RRule.SU.weekday);
     const [ruleText, setRuleText] = useState('');
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    // Hydrate internal state from formData.recurrence_rule on mount/change
+    useEffect(() => {
+        // If not custom or already hydrated or no rule, just mark as hydrated and skip
+        if (formData.frequency !== 'CUSTOM' || !formData.recurrence_rule || isHydrated) {
+            if (!isHydrated) setIsHydrated(true);
+            return;
+        }
+
+        try {
+            const rule = rrulestr(formData.recurrence_rule);
+            setCustomFreq(rule.options.freq);
+            setCustomInterval(rule.options.interval);
+
+            if (rule.options.byweekday) {
+                // rrule byweekday is sometimes an array of Weekday objects or numbers
+                // We need to cast it safely to our customByWeekday state
+                // The rrule library types are a bit loose, usually it's [Weekday]
+                // Let's assume standard RRule object behavior
+                const weekdays = Array.isArray(rule.options.byweekday)
+                    ? rule.options.byweekday
+                    : [rule.options.byweekday];
+                setCustomByWeekday(weekdays as Weekday[]);
+            } else {
+                setCustomByWeekday([]);
+            }
+
+            if (rule.options.freq === RRule.MONTHLY) {
+                if (rule.options.bysetpos) {
+                    setMonthlyMode('POS');
+                    const pos = Array.isArray(rule.options.bysetpos) ? rule.options.bysetpos[0] : rule.options.bysetpos;
+                    setCustomBySetPos(pos);
+
+                    if (rule.options.byweekday) {
+                        const days = Array.isArray(rule.options.byweekday) ? rule.options.byweekday : [rule.options.byweekday];
+                        if (days.length > 0) {
+                            // days[0] matches the Weekday interface { weekday: number }
+                            setCustomPosDay(days[0].weekday);
+                        }
+                    }
+                } else {
+                    setMonthlyMode('DATE');
+                }
+            }
+
+            setIsHydrated(true);
+        } catch (e) {
+            console.error("Failed to hydrate custom rule:", e);
+            setIsHydrated(true); // Prevent infinite retry
+        }
+    }, [formData.frequency, formData.recurrence_rule, isHydrated]);
+
 
     // Effect: Generate RRULE string when custom settings change
     useEffect(() => {
-        if (formData.frequency !== 'CUSTOM') return;
+        if (formData.frequency !== 'CUSTOM' || !isHydrated) return;
 
         try {
             const options: any = {
@@ -106,7 +158,7 @@ export default function EventScheduleSection({
             console.error("Error generating RRULE:", e);
         }
 
-    }, [customFreq, customInterval, customByWeekday, monthlyMode, customBySetPos, customPosDay, formData.frequency, formData.ends_on, formData.recurrence_end_date]);
+    }, [customFreq, customInterval, customByWeekday, monthlyMode, customBySetPos, customPosDay, formData.frequency, formData.ends_on, formData.recurrence_end_date, isHydrated]);
 
     // Format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input
     const formatDateForInput = (isoString: string | Date | undefined | null) => {
