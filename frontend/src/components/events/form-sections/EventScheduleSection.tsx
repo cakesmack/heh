@@ -70,7 +70,7 @@ export default function EventScheduleSection({
                 const weekdays = Array.isArray(rule.options.byweekday)
                     ? rule.options.byweekday
                     : [rule.options.byweekday];
-                setCustomByWeekday(weekdays as Weekday[]);
+                setCustomByWeekday(weekdays as unknown as Weekday[]);
             } else {
                 setCustomByWeekday([]);
             }
@@ -84,8 +84,11 @@ export default function EventScheduleSection({
                     if (rule.options.byweekday) {
                         const days = Array.isArray(rule.options.byweekday) ? rule.options.byweekday : [rule.options.byweekday];
                         if (days.length > 0) {
-                            // days[0] matches the Weekday interface { weekday: number }
-                            setCustomPosDay(days[0].weekday);
+                            // days[0] matches the Weekday interface { weekday: number } or is a number
+                            // internal state expects just the number for customPosDay
+                            const firstDay = days[0] as unknown as (Weekday | number);
+                            const dayNum = typeof firstDay === 'number' ? firstDay : firstDay.weekday;
+                            setCustomPosDay(dayNum);
                         }
                     }
                 } else {
