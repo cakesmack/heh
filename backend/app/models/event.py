@@ -106,6 +106,8 @@ class Event(SQLModel, table=True):
     
     # Analytics (Denormalized)
     view_count: int = Field(default=0)
+    attending_count: int = Field(default=0)  # User marked as "Going"
+    ticket_click_count: int = Field(default=0) # User clicked "Tickets"
 
 
     # Media

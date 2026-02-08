@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { analytics } from '@/lib/analytics';
+import { eventsAPI } from '@/lib/api';
 
 export const useAnalytics = () => {
     const trackEvent = useCallback((eventType: string, targetId?: string, metadata?: any) => {
@@ -28,6 +29,8 @@ export const useAnalytics = () => {
 
     const trackTicketClick = useCallback((eventId: string) => {
         trackEvent('click_ticket', eventId);
+        // Track for internal popularity scoring
+        eventsAPI.trackTicketClick(eventId).catch(err => console.error('Failed to track ticket click:', err));
     }, [trackEvent]);
 
     return {

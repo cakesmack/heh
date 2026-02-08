@@ -397,6 +397,18 @@ export const eventsAPI = {
    * Get top events ranked by popularity score
    * Score = (views * 1) + (attending * 5) + (ticket_clicks * 10)
    */
+  /**
+   * Track a ticket link click
+   */
+  trackTicketClick: async (id: string): Promise<void> => {
+    return apiFetch(`/api/events/${id}/click`, {
+      method: 'POST',
+    }, false);
+  },
+
+  /**
+   * Get filtered list of events (Top)
+   */
   getTop: async (limit: number = 10): Promise<EventListResponse> => {
     return apiFetch<EventListResponse>(`/api/events/top?limit=${limit}`, {}, false);
   },

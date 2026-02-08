@@ -755,80 +755,63 @@ def list_events(
 
 
 
+
+@router.post("/{event_id}/click", response_model=EventResponse)
+def track_ticket_click(
+    event_id: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Track a "Get Tickets" click.
+    Increments ticket_click_count and returns updated event.
+    Public endpoint (no auth required).
+    """
+    event = session.get(Event, normalize_uuid(event_id))
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found"
+        )
+    
+    event.ticket_click_count += 1
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    
+    return build_event_response(event, session)
+
+
 @router.get("/top", response_model=EventListResponse)
 def get_top_events(
     limit: int = Query(default=10, ge=1, le=50),
     session: Session = Depends(get_session)
 ):
     """
-    Get top events ranked by popularity score with fallback to chronological order.
+    Get top events ranked by Weighted Popularity Score.
     
-    Score = (view_count * 1) + (attending_count * 5) + (ticket_click_count * 10)
+    Formula: Score = (view_count * 1) + (attending_count * 5) + (ticket_click_count * 10)
     
     Sorting:
-    - Primary: popularity_score DESC (highest engagement first)
-    - Secondary: date_start ASC (sooner events first, for ties/cold start)
-    
-    Only returns future approved events.
+    - Primary: Score DESC
+    - Secondary: Date ASC (upcoming first)
     """
-    from app.models.analytics import AnalyticsEvent
-    
     now = datetime.utcnow()
     
-    # 1. Fetch upcoming approved events (limit to 50 for efficiency)
-    upcoming_events = session.exec(
-        select(Event)
-        .where(Event.date_start > now)
-        .where(Event.status == "published")
-        .order_by(Event.date_start)
-        .limit(50)
-    ).all()
+    # Efficient Database-Side Sorting
+    # We calculate the score directly in the ORDER BY clause
+    # This avoids fetching 50 events and sorting in Python, allowing true "Top N" from the entire DB.
     
-    if not upcoming_events:
-        return EventListResponse(events=[], total=0, skip=0, limit=limit)
+    query = select(Event).where(
+        (Event.date_start > now) & 
+        (Event.status == "published")
+    ).order_by(
+        (Event.view_count + (Event.attending_count * 5) + (Event.ticket_click_count * 10)).desc(),
+        Event.date_start.asc()
+    ).limit(limit)
+
+    top_events = session.exec(query).all()
     
-    # 2. Get all relevant analytics in one query
-    analytics = session.exec(
-        select(AnalyticsEvent)
-        .where(AnalyticsEvent.event_type.in_(["event_view", "save_event", "click_ticket"]))
-    ).all()
-    
-    # 3. Build analytics counts per event (null-safe)
-    event_stats = {}
-    for ae in analytics:
-        target_id = (ae.event_metadata or {}).get("target_id")
-        if target_id:
-            normalized_id = target_id.replace("-", "")
-            if normalized_id not in event_stats:
-                event_stats[normalized_id] = {"views": 0, "saves": 0, "clicks": 0}
-            
-            if ae.event_type == "event_view":
-                event_stats[normalized_id]["views"] += 1
-            elif ae.event_type == "save_event":
-                event_stats[normalized_id]["saves"] += 1
-            elif ae.event_type == "click_ticket":
-                event_stats[normalized_id]["clicks"] += 1
-    
-    # 4. Calculate popularity score for each event (null-safe with defaults)
-    events_with_scores = []
-    for event in upcoming_events:
-        normalized_id = str(event.id).replace("-", "")
-        stats = event_stats.get(normalized_id, {})
-        
-        # Null-safe score calculation: coalesce to 0
-        views = stats.get("views", 0) or 0
-        saves = stats.get("saves", 0) or 0
-        clicks = stats.get("clicks", 0) or 0
-        
-        # Formula: views * 1 + saves * 5 + clicks * 10
-        score = (views * 1) + (saves * 5) + (clicks * 10)
-        events_with_scores.append((event, score, event.date_start))
-    
-    # 5. Two-phase sort: Primary = score DESC, Secondary = date_start ASC
-    events_with_scores.sort(key=lambda x: (-x[1], x[2]))
-    top_events = [e[0] for e in events_with_scores[:limit]]
-    
-    # 6. Build responses
+    # Build responses
     event_responses = [build_event_response(event, session) for event in top_events]
     
     return EventListResponse(

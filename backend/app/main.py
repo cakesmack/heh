@@ -142,6 +142,12 @@ async def lifespan(app: FastAPI):
                     session.exec(text("""
                         ALTER TABLE events ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0;
                     """))
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS attending_count INTEGER DEFAULT 0;
+                    """))
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_click_count INTEGER DEFAULT 0;
+                    """))
 
                     # Backfill created_at for Magazine Feed (Just Added)
                     # Ensure all events have a created_at date for sorting
