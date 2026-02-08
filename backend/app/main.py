@@ -138,6 +138,11 @@ async def lifespan(app: FastAPI):
                             """))
                             logger.info(f"Initialized Hero Slot position {i}")
         
+                    # View Count Migration (Added for Analytics Fix)
+                    session.exec(text("""
+                        ALTER TABLE events ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0;
+                    """))
+
                     # Backfill created_at for Magazine Feed (Just Added)
                     # Ensure all events have a created_at date for sorting
                     # Backfill created_at for Magazine Feed (Just Added)

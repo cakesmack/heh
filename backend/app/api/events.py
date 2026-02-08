@@ -164,7 +164,8 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
     #         elif ae.event_type == "click_ticket":
     #             ticket_click_count += 1
 
-    response.view_count = view_count
+    # response.view_count = view_count
+    response.view_count = event.view_count
     response.save_count = save_count
     response.ticket_click_count = ticket_click_count
     
@@ -1224,6 +1225,20 @@ def get_event(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event not found"
         )
+
+    # Increment View Count (Public & Admin)
+    # Using SQL expression to be race-condition resistant (partially)
+    # event.view_count += 1 
+    # session.add(event)
+    # session.commit()
+    # session.refresh(event)
+    
+    # Optimization: Direct SQL update to avoid race conditions and overhead
+    # But for simplicity with SQLModel objects:
+    event.view_count += 1
+    session.add(event)
+    session.commit()
+    session.refresh(event)
 
     return build_event_response(event, session)
 
