@@ -7,7 +7,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +22,7 @@ import { PromotionCard } from '@/components/promotions/PromotionCard';
 import { FollowButton } from '@/components/common/FollowButton';
 import SocialLinks from '@/components/common/SocialLinks';
 import RichText from '@/components/ui/RichText';
+import VenueEditModal from '@/components/venues/VenueEditModal';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
@@ -41,14 +42,61 @@ export default function VenueDetailPage() {
   const [newStaffEmail, setNewStaffEmail] = useState('');
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'events' | 'promotions' | 'about' | 'staff'>('events');
 
   // Pagination State
   const [eventsTotal, setEventsTotal] = useState(0);
   const [isLoadingMoreEvents, setIsLoadingMoreEvents] = useState(false);
 
-  const isOwner = currentUser && (venue?.owner_id === currentUser.id || currentUser.is_admin);
+  // Check if current user is the owner or admin
+  // We use venue.owner_id directly from the response
+  const isOwner = currentUser && venue && (venue.owner_id === currentUser.id || currentUser.is_admin);
 
+  const fetchVenueDetails = useCallback(async () => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const data = await api.venues.get(id as string);
+      setVenue(data);
+
+      // Fetch initial events
+      const eventsData = await api.events.list({
+        venue_id: id as string,
+        limit: 12,
+        sort_by: 'date_start',
+        sort_dir: 'asc',
+        // Show all events (including drafts) to owner? 
+        // For now, let's keep it standard. Owners can see drafts in admin panel if needed, 
+        // or we can add logic here later.
+        status: 'published'
+      });
+      setEvents(eventsData.events);
+      setEventsTotal(eventsData.total || 0);
+
+      // Fetch promotions
+      try {
+        const promos = await api.promotions.list(id as string);
+        setPromotions(promos.promotions);
+      } catch (err) {
+        console.warn('Failed to fetch promotions', err);
+      }
+
+    } catch (err) {
+      console.error('Error fetching venue:', err);
+      setError('Venue not found or error loading details.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (router.isReady && id) {
+      fetchVenueDetails();
+    }
+  }, [router.isReady, id, fetchVenueDetails]);
+
+  // Fetch staff only if owner
   useEffect(() => {
     if (isOwner && id) {
       fetchStaff();
@@ -65,6 +113,11 @@ export default function VenueDetailPage() {
     } finally {
       setIsStaffLoading(false);
     }
+  };
+
+  const handleUpdateVenue = () => {
+    // Refresh details after edit
+    fetchVenueDetails();
   };
 
   const handleAddStaff = async (e: React.FormEvent) => {
@@ -98,44 +151,6 @@ export default function VenueDetailPage() {
     }
   }, [venue?.id, trackVenueView]);
 
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchVenueData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Fetch venue details
-        const venueData = await api.venues.get(id as string);
-        setVenue(venueData);
-
-        // Fetch events at this venue
-        try {
-          const eventsData = await api.events.list({ venue_id: id as string, limit: 12, skip: 0 });
-          setEvents(eventsData.events);
-          setEventsTotal(eventsData.total || 0);
-        } catch (err) {
-          console.error('Error fetching events:', err);
-        }
-
-        // Fetch promotions at this venue
-        try {
-          const promotionsData = await api.promotions.listActive(id as string);
-          setPromotions(promotionsData.promotions);
-        } catch (err) {
-          console.error('Error fetching promotions:', err);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load venue');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchVenueData();
-  }, [id]);
-
   const handleLoadMoreEvents = async () => {
     if (!id || isLoadingMoreEvents) return;
     setIsLoadingMoreEvents(true);
@@ -155,25 +170,20 @@ export default function VenueDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Spinner size="lg" />
-          <p className="text-gray-600 mt-4">Loading venue...</p>
-        </div>
+      <div className="min-h-screen pt-24 pb-12 flex justify-center">
+        <Spinner size="lg" />
       </div>
     );
   }
 
   if (error || !venue) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Venue Not Found</h1>
-          <p className="text-gray-600 mb-6">{error || 'This venue does not exist.'}</p>
-          <Link href="/venues" className="text-emerald-600 hover:text-emerald-700">
-            &larr; Back to Venues
-          </Link>
-        </div>
+      <div className="min-h-screen pt-24 pb-12 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Venue Not Found</h1>
+        <p className="text-gray-600 mb-6">{error || "The venue you're looking for doesn't exist."}</p>
+        <Link href="/locations">
+          <Button variant="primary">Browse Locations</Button>
+        </Link>
       </div>
     );
   }
@@ -184,7 +194,7 @@ export default function VenueDetailPage() {
     : `Discover events and promotions at ${venue.name} in ${venue.address}.`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-12">
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -203,6 +213,7 @@ export default function VenueDetailPage() {
         <meta property="twitter:description" content={pageDescription} />
         {venue.image_url && <meta property="twitter:image" content={venue.image_url} />}
       </Head>
+
       {/* Cinematic Hero */}
       <div className="relative h-[50vh] min-h-[400px] overflow-hidden">
         {/* Blurred Background */}
@@ -282,13 +293,25 @@ export default function VenueDetailPage() {
                   <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
-                  <span className="text-stone-200">{venue.category?.name || 'Venue'}</span>
+                  <span className="text-stone-200">{venue.category_rel?.name || 'Venue'}</span>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
               <FollowButton targetId={venue.id} targetType="venue" />
+              {isOwner && (
+                <Button
+                  variant="primary"
+                  onClick={() => setEditModalOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg border-none"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Edit Details
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -303,7 +326,8 @@ export default function VenueDetailPage() {
             <div className="flex items-center gap-8 border-b border-gray-200">
               <button
                 onClick={() => setActiveTab('events')}
-                className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'events' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
+                className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'events' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
+                  }`}
               >
                 Events ({events.length})
               </button>
@@ -311,21 +335,24 @@ export default function VenueDetailPage() {
               {false && (
                 <button
                   onClick={() => setActiveTab('promotions')}
-                  className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'promotions' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
+                  className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'promotions' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
+                    }`}
                 >
                   Promotions ({promotions.length})
                 </button>
               )}
               <button
                 onClick={() => setActiveTab('about')}
-                className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'about' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
+                className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'about' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
+                  }`}
               >
                 About
               </button>
               {isOwner && (
                 <button
                   onClick={() => setActiveTab('staff')}
-                  className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'staff' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
+                  className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'staff' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
+                    }`}
                 >
                   Staff
                 </button>
@@ -339,12 +366,19 @@ export default function VenueDetailPage() {
                   {events.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {events.map((event) => (
-                        <EventCard key={event.id} event={event} />
+                        <EventCard key={event.id} event={event} canManage={!!isOwner} />
                       ))}
                     </div>
                   ) : (
                     <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
                       <p className="text-gray-500">No upcoming events scheduled.</p>
+                      {isOwner && (
+                        <Link href="/admin/events/new">
+                          <Button variant="primary" className="mt-4">
+                            Create First Event
+                          </Button>
+                        </Link>
+                      )}
                     </div>
                   )}
 
@@ -604,6 +638,8 @@ export default function VenueDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Report Modal */}
       {venue && (
         <ReportModal
           isOpen={reportModalOpen}
@@ -613,18 +649,28 @@ export default function VenueDetailPage() {
           targetName={venue.name}
         />
       )}
+
+      {/* Edit Modal */}
+      {venue && isOwner && (
+        <VenueEditModal
+          isOpen={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          venue={venue}
+          onUpdate={handleUpdateVenue}
+        />
+      )}
     </div>
   );
 }
 
-function AmenityItem({ icon, label, active }: { icon: React.ReactNode, label: string, active?: boolean }) {
+// Helper Component for Amenity Item
+function AmenityItem({ icon, label, active }: { icon: React.ReactNode; label: string; active: boolean }) {
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl border ${active ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-gray-50 border-gray-100 text-gray-400 grayscale'}`}>
-      <div className={active ? 'text-blue-600' : 'text-gray-400'}>
+    <div className={`flex items-center gap-3 p-3 rounded-lg border ${active ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-gray-50 border-gray-100 text-gray-400'}`}>
+      <div className={active ? 'text-emerald-600' : 'text-gray-400'}>
         {icon}
       </div>
-      <span className="text-sm font-medium">{label}</span>
-      {!active && <span className="ml-auto text-[10px] uppercase tracking-wider font-bold opacity-50">No</span>}
+      <span className="font-medium text-sm">{label}</span>
     </div>
   );
 }
