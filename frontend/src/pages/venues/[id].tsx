@@ -76,7 +76,7 @@ export default function VenueDetailPage() {
 
       // Fetch promotions
       try {
-        const promos = await api.promotions.list(id as string);
+        const promos = await api.promotions.listActive(id as string);
         setPromotions(promos.promotions);
       } catch (err) {
         console.warn('Failed to fetch promotions', err);
