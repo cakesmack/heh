@@ -126,15 +126,17 @@ export function EventCard({ event }: EventCardProps) {
                   </>
                 );
               })() : /* Case 2: Multi-day event (date_start and date_end on different days) */
-                event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() ? (() => {
-                  const startDate = new Date(event.date_start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                  const endDate = new Date(event.date_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                  return (
-                    <span>
-                      {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
-                    </span>
-                  );
-                })() : (
+                event.date_end &&
+                  new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() &&
+                  !event.is_recurring ? (() => {
+                    const startDate = new Date(event.date_start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    const endDate = new Date(event.date_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    return (
+                      <span>
+                        {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                      </span>
+                    );
+                  })() : (
                   /* Case 3: Single day event */
                   <span>
                     {formatDate(event.date_start)} · {formatTime(event.date_start)}
@@ -145,7 +147,7 @@ export function EventCard({ event }: EventCardProps) {
                   <svg className="h-3 w-3 md:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  <span className="hidden md:inline">Weekly</span>
+                  <span className="hidden md:inline">Recurring</span>
                 </span>
               )}
             </div>
