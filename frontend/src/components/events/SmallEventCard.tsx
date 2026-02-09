@@ -58,11 +58,13 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
                                 const firstDate = formatDate(event.showtimes[0].start_time);
                                 const lastDate = formatDate(event.showtimes[event.showtimes.length - 1].start_time);
                                 return firstDate === lastDate ? firstDate : `${firstDate} - ${lastDate}`;
-                            })() : event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() ? (() => {
-                                const startDate = formatDate(event.date_start);
-                                const endDate = formatDate(event.date_end);
-                                return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
-                            })() : (
+                            })() : event.date_end &&
+                                new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() &&
+                                !event.is_recurring ? (() => {
+                                    const startDate = formatDate(event.date_start);
+                                    const endDate = formatDate(event.date_end);
+                                    return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+                                })() : (
                                 formatDate(event.date_start)
                             )}
                         </span>

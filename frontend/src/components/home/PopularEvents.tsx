@@ -27,7 +27,10 @@ function formatEventDate(event: EventResponse): string {
     }
 
     // Case 2: Multi-day span
-    if (event.date_end && new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString()) {
+    if (event.date_end &&
+        new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() &&
+        !event.is_recurring
+    ) {
         const startStr = formatShort(new Date(event.date_start));
         const endStr = formatShort(new Date(event.date_end));
         // Only show range if dates are different
