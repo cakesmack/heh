@@ -11,14 +11,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
-import { VenueResponse, EventResponse, PromotionResponse, VenueStaffResponse } from '@/types';
+import { VenueResponse, EventResponse, VenueStaffResponse } from '@/types';
 import ReportModal from '@/components/common/ReportModal';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Spinner } from '@/components/common/Spinner';
 import { EventCard } from '@/components/events/EventCard';
-import { PromotionCard } from '@/components/promotions/PromotionCard';
+
 import { FollowButton } from '@/components/common/FollowButton';
 import SocialLinks from '@/components/common/SocialLinks';
 import RichText from '@/components/ui/RichText';
@@ -32,7 +32,7 @@ export default function VenueDetailPage() {
   const { id } = router.query;
   const [venue, setVenue] = useState<VenueResponse | null>(null);
   const [events, setEvents] = useState<EventResponse[]>([]);
-  const [promotions, setPromotions] = useState<PromotionResponse[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user: currentUser, refreshUser } = useAuth();
@@ -43,7 +43,7 @@ export default function VenueDetailPage() {
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'events' | 'promotions' | 'about' | 'staff'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'about' | 'staff'>('events');
 
   // Pagination State
   const [eventsTotal, setEventsTotal] = useState(0);
@@ -74,13 +74,7 @@ export default function VenueDetailPage() {
       setEvents(eventsData.events);
       setEventsTotal(eventsData.total || 0);
 
-      // Fetch promotions
-      try {
-        const promos = await api.promotions.listActive(id as string);
-        setPromotions(promos.promotions);
-      } catch (err) {
-        console.warn('Failed to fetch promotions', err);
-      }
+
 
     } catch (err) {
       console.error('Error fetching venue:', err);
@@ -332,15 +326,7 @@ export default function VenueDetailPage() {
                 Events ({events.length})
               </button>
               {/* HIDDEN FOR ALPHA - Promotions feature not ready */}
-              {false && (
-                <button
-                  onClick={() => setActiveTab('promotions')}
-                  className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'promotions' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
-                    }`}
-                >
-                  Promotions ({promotions.length})
-                </button>
-              )}
+
               <button
                 onClick={() => setActiveTab('about')}
                 className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'about' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
@@ -398,21 +384,7 @@ export default function VenueDetailPage() {
               )}
 
               {/* HIDDEN FOR ALPHA - Promotions feature not ready */}
-              {false && activeTab === 'promotions' && (
-                <div className="space-y-6">
-                  {promotions.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {promotions.map((promotion) => (
-                        <PromotionCard key={promotion.id} promotion={promotion} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-                      <p className="text-gray-500">No active promotions at this time.</p>
-                    </div>
-                  )}
-                </div>
-              )}
+
 
               {activeTab === 'about' && (
                 <div className="space-y-8">
