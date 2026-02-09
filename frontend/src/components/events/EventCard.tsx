@@ -21,6 +21,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
   const hasEditRights = canManage || (user && (
     user.is_admin ||
     user.id === event.organizer_id ||
+    (event.venue_owner_id && user.id === event.venue_owner_id) ||
     (event.organizer_profile_id && user.organizer_profiles?.some(p => p.id === event.organizer_profile_id))
   ));
 

@@ -351,6 +351,7 @@ export interface EventResponse extends Event {
   map_display_lat?: number;
   map_display_lng?: number;
   map_display_label?: string;
+  venue_owner_id?: string;
 }
 
 export interface EventCreate {

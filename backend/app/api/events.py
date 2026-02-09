@@ -90,6 +90,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
             venue_name = venue.name
             venue_lat = venue.latitude
             venue_lon = venue.longitude
+            event.venue_owner_id = venue.owner_id
     elif event.location_name:
         venue_name = event.location_name
 
