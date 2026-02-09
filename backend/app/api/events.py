@@ -83,6 +83,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
     venue_name = None
     venue_lat = None
     venue_lon = None
+    venue_owner_id = None
     
     if event.venue_id:
         venue = session.get(Venue, event.venue_id)
@@ -90,7 +91,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
             venue_name = venue.name
             venue_lat = venue.latitude
             venue_lon = venue.longitude
-            event.venue_owner_id = venue.owner_id
+            venue_owner_id = venue.owner_id
     elif event.location_name:
         venue_name = event.location_name
 
@@ -129,6 +130,7 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
         response.longitude = venue_lon
         
     response.venue_name = venue_name
+    response.venue_owner_id = venue_owner_id
     response.distance_km = distance_km
 
     response.category = category_response
