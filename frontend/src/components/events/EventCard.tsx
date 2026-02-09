@@ -239,6 +239,13 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
               {event.checkin_count} check-in{event.checkin_count !== 1 ? 's' : ''}
             </div>
           )}
+
+          {/* Claim Event Button (Only for non-owners) */}
+          {user && !hasEditRights && !event.organizer_id && (
+            <Link href={`/events/${event.id}/claim`} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+              Claim Event
+            </Link>
+          )}
         </div>
       </div>
     </Card>

@@ -151,6 +151,13 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
     return now >= start && now <= end;
   };
 
+  const hasEditRights = user && (
+    user.is_admin ||
+    user.id === event.organizer_id ||
+    (event.venue_owner_id && user.id === event.venue_owner_id) ||
+    (event.organizer_profile_id && user.organizer_profiles?.some(p => p.id === event.organizer_profile_id))
+  );
+
   // Format date for OG description
   const eventDate = new Date(event.date_start);
   const formattedOgDate = eventDate.toLocaleDateString('en-GB', {
@@ -550,14 +557,14 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
           <Card className="mt-4 border-amber-200 bg-amber-50/50">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-900">
-                {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Event" : "Sponsor Event"}
+                {hasEditRights ? "Promote Event" : "Sponsor Event"}
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
                 Featured
               </span>
             </div>
             <p className="text-xs text-gray-600 mb-4">
-              {user && (event.organizer_id === user.id || user.is_admin)
+              {hasEditRights
                 ? "Boost visibility by featuring this event on the homepage."
                 : "Support this event by featuring it on the homepage."}
             </p>
@@ -574,7 +581,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
               </svg>
-              {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Now" : "Sponsor Event"}
+              {hasEditRights ? "Promote Now" : "Sponsor Event"}
             </button>
           </Card>
         </div>
@@ -804,10 +811,10 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 </Card>
               )}
 
-              {/* Admin Tools (Visible to any Admin) */}
-              {user && user.is_admin && (
+              {/* Event Tools (Visible to Organizers/Admins) */}
+              {hasEditRights && (
                 <Card className="border-l-4 border-l-purple-500 bg-purple-50">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">Admin Tools</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Event Tools</h3>
                   <div className="space-y-2">
                     <a
                       href={`/social/${event.id}`}
@@ -926,14 +933,14 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
               <Card className="border-amber-200 bg-amber-50/50">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-gray-900">
-                    {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Event" : "Sponsor Event"}
+                    {hasEditRights ? "Promote Event" : "Sponsor Event"}
                   </h3>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
                     Featured
                   </span>
                 </div>
                 <p className="text-xs text-gray-600 mb-4">
-                  {user && (event.organizer_id === user.id || user.is_admin)
+                  {hasEditRights
                     ? "Boost visibility by featuring this event on the homepage."
                     : "Support this event by featuring it on the homepage."}
                 </p>
@@ -950,14 +957,14 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                   </svg>
-                  {user && (event.organizer_id === user.id || user.is_admin) ? "Promote Now" : "Sponsor Event"}
+                  {hasEditRights ? "Promote Now" : "Sponsor Event"}
                 </button>
               </Card>
 
 
 
-              {/* Claim Event Card - for users who don't own the event */}
-              {isAuthenticated && user && event.organizer_id !== user.id && !user.is_admin && (
+              {/* Claim Event Card - for users who don't have edit rights */}
+              {isAuthenticated && user && !hasEditRights && !event.organizer_id && (
                 <Card className="mt-4 border-purple-200 bg-purple-50/50">
                   <h3 className="text-sm font-semibold text-gray-900 mb-2">Is this your event?</h3>
                   <p className="text-xs text-gray-600 mb-3">Claim this event to manage it, update details, and track analytics.</p>
@@ -983,12 +990,12 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
               )}
 
               {/* Owner Actions */}
-              {user && (event.organizer_id === user.id || user.is_admin) && (
+              {hasEditRights && (
                 <Card className="mt-4">
                   <h3 className="text-sm font-semibold text-gray-900 mb-3">Manage Event</h3>
                   <div className="space-y-2">
                     {/* Owner Actions */}
-                    {user && (event.organizer_id === user.id || user.is_admin) && (
+                    {hasEditRights && (
                       <Link
                         href={`/events/${event.id}/edit`}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-medium transition-colors"
