@@ -65,11 +65,11 @@ export default function VenueDetailPage() {
         venue_id: id as string,
         limit: 12,
         sort_by: 'date_start',
-        sort_dir: 'asc',
+
         // Show all events (including drafts) to owner? 
         // For now, let's keep it standard. Owners can see drafts in admin panel if needed, 
         // or we can add logic here later.
-        status: 'published'
+
       });
       setEvents(eventsData.events);
       setEventsTotal(eventsData.total || 0);
