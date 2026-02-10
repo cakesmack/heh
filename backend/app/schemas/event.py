@@ -194,8 +194,10 @@ class EventResponse(BaseModel):
     save_count: int = 0
     ticket_click_count: int = 0
     organizer_email: Optional[str] = None
+    organizer_name: Optional[str] = None
     organizer_profile_name: Optional[str] = None
     venue_owner_id: Optional[UUID] = None
+    moderation_reason: Optional[str] = None
 
     class Config:
         from_attributes = True

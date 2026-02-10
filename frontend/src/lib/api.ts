@@ -1422,6 +1422,16 @@ export const venueClaimsAPI = {
 
 export const eventClaimsAPI = {
   /**
+   * Submit a claim for event ownership
+   */
+  create: async (eventId: string, reason: string): Promise<any> => {
+    return apiFetch<any>(`/api/events/${eventId}/claim`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  /**
    * List event claims (admin only)
    */
   list: async (status?: string): Promise<any[]> => {

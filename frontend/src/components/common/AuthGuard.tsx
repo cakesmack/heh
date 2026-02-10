@@ -18,7 +18,7 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
         if (!isLoading) {
             if (!isAuthenticated) {
                 // Redirect to login if not authenticated
-                router.push(`/auth/login?redirect=${router.asPath}`);
+                router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
             } else if (requireAdmin && !user?.is_admin) {
                 // Redirect home if admin required but user is not admin
                 toast.error('Unauthorized access');

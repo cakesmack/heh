@@ -684,10 +684,13 @@ def list_events(
             else_=4
         ))
         if sort_by == "created":
+             query = query.group_by(Event.id)
              query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.created_at.desc())
         elif sort_by == "random":
+             query = query.group_by(Event.id)
              query = query.order_by(pinned_priority.asc(), Event.featured.desc(), sa_func.random())
         else:
+             query = query.group_by(Event.id)
              query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
         
         if not is_radius_search:

@@ -17,6 +17,7 @@ import { Spinner } from '@/components/common/Spinner';
 
 import ShareButtons from '@/components/events/ShareButtons';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
+import ClaimEventModal from '@/components/events/ClaimEventModal';
 import ReportModal from '@/components/common/ReportModal';
 import SimilarEvents from '@/components/events/SimilarEvents';
 import AgeRestrictionBadge from '@/components/events/AgeRestrictionBadge';
@@ -49,6 +50,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const [error, setError] = useState<string | null>(serverError || null);
 
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [imageLightboxOpen, setImageLightboxOpen] = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState<number>(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -961,6 +963,23 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 </button>
               </Card>
 
+              {/* Claim Event Card - for users who don't have edit rights */}
+              {isAuthenticated && user && !hasEditRights && !event.organizer_id && (
+                <Card className="mt-4 border-purple-200 bg-purple-50/50">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Is this your event?</h3>
+                  <p className="text-xs text-gray-600 mb-3">Claim this event to manage it, update details, and view stats.</p>
+                  <button
+                    onClick={() => setClaimModalOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-medium transition-colors text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Claim Event
+                  </button>
+                </Card>
+              )}
+
 
 
               {/* Claim Event Card - for users who don't have edit rights */}
@@ -1093,6 +1112,13 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
           />
         )
       }
+
+      <ClaimEventModal
+        isOpen={claimModalOpen}
+        onClose={() => setClaimModalOpen(false)}
+        eventId={event.id}
+        eventTitle={event.title}
+      />
 
       {/* Image Lightbox Modal */}
       {

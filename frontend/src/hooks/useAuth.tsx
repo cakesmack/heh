@@ -106,11 +106,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Logout user
    */
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Navigate home first to avoid protected route redirects (404s)
+    await router.push('/');
+    // Then clear auth state
     api.auth.logout();
     setUser(null);
     toast.success('Logged out successfully. See you soon!');
-    router.push('/');
   }, [router]);
 
   /**
