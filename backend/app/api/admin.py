@@ -25,6 +25,7 @@ from app.models.featured_booking import FeaturedBooking, BookingStatus, SlotType
 from app.models.slot_pricing import SlotPricing, DEFAULT_PRICING
 from app.schemas.venue_claim import VenueClaimResponse
 from app.services.notifications import notification_service
+from app.models.notification import NotificationType
 from app.services.resend_email import resend_email_service
 from app.core.config import settings
 import stripe
@@ -134,6 +135,12 @@ def get_admin_stats(
     # Pending Claims
     pending_claims = session.exec(select(func.count(VenueClaim.id)).where(VenueClaim.status == "pending")).one()
 
+    # Pending Event Claims
+    pending_event_claims = session.exec(select(func.count(EventClaim.id)).where(EventClaim.status == "pending")).one()
+
+    # Total Pending Claims
+    pending_claims = (pending_claims or 0) + (pending_event_claims or 0)
+
     return AdminDashboardStats(
         total_users=total_users or 0,
         total_events=total_events or 0,
@@ -144,7 +151,7 @@ def get_admin_stats(
         total_checkins=total_checkins or 0,
         pending_reports=pending_reports or 0,
         pending_events=pending_events or 0,
-        pending_claims=pending_claims or 0,
+        pending_claims=pending_claims,
     )
 
 
@@ -766,6 +773,16 @@ def process_venue_claim(
                     venue_id=venue.id,
                     username=claim.user.username
                 )
+                
+            # 5. In-App Notification for Approval
+            notification_service.create_in_app_notification(
+                session, 
+                claim.user_id, 
+                NotificationType.VENUE_CLAIM_APPROVED,
+                "Venue Claim Approved", 
+                f"Your claim for '{venue.name}' has been approved.", 
+                f"/venues/{venue.id}/dashboard"
+            )
 
     session.add(claim)
     session.commit()
@@ -775,7 +792,13 @@ def process_venue_claim(
     # We handled Approval email specifically above with the new template
     if action == "reject" and claim.user and claim.user.email:
         venue_name = claim.venue.name if claim.venue else "Unknown Venue"
-        notification_service.notify_venue_claim_update(claim.user.email, venue_name, claim.status)
+        notification_service.notify_venue_claim_update(
+            claim.user.email, 
+            venue_name, 
+            claim.status,
+            session=session,
+            user_id=claim.user_id
+        )
 
     return claim
 
@@ -932,7 +955,13 @@ def process_event_claim(
     if claim.user and claim.user.email:
         event = session.get(Event, claim.event_id)
         event_title = event.title if event else "Unknown Event"
-        notification_service.notify_event_claim_update(claim.user.email, event_title, claim.status)
+        notification_service.notify_event_claim_update(
+            claim.user.email, 
+            event_title, 
+            claim.status,
+            session=session,
+            user_id=claim.user_id
+        )
     
     # Get related data for response
     event = session.get(Event, claim.event_id)

@@ -291,129 +291,117 @@ export default function SubmitEventPage() {
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Sign In Required</h1>
-          <p className="text-gray-600 mb-6">Please sign in to submit an event.</p>
-          <Link href="/login" className="inline-block px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
-            Sign In
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Submit an Event</h1>
-          <p className="text-lg text-gray-600">Share your event with the Highland Events Hub community and reach thousands of locals and visitors.</p>
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mb-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Submit an Event</h1>
+            <p className="text-lg text-gray-600">Share your event with the Highland Events Hub community and reach thousands of locals and visitors.</p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {/* Status Messages */}
+            <div className="max-w-3xl mb-8">
+              {successMessage?.type === 'published' && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg mb-6">
+                  <p className="text-emerald-800 font-medium">Event published! Redirecting...</p>
+                </div>
+              )}
+              {successMessage?.type === 'pending' && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-6">
+                  <p className="text-amber-800 font-medium">Event submitted for review.</p>
+                </div>
+              )}
+              {successMessage?.type === 'duplicate' && (
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
+                  <p className="text-orange-800 font-bold">Event submitted for review.</p>
+                  <p className="text-orange-700 text-sm mt-1">
+                    Our system detected a similar event. We'll verify it shortly.
+                  </p>
+                </div>
+              )}
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm mb-6">
+                  {error}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6">
+
+              < OrganizerSelector
+                user={user}
+                organizers={organizers}
+                selectedId={selectedOrganizer || ''} // Pass '' if null to avoid controlled/uncontrolled warning, though component handles it? actually component expects string.
+                onChange={(id) => {
+                  setSelectedOrganizer(id);
+                  setOrganizerError(undefined);
+                }}
+                error={organizerError}
+              />
+
+              <EventMediaSection
+                imageUrl={formData.image_url}
+                onUpload={handleImageUpload}
+                onRemove={handleImageRemove}
+              />
+
+              <EventBasicDetails
+                formData={formData}
+                handleChange={handleChange}
+                setFormData={setFormData}
+                categories={categories}
+                organizers={organizers}
+                userEmail={user?.email}
+                selectedTags={selectedTags}
+                setSelectedTags={setSelectedTags}
+              />
+
+              <EventLocationSection
+                locationTab={locationTab}
+                setLocationTab={setLocationTab}
+                locationMode={locationMode}
+                setLocationMode={setLocationMode}
+                formData={formData}
+                handleVenueChange={handleVenueChange}
+                handlePlaceSelect={handlePlaceSelect}
+                handleLocationChange={handleLocationChange}
+                participatingVenues={participatingVenues}
+                setParticipatingVenues={setParticipatingVenues}
+                isLocationValid={isLocationValid}
+                onMapDisplayChange={handleMapDisplayChange}
+              />
+
+              <EventScheduleSection
+                formData={formData}
+                setFormData={setFormData}
+                handleChange={handleChange}
+                isMultiSession={isMultiSession}
+                setIsMultiSession={setIsMultiSession}
+                showtimes={showtimes}
+                setShowtimes={setShowtimes}
+                noEndTime={noEndTime}
+                setNoEndTime={setNoEndTime}
+                isAllDay={formData.is_all_day}
+                setIsAllDay={(val) => setFormData(prev => ({ ...prev, is_all_day: val }))}
+              />
+
+              <EventTicketingSection
+                formData={formData}
+                handleChange={handleChange}
+              />
+            </div>
+
+            <div className="flex justify-end pt-8 gap-4 border-t border-gray-200 mt-8">
+              <Link href="/events" className="px-6 py-3 text-gray-600 hover:text-emerald-600 font-medium">Cancel</Link>
+              <Button type="submit" variant="primary" size="lg" disabled={isLoading} className="min-w-[150px]">
+                {isLoading ? 'Submitting...' : 'Submit Event'}
+              </Button>
+            </div>
+          </form>
         </div>
-
-        <form onSubmit={handleSubmit}>
-          {/* Status Messages */}
-          <div className="max-w-3xl mb-8">
-            {successMessage?.type === 'published' && (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg mb-6">
-                <p className="text-emerald-800 font-medium">Event published! Redirecting...</p>
-              </div>
-            )}
-            {successMessage?.type === 'pending' && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-6">
-                <p className="text-amber-800 font-medium">Event submitted for review.</p>
-              </div>
-            )}
-            {successMessage?.type === 'duplicate' && (
-              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
-                <p className="text-orange-800 font-bold">Event submitted for review.</p>
-                <p className="text-orange-700 text-sm mt-1">
-                  Our system detected a similar event. We'll verify it shortly.
-                </p>
-              </div>
-            )}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm mb-6">
-                {error}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-6">
-
-            < OrganizerSelector
-              user={user}
-              organizers={organizers}
-              selectedId={selectedOrganizer || ''} // Pass '' if null to avoid controlled/uncontrolled warning, though component handles it? actually component expects string.
-              onChange={(id) => {
-                setSelectedOrganizer(id);
-                setOrganizerError(undefined);
-              }}
-              error={organizerError}
-            />
-
-            <EventMediaSection
-              imageUrl={formData.image_url}
-              onUpload={handleImageUpload}
-              onRemove={handleImageRemove}
-            />
-
-            <EventBasicDetails
-              formData={formData}
-              handleChange={handleChange}
-              setFormData={setFormData}
-              categories={categories}
-              organizers={organizers}
-              userEmail={user?.email}
-              selectedTags={selectedTags}
-              setSelectedTags={setSelectedTags}
-            />
-
-            <EventLocationSection
-              locationTab={locationTab}
-              setLocationTab={setLocationTab}
-              locationMode={locationMode}
-              setLocationMode={setLocationMode}
-              formData={formData}
-              handleVenueChange={handleVenueChange}
-              handlePlaceSelect={handlePlaceSelect}
-              handleLocationChange={handleLocationChange}
-              participatingVenues={participatingVenues}
-              setParticipatingVenues={setParticipatingVenues}
-              isLocationValid={isLocationValid}
-              onMapDisplayChange={handleMapDisplayChange}
-            />
-
-            <EventScheduleSection
-              formData={formData}
-              setFormData={setFormData}
-              handleChange={handleChange}
-              isMultiSession={isMultiSession}
-              setIsMultiSession={setIsMultiSession}
-              showtimes={showtimes}
-              setShowtimes={setShowtimes}
-              noEndTime={noEndTime}
-              setNoEndTime={setNoEndTime}
-              isAllDay={formData.is_all_day}
-              setIsAllDay={(val) => setFormData(prev => ({ ...prev, is_all_day: val }))}
-            />
-
-            <EventTicketingSection
-              formData={formData}
-              handleChange={handleChange}
-            />
-          </div>
-
-          <div className="flex justify-end pt-8 gap-4 border-t border-gray-200 mt-8">
-            <Link href="/events" className="px-6 py-3 text-gray-600 hover:text-emerald-600 font-medium">Cancel</Link>
-            <Button type="submit" variant="primary" size="lg" disabled={isLoading} className="min-w-[150px]">
-              {isLoading ? 'Submitting...' : 'Submit Event'}
-            </Button>
-          </div>
-        </form>
       </div>
-    </div>
+    </AuthGuard>
   );
 }

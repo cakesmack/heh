@@ -846,7 +846,9 @@ def claim_venue(
             admin_emails, 
             "venue", 
             venue.name, 
-            current_user.email
+            current_user.email,
+            session=session,
+            admin_users=admin_users
         )
 
     return new_claim
