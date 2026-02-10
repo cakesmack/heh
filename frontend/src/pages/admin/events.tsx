@@ -595,6 +595,11 @@ export default function AdminEvents() {
                           setEvents(prev => prev.map(e => e.id === event.id ? { ...e, status: newStatus } : e));
                         }}
                       />
+                      {event.moderation_reason && (
+                        <div className="text-xs text-red-600 mt-1 max-w-[150px] truncate" title={event.moderation_reason}>
+                          {event.moderation_reason}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       {event.is_recurring || event.parent_event_id ? (

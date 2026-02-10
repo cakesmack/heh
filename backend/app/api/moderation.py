@@ -176,6 +176,7 @@ def moderate_event(
 
     elif action == "reject":
         event.status = "rejected"
+        event.moderation_reason = moderation.rejection_reason
         # If rejecting a series, we might want to reject all? 
         # For now, let's keep rejection granular or user can delete, 
         # unless user typically wants to reject the whole series. 

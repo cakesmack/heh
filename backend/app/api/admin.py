@@ -169,6 +169,7 @@ class AdminEventResponse(BaseModel):
     parent_event_id: Optional[str]
     organizer_email: Optional[str]
     created_at: datetime
+    moderation_reason: Optional[str] = None
 
 
 class AdminEventsListResponse(BaseModel):
@@ -300,7 +301,8 @@ def list_admin_events(
             is_recurring=event.is_recurring or False,
             parent_event_id=event.parent_event_id,
             organizer_email=organizer_email,
-            created_at=event.created_at
+            created_at=event.created_at,
+            moderation_reason=event.moderation_reason
         ))
     
     return AdminEventsListResponse(

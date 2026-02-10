@@ -1866,6 +1866,7 @@ export interface AdminEventItem {
   parent_event_id: string | null;
   organizer_email: string | null;
   created_at: string;
+  moderation_reason?: string | null;
 }
 
 export interface AdminEventsListResponse {

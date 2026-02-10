@@ -831,9 +831,16 @@ function AccountPageContent() {
                             {/* Status Badges */}
                             <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-40px)]">
                               {event.status === 'rejected' && (
-                                <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">
-                                  Rejected
-                                </span>
+                                <div className="flex flex-col gap-1 items-start">
+                                  <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">
+                                    Rejected
+                                  </span>
+                                  {event.moderation_reason && (
+                                    <span className="px-1.5 py-0.5 bg-black/50 backdrop-blur-sm text-white text-[10px] rounded border border-red-500/50 max-w-[150px] truncate">
+                                      {event.moderation_reason}
+                                    </span>
+                                  )}
+                                </div>
                               )}
                               {event.status === 'pending' && (
                                 <span className="px-1.5 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded uppercase">
