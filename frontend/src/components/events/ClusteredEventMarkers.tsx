@@ -230,7 +230,16 @@ export function ClusteredEventMarkers({
         return () => {
             idleListener.remove();
             if (clustererInstance) {
-                clustererInstance.clearMarkers();
+                // During unmount the map's overlay projection is torn down before
+                // our cleanup runs.  clearMarkers() internally calls
+                // fromLatLngToDivPixel which throws if the projection is gone.
+                // A try-catch is the only reliable guard because getProjection()
+                // can return a non-null but internally-dead overlay object.
+                try {
+                    clustererInstance.clearMarkers();
+                } catch {
+                    // Projection already torn down — silently skip
+                }
                 clustererInstance.setMap(null);
             }
         };

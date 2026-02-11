@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey, UniqueConstraint
 
 if TYPE_CHECKING:
     from .user import User
@@ -16,6 +16,9 @@ class Bookmark(SQLModel, table=True):
     Bookmark model representing a user saving an event.
     """
     __tablename__ = "bookmarks"
+    __table_args__ = (
+        UniqueConstraint("user_id", "event_id", name="uq_user_event_bookmark"),
+    )
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
     user_id: str = Field(

@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING, List
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey, UniqueConstraint
 
 from .tag import EventTag
 from .event_participating_venue import EventParticipatingVenue
@@ -45,6 +45,9 @@ class Event(SQLModel, table=True):
         updated_at: Last update timestamp
     """
     __tablename__ = "events"
+    __table_args__ = (
+        UniqueConstraint("title", "date_start", "venue_id", name="uq_event_title_date_venue"),
+    )
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
     title: str = Field(max_length=255, index=True)

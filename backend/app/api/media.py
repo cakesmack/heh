@@ -3,6 +3,9 @@ Media upload API routes.
 Uses Cloudinary in production when configured, local storage in development.
 """
 from fastapi import APIRouter, Depends, UploadFile, File, Query, HTTPException
+from sqlmodel import Session
+from typing import Optional
+from app.core.database import get_session
 from app.core.security import get_current_user
 from app.models.user import User
 from app.services.media import upload_image as local_upload, delete_image as local_delete
@@ -40,11 +43,38 @@ async def upload_media(
 async def delete_media(
     folder: str,
     filename: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+    owner_type: Optional[str] = Query(None, description="'event' or 'venue'"),
+    owner_id: Optional[str] = Query(None, description="ID of the owning entity"),
 ):
     """
     Delete an uploaded image and its variants.
+    Only the owner of the associated entity (or an admin) may delete.
     """
+    # --- Ownership check ---
+    if not current_user.is_admin:
+        if not owner_type or not owner_id:
+            raise HTTPException(
+                status_code=403,
+                detail="owner_type and owner_id are required for non-admin users",
+            )
+
+        owner_id_normalized = owner_id.replace("-", "")
+
+        if owner_type == "event":
+            from app.models.event import Event
+            entity = session.get(Event, owner_id_normalized)
+            if not entity or str(entity.organizer_id) != str(current_user.id):
+                raise HTTPException(status_code=403, detail="Not authorized to delete this image")
+        elif owner_type == "venue":
+            from app.models.venue import Venue
+            entity = session.get(Venue, owner_id_normalized)
+            if not entity or str(entity.owner_id) != str(current_user.id):
+                raise HTTPException(status_code=403, detail="Not authorized to delete this image")
+        else:
+            raise HTTPException(status_code=400, detail="owner_type must be 'event' or 'venue'")
+
     # Try Cloudinary first
     if is_cloudinary_configured():
         public_id = f"highland_events/{folder}/{filename.rsplit('.', 1)[0]}"
@@ -59,3 +89,4 @@ async def delete_media(
         raise HTTPException(status_code=404, detail="Image not found")
 
     return {"deleted": True}
+

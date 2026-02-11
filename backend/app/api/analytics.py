@@ -5,7 +5,7 @@ from sqlmodel import Session, select, func, col
 from pydantic import BaseModel
 
 from app.core.database import get_session
-from app.core.security import get_current_user_optional, get_current_user
+from app.core.security import get_current_user_optional, get_current_user, get_current_active_admin
 from app.models.analytics import AnalyticsEvent
 from app.models.user import User
 from app.models.event import Event
@@ -507,7 +507,8 @@ def get_organizer_stats(
 @router.get("/trending", response_model=List[str])
 def get_trending_events(
     days: int = 7,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get IDs of events that are currently trending.
@@ -576,7 +577,8 @@ class SupplyGap(BaseModel):
 def get_supply_gaps(
     threshold: int = 3,
     days: int = 30,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    admin: User = Depends(get_current_active_admin)
 ):
     """
     Identify upcoming dates with low event supply.
@@ -629,7 +631,8 @@ class QualityIssue(BaseModel):
 
 @router.get("/quality-issues", response_model=List[QualityIssue])
 def get_quality_issues(
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    admin: User = Depends(get_current_active_admin)
 ):
     """
     Flag live events with data quality issues.
@@ -721,7 +724,8 @@ class CategoryMixStats(BaseModel):
 
 @router.get("/category-mix", response_model=List[CategoryMixStats])
 def get_category_mix(
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    admin: User = Depends(get_current_active_admin)
 ):
     """
     Breakdown of active inventory by category.

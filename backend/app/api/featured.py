@@ -297,6 +297,7 @@ class VerifySessionResponse(BaseModel):
 def verify_stripe_session(
     session_id: str = Query(None, description="Stripe checkout session ID"),
     booking_id: str = Query(None, description="Featured booking ID"),
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
     """
@@ -304,8 +305,10 @@ def verify_stripe_session(
     
     This endpoint serves as a fallback when webhooks are delayed or fail.
     The frontend should call this after Stripe redirects back.
+    Requires authentication — only the booking owner or an admin can verify.
     """
     print(f"[VERIFY SESSION] Called with session_id={session_id}, booking_id={booking_id}")
+
     
     try:
         # Approach 1: If we have the booking_id, check its current status
@@ -317,6 +320,10 @@ def verify_stripe_session(
                     success=False,
                     message="Booking not found"
                 )
+            
+            # Ownership gate: only the booking owner or admin can verify
+            if str(booking.organizer_id) != str(current_user.id) and not current_user.is_admin:
+                raise HTTPException(status_code=403, detail="Not authorized to verify this booking")
             
             # If already active or pending approval, return success
             if booking.status in [BookingStatus.ACTIVE, BookingStatus.PENDING_APPROVAL]:

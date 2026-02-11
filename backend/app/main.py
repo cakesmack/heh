@@ -72,102 +72,18 @@ async def lifespan(app: FastAPI):
         run_migrations()
         logger.info("Migrations complete")
         
-        # Inline Migration: Add website_url and is_all_day to events table
-        from sqlalchemy import text
-        from app.core.database import get_session
-        
-        # We put inline migrations in a separate try block to avoid blocking valid startup
-        if "sqlite" in settings.DATABASE_URL:
+        # Inline Migrations (Postgres-only ALTER TABLE statements)
+        from app.core.config import settings as cfg
+        if "sqlite" in cfg.DATABASE_URL:
             logger.info("Skipping Postgres-only inline migrations for SQLite")
         else:
             try:
+                from app.core.inline_migrations import run_inline_migrations
+                from app.core.database import get_session
                 with next(get_session()) as session:
-                     # Add website_url column if it doesn't exist
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS website_url VARCHAR(500);
-                    """))
-                    # Add is_all_day column if it doesn't exist
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN DEFAULT FALSE;
-                    """))
-                    
-                    # Recurring Event Migrations
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;
-                    """))
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_rule VARCHAR(500);
-                    """))
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS parent_event_id VARCHAR(50);
-                    """))
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_group_id VARCHAR(50);
-                    """))
-                    # Triptych Hero Migration
-                    session.exec(text("""
-                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_left VARCHAR(500);
-                    """))
-                    session.exec(text("""
-                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_right VARCHAR(500);
-                    """))
-                    # Emergency Migration: Add is_dismissed to venues
-                    session.exec(text("""
-                        ALTER TABLE venues ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT FALSE;
-                    """))
-                    
-                    # Hero 4-Slot Magazine Migration
-                    session.exec(text("""
-                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS link VARCHAR(500);
-                    """))
-                    session.exec(text("""
-                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_text VARCHAR(50);
-                    """))
-                    session.exec(text("""
-                        ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_color VARCHAR(50) DEFAULT 'emerald';
-                    """))
-                    
-                    # Initialize 4 Fixed Slots (0-3)
-                    for i in range(4):
-                        # Check directly via SQL to avoid model mismatches during migration
-                        result = session.exec(text(f"SELECT id FROM hero_slots WHERE position = {i}")).first()
-                        if not result:
-                            session.exec(text(f"""
-                                INSERT INTO hero_slots (position, type, is_active, badge_color, overlay_style)
-                                VALUES ({i}, 'spotlight_event', false, 'emerald', 'dark')
-                            """))
-                            logger.info(f"Initialized Hero Slot position {i}")
-        
-                    # View Count Migration (Added for Analytics Fix)
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0;
-                    """))
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS attending_count INTEGER DEFAULT 0;
-                    """))
-                    session.exec(text("""
-                        ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_click_count INTEGER DEFAULT 0;
-                    """))
-
-                    # Backfill created_at for Magazine Feed (Just Added)
-                    # Ensure all events have a created_at date for sorting
-                    # Backfill created_at for Magazine Feed (Just Added)
-                    # Ensure all events have a created_at date for sorting.
-                    # FIX: Clamp to NOW() to prevent future events from burying new creations.
-                    session.exec(text("""
-                        UPDATE events 
-                        SET created_at = CASE 
-                            WHEN created_at IS NULL THEN LEAST(date_start, NOW())
-                            WHEN created_at > NOW() THEN NOW()
-                            ELSE created_at
-                        END
-                        WHERE created_at IS NULL OR created_at > NOW();
-                    """))
-                    
-                    session.commit()
-                    logger.info("Inline Migrations complete")
+                    run_inline_migrations(session)
             except Exception as e:
-                 logger.warning(f"Inline Migration skipped/failed (non-critical): {e}")
+                logger.warning(f"Inline Migration skipped/failed (non-critical): {e}")
 
     except Exception as e:
         logger.error(f"Failed to initialize database (Tables/Migrations): {e}")
@@ -273,7 +189,7 @@ app.include_router(groups.router, prefix="/api/groups", tags=["Groups"])
 app.include_router(search.router, prefix="/api/search", tags=["Search"])
 app.include_router(preferences.router, prefix="/api")
 app.include_router(featured.router, prefix="/api/featured", tags=["Featured"])
-app.include_router(notifications.router)
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(email_testing.router, prefix="/api/admin/email-testing", tags=["Admin Email Testing"])
 app.include_router(admin_import.router, prefix="/api/admin", tags=["Admin Import"])
 app.include_router(cron.router, prefix="/api")

@@ -17,6 +17,7 @@ from app.models.user import User
 from app.models.event import Event
 from app.models.showtime import EventShowtime
 from app.services.cloudinary_service import init_cloudinary, is_cloudinary_configured
+from app.services.event_service import upsert_event, cleanup_stale_venue_events
 
 # Define Router
 router = APIRouter()
@@ -64,6 +65,12 @@ class SingleEventImportRequest(BaseModel):
         }
 
 
+class VenueCleanupRequest(BaseModel):
+    """Request body for post-import cleanup."""
+    venue_id: str
+    imported_event_ids: List[str]
+
+
 def parse_showtime_string(raw_str: str, year: int) -> datetime:
     """
     Parses "Mon 12 Jan at 7:30" + year into a datetime object.
@@ -96,37 +103,13 @@ def import_single_event(
     """
     Import a single event from external data.
     Sideloads image from external URL to Cloudinary.
+    Uses upsert logic: if an event with the same title + date + venue
+    already exists, it is updated instead of duplicated.
     """
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    # 1. Duplicate Check
-    # Check based on venue_id or location_name
-    normalized_venue_id = normalize_uuid(req.venue_id) if req.venue_id else None
-    
-    if normalized_venue_id:
-        # Venue-based duplicate check
-        existing = session.exec(
-            select(Event).where(
-                Event.venue_id == normalized_venue_id,
-                Event.title == req.title,
-                Event.date_start == req.date_start
-            )
-        ).first()
-    else:
-        # Location-based duplicate check (custom location)
-        existing = session.exec(
-            select(Event).where(
-                Event.location_name == req.location_name,
-                Event.title == req.title,
-                Event.date_start == req.date_start
-            )
-        ).first()
-    
-    if existing:
-        return {"skipped": True, "reason": "duplicate", "event_id": existing.id}
-
-    # 2. Image Processing (Sideload)
+    # 1. Image Processing (Sideload)
     final_image_url = req.image_url
     
     if req.image_url and "cloudinary" not in req.image_url:
@@ -150,53 +133,96 @@ def import_single_event(
                 detail=f"Image upload failed: {str(e)}"
             )
 
-    # 3. Create Event
-    new_event = Event(
-        id=normalize_uuid(uuid4()),
+    # 2. Upsert Event (get-or-create)
+    normalized_venue_id = normalize_uuid(req.venue_id) if req.venue_id else None
+
+    event, created = upsert_event(
+        session,
         title=req.title,
-        description=req.description,
         date_start=req.date_start,
-        date_end=req.date_end or req.date_start,  # Default to date_start (no specific end time)
-        venue_id=normalized_venue_id,  # Will be None for custom locations
-        location_name=req.location_name if not normalized_venue_id else None,
-        category_id=normalize_uuid(req.category_id),
-        image_url=final_image_url,
-        ticket_url=req.ticket_url,
-        price_display=req.price_display,
-        min_price=req.min_price,
-        min_age=req.min_age,
+        venue_id=normalized_venue_id,
         organizer_id=current_user.id,
-        organizer_profile_id=normalize_uuid(req.organizer_profile_id) if req.organizer_profile_id else None,
-        address_full=req.address, # Save address
-        latitude=req.latitude, # Save coords
-        longitude=req.longitude,
-        status="published"  # Admin imports are auto-published
+        fields={
+            "description": req.description,
+            "date_end": req.date_end,
+            "image_url": final_image_url,
+            "ticket_url": req.ticket_url,
+            "price_display": req.price_display,
+            "min_price": req.min_price,
+            "min_age": req.min_age,
+            "category_id": normalize_uuid(req.category_id),
+            "organizer_profile_id": normalize_uuid(req.organizer_profile_id) if req.organizer_profile_id else None,
+            "location_name": req.location_name if not normalized_venue_id else None,
+            "address_full": req.address,
+            "latitude": req.latitude,
+            "longitude": req.longitude,
+        },
     )
-    
-    session.add(new_event)
-    session.flush() # Flush to get ID if needed, though we set it manually
-    
-    # 4. Parse & Save Showtimes
+
+    session.flush()  # Ensure event.id is available
+
+    # 3. Sync Showtimes
+    #    On update: clear old showtimes first, then re-insert.
+    if not created:
+        existing_showtimes = session.exec(
+            select(EventShowtime).where(EventShowtime.event_id == event.id)
+        ).all()
+        for st in existing_showtimes:
+            session.delete(st)
+
     year = req.date_start.year
     
     for showtime_str in req.raw_showtimes:
         try:
             st_dt = parse_showtime_string(showtime_str, year)
-            
-            # Create EventShowtime
             showtime = EventShowtime(
-                event_id=new_event.id,
+                event_id=event.id,
                 start_time=st_dt,
-                ticket_url=req.ticket_url # Inherit main ticket URL by default
+                ticket_url=req.ticket_url
             )
             session.add(showtime)
         except ValueError as e:
-            # Log error but maybe continue? Or fail? 
-            # Requirement says "Insert EventShowtime records". 
-            # Strict failure is safer for API data integrity.
             raise HTTPException(status_code=400, detail=f"Invalid showtime format '{showtime_str}': {str(e)}")
 
     session.commit()
-    session.refresh(new_event)
+    session.refresh(event)
     
-    return {"success": True, "event_id": new_event.id}
+    return {"success": True, "event_id": event.id, "created": created}
+
+
+@router.post("/events/cleanup-venue")
+def cleanup_venue_events(
+    req: VenueCleanupRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Post-import cleanup: cancel future events for a venue that were NOT
+    part of the latest scrape batch.
+
+    Call this AFTER importing all events for a venue. Pass the venue_id
+    and the list of event IDs returned by the import-single calls.
+
+    Example workflow (scraper):
+        1. For each event scraped → POST /events/import-single → collect event_id
+        2. After all imports → POST /events/cleanup-venue with venue_id + all collected IDs
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    normalized_venue_id = normalize_uuid(req.venue_id)
+
+    result = cleanup_stale_venue_events(
+        session,
+        venue_id=normalized_venue_id,
+        current_import_ids=[normalize_uuid(eid) for eid in req.imported_event_ids],
+    )
+
+    session.commit()
+
+    return {
+        "success": True,
+        "venue_id": normalized_venue_id,
+        "cancelled_count": result["cancelled_count"],
+        "cancelled_ids": result["cancelled_ids"],
+    }

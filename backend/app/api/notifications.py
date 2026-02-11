@@ -13,7 +13,7 @@ from app.models.user import User
 from app.models.notification import Notification, NotificationType
 from app.api.auth import get_current_user
 
-router = APIRouter(prefix="/api/notifications", tags=["notifications"])
+router = APIRouter(tags=["Notifications"])
 
 
 # ============================================================

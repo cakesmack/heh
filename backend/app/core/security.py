@@ -114,27 +114,21 @@ async def get_current_user(
     if user_id_str is None:
         raise credentials_exception
 
-    # Fetch user from database using raw SQL to avoid UUID type processing issues with SQLite
-    # Remove hyphens from UUID to match SQLite storage format
+    # Normalize UUID (remove hyphens) to match DB storage format
     user_id_normalized = user_id_str.replace("-", "")
-    from sqlalchemy import text as sql_text
-    statement = sql_text("SELECT id, email, password_hash, username, trust_level, is_admin, created_at FROM users WHERE id = :user_id")
-    result = session.execute(statement, {"user_id": user_id_normalized})
-    row = result.fetchone()
 
-    if row is None:
+    # Use session.get() to load the full ORM model with ALL columns
+    user = session.get(User, user_id_normalized)
+
+    if user is None:
         raise credentials_exception
 
-    # Manually construct User object from row
-    user = User(
-        id=row[0],
-        email=row[1],
-        password_hash=row[2],
-        username=row[3],
-        trust_level=row[4],
-        is_admin=bool(row[5]),
-        created_at=row[6]
-    )
+    # Block banned / deactivated accounts
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated",
+        )
 
     return user
 
@@ -157,27 +151,14 @@ async def get_current_user_optional(
         if user_id_str is None:
             return None
 
-        # Fetch user from database using raw SQL to avoid UUID type processing issues with SQLite
+        from app.models.user import User
         user_id_normalized = user_id_str.replace("-", "")
-        from sqlalchemy import text as sql_text
-        statement = sql_text("SELECT id, email, password_hash, username, trust_level, is_admin, created_at FROM users WHERE id = :user_id")
-        result = session.execute(statement, {"user_id": user_id_normalized})
-        row = result.fetchone()
+        user = session.get(User, user_id_normalized)
 
-        if row is None:
+        # Return None for missing or deactivated users (no exception)
+        if user is None or not user.is_active:
             return None
 
-        from app.models.user import User
-        # Manually construct User object from row
-        user = User(
-            id=row[0],
-            email=row[1],
-            password_hash=row[2],
-            username=row[3],
-            trust_level=row[4],
-            is_admin=bool(row[5]),
-            created_at=row[6]
-        )
         return user
 
     except Exception:
