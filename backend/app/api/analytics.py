@@ -508,7 +508,7 @@ def get_organizer_stats(
 def get_trending_events(
     days: int = 7,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """
     Get IDs of events that are currently trending.

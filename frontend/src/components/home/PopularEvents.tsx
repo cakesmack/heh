@@ -61,16 +61,20 @@ export default function PopularEvents() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch top events by popularity score and trending IDs in parallel
-                const [topData, trendingData] = await Promise.all([
-                    eventsAPI.getTop(10),
-                    searchAPI.trending(7)
-                ]);
-
+                // Fetch top events — this is the critical data for the section
+                const topData = await eventsAPI.getTop(10);
                 setEvents(topData.events);
-                setTrendingIds(trendingData);
             } catch (err) {
                 console.error('Failed to fetch popular events:', err);
+            }
+
+            // Trending IDs are a nice-to-have badge — fetch separately so a 401
+            // doesn't kill the whole section (graceful degradation)
+            try {
+                const trendingData = await searchAPI.trending(7);
+                setTrendingIds(trendingData);
+            } catch {
+                // 401 or other failure — just hide trending badges, no crash
             } finally {
                 setLoading(false);
             }
