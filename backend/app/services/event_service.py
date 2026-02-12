@@ -206,7 +206,7 @@ def upsert_event(
         venue_id=venue_id,
         organizer_id=organizer_id,
         status="published",  # Admin imports are auto-published
-        **{k: v for k, v in fields.items() if k in _UPDATABLE_FIELDS and v is not None},
+        **{k: v for k, v in fields.items() if k in _UPDATABLE_FIELDS and k != "date_end" and v is not None},
     )
     session.add(new_event)
     return new_event, True
