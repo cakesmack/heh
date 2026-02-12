@@ -412,6 +412,13 @@ export const eventsAPI = {
   getTop: async (limit: number = 10): Promise<EventListResponse> => {
     return apiFetch<EventListResponse>(`/api/events/top?limit=${limit}`, {}, false);
   },
+
+  /**
+   * Get title suggestions for duplicate prevention
+   */
+  suggestions: async (q: string): Promise<{ id: string; title: string; date_start: string; venue_name: string | null }[]> => {
+    return apiFetch(`/api/events/suggestions?q=${encodeURIComponent(q)}`, {}, false);
+  },
 };
 
 // ============================================================

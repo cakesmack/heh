@@ -758,7 +758,67 @@ def list_events(
 
 # ... (create_event remains similar but with priority fix below) ...
 
+@router.get("/suggestions")
+@limiter.limit("30/minute")
+def suggest_events(
+    request: Request,
+    q: str = Query(..., min_length=5, description="Title search query"),
+    limit: int = Query(default=5, ge=1, le=10),
+    session: Session = Depends(get_session),
+):
+    """
+    Return the top N existing events whose title is similar to `q`.
 
+    Uses PostgreSQL pg_trgm `similarity()` for fuzzy matching.
+    Falls back to ILIKE if pg_trgm is not available.
+    """
+    from sqlalchemy import text as sa_text
+    from pydantic import BaseModel
+    from typing import Optional
+
+    class SuggestionItem(BaseModel):
+        id: str
+        title: str
+        date_start: datetime
+        venue_name: Optional[str] = None
+
+    try:
+        # pg_trgm path — ORDER BY similarity DESC
+        rows = session.exec(
+            sa_text(
+                "SELECT e.id, e.title, e.date_start, v.name AS venue_name "
+                "FROM events e "
+                "LEFT JOIN venues v ON e.venue_id = v.id "
+                "WHERE e.status = 'published' "
+                "  AND similarity(e.title, :q) > 0.3 "
+                "ORDER BY similarity(e.title, :q) DESC "
+                "LIMIT :lim"
+            ).bindparams(q=q, lim=limit)
+        ).all()
+    except Exception:
+        # Fallback — plain ILIKE (covers SQLite / missing pg_trgm)
+        search_term = f"%{q}%"
+        rows = session.exec(
+            sa_text(
+                "SELECT e.id, e.title, e.date_start, v.name AS venue_name "
+                "FROM events e "
+                "LEFT JOIN venues v ON e.venue_id = v.id "
+                "WHERE e.status = 'published' "
+                "  AND e.title ILIKE :term "
+                "ORDER BY e.date_start DESC "
+                "LIMIT :lim"
+            ).bindparams(term=search_term, lim=limit)
+        ).all()
+
+    return [
+        SuggestionItem(
+            id=row.id,
+            title=row.title,
+            date_start=row.date_start,
+            venue_name=row.venue_name,
+        )
+        for row in rows
+    ]
 
 
 

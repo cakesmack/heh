@@ -16,6 +16,16 @@ logger = logging.getLogger(__name__)
 def run_inline_migrations(session: Session) -> None:
     """Execute all idempotent inline migrations."""
 
+    # --- pg_trgm extension for fuzzy title matching ---
+    try:
+        session.exec(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+        session.exec(text(
+            "CREATE INDEX IF NOT EXISTS idx_events_title_trgm "
+            "ON events USING gin (title gin_trgm_ops);"
+        ))
+    except Exception as e:
+        logger.warning("pg_trgm setup skipped (non-critical): %s", e)
+
     # --- Event columns ---
     session.exec(text(
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS website_url VARCHAR(500);"
