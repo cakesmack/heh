@@ -265,6 +265,7 @@ def list_venues(
     exclude_status: Optional[str] = Query(None, description="Status to exclude"),
     has_image: Optional[bool] = Query(None, description="Filter by presence of image_url"),
     min_events: Optional[int] = Query(None, description="Minimum number of upcoming events"),
+    all: bool = Query(False, description="Return all venues (bypass pagination)"),
     session: Session = Depends(get_session)
 ):
     """
@@ -353,7 +354,11 @@ def list_venues(
         total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
     # Apply pagination
-    query = query.offset(skip).limit(limit)
+    if all:
+         query = query.limit(10000)
+    else:
+         query = query.offset(skip).limit(limit)
+         
     results = session.exec(query).all()
     
     # Extract venues from results (handle tuple for activity sort)
@@ -371,8 +376,8 @@ def list_venues(
     return VenueListResponse(
         venues=venue_responses,
         total=total,
-        skip=skip,
-        limit=limit
+        skip=0 if all else skip,
+        limit=10000 if all else limit
     )
 
 

@@ -255,6 +255,7 @@ export interface VenueFilter {
   exclude_status?: string;
   has_image?: boolean;
   min_events?: number;
+  all?: boolean;
 }
 
 export interface VenueListResponse {

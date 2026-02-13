@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Venue, Category } from '@/types';
 import { X, Trash2, Check, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
+import { UnifiedVenueSelect } from '@/components/venues/UnifiedVenueSelect';
 
 interface ImportWizardProps {
     venues: Venue[];
@@ -395,16 +396,13 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                 3. Bulk Set Venue (Optional)
                             </label>
                             <div className="flex gap-2">
-                                <select
-                                    value={bulkVenueId}
-                                    onChange={(e) => setBulkVenueId(e.target.value)}
-                                    className="block flex-1 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-                                >
-                                    <option value="">-- Choose Venue --</option>
-                                    {venues.map(v => (
-                                        <option key={v.id} value={v.id}>{v.name}</option>
-                                    ))}
-                                </select>
+                                <div className="flex-1">
+                                    <UnifiedVenueSelect
+                                        value={bulkVenueId}
+                                        onChange={(id, venue) => setBulkVenueId(id)}
+                                        placeholder="Search for a venue..."
+                                    />
+                                </div>
                                 <button
                                     onClick={applyBulkVenue}
                                     disabled={!bulkVenueId || stagedEvents.length === 0}
@@ -616,16 +614,16 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
-                                        <select
-                                            value={currentEvent.selectedVenueId || ''}
-                                            onChange={(e) => updateCurrentEvent({ selectedVenueId: e.target.value || null })}
-                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                        >
-                                            <option value="">📍 Custom: {currentEvent.location_name || 'Unknown'}</option>
-                                            {venues.map(v => (
-                                                <option key={v.id} value={v.id}>🏢 {v.name}</option>
-                                            ))}
-                                        </select>
+                                        <UnifiedVenueSelect
+                                            value={currentEvent.selectedVenueId || null}
+                                            onChange={(id, venue) => updateCurrentEvent({
+                                                selectedVenueId: id || null,
+                                                // If we selected a venue, clear custom location fields
+                                                location_name: venue ? '' : currentEvent.location_name,
+                                                address: venue ? '' : currentEvent.address
+                                            })}
+                                            placeholder={currentEvent.location_name || "Search for venue..."}
+                                        />
                                     </div>
 
                                     {/* Custom Location Inputs - Only show if NO venue selected */}

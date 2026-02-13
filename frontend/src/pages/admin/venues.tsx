@@ -167,29 +167,22 @@ export default function AdminVenues() {
     }
   };
 
+  const [limit, setLimit] = useState(50);
+  const [skip, setSkip] = useState(0);
+
   const fetchVenues = useCallback(async () => {
     setLoading(true);
     try {
-      // Use search endpoint if query exists, otherwise list
-      // BUT list supports complex filters, search logic might be limited or different
-      // If we are just filtering/sorting, we should use 'list'. search is for fuzzy text search.
-      // If searchQuery is present, we MIGHT lose other filters if 'search' API doesn't support them.
-      // HOWEVER, admin dashboard usually prefers LIST endpoint with filters.
-      // Let's assume list endpoint handles everything if we don't have a specific text search?
-      // Actually, 'list_venues' doesn't seem to support text search 'q'.
-      // Only 'search_venues' supports 'q'.
-      // So if 'searchQuery' is active, we use search.
-      // If NOT active, we use list with filters.
-
       if (searchQuery && searchQuery.length >= 2) {
         // Search API currently doesn't support status/category filters (based on backend code)
-        // We might want to fix that later, but for now behave as is.
         const response = await venuesAPI.search(searchQuery, 50);
         setVenues(response.venues);
         setTotal(response.total);
+        setSkip(0); // Reset skip on search
       } else {
         const response = await venuesAPI.list({
-          limit: 100,
+          limit,
+          skip,
           status: filterStatus || undefined,
           category_id: filterCategory || undefined,
           sort_by: sortBy,
@@ -203,7 +196,7 @@ export default function AdminVenues() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, filterStatus, filterCategory, sortBy, sortDir]);
+  }, [searchQuery, filterStatus, filterCategory, sortBy, sortDir, skip, limit]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -226,11 +219,15 @@ export default function AdminVenues() {
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Only fetch if query changed significantly or is empty
       fetchVenues();
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setSkip(0);
+  }, [filterStatus, filterCategory, sortBy, sortDir]);
 
   const openCreateModal = () => {
     setEditingVenue(null);
@@ -634,6 +631,31 @@ export default function AdminVenues() {
             </table>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {!searchQuery && total > limit && (
+          <div className="flex items-center justify-between mt-4 bg-white p-4 rounded-lg shadow">
+            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{skip + 1}</span> to <span className="font-medium">{Math.min(skip + limit, total)}</span> of <span className="font-medium">{total}</span> results
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSkip(Math.max(0, skip - limit))}
+                disabled={skip === 0}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setSkip(skip + limit)}
+                disabled={skip + limit >= total}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
 
         <Modal
           isOpen={modalOpen}

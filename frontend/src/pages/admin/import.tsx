@@ -21,7 +21,7 @@ export default function AdminImportPage() {
         const fetchData = async () => {
             try {
                 const [venuesRes, categoriesRes, organizersRes] = await Promise.all([
-                    venuesAPI.list({ limit: 100 }), // Fetch up to 100 venues for the dropdown
+                    venuesAPI.list({ all: true }), // Fetch all venues for the dropdown / auto-matcher
                     categoriesAPI.list(),
                     api.organizers.list()
                 ]);

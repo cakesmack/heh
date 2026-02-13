@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import Column, String, ForeignKey
 
 class VenueStatus(str, Enum):
     VERIFIED = "VERIFIED"
@@ -45,7 +46,6 @@ class Venue(SQLModel, table=True):
     __tablename__ = "venues"
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
-    name: str = Field(max_length=255, index=True)
     name: str = Field(max_length=255, index=True)
     address: str = Field(max_length=500)
     status: VenueStatus = Field(default=VenueStatus.UNVERIFIED, index=True)
@@ -90,8 +90,11 @@ class Venue(SQLModel, table=True):
     social_tiktok: Optional[str] = Field(default=None, max_length=255)
     website_url: Optional[str] = Field(default=None, max_length=255)
 
-    # Ownership
-    owner_id: Optional[str] = Field(default=None, foreign_key="users.id")
+    # Ownership — SET NULL so venues survive if owner is deleted
+    owner_id: Optional[str] = Field(
+        default=None,
+        sa_column=Column(String, ForeignKey("users.id", ondelete="SET NULL"))
+    )
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
