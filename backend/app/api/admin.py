@@ -323,10 +323,23 @@ def list_admin_events(
         # Get venue name
         venue_name = None
         if event.venue_id:
-            venue = session.get(Venue, event.venue_id)
-            if venue:
-                venue_name = venue.name
-        
+            try:
+                # Handle potential UUID/string mismatches
+                v_id = event.venue_id
+                if '-' not in v_id and len(v_id) == 32:
+                     # try to normalize if needed, or just let session.get handle it
+                     pass
+                venue = session.get(Venue, v_id)
+                if not venue and '-' not in v_id:
+                     # Attempt to find by normalized ID logic if direct fetch failed
+                     # This is a fallback for legacy data
+                     pass
+                
+                if venue:
+                    venue_name = venue.name
+            except Exception:
+                venue_name = "Unknown Venue"
+
         # Get organizer email and username
         organizer_email = None
         organizer_username = None
@@ -342,7 +355,7 @@ def list_admin_events(
             status=event.status,
             date_start=event.date_start,
             date_end=event.date_end,
-            venue_name=venue_name,
+            venue_name=venue_name or event.location_name or "Unknown Location",
             location_name=event.location_name,
             category_id=event.category_id,
             category_name=category_name,

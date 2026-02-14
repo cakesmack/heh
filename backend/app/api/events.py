@@ -1110,7 +1110,18 @@ def create_event(
         new_event.status = "pending"
         logger.info(f"[MODERATION] Event '{new_event.title}' pending (standard review).")
     session.add(new_event)
-    session.flush()  # Get the event ID
+    try:
+        session.flush()  # Get the event ID
+    except Exception as e:
+        # Check for unique constraint violation
+        if "uq_event_title_date_venue" in str(e):
+            session.rollback()
+            logger.warning(f"[CREATE_EVENT] Duplicate event blocked: {new_event.title}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An event with this title, date, and venue already exists."
+            )
+        raise e
 
     # Handle tags
     if event_data.tags:
@@ -1198,7 +1209,9 @@ def create_event(
     # Send appropriate notifications based on approval status
     if current_user.email:
         try:
-            if is_auto_approved:
+            # BUG FIX: Check actual status, not just user permission flag.
+            # Even trusted users can be flagged for moderation (content/duplicates).
+            if new_event.status == 'published':
                 # Send auto-approval email via Resend
                 resend_email_service.send_event_approved(
                     to_email=current_user.email,
@@ -1234,7 +1247,6 @@ def create_event(
                 if admin_emails:
                     notification_service.notify_admin_new_pending_event(
                         admin_emails,
-                        new_event.title,
                         new_event.title,
                         current_user.email
                     )
@@ -1577,8 +1589,12 @@ def update_event(
             )
             session.add(new_showtime)
 
-    # Exclude transient fields and explicitly handled relationships from generic update
-    excluded_fields = {"frequency", "weekdays", "recurrence_end_date", "showtimes"}
+    # Handle updates
+    
+    # Track status changes for notifications
+    status_changed_to_published = False
+    status_changed_to_rejected = False
+    
     for field, value in update_data.items():
         if field in excluded_fields:
             continue
@@ -1588,8 +1604,19 @@ def update_event(
             
         if field == "status":
             if not current_user.is_admin:
-                # Silently ignore status updates from non-admins, or you could raise 403
-                continue
+                # Silently ignore status updates from non-admins, unless owner resetting to pending?
+                # Actually, owner edit of rejected event might want to reset to 'pending'.
+                # Let's allow owner to set 'pending' if current is 'rejected'.
+                if original_status == 'rejected' and value == 'pending':
+                    pass # Allow
+                else:
+                    continue
+            
+            # Detect transitions
+            if value == 'published' and original_status != 'published':
+                status_changed_to_published = True
+            elif value == 'rejected' and original_status != 'rejected':
+                status_changed_to_rejected = True
                 
         setattr(event, field, value)
 
@@ -1762,6 +1789,35 @@ def update_event(
     session.add(event)
     session.commit()
     session.refresh(event)
+
+    # Post-update notifications (Moved from Admin/Manual calls to centralized place)
+    try:
+        # Get organizer user for emails
+        organizer_user = None
+        if event.organizer_id:
+            organizer_user = session.get(User, event.organizer_id)
+            
+        if organizer_user and organizer_user.email:
+            if status_changed_to_published:
+                logger.info(f"Event {event.id} published. Sending approval email to {mask_email(organizer_user.email)}")
+                resend_email_service.send_event_approved(
+                    to_email=organizer_user.email,
+                    event_title=event.title,
+                    event_id=str(event.id),
+                    username=organizer_user.username,
+                    is_auto_approved=False
+                )
+            elif status_changed_to_rejected:
+                logger.info(f"Event {event.id} rejected. Sending rejection email to {mask_email(organizer_user.email)}")
+                resend_email_service.send_event_rejected(
+                    to_email=organizer_user.email,
+                    event_title=event.title,
+                    event_id=str(event.id),
+                    rejection_reason=event.moderation_reason, # Ensure this was set during update!
+                    username=organizer_user.username
+                )
+    except Exception as e:
+        logger.error(f"Failed to send event status update emails: {e}")
 
     return build_event_response(event, session)
 

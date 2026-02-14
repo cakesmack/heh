@@ -30,6 +30,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "24.10.1",
     "@types/react": "19.2.7",
     "autoprefixer": "^10.4.22",

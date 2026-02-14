@@ -280,7 +280,7 @@ export default function AdminModeration() {
                                                                 </div>
                                                                 <div className="flex gap-4">
                                                                     <span>📍 {firstEvent.venue_name || 'Unknown Venue'}</span>
-                                                                    <span>👤 {firstEvent.organizer_id}</span>
+                                                                    <span>👤 {firstEvent.organizer_username || firstEvent.organizer_email || firstEvent.organizer_id}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -357,7 +357,7 @@ export default function AdminModeration() {
                                                             <div className="flex gap-4 text-sm text-gray-500">
                                                                 <span>📅 {new Date(event.date_start).toLocaleDateString()}</span>
                                                                 <span>📍 {event.venue_name || 'Unknown Venue'}</span>
-                                                                <span>👤 {event.organizer_id}</span>
+                                                                <span>👤 {event.organizer_username || event.organizer_email || event.organizer_id}</span>
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col gap-2 ml-4 min-w-[120px]">

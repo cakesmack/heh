@@ -75,13 +75,17 @@ def get_moderation_queue(
     ).all()
     return reports
 
-@router.get("/events/pending", response_model=List[Event])
+from app.models.venue import Venue
+
+
+@router.get("/events/pending")
 def get_pending_events(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get all pending events requiring approval. Admin only.
+    Returns Event objects with venue_name, organizer_username, organizer_email injected.
     """
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -89,7 +93,36 @@ def get_pending_events(
     events = session.exec(
         select(Event).where(Event.status == "pending").order_by(Event.created_at.asc())
     ).all()
-    return events
+    
+    results = []
+    for event in events:
+        # Serialize the event to a dict
+        event_data = event.model_dump()
+
+        # Resolve venue name
+        venue_name = None
+        if event.venue_id:
+            venue = session.get(Venue, event.venue_id)
+            if venue:
+                venue_name = venue.name
+        if not venue_name and event.location_name:
+            venue_name = event.location_name
+        event_data["venue_name"] = venue_name or "Unknown Venue"
+
+        # Resolve organizer details
+        organizer_username = None
+        organizer_email = None
+        if event.organizer_id:
+            user = session.get(User, event.organizer_id)
+            if user:
+                organizer_username = user.username
+                organizer_email = user.email
+        event_data["organizer_username"] = organizer_username
+        event_data["organizer_email"] = organizer_email
+
+        results.append(event_data)
+
+    return results
 
 @router.post("/reports/{report_id}/resolve")
 def resolve_report(

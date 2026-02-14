@@ -197,7 +197,7 @@ export default function GroupsPage() {
                                 </Link>
                             ) : (
                                 <Link
-                                    href="/auth/login?redirect=/account/organizers/create"
+                                    href="/login?redirect=/account/organizers/create"
                                     className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
                                 >
                                     Sign in to Create

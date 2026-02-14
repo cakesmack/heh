@@ -108,7 +108,7 @@ export default function EditEventPage() {
     // Fetch initial data - ONLY ONCE when id is available
     useEffect(() => {
         if (!isAuthenticated && !authLoading) {
-            router.push(`/auth/login?redirect=/events/${id}/edit`);
+            router.push(`/login?redirect=/events/${id}/edit`);
             return;
         }
 

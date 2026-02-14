@@ -1,8 +1,13 @@
 import sys
 import os
+
+# Set env vars BEFORE importing app
+os.environ["DATABASE_URL"] = "sqlite:///./reproduce_issue.db"
+os.environ["SECRET_KEY"] = "dummy_secret_key_for_testing"
+
 from datetime import datetime, timedelta
 from uuid import uuid4
-from sqlmodel import Session, select, delete
+from sqlmodel import Session, select, delete, SQLModel
 
 # Add backend to path
 sys.path.append(os.path.join(os.getcwd(), "backend"))
@@ -10,11 +15,32 @@ sys.path.append(os.path.join(os.getcwd(), "backend"))
 from app.core.database import engine
 from app.models.event import Event
 from app.models.venue import Venue
+from app.models.user import User
+from app.models.organizer import Organizer
+from app.models.category import Category
 from app.services.event_service import upsert_event
 
 def reproduce():
+    # Initialize DB
+    SQLModel.metadata.create_all(engine)
+
     with Session(engine) as session:
         print("--- Setting up Test Data ---")
+        
+        # 0. Create a User (Organizer)
+        user_id = str(uuid4()).replace("-", "")
+        # Check if user exists or create new
+        user = User(
+            id=user_id,
+            email=f"test_{user_id[:8]}@example.com",
+            username=f"test_{user_id[:8]}",
+            password_hash="dummy"
+        )
+        session.add(user)
+        session.commit()
+        print(f"Created User: {user.username} ({user.id})")
+        
+        organizer_id = user.id
         
         # 1. Create two venues close to each other
         venue_a_id = str(uuid4())
@@ -26,7 +52,8 @@ def reproduce():
             address="Dornoch, UK",
             latitude=57.88,
             longitude=-4.03,
-            status="VERIFIED"
+            status="VERIFIED",
+            owner_id=user.id
         )
         venue_b = Venue(
             id=venue_b_id,
@@ -34,7 +61,8 @@ def reproduce():
             address="Dornoch South, UK",
             latitude=57.8801, # Very close
             longitude=-4.0301,
-            status="VERIFIED"
+            status="VERIFIED",
+            owner_id=user.id
         )
         
         session.add(venue_a)
@@ -47,52 +75,71 @@ def reproduce():
         # 2. Define Event Data
         title = f"Test Event {uuid4().hex[:8]}"
         date_start = datetime.utcnow() + timedelta(days=10)
-        organizer_id = "test_user" # Assuming existence or loose constraint for test? 
-        # Note: organizer_id might fail if FK constraint exists and user doesn't.
-        # But for reproduction we might get away with it if constraints aren't enforced in sqlite or if we use None.
-        # Event model says organizer_id is Optional, but set in upsert.
-        # Let's hope for the best or creation might fail. 
-        # Actually Event.organizer_id is optional field, but upsert_event requires it as arg.
-        # It's used to create Event object.
-        # FK is `ForeignKey("users.id", ondelete="SET NULL")`
-        # In real DB validation might fail. I'll create a user if needed.
         
         # 3. Import Event at Venue A
         print("\n--- Upserting Event at Venue A ---")
-        event_a, created_a = upsert_event(
-            session,
-            title=title,
-            date_start=date_start,
-            venue_id=venue_a.id,
-            organizer_id=organizer_id,
-            fields={"description": "First import"}
-        )
-        session.add(event_a)
-        session.commit()
-        print(f"Event A ID: {event_a.id}, Created: {created_a}")
+        try:
+            event_a, created_a = upsert_event(
+                session,
+                title=title,
+                date_start=date_start,
+                venue_id=venue_a.id,
+                organizer_id=organizer_id,
+                fields={"description": "First import"}
+            )
+            session.add(event_a)
+            session.commit()
+            print(f"Event A ID: {event_a.id}, Created: {created_a}")
+        except Exception as e:
+            print(f"FAILED to upsert A: {e}")
+            import traceback
+            traceback.print_exc()
+            try:
+                session.delete(user)
+                session.delete(venue_a)
+                session.delete(venue_b)
+                session.commit()
+            except:
+                pass
+            return
         
-        # 4. Import Same Event at Venue B
-        print("\n--- Upserting Event at Venue B (Should catch duplicate) ---")
-        event_b, created_b = upsert_event(
-            session,
-            title=title,
-            date_start=date_start,
-            venue_id=venue_b.id, # Different Venue!
-            organizer_id=organizer_id,
-            fields={"description": "Second import (more specific)"}
-        )
-        session.add(event_b)
-        session.commit()
-        print(f"Event B ID: {event_b.id}, Created: {created_b}")
+        # 4. Import Same Event with "Copy of" prefix
+        print("\n--- Upserting Event with 'Copy of' prefix (Simulating API fix) ---")
         
+        raw_title = f"Copy of {title}"
+        
+        # Simulate API Logic (stripping prefix)
+        clean_title = raw_title
+        if clean_title.lower().startswith("copy of "):
+             clean_title = clean_title[8:]
+             print(f"DEBUG: Stripped prefix. '{raw_title}' -> '{clean_title}'")
+        
+        try:
+            event_b, created_b = upsert_event(
+                session,
+                title=clean_title, # Pass CLEAN title
+                date_start=date_start,
+                venue_id=venue_a.id, # Same Venue
+                organizer_id= organizer_id,
+                fields={"description": "Second import (should merge)"}
+            )
+            session.add(event_b)
+            session.commit()
+            print(f"Event B ID: {event_b.id}, Created: {created_b}")
+        except Exception as e:
+            print(f"FAILED to upsert B: {e}")
+            import traceback
+            traceback.print_exc()
+            return
+
         if event_a.id != event_b.id:
-            print("\n❌ DUPLICATE DETECTED! IDs differ.")
+            print("\nDUPLICATE DETECTED! IDs differ.")
         else:
-            print("\n✅ MERGED SUCCESS! Events merged.")
+            print("\nMERGED SUCCESS! Events merged.")
             if event_b.venue_id == venue_b.id:
-                print("✅ Venue updated to more specific one.")
+                print("Venue updated to more specific one.")
             else:
-                print("⚠️ Venue NOT updated (kept original).")
+                print("Venue NOT updated (kept original).")
 
         # Cleanup
         print("\n--- Cleaning up ---")
@@ -101,6 +148,7 @@ def reproduce():
             session.delete(event_b)
         session.delete(venue_a)
         session.delete(venue_b)
+        session.delete(user)
         session.commit()
 
 if __name__ == "__main__":

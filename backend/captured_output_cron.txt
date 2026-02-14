@@ -1,0 +1,217 @@
+STDOUT:
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0 -- C:\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend
+configfile: pytest.ini
+plugins: anyio-4.11.0, asyncio-1.3.0, django-4.7.0, env-1.3.2
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 4 items
+
+tests/test_cron.py::test_expire_featured_events_empty ERROR              [ 25%]
+tests/test_cron.py::test_expire_featured_events_success PASSED           [ 50%]
+tests/test_cron.py::test_expire_featured_events_future PASSED            [ 75%]
+tests/test_cron.py::test_expire_featured_unauthorized PASSED             [100%]
+
+=================================== ERRORS ====================================
+_____________ ERROR at setup of test_expire_featured_events_empty _____________
+
+fixturedef = <FixtureDef argname='admin_token_headers' scope='function' baseid='tests'>
+request = <SubRequest 'admin_token_headers' for <Function test_expire_featured_events_empty>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+                return (yield)
+            if not _is_coroutine_or_asyncgen(fixturedef.func):
+>               return (yield)
+                        ^^^^^
+
+C:\Users\Craig\AppData\Roaming\Python\Python314\site-packages\pytest_asyncio\plugin.py:730: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:73: in admin_token_headers_fixture
+    token = create_access_token(str(admin_user.id))
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = '3536c6c343e9469ca6a2b61a934911b6', expires_delta = None
+
+    def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+        """
+        Create a JWT access token.
+    
+        Args:
+            data: Payload to encode in the token (typically {"sub": user_id})
+            expires_delta: Optional custom expiration time
+    
+        Returns:
+            Encoded JWT token string
+        """
+>       to_encode = data.copy()
+                    ^^^^^^^^^
+E       AttributeError: 'str' object has no attribute 'copy'
+
+app\core\security.py:54: AttributeError
+---------------------------- Captured stdout setup ----------------------------
+--- [LIFESPAN] Starting lifespan manager... ---
+--- [LIFESPAN] Checking database connection... ---
+--- [LIFESPAN] Database connection successful. ---
+--- [LIFESPAN] Creating database tables... ---
+--- [LIFESPAN] Running migrations... ---
+--- [LIFESPAN] Startup complete. Ready to serve requests. ---
+============================== warnings summary ===============================
+app\core\config.py:11
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\core\config.py:11: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+app\schemas\user.py:30
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\user.py:30: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class UserResponse(BaseModel):
+
+app\schemas\user.py:42
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\user.py:42: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class UserProfile(BaseModel):
+
+app\schemas\category.py:40
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\category.py:40: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CategoryResponse(BaseModel):
+
+app\schemas\tag.py:14
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\tag.py:14: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class TagResponse(BaseModel):
+
+app\schemas\venue.py:11
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\venue.py:11: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class VenueCategoryResponse(BaseModel):
+
+app\schemas\venue.py:104
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\venue.py:104: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class VenueResponse(BaseModel):
+
+app\schemas\venue.py:172
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\venue.py:172: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class VenueStaffResponse(BaseModel):
+
+app\schemas\event.py:34
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\event.py:34: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ShowtimeResponse(BaseModel):
+
+app\schemas\event.py:47
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\event.py:47: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class OrganizerProfileResponse(BaseModel):
+
+app\schemas\event.py:135
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\event.py:135: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class EventResponse(BaseModel):
+
+app\schemas\event.py:233
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\event.py:233: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MapEventResponse(BaseModel):
+
+app\schemas\promotions.py:35
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\promotions.py:35: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class PromotionResponse(BaseModel):
+
+app\schemas\payments.py:21
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\payments.py:21: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class PaymentResponse(BaseModel):
+
+..\..\..\..\..\..\AppData\Roaming\Python\Python314\site-packages\slowapi\extension.py:717
+..\..\..\..\..\..\AppData\Roaming\Python\Python314\site-packages\slowapi\extension.py:717
+..\..\..\..\..\..\AppData\Roaming\Python\Python314\site-packages\slowapi\extension.py:717
+..\..\..\..\..\..\AppData\Roaming\Python\Python314\site-packages\slowapi\extension.py:717
+..\..\..\..\..\..\AppData\Roaming\Python\Python314\site-packages\slowapi\extension.py:717
+  C:\Users\Craig\AppData\Roaming\Python\Python314\site-packages\slowapi\extension.py:717: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+app\schemas\event_claim.py:21
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\event_claim.py:21: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class EventClaimResponse(EventClaimBase):
+
+app\schemas\venue_claim.py:21
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\venue_claim.py:21: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class VenueClaimResponse(VenueClaimBase):
+
+app\api\admin.py:857
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\api\admin.py:857: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class VenueInviteResponse(BaseModel):
+
+app\api\admin.py:921
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\api\admin.py:921: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class EventClaimAdminResponse(BaseModel):
+
+app\schemas\hero.py:45
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\hero.py:45: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class HeroSlotResponse(HeroSlotBase):
+
+app\schemas\collection.py:27
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\collection.py:27: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Collection(CollectionBase):
+
+app\schemas\organizer.py:40
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\organizer.py:40: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class OrganizerResponse(OrganizerBase):
+
+app\schemas\group_member.py:9
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\group_member.py:9: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class GroupMemberResponse(BaseModel):
+
+app\schemas\group_member.py:34
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\schemas\group_member.py:34: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class GroupInviteResponse(BaseModel):
+
+app\api\admin_import.py:27
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\api\admin_import.py:27: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class SingleEventImportRequest(BaseModel):
+
+tests/test_cron.py::test_expire_featured_events_empty
+tests/test_cron.py::test_expire_featured_events_success
+tests/test_cron.py::test_expire_featured_events_success
+tests/test_cron.py::test_expire_featured_events_success
+tests/test_cron.py::test_expire_featured_events_success
+tests/test_cron.py::test_expire_featured_events_future
+tests/test_cron.py::test_expire_featured_events_future
+tests/test_cron.py::test_expire_featured_events_future
+tests/test_cron.py::test_expire_featured_events_future
+  C:\Users\Craig\AppData\Roaming\Python\Python314\site-packages\pydantic\fields.py:747: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return fac()
+
+tests/test_cron.py::test_expire_featured_events_success
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\tests\test_cron.py:35: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    date_start=datetime.utcnow(),
+
+tests/test_cron.py::test_expire_featured_events_success
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\tests\test_cron.py:36: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    date_end=datetime.utcnow() + timedelta(hours=2),
+
+tests/test_cron.py::test_expire_featured_events_success
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\tests\test_cron.py:39: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    featured_until=datetime.utcnow() - timedelta(days=1), # Expired yesterday
+
+tests/test_cron.py::test_expire_featured_events_success
+tests/test_cron.py::test_expire_featured_events_future
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\app\api\cron.py:180: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+tests/test_cron.py::test_expire_featured_events_future
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\tests\test_cron.py:74: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    date_start=datetime.utcnow(),
+
+tests/test_cron.py::test_expire_featured_events_future
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\tests\test_cron.py:75: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    date_end=datetime.utcnow() + timedelta(hours=2),
+
+tests/test_cron.py::test_expire_featured_events_future
+  C:\Users\Craig\Desktop\projects\antigrav\heh\highland_events_app\backend\tests\test_cron.py:78: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    featured_until=datetime.utcnow() + timedelta(days=1), # Expires tomorrow
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR tests/test_cron.py::test_expire_featured_events_empty - AttributeError: 'str' object has no attribute 'copy'
+=================== 3 passed, 46 warnings, 1 error in 0.44s ===================
+
+STDERR:

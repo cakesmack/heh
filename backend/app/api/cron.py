@@ -166,3 +166,39 @@ async def trigger_weekly_digest(
         "message": f"Time to send! Queued {sent_count} weekly digests.",
         "processed_users": len(subscribed_users)
     }
+
+
+@router.post("/expire-featured")
+def expire_featured_events(
+    session: Session = Depends(get_session),
+    authorized: bool = Depends(verify_cron_access)
+):
+    """
+    Cron job to expire featured events.
+    Checks for events where featured_until < now and resets featured status.
+    """
+    now = datetime.utcnow()
+    
+    # query for expired events
+    expired_events = session.exec(
+        select(Event)
+        .where(Event.featured == True)
+        .where(Event.featured_until < now)
+    ).all()
+    
+    count = 0
+    for event in expired_events:
+        event.featured = False
+        event.featured_until = None
+        session.add(event)
+        count += 1
+        
+    session.commit()
+    
+    logger.info(f"[CRON] Expired {count} featured events.")
+    
+    return {
+        "status": "success",
+        "message": f"Expired {count} featured events.",
+        "processed_count": count
+    }

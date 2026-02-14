@@ -344,6 +344,7 @@ export interface EventResponse extends Event {
   category?: Category;
   tags?: Tag[];
   organizer_email?: string;
+  organizer_username?: string;
   organizer_profile_name?: string;
   organizer_profile?: OrganizerProfileResponse;
   participating_venues?: VenueResponse[];

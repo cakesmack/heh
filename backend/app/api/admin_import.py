@@ -15,6 +15,7 @@ from app.core.security import get_current_user
 from app.core.utils import normalize_uuid
 from app.models.user import User
 from app.models.event import Event
+from app.models.venue import Venue
 from app.models.showtime import EventShowtime
 from app.services.cloudinary_service import init_cloudinary, is_cloudinary_configured
 from app.services.event_service import upsert_event, cleanup_stale_venue_events
@@ -136,9 +137,37 @@ def import_single_event(
     # 2. Upsert Event (get-or-create)
     normalized_venue_id = normalize_uuid(req.venue_id) if req.venue_id else None
 
+    # Validate or Create Venue
+    if normalized_venue_id:
+        venue = session.get(Venue, normalized_venue_id)
+        if not venue:
+            # User expectation: Create venue if it doesn't exist, even if ID provided
+            # This handles cases where frontend generated an ID or data is out of sync
+            if not req.location_name and not req.address:
+                 # We can't create a venue without at least a name
+                 raise HTTPException(status_code=400, detail=f"Venue ID {normalized_venue_id} not found and no location name provided to create it.")
+            
+            venue = Venue(
+                id=normalized_venue_id,
+                name=req.location_name or "Unknown Venue",
+                address=req.address,
+                latitude=req.latitude,
+                longitude=req.longitude,
+                status="verified", # Auto-verify imported venues? Or keep properly?
+                owner_id=current_user.id
+            )
+            session.add(venue)
+            session.commit() # Commit immediately so FK exists for Event
+            session.refresh(venue)
+
+    # NEW: Strip "Copy of" prefix to prevent duplicates
+    clean_title = req.title
+    if clean_title.lower().startswith("copy of "):
+        clean_title = clean_title[8:]
+
     event, created = upsert_event(
         session,
-        title=req.title,
+        title=clean_title,
         date_start=req.date_start,
         venue_id=normalized_venue_id,
         organizer_id=current_user.id,

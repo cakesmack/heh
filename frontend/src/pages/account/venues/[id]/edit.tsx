@@ -39,7 +39,7 @@ export default function EditVenuePage() {
         if (!id || authLoading) return;
 
         if (!isAuthenticated) {
-            router.push(`/auth/login?redirect=/account/venues/${id}/edit`);
+            router.push(`/login?redirect=/account/venues/${id}/edit`);
             return;
         }
 

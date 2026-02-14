@@ -56,7 +56,7 @@ export default function EditOrganizerPage() {
         }
 
         if (!isAuthenticated) {
-            router.push(`/auth/login?redirect=/account/organizers/${id}/edit`);
+            router.push(`/login?redirect=/account/organizers/${id}/edit`);
             return;
         }
 
