@@ -1204,7 +1204,7 @@ def create_event(
                     to_email=current_user.email,
                     event_title=new_event.title,
                     event_id=str(new_event.id),
-                    display_name=current_user.display_name,
+                    username=current_user.username,
                     is_auto_approved=True
                 )
                 logger.info(f"Auto-approval email sent to {mask_email(current_user.email)} for event {new_event.id}")

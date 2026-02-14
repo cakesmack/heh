@@ -585,7 +585,7 @@ export default function AdminEvents() {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      {event.organizer_email?.split('@')[0] || '—'}
+                      {event.organizer_username || (event.organizer_email ? event.organizer_email.split('@')[0] : '—')}
                     </td>
                     <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                       <StatusDropdown

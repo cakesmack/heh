@@ -175,6 +175,7 @@ class AdminEventResponse(BaseModel):
     is_recurring: bool
     parent_event_id: Optional[str]
     organizer_email: Optional[str]
+    organizer_username: Optional[str]
     created_at: datetime
     moderation_reason: Optional[str] = None
 
@@ -286,12 +287,14 @@ def list_admin_events(
             if venue:
                 venue_name = venue.name
         
-        # Get organizer email
+        # Get organizer email and username
         organizer_email = None
+        organizer_username = None
         if event.organizer_id:
             user = session.get(User, event.organizer_id)
             if user:
                 organizer_email = user.email
+                organizer_username = user.username
         
         result.append(AdminEventResponse(
             id=event.id,
@@ -308,6 +311,7 @@ def list_admin_events(
             is_recurring=event.is_recurring or False,
             parent_event_id=event.parent_event_id,
             organizer_email=organizer_email,
+            organizer_username=organizer_username,
             created_at=event.created_at,
             moderation_reason=event.moderation_reason
         ))
@@ -1064,7 +1068,7 @@ def approve_featured_booking(
         event_title = event.title if event else "your event"
         resend_email_service.send_organizer_alert(
             organizer.email,
-            organizer.display_name or organizer.email,
+            organizer.username or organizer.email,
             event_title,
             "approved",
             ""

@@ -1882,6 +1882,7 @@ export interface AdminEventItem {
   is_recurring: boolean;
   parent_event_id: string | null;
   organizer_email: string | null;
+  organizer_username: string | null;
   created_at: string;
   moderation_reason?: string | null;
 }

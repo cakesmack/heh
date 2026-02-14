@@ -131,7 +131,7 @@ def update_me(
 ):
     """
     Update current user's profile.
-    Allows updating email, username, display_name, and password.
+    Allows updating email, username, and password.
     """
     # Refetch user from session to ensure it's tracked and avoid detached instance issues
     db_user = session.get(User, current_user.id)
