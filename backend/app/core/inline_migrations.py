@@ -107,5 +107,12 @@ def run_inline_migrations(session: Session) -> None:
         WHERE created_at IS NULL OR created_at > NOW();
     """))
 
+    # --- User enhancements (Admin Phase) ---
+    try:
+        session.exec(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITHOUT TIME ZONE;"))
+        session.exec(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_notes VARCHAR(5000);"))
+    except Exception as e:
+        logger.warning(f"User migration skipped: {e}")
+
     session.commit()
     logger.info("Inline migrations complete")

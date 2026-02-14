@@ -1247,6 +1247,10 @@ export interface AdminUser {
   event_count: number;
   checkin_count: number;
   username: string;
+  last_login?: string;
+  admin_notes?: string;
+  website?: string;
+  instagram?: string;
 }
 
 export interface AdminUserListResponse {
@@ -1276,11 +1280,13 @@ export const adminAPI = {
   /**
    * List all users with search and pagination
    */
-  listUsers: async (params: { q?: string; skip?: number; limit?: number } = {}): Promise<AdminUserListResponse> => {
+  listUsers: async (params: { q?: string; skip?: number; limit?: number; sort_by?: string; sort_dir?: 'asc' | 'desc' } = {}): Promise<AdminUserListResponse> => {
     const searchParams = new URLSearchParams();
     if (params.q) searchParams.append('q', params.q);
     if (params.skip !== undefined) searchParams.append('skip', params.skip.toString());
     if (params.limit !== undefined) searchParams.append('limit', params.limit.toString());
+    if (params.sort_by) searchParams.append('sort_by', params.sort_by);
+    if (params.sort_dir) searchParams.append('sort_dir', params.sort_dir);
     const queryString = searchParams.toString();
     return apiFetch<AdminUserListResponse>(`/api/admin/users${queryString ? `?${queryString}` : ''}`);
   },
@@ -1311,7 +1317,7 @@ export const adminAPI = {
   /**
    * Update user details
    */
-  updateUser: async (userId: string, data: { email?: string; username?: string; is_admin?: boolean; is_active?: boolean }): Promise<AdminUser> => {
+  updateUser: async (userId: string, data: { email?: string; username?: string; is_admin?: boolean; is_active?: boolean; admin_notes?: string }): Promise<AdminUser> => {
     return apiFetch<AdminUser>(`/api/admin/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(data),

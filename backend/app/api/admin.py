@@ -71,6 +71,10 @@ class AdminUserResponse(BaseModel):
     event_count: int
     checkin_count: int
     username: str
+    last_login: Optional[datetime] = None
+    admin_notes: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
 
 
 class AdminUserListResponse(BaseModel):
@@ -176,8 +180,44 @@ class AdminEventResponse(BaseModel):
     parent_event_id: Optional[str]
     organizer_email: Optional[str]
     organizer_username: Optional[str]
-    created_at: datetime
-    moderation_reason: Optional[str] = None
+    admin_notes: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
+
+
+def build_admin_user_response(user: User, session: Session, event_count: Optional[int] = None) -> AdminUserResponse:
+    """Helper to build AdminUserResponse with calculated fields."""
+    if event_count is None:
+        event_count = session.exec(
+            select(func.count(Event.id)).where(Event.organizer_id == user.id)
+        ).one() or 0
+        
+    checkin_count = 0  # Feature removed
+    
+    # Determine social links from first organizer profile
+    website = None
+    instagram = None
+    if user.organizer_profiles:
+        org = user.organizer_profiles[0]
+        website = org.website_url or org.social_website
+        instagram = org.social_instagram
+
+    return AdminUserResponse(
+        id=str(user.id),
+        email=user.email,
+        is_admin=user.is_admin,
+        is_trusted_organizer=user.is_trusted_organizer,
+        is_active=user.is_active,
+        has_password=user.password_hash is not None,
+        created_at=user.created_at,
+        last_login=user.last_login,
+        admin_notes=user.admin_notes,
+        website=website,
+        instagram=instagram,
+        event_count=event_count,
+        checkin_count=checkin_count,
+        username=user.username,
+    )
 
 
 class AdminEventsListResponse(BaseModel):
@@ -334,35 +374,56 @@ def list_users(
     q: Optional[str] = Query(None, description="Search by email"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    sort_by: str = Query("created_at", description="Field to sort by: created_at, event_count, last_login"),
+    sort_dir: str = Query("desc", description="Sort direction: asc, desc"),
     admin: User = Depends(require_admin),
     session: Session = Depends(get_session)
 ):
     """List all users with search and pagination."""
-    query = select(User)
+    # Main query with event count
+    query = (
+        select(User, func.count(Event.id).label("event_count"))
+        .outerjoin(Event, Event.organizer_id == User.id)
+        .group_by(User.id)
+    )
 
     if q:
         query = query.where(User.email.ilike(f"%{q}%"))
 
-    query = query.order_by(User.created_at.desc())
+    # Sorting
+    if sort_by == "event_count":
+        order = func.count(Event.id).desc() if sort_dir == "desc" else func.count(Event.id).asc()
+    elif sort_by == "last_login":
+        order = User.last_login.desc() if sort_dir == "desc" else User.last_login.asc()
+    else:
+        # Default to created_at
+        order = User.created_at.desc() if sort_dir == "desc" else User.created_at.asc()
+    
+    query = query.order_by(order)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = session.exec(count_query).one()
+    # Get total count (simple count of users matching filter)
+    # We need a separate query for total because the main query groups by user
+    total_query = select(func.count(User.id))
+    if q:
+        total_query = total_query.where(User.email.ilike(f"%{q}%"))
+    total = session.exec(total_query).one()
 
     # Apply pagination
     query = query.offset(skip).limit(limit)
-    users = session.exec(query).all()
+    results = session.exec(query).all()
 
-    # Build response with counts
+    # Build response
     user_responses = []
-    for user in users:
-        # Count events by this user
-        event_count = session.exec(
-            select(func.count(Event.id)).where(Event.organizer_id == user.id)
-        ).one() or 0
-
-        # Count check-ins by this user (Feature removed)
+    for user, event_count in results:
         checkin_count = 0
+        
+        # Determine social links from first organizer profile
+        website = None
+        instagram = None
+        if user.organizer_profiles:
+            org = user.organizer_profiles[0]
+            website = org.website_url or org.social_website
+            instagram = org.social_instagram
 
         user_responses.append(AdminUserResponse(
             id=str(user.id),
@@ -372,6 +433,10 @@ def list_users(
             is_active=user.is_active,
             has_password=user.password_hash is not None,
             created_at=user.created_at,
+            last_login=user.last_login,
+            admin_notes=user.admin_notes,
+            website=website,
+            instagram=instagram,
             event_count=event_count,
             checkin_count=checkin_count,
             username=user.username,
@@ -402,22 +467,9 @@ def toggle_trusted_organizer(
     session.commit()
     session.refresh(user)
     
-    # Calculate stats for response
-    event_count = session.exec(select(func.count(Event.id)).where(Event.organizer_id == user.id)).one() or 0
-    checkin_count = 0
+    session.refresh(user)
     
-    return AdminUserResponse(
-        id=str(user.id),
-        email=user.email,
-        is_admin=user.is_admin,
-        is_trusted_organizer=user.is_trusted_organizer,
-        is_active=user.is_active,
-        has_password=bool(user.password_hash),
-        created_at=user.created_at,
-        event_count=event_count,
-        checkin_count=checkin_count,
-        username=user.username,
-    )
+    return build_admin_user_response(user, session)
 
 
 @router.get("/users/{user_id}/events", response_model=List[UserEventSummary])
@@ -483,26 +535,26 @@ def toggle_user_admin(
     session.commit()
     session.refresh(user)
 
-    # Count events
-    event_count = session.exec(
-        select(func.count(Event.id)).where(Event.organizer_id == user.id)
-    ).one() or 0
+    session.refresh(user)
 
-    # Count check-ins (Feature removed)
-    checkin_count = 0
+    return build_admin_user_response(user, session)
 
-    return AdminUserResponse(
-        id=str(user.id),
-        email=user.email,
-        is_admin=user.is_admin,
-        is_trusted_organizer=user.is_trusted_organizer,
-        is_active=user.is_active,
-        has_password=user.password_hash is not None,
-        created_at=user.created_at,
-        event_count=event_count,
-        checkin_count=checkin_count,
-        username=user.username,
-    )
+
+@router.get("/users/{user_id}", response_model=AdminUserResponse)
+def get_user(
+    user_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Get user details."""
+    normalized_id = user_id.replace("-", "") if "-" in user_id else user_id
+    user = session.get(User, normalized_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return build_admin_user_response(user, session)
 
 
 class AdminUserUpdate(BaseModel):
@@ -511,6 +563,7 @@ class AdminUserUpdate(BaseModel):
     username: Optional[str] = None
     is_admin: Optional[bool] = None
     is_active: Optional[bool] = None
+    admin_notes: Optional[str] = None
 
 
 @router.put("/users/{user_id}", response_model=AdminUserResponse)
@@ -546,24 +599,11 @@ def update_user(
     session.commit()
     session.refresh(user)
     
-    # Count events and check-ins
-    event_count = session.exec(
-        select(func.count(Event.id)).where(Event.organizer_id == user.id)
-    ).one() or 0
-    checkin_count = 0
+    session.add(user)
+    session.commit()
+    session.refresh(user)
     
-    return AdminUserResponse(
-        id=str(user.id),
-        email=user.email,
-        is_admin=user.is_admin,
-        is_trusted_organizer=user.is_trusted_organizer,
-        is_active=user.is_active,
-        has_password=user.password_hash is not None,
-        created_at=user.created_at,
-        event_count=event_count,
-        checkin_count=checkin_count,
-        username=user.username,
-    )
+    return build_admin_user_response(user, session)
 
 
 @router.delete("/users/{user_id}")

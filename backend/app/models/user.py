@@ -55,7 +55,11 @@ class User(SQLModel, table=True):
     receive_interest_notifications: bool = Field(default=True)
 
     # Timestamps
+    last_login: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Admin notes (internal only)
+    admin_notes: Optional[str] = Field(default=None, max_length=5000)
 
     # Relationships
     submitted_events: list["Event"] = Relationship(back_populates="organizer")

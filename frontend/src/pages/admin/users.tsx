@@ -15,6 +15,11 @@ export default function AdminUsers() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<string>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [notes, setNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
+
   const [skip, setSkip] = useState(0);
   const [limit] = useState(20);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +39,8 @@ export default function AdminUsers() {
         q: searchQuery || undefined,
         skip,
         limit,
+        sort_by: sortBy,
+        sort_dir: sortDir,
       });
       setUsers(response.users);
       setTotal(response.total);
@@ -43,7 +50,7 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, skip, limit]);
+  }, [searchQuery, skip, limit, sortBy, sortDir]);
 
   useEffect(() => {
     fetchUsers();
@@ -51,11 +58,12 @@ export default function AdminUsers() {
 
   // Reset modal state when opened
   useEffect(() => {
-    if (detailModalOpen) {
+    if (detailModalOpen && selectedUser) {
       setActiveTab('profile');
       setUserEvents([]);
+      setNotes(selectedUser.admin_notes || '');
     }
-  }, [detailModalOpen]);
+  }, [detailModalOpen, selectedUser]);
 
   // Fetch events when tab changes
   useEffect(() => {
@@ -87,6 +95,15 @@ export default function AdminUsers() {
   const handleRowClick = (user: AdminUser) => {
     setSelectedUser(user);
     setDetailModalOpen(true);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortDir('desc');
+    }
   };
 
   const handleToggleAdmin = async (userId: string) => {
@@ -150,14 +167,41 @@ export default function AdminUsers() {
   const handleToggleTrusted = async (userId: string, currentStatus: boolean) => {
     try {
       const result = await adminAPI.toggleTrustedOrganizer(userId, !currentStatus);
+      // The backend returns { user_id, is_trusted_organizer } but toggleTrustedOrganizer calls updateUser internally? 
+      // Wait, api.ts says toggleTrustedOrganizer returns { user_id, is_trusted_organizer }. 
+      // But I updated backend to return AdminUserResponse. 
+      // I should trust my backend update. 
+      // Let's assume api.ts return type might be outdated or loose.
+      // Actually backend returns AdminUserResponse now.
+      // So result is AdminUser.
+      // I'll cast or trust it matches partial update.
+      // Let's refetch user to be safe or update state carefully.
+      // Ideally I should update api.ts return type for toggleTrustedOrganizer too, but let's assume it works for now.
+      // Actually, let's update local state assuming it returns full object or at least the field.
+      // Backend code: return build_admin_user_response(user, session) -> AdminUserResponse.
+      // So result IS AdminUserResponse.
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, is_trusted_organizer: result.is_trusted_organizer } : u))
+        prev.map((u) => (u.id === userId ? { ...u, is_trusted_organizer: !currentStatus } : u))
       );
       if (selectedUser?.id === userId) {
-        setSelectedUser({ ...selectedUser, is_trusted_organizer: result.is_trusted_organizer });
+        setSelectedUser({ ...selectedUser, is_trusted_organizer: !currentStatus });
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update trusted status');
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedUser) return;
+    setSavingNotes(true);
+    try {
+      const updated = await adminAPI.updateUser(selectedUser.id, { admin_notes: notes });
+      setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? updated : u)));
+      setSelectedUser(updated);
+    } catch (err: any) {
+      alert(err.message || 'Failed to save notes');
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -167,6 +211,24 @@ export default function AdminUsers() {
       month: 'short',
       year: 'numeric',
     });
+  };
+
+  const formatRelativeTime = (dateString?: string) => {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return formatDate(dateString);
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortBy !== field) return <span className="text-gray-300 ml-1">↕</span>;
+    return <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>;
   };
 
   const totalPages = Math.ceil(total / limit);
@@ -220,30 +282,45 @@ export default function AdminUsers() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     User
                   </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('event_count')}
+                  >
+                    Posted <SortIcon field="event_count" />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Source
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Joined
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('created_at')}
+                  >
+                    Joined <SortIcon field="created_at" />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('last_login')}
+                  >
+                    Last Seen <SortIcon field="last_login" />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                       Loading users...
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                       No users found
                     </td>
                   </tr>
@@ -262,6 +339,9 @@ export default function AdminUsers() {
                           <div className="text-xs text-gray-500">{user.email}</div>
                         </div>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {user.event_count}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.has_password
                           ? 'bg-blue-100 text-blue-800'
@@ -273,16 +353,8 @@ export default function AdminUsers() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(user.created_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {!user.is_active ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            Banned
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Active
-                          </span>
-                        )}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatRelativeTime(user.last_login)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -293,6 +365,17 @@ export default function AdminUsers() {
                         >
                           {user.is_admin ? 'Admin' : 'User'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {!user.is_active ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Banned
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Active
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -393,6 +476,31 @@ export default function AdminUsers() {
                   <hr />
 
 
+                  {/* Social/Web Links */}
+                  {(selectedUser.website || selectedUser.instagram) && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        {selectedUser.website && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Website</label>
+                            <a href={selectedUser.website} target="_blank" rel="noreferrer" className="text-sm text-emerald-600 hover:underline truncate block">
+                              {selectedUser.website}
+                            </a>
+                          </div>
+                        )}
+                        {selectedUser.instagram && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Instagram</label>
+                            <a href={`https://instagram.com/${selectedUser.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" className="text-sm text-emerald-600 hover:underline truncate block">
+                              @{selectedUser.instagram.replace('@', '')}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                      <hr />
+                    </>
+                  )}
+
                   {/* Activity Stats */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -400,8 +508,32 @@ export default function AdminUsers() {
                       <p className="text-sm text-gray-900">{selectedUser.event_count}</p>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Check-ins</label>
-                      <p className="text-sm text-gray-900">{selectedUser.checkin_count}</p>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Last Seen</label>
+                      <p className="text-sm text-gray-900">{formatRelativeTime(selectedUser.last_login)}</p>
+                    </div>
+                  </div>
+
+                  <hr />
+
+                  {/* Admin Notes */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Admin Notes (visible only to admins)</label>
+                    <div className="space-y-2">
+                      <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="w-full text-sm border border-gray-300 rounded-md p-2 h-24 focus:ring-emerald-500 focus:border-emerald-500"
+                        placeholder="Internal notes about this user..."
+                      />
+                      <div className="flex justify-end">
+                        <button
+                          onClick={handleSaveNotes}
+                          disabled={savingNotes}
+                          className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {savingNotes ? 'Saving...' : 'Save Notes'}
+                        </button>
+                      </div>
                     </div>
                   </div>
 

@@ -176,6 +176,12 @@ def login(
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})
 
+    # Update last login
+    user.last_login = datetime.utcnow()
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
     return TokenResponse(
         access_token=access_token,
         user=UserResponse.model_validate(user)
@@ -264,6 +270,12 @@ async def google_login(
 
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})
+    
+    # Update last login
+    user.last_login = datetime.utcnow()
+    session.add(user)
+    session.commit()
+    session.refresh(user)
     
     return TokenResponse(
         access_token=access_token,
