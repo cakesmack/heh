@@ -32,19 +32,81 @@ export default function ImageUpload({
     setPreview(currentImageUrl || null);
   }, [currentImageUrl]);
 
+  // Helper to resize image
+  const resizeImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX_DIMENSION = 2000;
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate new dimensions
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIMENSION) / width);
+            width = MAX_DIMENSION;
+          } else {
+            width = Math.round((width * MAX_DIMENSION) / height);
+            height = MAX_DIMENSION;
+          }
+        } else {
+          // No resize needed
+          resolve(file);
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Compress to 0.85 quality
+        // Use original type if supported, else JPEG
+        const outputType = file.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const resizedFile = new File([blob], file.name, {
+                type: outputType,
+                lastModified: Date.now(),
+              });
+              resolve(resizedFile);
+            } else {
+              reject(new Error('Canvas to Blob failed'));
+            }
+          },
+          outputType,
+          0.85
+        );
+      };
+      img.onerror = (err) => reject(err);
+    });
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const originalFile = e.target.files?.[0];
+    if (!originalFile) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!originalFile.type.startsWith('image/')) {
       setError('Please select an image file');
       return;
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB');
+    // Validate original file size (check if it's ridiculously huge before even processing? 
+    // Actually, we want to allow large files as input and resize them down. 
+    // But maybe keep a sane upper limit like 20MB to prevent browser crash)
+    if (originalFile.size > 20 * 1024 * 1024) {
+      setError('Image must be less than 20MB');
       return;
     }
 
@@ -52,16 +114,20 @@ export default function ImageUpload({
     setUploading(true);
     onUploadStart?.();
 
-    // Show preview immediately
+    // Show preview immediately (using original to be fast)
     const reader = new FileReader();
     reader.onload = (e) => setPreview(e.target?.result as string);
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(originalFile);
 
     try {
-      const urls = await api.media.upload(file, folder);
+      // Resize/Compress
+      const processedFile = await resizeImage(originalFile);
+
+      const urls = await api.media.upload(processedFile, folder);
       onUpload(urls);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Upload failed');
+      console.error('Upload Process Error:', err);
+      setError(err.response?.data?.detail || err.message || 'Upload failed');
       setPreview(currentImageUrl || null);
     } finally {
       setUploading(false);
@@ -116,7 +182,7 @@ export default function ImageUpload({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <p className="text-gray-600">Click to upload image</p>
-            <p className="text-sm text-gray-400 mt-1">PNG, JPG, WebP up to 5MB</p>
+            <p className="text-sm text-gray-400 mt-1">PNG, JPG, WebP up to 20MB</p>
           </div>
         </div>
       )}
