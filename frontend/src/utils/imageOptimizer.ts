@@ -16,6 +16,11 @@ export function optimizeCloudinaryUrl(urlOrId: string | null | undefined, width:
 
     let cleanUrlOrId = urlOrId.trim();
 
+    // If it's a data URL (local preview), return as is
+    if (cleanUrlOrId.startsWith('data:')) {
+        return cleanUrlOrId;
+    }
+
     // SELF-HEALING: If it's a Cloudflare ID that got corrupted with 'https://' by the backend sanitizer
     // Example: https://5ed3e706-cbf4-46be-b0c9-3e89f7d7da00/
     if (cleanUrlOrId.startsWith('https://')) {
