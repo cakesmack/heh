@@ -54,15 +54,17 @@ export function optimizeCloudinaryUrl(urlOrId: string | null | undefined, width:
 
     if (!cleanUrlOrId.startsWith('http')) {
         if (!hash) {
-            console.warn('[imageOptimizer] Account Hash is missing on this environment (Server/Client). Image:', cleanUrlOrId);
-            return cleanUrlOrId;
+            console.warn('[imageOptimizer] Account Hash missing. Cannot construct Cloudflare URL for:', cleanUrlOrId);
+            // Return empty string to avoid relative path 404s
+            return '';
         }
 
-        // Use 'public' variant as default unless specific variants are confirmed to exist
-        const variant = 'public';
+        // Align with backend variants defined in media.py / cloudflare_service.py
+        let variant = 'card'; // Default to card
+        if (width <= 200) variant = 'thumbnail';
+        else if (width >= 1200) variant = 'hero';
 
-        const cfUrl = `https://imagedelivery.net/${hash}/${cleanUrlOrId}/${variant}`;
-        return cfUrl;
+        return `https://imagedelivery.net/${hash}/${cleanUrlOrId}/${variant}`;
     }
 
     return cleanUrlOrId;

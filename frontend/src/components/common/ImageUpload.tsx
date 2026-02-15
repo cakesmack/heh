@@ -125,6 +125,9 @@ export default function ImageUpload({
       const processedFile = await resizeImage(originalFile);
 
       const urls = await api.media.upload(processedFile, folder);
+      // Immediately set preview to the full medium URL from backend
+      // This prevents "vanishing" while waiting for parent state to sync
+      setPreview(urls.medium_url);
       onUpload(urls);
     } catch (err: any) {
       console.error('Upload Process Error:', err);
@@ -153,6 +156,7 @@ export default function ImageUpload({
       {preview ? (
         <div className="relative" style={{ aspectRatio }}>
           <img
+            key={preview}
             src={optimizeCloudinaryUrl(preview, 800)}
             alt="Preview"
             className="w-full h-full object-cover rounded-lg"
