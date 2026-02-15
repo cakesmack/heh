@@ -5,7 +5,7 @@ Handles event creation, updates, filtering, and listings.
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, Field, BeforeValidator
+from pydantic import BaseModel, Field, BeforeValidator, model_validator
 from typing import Annotated
 
 from app.schemas.category import CategoryResponse
@@ -13,6 +13,19 @@ from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
 from app.schemas.venue import VenueResponse
 from typing import Union
+import re
+
+
+def _sanitize_url(value: Union[str, None]) -> Union[str, None]:
+    """Trim whitespace, convert blanks to None, auto-prepend https:// if missing."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    if not re.match(r'^https?://', trimmed, re.IGNORECASE):
+        trimmed = f'https://{trimmed}'
+    return trimmed
 
 
 def empty_string_to_none(v: Union[str, None]) -> Union[str, None]:
@@ -94,6 +107,15 @@ class EventCreate(BaseModel):
     map_display_lng: Optional[float] = None
     map_display_label: Optional[str] = Field(None, max_length=255)
 
+    @model_validator(mode='before')
+    @classmethod
+    def sanitize_urls(cls, data):
+        if isinstance(data, dict):
+            for field in ('ticket_url', 'website_url', 'image_url'):
+                if field in data:
+                    data[field] = _sanitize_url(data.get(field))
+        return data
+
 class EventUpdate(BaseModel):
     """Schema for updating an existing event."""
     title: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -130,6 +152,15 @@ class EventUpdate(BaseModel):
     recurrence_end_date: Optional[datetime] = None
     weekdays: Optional[List[int]] = Field(None, description="Days of the week for recurring events (0=Mon, 6=Sun)")
     status: Optional[str] = Field(None, description="Admin only: Update event status")
+
+    @model_validator(mode='before')
+    @classmethod
+    def sanitize_urls(cls, data):
+        if isinstance(data, dict):
+            for field in ('ticket_url', 'website_url', 'image_url'):
+                if field in data:
+                    data[field] = _sanitize_url(data.get(field))
+        return data
 
 
 class EventResponse(BaseModel):

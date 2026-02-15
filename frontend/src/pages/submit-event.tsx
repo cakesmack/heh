@@ -390,6 +390,7 @@ export default function SubmitEventPage() {
               <EventTicketingSection
                 formData={formData}
                 handleChange={handleChange}
+                setFormData={setFormData}
               />
             </div>
 

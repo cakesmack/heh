@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { normalizeUrl } from '@/utils/url';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -801,13 +802,14 @@ export default function EditEventPage() {
                             <Input
                                 id="ticket_url"
                                 name="ticket_url"
-                                type="url"
+                                type="text"
                                 value={formData.ticket_url}
                                 onChange={handleChange}
-                                placeholder="https://www.skiddle.com/your-event or https://www.eventbrite.com/..."
+                                onBlur={() => setFormData(prev => ({ ...prev, ticket_url: normalizeUrl(prev.ticket_url || '') }))}
+                                placeholder="e.g., www.skiddle.com/your-event"
                                 disabled={isLoading}
                             />
-                            <p className="mt-1 text-sm text-gray-500">Paste a link where attendees can buy tickets</p>
+                            <p className="mt-1 text-sm text-gray-500">Paste a link where attendees can buy tickets. We'll add https:// automatically.</p>
                         </div>
 
                         {/* Age Restriction */}

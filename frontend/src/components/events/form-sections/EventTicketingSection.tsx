@@ -2,13 +2,15 @@
 import React from 'react';
 import { Input } from '@/components/common/Input';
 import FormSection from '../FormSection';
+import { createUrlBlurHandler } from '@/utils/url';
 
 interface EventTicketingSectionProps {
     formData: any;
     handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    setFormData: React.Dispatch<React.SetStateAction<any>>;
 }
 
-export default function EventTicketingSection({ formData, handleChange }: EventTicketingSectionProps) {
+export default function EventTicketingSection({ formData, handleChange, setFormData }: EventTicketingSectionProps) {
     return (
         <FormSection
             title="Ticketing & More"
@@ -35,14 +37,28 @@ export default function EventTicketingSection({ formData, handleChange }: EventT
 
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ticket URL</label>
-                <Input name="ticket_url" type="url" value={formData.ticket_url} onChange={handleChange} placeholder="https://tickets.example.com/..." />
-                <p className="mt-1 text-xs text-gray-500">Link to where people can buy tickets.</p>
+                <Input
+                    name="ticket_url"
+                    type="text"
+                    value={formData.ticket_url}
+                    onChange={handleChange}
+                    onBlur={createUrlBlurHandler(setFormData, 'ticket_url')}
+                    placeholder="e.g., www.skiddle.com/your-event"
+                />
+                <p className="mt-1 text-xs text-gray-500">Link to where people can buy tickets. We'll add https:// automatically.</p>
             </div>
 
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Event Website (Optional)</label>
-                <Input name="website_url" type="url" value={formData.website_url || ''} onChange={handleChange} placeholder="https://www.your-event.com" />
-                <p className="mt-1 text-xs text-gray-500">A separate website for your event (if different from tickets).</p>
+                <Input
+                    name="website_url"
+                    type="text"
+                    value={formData.website_url || ''}
+                    onChange={handleChange}
+                    onBlur={createUrlBlurHandler(setFormData, 'website_url')}
+                    placeholder="e.g., www.your-event.com"
+                />
+                <p className="mt-1 text-xs text-gray-500">A separate website for your event. We'll add https:// automatically.</p>
             </div>
 
             <div>

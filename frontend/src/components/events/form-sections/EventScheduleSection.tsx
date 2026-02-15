@@ -411,12 +411,20 @@ export default function EventScheduleSection({
                                         <div>
                                             <label className="text-xs text-gray-500 mb-1 block">Ticket Link (Optional)</label>
                                             <input
-                                                type="url"
+                                                type="text"
                                                 value={st.ticket_url || ''}
                                                 onChange={(e) => {
                                                     const updated = [...showtimes];
                                                     updated[index] = { ...updated[index], ticket_url: e.target.value };
                                                     setShowtimes(updated);
+                                                }}
+                                                onBlur={() => {
+                                                    const val = (st.ticket_url || '').trim();
+                                                    if (val && !/^https?:\/\//i.test(val)) {
+                                                        const updated = [...showtimes];
+                                                        updated[index] = { ...updated[index], ticket_url: `https://${val}` };
+                                                        setShowtimes(updated);
+                                                    }
                                                 }}
                                                 placeholder="Specific ticket link"
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-emerald-500 focus:border-emerald-500"
