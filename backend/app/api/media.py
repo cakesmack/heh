@@ -14,6 +14,11 @@ from app.services.cloudinary_service import (
     upload_image as cloudinary_upload,
     delete_image as cloudinary_delete
 )
+from app.services.cloudflare_service import (
+    is_cloudflare_configured,
+    upload_to_cloudflare,
+    get_cloudflare_url
+)
 
 router = APIRouter(tags=["Media"])
 
@@ -30,8 +35,19 @@ async def upload_media(
     Folder must be one of: events, venues, categories
     Returns URLs for original and size variants.
 
-    Uses Cloudinary when configured, falls back to local storage.
+    Uses Cloudflare when configured, then Cloudinary, then local storage.
     """
+    if is_cloudflare_configured():
+        image_id = await upload_to_cloudflare(file)
+        return {
+            "url": image_id,  # Storing ID as URL for Cloudflare images
+            "id": image_id,
+            "provider": "cloudflare",
+            "thumbnail_url": get_cloudflare_url(image_id, "thumbnail"),
+            "medium_url": get_cloudflare_url(image_id, "card"),
+            "large_url": get_cloudflare_url(image_id, "hero")
+        }
+    
     if is_cloudinary_configured():
         return await cloudinary_upload(file, folder)
     else:

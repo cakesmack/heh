@@ -23,9 +23,18 @@ def _sanitize_url(value: Union[str, None]) -> Union[str, None]:
     trimmed = value.strip()
     if not trimmed:
         return None
-    if not re.match(r'^https?://', trimmed, re.IGNORECASE):
-        trimmed = f'https://{trimmed}'
-    return trimmed
+    
+    # If it is already a full URL, or a Cloudinary shortcut, return it
+    if re.match(r'^https?://', trimmed, re.IGNORECASE):
+        return trimmed
+    
+    # If it looks like a Cloudflare Image ID (UUID format), do NOT prepend https://
+    # Cloudflare IDs are typically UUIDs: 8-4-4-4-12 hex chars
+    if re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', trimmed, re.IGNORECASE):
+        return trimmed
+
+    # Otherwise prepend https://
+    return f'https://{trimmed}'
 
 
 def empty_string_to_none(v: Union[str, None]) -> Union[str, None]:
@@ -157,7 +166,7 @@ class EventUpdate(BaseModel):
     @classmethod
     def sanitize_urls(cls, data):
         if isinstance(data, dict):
-            for field in ('ticket_url', 'website_url', 'image_url'):
+            for field in ('ticket_url', 'website_url'):
                 if field in data:
                     data[field] = _sanitize_url(data.get(field))
         return data
@@ -227,7 +236,7 @@ class EventResponse(BaseModel):
     organizer_email: Optional[str] = None
     organizer_name: Optional[str] = None
     organizer_profile_name: Optional[str] = None
-    venue_owner_id: Optional[UUID] = None
+    venue_owner_id: Optional[str] = None
     moderation_reason: Optional[str] = None
 
     class Config:

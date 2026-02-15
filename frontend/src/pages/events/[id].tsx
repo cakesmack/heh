@@ -177,8 +177,12 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   // SEO: Dynamic Title (Title | Venue | Date | Site Name)
   const pageTitle = `${event.title} at ${venueName} | ${formattedOgDate} | Highland Events Hub`;
   const siteUrl = baseUrl || 'https://www.highlandeventshub.co.uk';
-  const ogImageUrl = event.image_url
-    ? (event.image_url.startsWith('http') ? event.image_url : `${siteUrl}${event.image_url}`)
+
+  // Use optimized URL for OG image if it's a Cloudflare ID
+  const optimizedOgUrl = event.image_url ? optimizeCloudinaryUrl(event.image_url, 1200) : null;
+
+  const ogImageUrl = optimizedOgUrl
+    ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${siteUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
     : `${siteUrl}/images/og-default.jpg`;
   const canonicalUrl = `${siteUrl}/events/${event.id}`;
 
@@ -259,6 +263,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
         <div className="absolute inset-0">
           {event.image_url ? (
             <Image
+              key={`blur-${event.image_url}`}
               src={optimizeCloudinaryUrl(event.image_url, 200)}
               alt=""
               fill
@@ -280,6 +285,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
             {event.image_url ? (
               <>
                 <Image
+                  key={`hero-${event.image_url}`}
                   src={optimizeCloudinaryUrl(event.image_url, 1200)}
                   alt={`${event.title} at ${venueName}`}
                   fill
@@ -1122,7 +1128,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
 
             {/* Full Image */}
             <img
-              src={event.image_url}
+              src={optimizeCloudinaryUrl(event.image_url, 1200)}
               alt={event.title}
               className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
@@ -1166,8 +1172,9 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
       ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...'
       : `Join us for ${event.title} at ${event.venue_name || event.location_name || 'Highland Events Hub'}`;
 
-    const ogImage = event.image_url
-      ? (event.image_url.startsWith('http') ? event.image_url : `${baseUrl}${event.image_url}`)
+    const optimizedOgUrl = event.image_url ? optimizeCloudinaryUrl(event.image_url, 1200) : null;
+    const ogImage = optimizedOgUrl
+      ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${baseUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
       : `${baseUrl}/images/og-default.jpg`;
 
     return {

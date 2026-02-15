@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: Optional[str] = None
     OS_PLACES_API_KEY: Optional[str] = None
     OS_API_KEY: Optional[str] = None
+    CLOUDFLARE_ACCOUNT_ID: Optional[str] = None
+    CLOUDFLARE_API_TOKEN: Optional[str] = None
+    CLOUDFLARE_ACCOUNT_HASH: Optional[str] = None
 
     # Email (Hostinger SMTP for transactional)
     HOSTINGER_SMTP_HOST: str = "smtp.hostinger.com"

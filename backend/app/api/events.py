@@ -1212,6 +1212,13 @@ async def create_event(
             # BUG FIX: Check actual status, not just user permission flag.
             # Even trusted users can be flagged for moderation (content/duplicates).
             if new_event.status == 'published':
+                # Get venue name for notification
+                v_name = new_event.location_name
+                if new_event.venue_id:
+                    v = session.get(Venue, new_event.venue_id)
+                    if v:
+                        v_name = v.name
+
                 # Send auto-approval email via Resend
                 await resend_email_service.send_event_approved(
                     to_email=current_user.email,
@@ -1221,8 +1228,8 @@ async def create_event(
                     is_auto_approved=True
                 )
                 logger.info(f"Auto-approval email sent to {mask_email(current_user.email)} for event {new_event.id}")
-                # No admin notification needed for auto-approved events (notification_service)
-                # But send EMAIL alert as requested
+                
+                # Send EMAIL alert to ADMIN_EMAIL (New Event Posted)
                 background_tasks.add_task(
                     resend_email_service.send_new_event_notification,
                     new_event.title,
