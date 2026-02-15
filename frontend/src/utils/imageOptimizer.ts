@@ -59,10 +59,8 @@ export function optimizeCloudinaryUrl(urlOrId: string | null | undefined, width:
             return '';
         }
 
-        // Align with backend variants defined in media.py / cloudflare_service.py
-        let variant = 'card'; // Default to card
-        if (width <= 200) variant = 'thumbnail';
-        else if (width >= 1200) variant = 'hero';
+        // Default to 'public' variant as it is the standard for Cloudflare Images
+        const variant = 'public';
 
         return `https://imagedelivery.net/${hash}/${cleanUrlOrId}/${variant}`;
     }

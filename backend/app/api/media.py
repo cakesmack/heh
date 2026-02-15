@@ -43,9 +43,9 @@ async def upload_media(
             "url": image_id,  # Storing ID as URL for Cloudflare images
             "id": image_id,
             "provider": "cloudflare",
-            "thumbnail_url": get_cloudflare_url(image_id, "thumbnail"),
-            "medium_url": get_cloudflare_url(image_id, "card"),
-            "large_url": get_cloudflare_url(image_id, "hero")
+            "thumbnail_url": get_cloudflare_url(image_id, "public"),
+            "medium_url": get_cloudflare_url(image_id, "public"),
+            "large_url": get_cloudflare_url(image_id, "public")
         }
     
     if is_cloudinary_configured():
