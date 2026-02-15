@@ -2,7 +2,6 @@ import React from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { EventResponse } from '@/types';
-import { getOptimizedImage } from '@/lib/images';
 
 interface MapEventCardProps {
     event: EventResponse;

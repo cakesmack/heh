@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { GetServerSideProps } from 'next';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -14,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Spinner } from '@/components/common/Spinner';
+import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 
 import ShareButtons from '@/components/events/ShareButtons';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
@@ -256,10 +258,12 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
         {/* Blurred Background */}
         <div className="absolute inset-0">
           {event.image_url ? (
-            <img
-              src={event.image_url}
+            <Image
+              src={optimizeCloudinaryUrl(event.image_url, 200)}
               alt=""
-              className="w-full h-full object-cover blur-2xl scale-110 opacity-60"
+              fill
+              className="object-cover blur-2xl scale-110 opacity-60"
+              priority
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-stone-800 to-stone-950" />
@@ -275,10 +279,13 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
           >
             {event.image_url ? (
               <>
-                <img
-                  src={event.image_url}
+                <Image
+                  src={optimizeCloudinaryUrl(event.image_url, 1200)}
                   alt={`${event.title} at ${venueName}`}
-                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
+                  fill
+                  sizes="100vw"
+                  className="object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
+                  priority
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors duration-300">
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/10 backdrop-blur-md rounded-full p-4 border border-white/20">

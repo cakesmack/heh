@@ -7,7 +7,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { MarkerClusterer, type Marker, GridAlgorithm } from '@googlemaps/markerclusterer';
 import { format } from 'date-fns';
+import Image from 'next/image';
 import type { EventResponse } from '@/types';
+import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 
 export interface ClusteredEventMarkersProps {
     events: EventResponse[];
@@ -325,12 +327,13 @@ export function ClusteredEventMarkers({
                     <div className="w-[280px] overflow-hidden -m-2">
                         {/* Event Image */}
                         {selectedEvent.image_url ? (
-                            <div className="w-full h-32 bg-gray-100">
-                                <img
-                                    src={selectedEvent.image_url}
+                            <div className="relative w-full h-32 bg-gray-100">
+                                <Image
+                                    src={optimizeCloudinaryUrl(selectedEvent.image_url, 500)}
                                     alt={selectedEvent.title}
-                                    className="w-full h-full object-cover"
-                                    loading="lazy"
+                                    fill
+                                    sizes="280px"
+                                    className="object-cover"
                                 />
                             </div>
                         ) : (
@@ -417,13 +420,14 @@ export function ClusteredEventMarkers({
                                     className="flex gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                                 >
                                     {/* Thumbnail */}
-                                    <div className="w-12 h-12 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                                    <div className="relative w-12 h-12 flex-shrink-0 rounded overflow-hidden bg-gray-100">
                                         {event.image_url ? (
-                                            <img
-                                                src={event.image_url}
+                                            <Image
+                                                src={optimizeCloudinaryUrl(event.image_url, 200)}
                                                 alt=""
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
+                                                fill
+                                                sizes="48px"
+                                                className="object-cover"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-300">

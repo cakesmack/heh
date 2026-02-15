@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { HeroSlot } from '@/types';
 import { heroAPI } from '@/lib/api';
-import { getOptimizedImage } from '@/lib/images';
+import Image from 'next/image';
+import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 
@@ -91,7 +92,6 @@ export default function HeroSection() {
 
 // --- Reusable Sub-Component for Rendering a Slot ---
 function HeroCard({ slot, isMain, mobileCompact }: { slot: HeroSlot, isMain: boolean, mobileCompact?: boolean }) {
-    const img = getOptimizedImage(slot.image_override || '/images/hero-bg.jpg', isMain ? 1600 : 800);
 
     // Resolve badge color
     const badgeColorMap: Record<string, string> = {
@@ -107,10 +107,16 @@ function HeroCard({ slot, isMain, mobileCompact }: { slot: HeroSlot, isMain: boo
     // Content Block
     const Content = () => (
         <>
-            <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105"
-                style={{ backgroundImage: `url(${img})` }}
-            />
+            <div className="absolute inset-0 transition-transform duration-1000 group-hover:scale-105">
+                <Image
+                    src={optimizeCloudinaryUrl(slot.image_override || '/images/hero-bg.jpg', isMain ? 1600 : 800)}
+                    alt={slot.title_override || ''}
+                    fill
+                    className="object-cover"
+                    priority={isMain}
+                    sizes={isMain ? "100vw" : "(max-width: 1024px) 100vw, 33vw"}
+                />
+            </div>
             {/* Gradient Overlay */}
             <div className={`absolute inset-0 bg-gradient-to-t ${isMain ? 'from-black/90 via-black/20' : 'from-black/80 via-black/10'} to-transparent z-10 transition-opacity group-hover:opacity-90`} />
 

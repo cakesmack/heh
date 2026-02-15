@@ -6,12 +6,14 @@
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 import { VenueResponse, EventResponse, VenueStaffResponse } from '@/types';
+import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 import ReportModal from '@/components/common/ReportModal';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
@@ -213,10 +215,12 @@ export default function VenueDetailPage() {
         {/* Blurred Background */}
         <div className="absolute inset-0">
           {venue.image_url ? (
-            <img
-              src={venue.image_url}
+            <Image
+              src={optimizeCloudinaryUrl(venue.image_url, 200)}
               alt=""
-              className="w-full h-full object-cover blur-2xl scale-110 opacity-60"
+              fill
+              className="object-cover blur-2xl scale-110 opacity-60"
+              priority
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-blue-800 to-blue-950" />
@@ -228,10 +232,13 @@ export default function VenueDetailPage() {
         <div className="absolute inset-0 flex items-center justify-center px-4 pt-24">
           <div className="relative w-full max-w-3xl aspect-[16/9] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10">
             {venue.image_url ? (
-              <img
-                src={venue.image_url}
+              <Image
+                src={optimizeCloudinaryUrl(venue.image_url, 1200)}
                 alt={venue.name}
-                className="w-full h-full object-cover object-top"
+                fill
+                sizes="(max-width: 768px) 100vw, 800px"
+                className="object-cover object-top"
+                priority
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">

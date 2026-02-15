@@ -1,6 +1,7 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Category } from '@/types';
-import { getOptimizedImage } from '@/lib/images';
+import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 
 interface CategoryCardProps {
     category: Category;
@@ -16,14 +17,15 @@ export default function CategoryCard({ category }: CategoryCardProps) {
             className="group relative block w-full h-full overflow-hidden"
         >
             {/* Background Image with Zoom Effect */}
-            <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-in-out group-hover:scale-110"
-                style={{
-                    backgroundImage: category.image_url
-                        ? `url(${getOptimizedImage(category.image_url, 400)})`
-                        : 'url(/images/category-placeholder.jpg)',
-                }}
-            />
+            <div className="absolute inset-0 transition-transform duration-700 ease-in-out group-hover:scale-110">
+                <Image
+                    src={optimizeCloudinaryUrl(category.image_url || '/images/category-placeholder.jpg', 400)}
+                    alt={category.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                />
+            </div>
 
             {/* Gradient Overlay (Scrim) - Uses category color from database */}
             <div
