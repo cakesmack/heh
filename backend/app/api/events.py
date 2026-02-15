@@ -889,7 +889,7 @@ def get_top_events(
 
 
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-def create_event(
+async def create_event(
     event_data: EventCreate,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -1213,7 +1213,7 @@ def create_event(
             # Even trusted users can be flagged for moderation (content/duplicates).
             if new_event.status == 'published':
                 # Send auto-approval email via Resend
-                resend_email_service.send_event_approved(
+                await resend_email_service.send_event_approved(
                     to_email=current_user.email,
                     event_title=new_event.title,
                     event_id=str(new_event.id),
@@ -1223,19 +1223,11 @@ def create_event(
                 logger.info(f"Auto-approval email sent to {mask_email(current_user.email)} for event {new_event.id}")
                 # No admin notification needed for auto-approved events (notification_service)
                 # But send EMAIL alert as requested
-                from app.services.email_service import send_new_event_notification
-                # Resolve venue name
-                v_name = new_event.location_name
-                if not v_name and new_event.venue_id:
-                     v = session.get(Venue, new_event.venue_id)
-                     if v: v_name = v.name
-                
                 background_tasks.add_task(
-                    send_new_event_notification,
+                    resend_email_service.send_new_event_notification,
                     new_event.title,
                     str(new_event.id),
-                    v_name,
-                    new_event.status
+                    v_name
                 )
             else:
                 # Notify user their event is under review (fallback to notification_service)
@@ -1252,18 +1244,11 @@ def create_event(
                     )
                 
                 # Send EMAIL alert to ADMIN_EMAIL (New Event Posted)
-                from app.services.email_service import send_new_event_notification
-                v_name = new_event.location_name
-                if not v_name and new_event.venue_id:
-                     v = session.get(Venue, new_event.venue_id)
-                     if v: v_name = v.name
-
                 background_tasks.add_task(
-                    send_new_event_notification,
+                    resend_email_service.send_new_event_notification,
                     new_event.title,
                     str(new_event.id),
-                    v_name,
-                    new_event.status
+                    current_user.username or current_user.email
                 )
         except Exception as e:
             # Log error but don't fail the request - event creation succeeded
@@ -1400,7 +1385,7 @@ def stop_recurrence(
 
 
 @router.put("/{event_id}", response_model=EventResponse)
-def update_event(
+async def update_event(
     event_id: str,
     event_data: EventUpdate,
     current_user: User = Depends(get_current_user),
@@ -1595,6 +1580,13 @@ def update_event(
     status_changed_to_published = False
     status_changed_to_rejected = False
     
+    # Fields handled explicitly or that shouldn't be set via setattr
+    excluded_fields = {
+        "tags", "participating_venue_ids", "showtimes", 
+        "date_start", "date_end", "is_recurring",
+        "weekdays", "recurrence_end_date", "frequency"
+    }
+    
     for field, value in update_data.items():
         if field in excluded_fields:
             continue
@@ -1645,9 +1637,6 @@ def update_event(
     # Handle participating venues update
     if event_data.participating_venue_ids is not None:
         # Clear existing participating venues
-        session.exec(
-            select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == event.id)
-        )
         existing_links = session.exec(
             select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == event.id)
         ).all()
@@ -1778,13 +1767,12 @@ def update_event(
         logger.info(f"[MODERATION] Event '{event.title}' reset to pending update by user {current_user.id}")
         
         # Trigger Admin Alert (Moderation Required)
-        from app.services.email_service import send_moderation_required_notification
-        if background_tasks:
-            background_tasks.add_task(
-                send_moderation_required_notification,
-                event.title,
-                str(event.id)
-            )
+        background_tasks.add_task(
+            resend_email_service.send_moderation_required_notification,
+            event.title,
+            str(event.id),
+            "Flagged for initial moderation review"
+        )
 
     session.add(event)
     session.commit()
@@ -1800,7 +1788,7 @@ def update_event(
         if organizer_user and organizer_user.email:
             if status_changed_to_published:
                 logger.info(f"Event {event.id} published. Sending approval email to {mask_email(organizer_user.email)}")
-                resend_email_service.send_event_approved(
+                await resend_email_service.send_event_approved(
                     to_email=organizer_user.email,
                     event_title=event.title,
                     event_id=str(event.id),
@@ -1809,7 +1797,7 @@ def update_event(
                 )
             elif status_changed_to_rejected:
                 logger.info(f"Event {event.id} rejected. Sending rejection email to {mask_email(organizer_user.email)}")
-                resend_email_service.send_event_rejected(
+                await resend_email_service.send_event_rejected(
                     to_email=organizer_user.email,
                     event_title=event.title,
                     event_id=str(event.id),

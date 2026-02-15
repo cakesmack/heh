@@ -41,7 +41,7 @@ class GoogleTokenRequest(BaseModel):
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def register(
+async def register(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
@@ -113,9 +113,8 @@ def register(
     )
     
     # Notify admin of new user signup
-    from app.services.email_service import send_new_user_notification
     background_tasks.add_task(
-        send_new_user_notification,
+        resend_email_service.send_new_user_notification,
         new_user.email,
         new_user.username
     )
@@ -259,7 +258,7 @@ async def google_login(
         session.commit()
 
         # Send welcome email
-        resend_email_service.send_welcome(user.email, user.username)
+        await resend_email_service.send_welcome(user.email, user.username)
 
     # Check if user is active (not banned)
     if not user.is_active:
@@ -329,7 +328,7 @@ class MessageResponse(BaseModel):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(
+async def forgot_password(
     request: ForgotPasswordRequest,
     session: Session = Depends(get_session)
 ):
@@ -374,7 +373,7 @@ def forgot_password(
     session.commit()
     
     # Send email using Resend (with raw token in link)
-    email_sent = resend_email_service.send_password_reset(request.email, raw_token)
+    email_sent = await resend_email_service.send_password_reset(request.email, raw_token)
     
     if not email_sent:
         # Log the error but still return success for security

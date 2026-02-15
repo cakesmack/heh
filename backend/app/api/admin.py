@@ -690,7 +690,7 @@ def delete_user(
 
 
 @router.post("/users/{user_id}/send-password-reset")
-def send_user_password_reset(
+async def send_user_password_reset(
     user_id: str,
     admin: User = Depends(require_admin),
     session: Session = Depends(get_session)
@@ -698,7 +698,7 @@ def send_user_password_reset(
     """Send password reset email to a user (admin-triggered)."""
     from app.models.password_reset import PasswordResetToken
     from app.core.security import hash_password
-    from app.services.email_service import send_password_reset_email
+    # send_password_reset_email will be called via resend_email_service
     import secrets
     from datetime import timedelta
     from app.core.config import settings
@@ -733,7 +733,7 @@ def send_user_password_reset(
     session.commit()
     
     # Send email
-    email_sent = send_password_reset_email(user.email, raw_token)
+    email_sent = await resend_email_service.send_password_reset(user.email, raw_token)
     
     if not email_sent:
         raise HTTPException(
@@ -763,7 +763,7 @@ def list_venue_claims(
 
 
 @router.post("/claims/{claim_id}/{action}", response_model=VenueClaimResponse)
-def process_venue_claim(
+async def process_venue_claim(
     claim_id: int,
     action: str,
     admin: User = Depends(require_admin),
@@ -824,7 +824,7 @@ def process_venue_claim(
             
             # 4. Success Email
             if claim.user and claim.user.email:
-                resend_email_service.send_venue_claim_approved(
+                await resend_email_service.send_venue_claim_approved(
                     to_email=claim.user.email, 
                     venue_name=venue.name, 
                     venue_id=venue.id,
@@ -878,7 +878,7 @@ class VenueInviteResponse(BaseModel):
         from_attributes = True
 
 @router.post("/venues/{venue_id}/invite", response_model=VenueInviteResponse)
-def create_venue_invite(
+async def create_venue_invite(
     venue_id: str,
     invite_data: VenueInviteRequest,
     admin: User = Depends(require_admin),
@@ -906,7 +906,7 @@ def create_venue_invite(
     
     # Send email
     invite_url = f"{settings.FRONTEND_URL.rstrip('/')}/accept-venue-invite/{invite.token}"
-    resend_email_service.send_venue_invite(
+    await resend_email_service.send_venue_invite(
         to_email=invite_data.email,
         venue_name=venue.name,
         invite_url=invite_url
@@ -1083,7 +1083,7 @@ def get_all_featured_bookings(
 
 
 @router.patch("/featured/{booking_id}/approve")
-def approve_featured_booking(
+async def approve_featured_booking(
     booking_id: str,
     admin: User = Depends(require_admin),
     session: Session = Depends(get_session)
@@ -1119,7 +1119,7 @@ def approve_featured_booking(
     if organizer:
         event = session.get(Event, booking.event_id)
         event_title = event.title if event else "your event"
-        resend_email_service.send_organizer_alert(
+        await resend_email_service.send_organizer_alert(
             organizer.email,
             organizer.username or organizer.email,
             event_title,

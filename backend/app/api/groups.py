@@ -72,7 +72,7 @@ def add_admin_role(session: Session = Depends(get_session)):
 # =============================================================================
 
 @router.post("/{group_id}/invite", response_model=GroupInviteResponse)
-def create_invite(
+async def create_invite(
     group_id: str,
     invite_request: Optional[GroupInviteCreate] = None,
     current_user: User = Depends(get_current_user),
@@ -107,7 +107,7 @@ def create_invite(
         
         print(f"Sending invite for group '{group_name}' from user '{current_user.username}'")
         
-        resend_email_service.send_group_invite(
+        await resend_email_service.send_group_invite(
             to_email=invite_request.email,
             inviter_name=inviter_name,
             group_name=group_name,

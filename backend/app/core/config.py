@@ -79,6 +79,13 @@ class Settings(BaseSettings):
     OS_PLACES_API_KEY: Optional[str] = None
     OS_API_KEY: Optional[str] = None
 
+    # Email (Hostinger SMTP for transactional)
+    HOSTINGER_SMTP_HOST: str = "smtp.hostinger.com"
+    HOSTINGER_SMTP_PORT: int = 465
+    HOSTINGER_SMTP_USER: Optional[str] = None
+    HOSTINGER_SMTP_PASS: Optional[str] = None
+    EMAIL_FROM_ADDRESS: Optional[str] = "Highland Events Hub <noreply@highlandeventshub.co.uk>"
+
     # Email (Gmail SMTP for password reset)
     SMTP_USER: Optional[str] = None
     SMTP_PASS: Optional[str] = None

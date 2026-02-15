@@ -8,33 +8,23 @@ import resend
 
 from app.core.config import settings
 from app.utils.pii import mask_email
+from app.services.email_service import smart_email_service, EmailType
 
 logger = logging.getLogger(__name__)
 
 
 class ResendEmailService:
-    """Email service using Resend API."""
+    """Email service abstraction using SmartEmailService."""
 
     def __init__(self):
-        if settings.RESEND_API_KEY:
-            resend.api_key = settings.RESEND_API_KEY
-            self.enabled = True
-            # Production email from verified domain
-            self.from_address = "Highland Events Hub <noreply@highlandeventshub.co.uk>"
-        else:
-            self.enabled = False
-            logger.warning("RESEND_API_KEY not configured - emails disabled")
+        # We now use smart_email_service for actual sending
+        # Keeping initialization logic for legacy support/enabled check
+        self.enabled = smart_email_service.resend_enabled or smart_email_service.smtp_enabled
+        self.from_address = smart_email_service.from_address
 
-    def send_welcome(self, to_email: str, username: str) -> bool:
+    async def send_welcome(self, to_email: str, username: str) -> bool:
         """
-        Send welcome email to new user.
-
-        Args:
-            to_email: User's email address
-            username: User's username
-
-        Returns:
-            True if sent successfully
+        Send welcome email to new user (Type: WELCOME -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send welcome email to {mask_email(to_email)}")
@@ -108,20 +98,14 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": "Welcome to Highland Events Hub!",
-                "html": html_content,
-            })
-            logger.info(f"Welcome email sent to {mask_email(to_email)}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send welcome email to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.WELCOME,
+            to=to_email,
+            subject="Welcome to Highland Events Hub!",
+            html_content=html_content
+        )
 
-    def send_weekly_digest(
+    async def send_weekly_digest(
         self,
         to_email: str,
         username: str,
@@ -130,14 +114,7 @@ class ResendEmailService:
         unsubscribe_token: str
     ) -> bool:
         """
-        Send modern weekly digest with featured and personalized sections.
-
-        Args:
-            to_email: User's email
-            username: User's username
-            featured_events: 3 featured/top pick events
-            personalized_events: User's personalized matches
-            unsubscribe_token: Token for one-click unsubscribe
+        Send modern weekly digest (Type: WELCOME -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send weekly digest to {mask_email(to_email)}")
@@ -154,16 +131,9 @@ class ResendEmailService:
         logo_url = f"{site_url}/icons/logo_knot.jpg"
         unsubscribe_url = f"{site_url}/unsubscribe?token={unsubscribe_token}&type=weekly_digest"
 
-        # BRAND COLORS
-        # Highland Green: #0F3E35
-        # Warm White: #FAF9F6
-        # Stone Dark: #2F2F2F
-        # Badge Warning: #FEF9C3 (bg), #854D0E (text)
-
         # Build featured events HTML (Site-like Event Cards)
         featured_html = ""
         for event in featured_events[:3]:
-            # IDs are already formatted as UUID strings
             event_id = event.get('id', '')
             event_url = f"{site_url}/events/{event_id}"
             image_url = event.get('image_url')
@@ -178,7 +148,6 @@ class ResendEmailService:
             <div style="margin-bottom: 24px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                 <a href="{event_url}" style="text-decoration: none; display: block; position: relative;">
                     {image_html}
-                    <!-- Featured Badge -->
                     <div style="position: absolute; top: 10px; left: 10px; background: #FEF9C3; color: #854D0E; font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 999px;">
                         ⭐ Featured
                     </div>
@@ -227,7 +196,6 @@ class ResendEmailService:
             </div>
             """
 
-        # Construct HTML string (New Brand Design)
         html_content = """
         <!DOCTYPE html>
         <html>
@@ -237,38 +205,25 @@ class ResendEmailService:
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #2F2F2F; margin: 0; padding: 0; background: #FAF9F6;">
             <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-                <!-- Brand Top Border -->
                 <div style="height: 4px; background: #0F3E35;"></div>
-                
-                <!-- Header -->
                 <div style="padding: 24px; text-align: center; border-bottom: 1px solid #f4f4f5;">
                     <img src="__LOGO_URL__" alt="Highland Events Hub" style="width: 48px; height: 48px;">
                     <h1 style="color: #0F3E35; margin: 12px 0 0 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">Highland Events Hub</h1>
                 </div>
-                
-                <!-- Main Content -->
                 <div style="padding: 32px 24px;">
                     <p style="font-size: 16px; margin-bottom: 32px; color: #2F2F2F;">Hi __NAME__, check out what's happening this week across the Highlands.</p>
-                    
-                    <!-- Featured Section -->
                     <div style="margin-bottom: 40px;">
                         <h2 style="color: #0F3E35; font-size: 18px; margin: 0 0 16px 0; font-weight: 700;">Top Picks</h2>
                         __FEATURED_HTML__
                     </div>
-                    
-                    <!-- Personalized Feed -->
                     <div>
                         <h2 style="color: #0F3E35; font-size: 18px; margin: 0 0 16px 0; font-weight: 700;">For You</h2>
                         __PERSONALIZED_HTML__
                     </div>
-                    
-                    <!-- CTA -->
                     <div style="text-align: center; margin-top: 40px;">
                         <a href="__SITE_URL__" style="display: inline-block; background: #0F3E35; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">View All Events</a>
                     </div>
                 </div>
-                
-                <!-- Footer -->
                 <div style="background: #2F2F2F; padding: 32px 24px; text-align: center; color: #a1a1aa;">
                     <p style="margin: 0 0 16px 0; font-size: 14px; color: #ffffff;">Highland Events Hub</p>
                     <p style="font-size: 12px; margin-bottom: 24px;">Discover what's on across the Scottish Highlands</p>
@@ -282,7 +237,6 @@ class ResendEmailService:
         </html>
         """
 
-        # Perform string replacements
         html_content = html_content.replace("__LOGO_URL__", logo_url)
         html_content = html_content.replace("__NAME__", name)
         html_content = html_content.replace("__FEATURED_HTML__", featured_html)
@@ -290,20 +244,14 @@ class ResendEmailService:
         html_content = html_content.replace("__SITE_URL__", site_url)
         html_content = html_content.replace("__UNSUBSCRIBE_URL__", unsubscribe_url)
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": f"Your Weekly Highland Guide 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-                "html": html_content,
-            })
-            logger.info(f"Weekly digest sent to {mask_email(to_email)}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send weekly digest to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.WELCOME,
+            to=to_email,
+            subject=f"Your Weekly Highland Guide 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+            html_content=html_content
+        )
 
-    def send_organizer_alert(
+    async def send_organizer_alert(
         self,
         to_email: str,
         username: str,
@@ -312,17 +260,7 @@ class ResendEmailService:
         unsubscribe_token: str
     ) -> bool:
         """
-        Send organizer alert (event approved, etc).
-
-        Args:
-            to_email: Organizer's email
-            username: Organizer's username
-            event_title: Name of the event
-            alert_type: Type of alert (approved, rejected, etc)
-            unsubscribe_token: Token for unsubscribe
-
-        Returns:
-            True if sent successfully
+        Send organizer alert (Type: MODERATION -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send organizer alert to {mask_email(to_email)}")
@@ -375,21 +313,15 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content,
-            })
-            logger.info(f"Organizer alert sent to {mask_email(to_email)}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send organizer alert to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
 
 
-    def send_event_approved(
+    async def send_event_approved(
         self,
         to_email: str,
         event_title: str,
@@ -398,17 +330,7 @@ class ResendEmailService:
         is_auto_approved: bool = False
     ) -> bool:
         """
-        Send notification when an event is approved.
-
-        Args:
-            to_email: Organizer's email
-            event_title: Name of the event
-            event_id: Event ID for linking
-            username: Organizer's username (optional)
-            is_auto_approved: Whether this was auto-approved based on trust
-
-        Returns:
-            True if sent successfully
+        Send notification when an event is approved (Type: MODERATION -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send event approved email to {mask_email(to_email)}")
@@ -465,20 +387,14 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content,
-            })
-            logger.info(f"Event approved email sent to {mask_email(to_email)} for event {event_id}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send event approved email to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
 
-    def send_event_rejected(
+    async def send_event_rejected(
         self,
         to_email: str,
         event_title: str,
@@ -487,17 +403,7 @@ class ResendEmailService:
         username: Optional[str] = None
     ) -> bool:
         """
-        Send notification when an event is rejected.
-
-        Args:
-            to_email: Organizer's email
-            event_title: Name of the event
-            event_id: Event ID for editing
-            rejection_reason: Reason for rejection (optional)
-            username: Organizer's username (optional)
-
-        Returns:
-            True if sent successfully
+        Send notification when an event is rejected (Type: MODERATION -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send event rejected email to {mask_email(to_email)}")
@@ -557,20 +463,14 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": f"Update regarding your event: {event_title}",
-                "html": html_content,
-            })
-            logger.info(f"Event rejected email sent to {mask_email(to_email)} for event {event_id}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send event rejected email to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=to_email,
+            subject=f"Update regarding your event: {event_title}",
+            html_content=html_content
+        )
 
-    def send_welcome_with_events(
+    async def send_welcome_with_events(
         self,
         to_email: str,
         username: str = None,
@@ -749,35 +649,21 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": f"Welcome to Highland Events Hub, {name}! 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-                "html": html_content,
-            })
-            logger.info(f"Welcome email with events sent to {mask_email(to_email)}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send welcome email with events to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.WELCOME,
+            to=to_email,
+            subject=f"Welcome to Highland Events Hub, {name}! 🏴󠁧󠁢󠁳󠁣󠁣󠁴󠁿",
+            html_content=html_content
+        )
 
-    def send_system_alert(
+    async def send_system_alert(
         self,
         to_email: str,
         subject: str,
         message_body: str
     ) -> bool:
         """
-        Send a system alert email (styled like event approval).
-
-        Args:
-            to_email: Recipient email
-            subject: Email subject line
-            message_body: HTML message body
-
-        Returns:
-            True if sent successfully
+        Send a system alert email (Type: MODERATION -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send system alert to {mask_email(to_email)}")
@@ -823,33 +709,20 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content,
-            })
-            logger.info(f"System alert sent to {mask_email(to_email)}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send system alert to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
 
-    def send_password_reset(
+    async def send_password_reset(
         self,
         to_email: str,
         reset_token: str
     ) -> bool:
         """
-        Send password reset email using Resend (custom domain).
-
-        Args:
-            to_email: User's email address
-            reset_token: Password reset token
-
-        Returns:
-            True if sent successfully
+        Send password reset email (Type: SECURITY -> Resend).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send password reset to {mask_email(to_email)}")
@@ -902,24 +775,16 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            # Use contact@ for password reset emails
-            from_address = "Highland Events Hub <contact@highlandeventshub.co.uk>"
-            response = resend.Emails.send({
-                "from": from_address,
-                "to": [to_email],
-                "subject": "Reset Your Password - Highland Events Hub",
-                "html": html_content,
-            })
-            logger.info(f"Password reset email sent to {mask_email(to_email)}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send password reset to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.SECURITY,
+            to=to_email,
+            subject="Reset Your Password - Highland Events Hub",
+            html_content=html_content
+        )
 
 
 # Global instance
-    def send_group_invite(
+    async def send_group_invite(
         self,
         to_email: str,
         inviter_name: str,
@@ -927,13 +792,7 @@ class ResendEmailService:
         invite_url: str
     ) -> bool:
         """
-        Send a personalized group invitation.
-        
-        Args:
-            to_email: Recipient's email
-            inviter_name: Name of the person inviting
-            group_name: Name of the group
-            invite_url: The unique invite link
+        Send a personalized group invitation (Type: INVITE -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send group invite to {mask_email(to_email)}")
@@ -987,32 +846,21 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content,
-            })
-            logger.info(f"Group invite sent to {mask_email(to_email)}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send group invite to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.INVITE,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
 
-    def send_venue_invite(
+    async def send_venue_invite(
         self,
         to_email: str,
         venue_name: str,
         invite_url: str
     ) -> bool:
         """
-        Send venue ownership invitation email (Golden Key).
-        
-        Args:
-            to_email: Recipient's email
-            venue_name: Name of the venue
-            invite_url: The unique invite link with token
+        Send venue ownership invitation email (Type: INVITE -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send venue invite to {mask_email(to_email)}")
@@ -1072,20 +920,14 @@ class ResendEmailService:
         </html>
         """
         
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content,
-            })
-            logger.info(f"Venue invite sent to {mask_email(to_email)}, id: {response.get('id')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send venue invite to {mask_email(to_email)}: {e}")
-            return False
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.INVITE,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
 
-    def send_venue_claim_approved(
+    async def send_venue_claim_approved(
         self,
         to_email: str,
         venue_name: str,
@@ -1093,13 +935,7 @@ class ResendEmailService:
         username: Optional[str] = None
     ) -> bool:
         """
-        Send notification when a venue claim is approved.
-
-        Args:
-            to_email: Manager's email
-            venue_name: Name of the venue
-            venue_id: Venue ID
-            username: User's username
+        Send notification when a venue claim is approved (Type: MODERATION -> SMTP).
         """
         if not self.enabled:
             logger.info(f"[DRY RUN] Would send venue claim approved email to {mask_email(to_email)}")
@@ -1145,18 +981,88 @@ class ResendEmailService:
         </html>
         """
 
-        try:
-            response = resend.Emails.send({
-                "from": self.from_address,
-                "to": [to_email],
-                "subject": f"You're now managing {venue_name}! 🔑",
-                "html": html_content,
-            })
-            logger.info(f"Venue claim approved email sent to {mask_email(to_email)}, id: {response.get('id')}")
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=to_email,
+            subject=f"You're now managing {venue_name}! 🔑",
+            html_content=html_content
+        )
+
+    async def send_new_user_notification(self, user_email: str, username: str) -> bool:
+        """Notify admin about a new user signup."""
+        if not settings.ADMIN_EMAIL:
             return True
-        except Exception as e:
-            logger.error(f"Failed to send venue claim approved email to {mask_email(to_email)}: {e}")
-            return False
+        
+        subject = f"New User Signup: {username or user_email}"
+        html_content = f"""
+        <div style="font-family: sans-serif; padding: 20px;">
+            <h2>New User Signup</h2>
+            <p>A new user has registered on Highland Events Hub:</p>
+            <ul>
+                <li><strong>Username:</strong> {username or 'N/A'}</li>
+                <li><strong>Email:</strong> {user_email}</li>
+            </ul>
+            <p><a href="{settings.FRONTEND_URL}/admin/users">View User Management</a></p>
+        </div>
+        """
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=settings.ADMIN_EMAIL,
+            subject=subject,
+            html_content=html_content
+        )
+
+    async def send_new_event_notification(self, event_title: str, event_id: str, organizer_name: str) -> bool:
+        """Notify admin about a new event submission."""
+        if not settings.ADMIN_EMAIL:
+            return True
+
+        subject = f"New Event Submission: {event_title}"
+        html_content = f"""
+        <div style="font-family: sans-serif; padding: 20px;">
+            <h2>New Event Submission</h2>
+            <p>A new event has been submitted by <strong>{organizer_name}</strong>:</p>
+            <ul>
+                <li><strong>Title:</strong> {event_title}</li>
+                <li><strong>Event ID:</strong> {event_id}</li>
+            </ul>
+            <p><a href="{settings.FRONTEND_URL}/events/{event_id}">View Event</a></p>
+            <p><a href="{settings.FRONTEND_URL}/admin/events">View Moderation Queue</a></p>
+        </div>
+        """
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=settings.ADMIN_EMAIL,
+            subject=subject,
+            html_content=html_content
+        )
+
+    async def send_moderation_required_notification(self, event_title: str, reason: str) -> bool:
+        """Notify admin when an event is flagged for moderation."""
+        if not settings.ADMIN_EMAIL:
+            return True
+
+        subject = f"Moderation Required: {event_title}"
+        html_content = f"""
+        <div style="font-family: sans-serif; padding: 20px;">
+            <h2>Event Flagged for Moderation</h2>
+            <p>The event <strong>{event_title}</strong> has been flagged for review:</p>
+            <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 15px 0;">
+                <strong>Reason:</strong> {reason}
+            </div>
+            <p><a href="{settings.FRONTEND_URL}/admin/events">View Moderation Queue</a></p>
+        </div>
+        """
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=settings.ADMIN_EMAIL,
+            subject=subject,
+            html_content=html_content
+        )
+
+    # Alias for backward compatibility in some modules
+    async def send_password_reset_email(self, to_email: str, reset_token: str) -> bool:
+        return await self.send_password_reset(to_email, reset_token)
 
 # Create global instance
 resend_email_service = ResendEmailService()

@@ -156,7 +156,7 @@ class EventModerationRequest(BaseModel):
 
 
 @router.post("/events/{event_id}/moderate")
-def moderate_event(
+async def moderate_event(
     event_id: str,
     moderation: EventModerationRequest,
     session: Session = Depends(get_session),
@@ -253,7 +253,7 @@ def moderate_event(
                 if is_series_approval:
                      display_title = f"{event.title} (Series - {sibling_count + 1} events)"
 
-                email_method(
+                await email_method(
                     to_email=event.organizer.email,
                     event_title=display_title,
                     event_id=str(event.id),
@@ -266,7 +266,7 @@ def moderate_event(
                 if is_series_approval:
                      display_title = f"{event.title} (Series)"
 
-                resend_email_service.send_event_rejected(
+                await resend_email_service.send_event_rejected(
                     to_email=event.organizer.email,
                     event_title=display_title,
                     event_id=str(event.id),

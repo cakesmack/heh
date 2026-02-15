@@ -136,13 +136,22 @@ async def global_exception_handler(request: Request, exc: Exception):
     # Don't expose internal errors in production
     detail = str(exc) if settings.DEBUG else "Internal server error"
 
-    return JSONResponse(
+    response = JSONResponse(
         status_code=500,
         content={
             "detail": detail,
             "type": "internal_error",
         }
     )
+
+    # SECURE: Explicitly add CORS headers to exception responses
+    # This ensures that 500 errors don't appear as CORS errors in the browser.
+    origin = request.headers.get("origin")
+    if origin and (origin in settings.ALLOWED_ORIGINS):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    
+    return response
 
 
 # Static Files Mounts

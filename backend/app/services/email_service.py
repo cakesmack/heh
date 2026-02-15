@@ -1,257 +1,122 @@
 """
-Email service for sending password reset and other transactional emails.
-Uses Gmail SMTP with App Password authentication.
+Smart email service abstraction for routing between Resend (SECURITY) and Hostinger SMTP (WELCOME, MODERATION, INVITE).
 """
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from typing import Optional
 import logging
-
+from typing import Optional, List, Dict, Any
+import resend
+import aiosmtplib
+from email.message import EmailMessage
 from app.core.config import settings
+from app.utils.pii import mask_email
 
 logger = logging.getLogger(__name__)
 
+class EmailType:
+    SECURITY = "SECURITY"
+    WELCOME = "WELCOME"
+    MODERATION = "MODERATION"
+    INVITE = "INVITE"
 
-def send_email(
-    to_email: str,
-    subject: str,
-    html_content: str,
-    text_content: Optional[str] = None
-) -> bool:
-    """
-    Send an email using Gmail SMTP.
-    
-    Args:
-        to_email: Recipient email address
-        subject: Email subject
-        html_content: HTML body content
-        text_content: Plain text fallback (optional)
-    
-    Returns:
-        True if email sent successfully, False otherwise
-    """
-    if not settings.SMTP_USER or not settings.SMTP_PASS:
-        logger.error("SMTP credentials not configured")
-        return False
-    
-    try:
-        # Create message
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = f"Highland Events <{settings.SMTP_USER}>"
-        msg["To"] = to_email
-        
-        # Add text part (fallback)
+class SmartEmailService:
+    """Consolidated email service with provider routing."""
+
+    def __init__(self):
+        # Configure Resend
+        if settings.RESEND_API_KEY:
+            resend.api_key = settings.RESEND_API_KEY
+            self.resend_enabled = True
+        else:
+            self.resend_enabled = False
+            logger.warning("RESEND_API_KEY not configured - Resend disabled")
+
+        # Configure SMTP
+        self.smtp_host = settings.HOSTINGER_SMTP_HOST
+        self.smtp_port = settings.HOSTINGER_SMTP_PORT
+        self.smtp_user = settings.HOSTINGER_SMTP_USER
+        self.smtp_pass = settings.HOSTINGER_SMTP_PASS
+        self.smtp_enabled = bool(self.smtp_user and self.smtp_pass)
+
+        if not self.smtp_enabled:
+            logger.warning("HOSTINGER_SMTP_USER/PASS not configured - SMTP disabled")
+
+        self.from_address = settings.EMAIL_FROM_ADDRESS
+
+    async def send_smart_email(
+        self, 
+        email_type: str, 
+        to: str, 
+        subject: str, 
+        html_content: str,
+        text_content: Optional[str] = None
+    ) -> bool:
+        """
+        Send email using the appropriate provider based on type.
+        """
+        if email_type == EmailType.SECURITY:
+            return await self._send_via_resend(to, subject, html_content)
+        else:
+            return await self._send_via_smtp(to, subject, html_content, text_content)
+
+    async def _send_via_resend(self, to: str, subject: str, html_content: str) -> bool:
+        """Internal method for Resend delivery."""
+        if not self.resend_enabled:
+            logger.info(f"[DRY RUN - RESEND] Would send SECURITY email to {mask_email(to)}")
+            return True
+
+        try:
+            # Note: resend-python is currently synchronous, wrapping it or using it as is
+            # if they have an async client in future, we'd use that.
+            resend.Emails.send({
+                "from": self.from_address,
+                "to": [to],
+                "subject": subject,
+                "html": html_content,
+            })
+            logger.info(f"SECURITY email sent via Resend to {mask_email(to)}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send SECURITY email to {mask_email(to)} via Resend: {e}")
+            return False
+
+    async def _send_via_smtp(
+        self, 
+        to: str, 
+        subject: str, 
+        html_content: str,
+        text_content: Optional[str] = None
+    ) -> bool:
+        """Internal method for Hostinger SMTP delivery."""
+        if not self.smtp_enabled:
+            logger.info(f"[DRY RUN - SMTP] Would send email to {mask_email(to)}")
+            return True
+
+        message = EmailMessage()
+        message["From"] = self.from_address
+        message["To"] = to
+        message["Subject"] = subject
+
         if text_content:
-            msg.attach(MIMEText(text_content, "plain"))
-        
-        # Add HTML part
-        msg.attach(MIMEText(html_content, "html"))
-        
-        # Connect to Gmail SMTP
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(settings.SMTP_USER, settings.SMTP_PASS)
-            server.sendmail(settings.SMTP_USER, to_email, msg.as_string())
-        
-        logger.info(f"Email sent successfully to {to_email}")
-        return True
-        
-    except smtplib.SMTPAuthenticationError:
-        logger.error("SMTP authentication failed. Check your App Password.")
-        return False
-    except Exception as e:
-        logger.error(f"Failed to send email: {e}")
-        return False
+            message.set_content(text_content)
+            message.add_alternative(html_content, subtype="html")
+        else:
+            message.set_content(html_content, subtype="html")
 
+        try:
+            await aiosmtplib.send(
+                message,
+                hostname=self.smtp_host,
+                port=self.smtp_port,
+                username=self.smtp_user,
+                password=self.smtp_pass,
+                use_tls=True,
+            )
+            logger.info(f"Email sent via SMTP to {mask_email(to)}")
+            return True
+        except Exception as e:
+            # [SMTP_FAILURE] Logging as requested
+            logger.error(f"[SMTP_FAILURE] Failed to send email to {mask_email(to)}: {e}")
+            # Do NOT fallback to Resend as per requirement
+            return False
 
-def send_password_reset_email(to_email: str, reset_token: str) -> bool:
-    """
-    Send a password reset email with the reset link.
-    
-    Args:
-        to_email: User's email address
-        reset_token: The password reset token
-    
-    Returns:
-        True if email sent successfully
-    """
-    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
-    
-    subject = "Reset Your Password - Highland Events"
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-            .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
-            .header h1 {{ color: white; margin: 0; }}
-            .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }}
-            .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }}
-            .button:hover {{ background: #059669; }}
-            .footer {{ text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }}
-            .warning {{ background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 6px; margin-top: 20px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>🏔️ Highland Events</h1>
-            </div>
-            <div class="content">
-                <h2>Reset Your Password</h2>
-                <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                
-                <p style="text-align: center;">
-                    <a href="{reset_link}" class="button">Reset Password</a>
-                </p>
-                
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #6b7280; font-size: 14px;">{reset_link}</p>
-                
-                <div class="warning">
-                    <strong>⚠️ This link expires in 1 hour.</strong><br>
-                    If you didn't request this password reset, you can safely ignore this email.
-                </div>
-            </div>
-            <div class="footer">
-                <p>© Highland Events Hub • Discover events in the Scottish Highlands</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    text_content = f"""
-    Reset Your Password - Highland Events
-    
-    We received a request to reset your password.
-    
-    Click this link to reset your password:
-    {reset_link}
-    
-    This link expires in 1 hour.
-    
-    If you didn't request this password reset, you can safely ignore this email.
-    """
-    
-    return send_email(to_email, subject, html_content, text_content)
-
-
-def send_new_user_notification(user_email: str, user_name: str) -> bool:
-    """
-    Send a notification to the admin when a new user signs up.
-    
-    Args:
-        user_email: The new user's email
-        user_name: The new user's name/username
-        
-    Returns:
-        True if email sent successfully or no ADMIN_EMAIL configured
-    """
-    admin_email = settings.ADMIN_EMAIL
-    if not admin_email:
-        return True # Skip if not configured, but don't fail
-        
-    subject = f"New User Signup: {user_email}"
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <body>
-        <h2>New User Registration</h2>
-        <p>A new user has just registered on Highland Events Hub.</p>
-        <ul>
-            <li><strong>Name:</strong> {user_name}</li>
-            <li><strong>Email:</strong> {user_email}</li>
-        </ul>
-    </body>
-    </html>
-    """
-    
-    text_content = f"""
-    New User Registration
-    
-    A new user has just registered.
-    Name: {user_name}
-    Email: {user_email}
-    """
-    
-    return send_email(admin_email, subject, html_content, text_content)
-
-
-def send_new_event_notification(event_title: str, event_id: str, venue_name: str, status: str) -> bool:
-    """
-    Send a notification to the admin when a new event is posted.
-    """
-    admin_email = settings.ADMIN_EMAIL
-    if not admin_email:
-        return True
-        
-    subject = f"📅 New Event: {event_title}"
-    link = f"https://www.highlandeventshub.co.uk/events/{event_id}"
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <body>
-        <h2>New Event Posted</h2>
-        <ul>
-            <li><strong>Title:</strong> {event_title}</li>
-            <li><strong>Venue:</strong> {venue_name or 'N/A'}</li>
-            <li><strong>Status:</strong> {status}</li>
-            <li><strong>Link:</strong> <a href="{link}">{link}</a></li>
-        </ul>
-    </body>
-    </html>
-    """
-    
-    text_content = f"""
-    New Event Posted
-    
-    Title: {event_title}
-    Venue: {venue_name or 'N/A'}
-    Status: {status}
-    Link: {link}
-    """
-    
-    return send_email(admin_email, subject, html_content, text_content)
-
-
-def send_moderation_required_notification(event_title: str, event_id: str) -> bool:
-    """
-    Send a notification to the admin when an event is updated and requires re-approval.
-    """
-    admin_email = settings.ADMIN_EMAIL
-    if not admin_email:
-        return True
-        
-    subject = f"⚠️ Moderation Needed: {event_title}"
-    link = f"https://www.highlandeventshub.co.uk/events/{event_id}"
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <body>
-        <h2>Moderation Required</h2>
-        <p>A user updated an event, and it requires re-approval. Please review it in the dashboard.</p>
-        <p><strong>Event:</strong> {event_title}</p>
-        <p><a href="{link}">View Event</a></p>
-    </body>
-    </html>
-    """
-    
-    text_content = f"""
-    Moderation Required
-    
-    A user updated an event, and it requires re-approval. Please review it in the dashboard.
-    Event: {event_title}
-    Link: {link}
-    """
-    
-    return send_email(admin_email, subject, html_content, text_content)
-
-
+# Global instance
+smart_email_service = SmartEmailService()

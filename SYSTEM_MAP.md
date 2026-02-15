@@ -30,3 +30,33 @@
 
 > [!NOTE]
 > This is **not** a security vulnerability — the backend sanitizer acts as a defence-in-depth measure ensuring all URLs stored in the database have a valid protocol, regardless of what the frontend sends.
+
+---
+
+## Scraper Data Sources
+
+### The Victorian Market (Inverness)
+
+**Source File:** `HEH/scrapers/victorian_market/thevictorianmarket-co-uk-2026-02-15.xlsx`
+**Scraper File:** `HEH/scrapers/victorian_market/vm_scrape.py`
+**Entry Point:** `scrape(hm)` — called from `HEH/scrapers/main.py` (menu option 6)
+
+**Architecture:**
+- **PIVOT**: Due to aggressive Cloudflare WAF protection preventing automated scraping, this source now uses a **manual export workflow**.
+- The user exports the event list using a browser plugin (e.g., Web Scraper) to an Excel file.
+- The scraper uses `pandas` and `openpyxl` to parse the Excel data.
+
+**Data Mapping:**
+- **Title**: Extracted from column `data`, with "Live Music | " prefix stripped.
+- **Date/Time**: Combines columns `data2` (Date) and `data6` (Time range) into ISO 8601.
+- **Description**: Merges `Event_Description` columns.
+- **Image**: Extracted from column `image`.
+
+**Historical Tracking:** Uses `HistoryManager` with keys derived from the `item_page_link` column.
+
+| Key | Details |
+|-----|---------|
+| Source Name | `The Victorian Market` |
+| Venue Name | `The Victorian Market, Inverness` |
+| Method | Excel Parsing (Pandas) |
+| File Required | `thevictorianmarket-co-uk-2026-02-15.xlsx` |

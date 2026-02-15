@@ -136,7 +136,7 @@ class EmailTestResponse(BaseModel):
 
 
 @router.post("/welcome", response_model=EmailTestResponse)
-def test_welcome_email(
+async def test_welcome_email(
     request: WelcomeTestRequest,
     current_user: User = Depends(require_admin),
     session: Session = Depends(get_session)
@@ -170,7 +170,7 @@ def test_welcome_email(
     username = capitalize_name(request.mock_user_name)
     
     # Send email with new template
-    success = resend_email_service.send_welcome_with_events(
+    success = await resend_email_service.send_welcome_with_events(
         to_email=request.recipient_email,
         username=username,
         featured_events=featured_data,
@@ -185,7 +185,7 @@ def test_welcome_email(
 
 
 @router.post("/weekly-digest", response_model=EmailTestResponse)
-def test_weekly_digest(
+async def test_weekly_digest(
     request: WeeklyDigestTestRequest,
     current_user: User = Depends(require_admin),
     session: Session = Depends(get_session)
@@ -259,7 +259,7 @@ def test_weekly_digest(
     username = capitalize_name(target_user.username or target_user.email.split('@')[0])
 
     # Send digest email with featured + personalized
-    success = resend_email_service.send_weekly_digest(
+    success = await resend_email_service.send_weekly_digest(
         to_email=request.send_to_email,
         username=username,
         featured_events=featured_data,
@@ -275,14 +275,14 @@ def test_weekly_digest(
 
 
 @router.post("/system-alert", response_model=EmailTestResponse)
-def test_system_alert(
+async def test_system_alert(
     request: SystemAlertTestRequest,
     current_user: User = Depends(require_admin),
 ):
     """
     Send test system alert email.
     """
-    success = resend_email_service.send_system_alert(
+    success = await resend_email_service.send_system_alert(
         to_email=request.recipient_email,
         subject=request.subject,
         message_body=request.message_body
