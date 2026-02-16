@@ -110,7 +110,7 @@ function HeroCard({ slot, isMain, mobileCompact }: { slot: HeroSlot, isMain: boo
                 <OptimizedImage
                     src={slot.image_override || '/images/hero-bg.jpg'}
                     alt={slot.title_override || ''}
-                    variant={isMain ? 'hero' : 'thumb'}
+                    variant="hero"
                     fill
                     className="object-cover"
                     priority={isMain}

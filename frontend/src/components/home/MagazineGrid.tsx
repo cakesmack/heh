@@ -151,7 +151,7 @@ export default function MagazineGrid({
                                 fill
                                 className="object-cover"
                                 sizes="100vw"
-                                variant="thumb"
+                                variant="hero"
                             />
                             {/* Category Ribbon */}
                             {event.category && (

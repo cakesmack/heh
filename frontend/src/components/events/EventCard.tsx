@@ -69,7 +69,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
         <div className="relative h-48 bg-gray-200">
           <OptimizedImage
             src={event.image_url}
-            variant="thumb"
+            variant="hero"
             alt={event.title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

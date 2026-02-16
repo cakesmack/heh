@@ -13,7 +13,7 @@
  */
 export function optimizeImage(
     urlOrId: string | null | undefined,
-    options: number | 'thumb' | 'hero' = 'hero'
+    options: number | 'thumb' | 'hero' | 'card' = 'hero'
 ): string {
     if (!urlOrId) return '';
 
@@ -78,11 +78,16 @@ export function optimizeImage(
         }
 
         // Map internal variants to Cloudflare variant names
-        let cfVariant = 'public';
+        let cfVariant = 'hero'; // Default high-res
+
         if (options === 'thumb') {
             cfVariant = 'thumbnail';
-        } else if (options === 'hero') {
-            cfVariant = 'public'; // or 'hero' if you have a specific hero variant
+        } else if (options === 'hero' || options === 'card') {
+            cfVariant = 'hero';
+        } else if (typeof options === 'number' && options <= 150) {
+            cfVariant = 'thumbnail'; // Handle number case if strictly small
+        } else if (typeof options === 'number') {
+            cfVariant = 'public';
         }
 
         return `https://imagedelivery.net/${hash}/${cleanUrlOrId}/${cfVariant}`;
