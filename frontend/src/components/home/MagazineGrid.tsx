@@ -304,7 +304,7 @@ export default function MagazineGrid({
                                 fill
                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                                 className="object-cover transition-transform duration-1000 ease-in-out group-hover:scale-110"
-                                variant="thumb"
+                                variant="hero"
                             />
                             <div className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <BookmarkButton eventId={event.id} size="sm" className="bg-white/90 hover:bg-white shadow-sm" />
