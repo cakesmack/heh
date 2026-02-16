@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { Category } from '@/types';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 
 interface CategoryCardProps {
     category: Category;
@@ -18,12 +17,13 @@ export default function CategoryCard({ category }: CategoryCardProps) {
         >
             {/* Background Image with Zoom Effect */}
             <div className="absolute inset-0 transition-transform duration-700 ease-in-out group-hover:scale-110">
-                <Image
-                    src={optimizeCloudinaryUrl(category.image_url || '/images/category-placeholder.jpg', 400)}
+                <OptimizedImage
+                    src={category.image_url || '/images/category-placeholder.jpg'}
                     alt={category.name}
                     fill
                     className="object-cover"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    variant="thumb"
                 />
             </div>
 

@@ -14,6 +14,7 @@ import { AuthGuard } from '@/components/common/AuthGuard';
 import { EventResponse, UserDashboardStats, VenueClaim, OrganizerSummary, Category } from '@/types';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { SettingsTab } from '@/components/account/SettingsTab';
 
 export default function AccountPage() {
@@ -561,9 +562,15 @@ function AccountPageContent() {
                           className="p-4 bg-gray-50 rounded-xl flex items-center justify-between hover:bg-gray-100 transition-colors"
                         >
                           <div className="flex items-center min-w-0">
-                            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mr-3 flex-shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mr-3 flex-shrink-0 relative overflow-hidden">
                               {org.logo_url ? (
-                                <img src={org.logo_url} alt={org.name} className="w-full h-full object-cover rounded-lg" />
+                                <OptimizedImage
+                                  src={org.logo_url}
+                                  alt={org.name}
+                                  fill
+                                  className="object-cover"
+                                  variant="thumb"
+                                />
                               ) : (
                                 <span className="text-base font-bold text-emerald-600">{org.name.charAt(0)}</span>
                               )}
@@ -644,10 +651,12 @@ function AccountPageContent() {
                             <div className="group relative rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all h-full bg-white">
                               <div className="aspect-video bg-gray-200 relative">
                                 {venue.image_url ? (
-                                  <img
+                                  <OptimizedImage
                                     src={venue.image_url}
                                     alt={venue.name}
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    className="object-cover"
+                                    variant="thumb"
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-600">

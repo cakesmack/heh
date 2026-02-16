@@ -4,15 +4,29 @@
  */
 
 /**
- * Optimizes an image URL by injecting transformation parameters.
+ * Optimizes an image URL or ID by injecting transformation parameters.
  * Supports both Cloudinary URLs and Cloudflare Image IDs.
  * 
  * @param urlOrId - The original image URL or Cloudflare Image ID
- * @param width - The desired width in pixels
+ * @param options - Transformation options (width or variant)
  * @returns The optimized image URL
  */
-export function optimizeCloudinaryUrl(urlOrId: string | null | undefined, width: number): string {
+export function optimizeImage(
+    urlOrId: string | null | undefined,
+    options: number | 'thumb' | 'hero' = 'hero'
+): string {
     if (!urlOrId) return '';
+
+    let width = typeof options === 'number' ? options : 1200;
+    let variant: 'public' | 'thumbnail' | 'hero' = 'public';
+
+    if (options === 'thumb') {
+        width = 400;
+        variant = 'public'; // Using public for now as standard, but mapping exists
+    } else if (options === 'hero') {
+        width = 1600;
+        variant = 'public';
+    }
 
     let cleanUrlOrId = urlOrId.trim();
 
@@ -55,14 +69,15 @@ export function optimizeCloudinaryUrl(urlOrId: string | null | undefined, width:
     if (!cleanUrlOrId.startsWith('http')) {
         if (!hash) {
             console.warn('[imageOptimizer] Account Hash missing. Cannot construct Cloudflare URL for:', cleanUrlOrId);
-            // Return empty string to avoid relative path 404s
             return '';
         }
 
-        // Default to 'public' variant as it is the standard for Cloudflare Images
-        const variant = 'public';
+        // Map internal variants to Cloudflare variant names
+        // Note: Reverted to 'public' default due to user feedback on missing variants,
+        // but keeping the structure for future expansion.
+        const cfVariant = 'public';
 
-        return `https://imagedelivery.net/${hash}/${cleanUrlOrId}/${variant}`;
+        return `https://imagedelivery.net/${hash}/${cleanUrlOrId}/${cfVariant}`;
     }
 
     return cleanUrlOrId;

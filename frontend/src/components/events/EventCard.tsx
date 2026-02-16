@@ -1,14 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { useRouter } from 'next/router';
 import { EventResponse } from '@/types';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 import { stripHtml } from '@/lib/stringUtils';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 import { useAuth } from '@/hooks/useAuth';
 
 interface EventCardProps {
@@ -68,8 +67,9 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
       {/* Image */}
       {event.image_url && (
         <div className="relative h-48 bg-gray-200">
-          <Image
-            src={optimizeCloudinaryUrl(event.image_url, 600)}
+          <OptimizedImage
+            src={event.image_url}
+            variant="thumb"
             alt={event.title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

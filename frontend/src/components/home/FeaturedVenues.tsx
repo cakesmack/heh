@@ -5,10 +5,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { venuesAPI } from '@/lib/api';
 import { VenueResponse } from '@/types';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 
 export default function FeaturedVenues() {
     const [venues, setVenues] = useState<VenueResponse[]>([]);
@@ -85,12 +84,13 @@ export default function FeaturedVenues() {
                         {/* Squircle Image -> Circle Image */}
                         <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden bg-white shadow-lg border-4 border-white group-hover:border-emerald-200 group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
                             {venue.image_url ? (
-                                <Image
-                                    src={optimizeCloudinaryUrl(venue.image_url, 400)}
+                                <OptimizedImage
+                                    src={venue.image_url}
                                     alt={venue.name}
                                     fill
                                     className="object-cover"
                                     sizes="400px"
+                                    variant="thumb"
                                 />
                             ) : (
                                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">

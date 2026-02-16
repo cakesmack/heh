@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { MobileDirectoryNav } from '@/components/common/MobileDirectoryNav';
 
 interface Organizer {
@@ -122,12 +123,14 @@ export default function GroupsPage() {
                             <Link key={org.id} href={`/groups/${org.slug}`}>
                                 <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                                     <div className="flex items-start">
-                                        <div className="w-16 h-16 rounded-xl bg-emerald-100 flex items-center justify-center mr-4 flex-shrink-0">
+                                        <div className="w-16 h-16 rounded-xl bg-emerald-100 flex items-center justify-center mr-4 flex-shrink-0 relative overflow-hidden">
                                             {org.logo_url ? (
-                                                <img
+                                                <OptimizedImage
                                                     src={org.logo_url}
                                                     alt={org.name}
-                                                    className="w-full h-full object-cover rounded-xl"
+                                                    fill
+                                                    className="object-cover"
+                                                    variant="thumb"
                                                 />
                                             ) : (
                                                 <span className="text-2xl font-bold text-emerald-600">

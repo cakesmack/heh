@@ -6,14 +6,14 @@
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 import { VenueResponse, EventResponse, VenueStaffResponse } from '@/types';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
+import { optimizeImage } from '@/utils/imageOptimizer';
 import ReportModal from '@/components/common/ReportModal';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
@@ -200,14 +200,14 @@ export default function VenueDetailPage() {
         <meta property="og:url" content={`https://highlandeventshub.com/venues/${venue.id}`} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        {venue.image_url && <meta property="og:image" content={venue.image_url} />}
+        {venue.image_url && <meta property="og:image" content={optimizeImage(venue.image_url, 1200)} />}
 
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:url" content={`https://highlandeventshub.com/venues/${venue.id}`} />
         <meta property="twitter:title" content={pageTitle} />
         <meta property="twitter:description" content={pageDescription} />
-        {venue.image_url && <meta property="twitter:image" content={venue.image_url} />}
+        {venue.image_url && <meta property="twitter:image" content={optimizeImage(venue.image_url, 1200)} />}
       </Head>
 
       {/* Cinematic Hero */}
@@ -215,8 +215,9 @@ export default function VenueDetailPage() {
         {/* Blurred Background */}
         <div className="absolute inset-0">
           {venue.image_url ? (
-            <Image
-              src={optimizeCloudinaryUrl(venue.image_url, 200)}
+            <OptimizedImage
+              src={venue.image_url}
+              variant="thumb"
               alt=""
               fill
               className="object-cover blur-2xl scale-110 opacity-60"
@@ -232,8 +233,9 @@ export default function VenueDetailPage() {
         <div className="absolute inset-0 flex items-center justify-center px-4 pt-24">
           <div className="relative w-full max-w-3xl aspect-[16/9] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10">
             {venue.image_url ? (
-              <Image
-                src={optimizeCloudinaryUrl(venue.image_url, 1200)}
+              <OptimizedImage
+                src={venue.image_url}
+                variant="hero"
                 alt={venue.name}
                 fill
                 sizes="(max-width: 768px) 100vw, 800px"

@@ -8,6 +8,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import Modal from '@/components/admin/Modal';
 import { adminAPI, AdminUser, UserEventSummary } from '@/lib/api';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import Link from 'next/link';
 
 export default function AdminUsers() {
@@ -627,9 +628,15 @@ export default function AdminUsers() {
                       {userEvents.map((event) => (
                         <div key={event.id} className="flex items-center gap-4 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
                           {/* Thumbnail */}
-                          <div className="h-12 w-12 rounded bg-gray-100 overflow-hidden flex-shrink-0">
+                          <div className="h-12 w-12 rounded bg-gray-100 overflow-hidden flex-shrink-0 relative">
                             {event.image_url ? (
-                              <img src={event.image_url} alt="" className="h-full w-full object-cover" />
+                              <OptimizedImage
+                                src={event.image_url}
+                                alt=""
+                                fill
+                                className="object-cover"
+                                variant="thumb"
+                              />
                             ) : (
                               <div className="h-full w-full flex items-center justify-center text-gray-300">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

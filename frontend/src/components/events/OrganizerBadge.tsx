@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { OrganizerProfileResponse } from '@/types';
 
 interface OrganizerBadgeProps {
@@ -17,10 +18,12 @@ export function OrganizerBadge({ organizer, className = '' }: OrganizerBadgeProp
             {/* Avatar */}
             <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex-shrink-0">
                 {organizer.logo_url ? (
-                    <img
+                    <OptimizedImage
                         src={organizer.logo_url}
                         alt={organizer.name}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        variant="thumb"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-600 font-bold text-lg">

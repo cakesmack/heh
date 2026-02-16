@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import Modal from '@/components/admin/Modal';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import VenueTypeahead from '@/components/venues/VenueTypeahead';
@@ -570,7 +571,15 @@ export default function AdminEvents() {
                     <td className="py-3 px-4">
                       <div className="flex items-center">
                         {event.image_url ? (
-                          <img src={event.image_url} alt={event.title} className="w-10 h-10 rounded object-cover mr-3" />
+                          <div className="relative w-10 h-10 mr-3">
+                            <OptimizedImage
+                              src={event.image_url}
+                              alt={event.title}
+                              fill
+                              className="rounded object-cover"
+                              variant="thumb"
+                            />
+                          </div>
                         ) : (
                           <div className="w-10 h-10 rounded bg-gray-200 mr-3 flex items-center justify-center">
                             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

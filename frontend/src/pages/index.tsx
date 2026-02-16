@@ -25,6 +25,7 @@ import PopularEvents from '@/components/home/PopularEvents';
 import PopularLocations from '@/components/PopularLocations';
 import CuratedCollections from '@/components/home/CuratedCollections';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
+import { optimizeImage } from '@/utils/imageOptimizer';
 
 // Site constants
 const SITE_URL = 'https://www.highlandeventshub.co.uk';
@@ -275,7 +276,7 @@ export default function HomePage() {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: 'url(https://res.cloudinary.com/dakq1xwn1/image/upload/v1767454232/highland_events/events/lhxbivhjsqpwn1hsbz5x.jpg)',
+            backgroundImage: `url(${optimizeImage('dd6cb0f1-b4ca-403c-fb75-d31c4ae4e000', 'hero')})`,
           }}
         />
         {/* Green Overlay */}

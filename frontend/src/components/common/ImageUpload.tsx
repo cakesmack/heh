@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
+import { optimizeImage } from '@/utils/imageOptimizer';
 
 interface ImageUploadProps {
   folder: 'events' | 'venues' | 'categories' | 'organizers' | 'hero';
@@ -157,7 +157,7 @@ export default function ImageUpload({
         <div className="relative" style={{ aspectRatio }}>
           <img
             key={preview}
-            src={optimizeCloudinaryUrl(preview, 800)}
+            src={optimizeImage(preview, 800)}
             alt="Preview"
             className="w-full h-full object-cover rounded-lg"
           />

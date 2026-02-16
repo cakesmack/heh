@@ -10,6 +10,8 @@ import DiscoveryBar from '@/components/home/DiscoveryBar';
 import { Category, EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { Badge } from '@/components/common/Badge';
+import { optimizeImage } from '@/utils/imageOptimizer';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 const EVENTS_PER_PAGE = 12;
 
@@ -258,7 +260,7 @@ export default function CategoryPage() {
                 {category.image_url ? (
                     <div
                         className="absolute inset-0 bg-cover bg-center"
-                        style={{ backgroundImage: `url(${category.image_url})` }}
+                        style={{ backgroundImage: `url(${optimizeImage(category.image_url, 'hero')})` }}
                     />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 to-gray-900" />
@@ -339,12 +341,14 @@ export default function CategoryPage() {
                                     className="group relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
                                 >
                                     <div className="aspect-[16/9] relative overflow-hidden">
-                                        <img
-                                            src={event.image_url || '/images/event-placeholder.jpg'}
+                                        <OptimizedImage
+                                            src={event.image_url}
                                             alt={event.title}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            fill
+                                            className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                            variant="hero"
                                         />
-                                        <div className="absolute top-3 left-3">
+                                        <div className="absolute top-3 left-3 z-10">
                                             <span className="bg-amber-400 text-amber-900 text-xs font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wider">
                                                 Featured
                                             </span>

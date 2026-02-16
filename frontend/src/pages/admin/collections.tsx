@@ -8,6 +8,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
 import { collectionsAPI, categoriesAPI } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
@@ -214,11 +215,15 @@ export default function AdminCollections() {
             render: (col: Collection) => (
                 <div className="flex items-center">
                     {col.image_url ? (
-                        <img
-                            src={col.image_url}
-                            alt={col.title}
-                            className="w-16 h-9 rounded object-cover mr-3"
-                        />
+                        <div className="relative w-16 h-9 mr-3">
+                            <OptimizedImage
+                                src={col.image_url}
+                                alt={col.title}
+                                fill
+                                className="rounded object-cover"
+                                variant="thumb"
+                            />
+                        </div>
                     ) : (
                         <div className="w-16 h-9 bg-gray-200 rounded mr-3" />
                     )}

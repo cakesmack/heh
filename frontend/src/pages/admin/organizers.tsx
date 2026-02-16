@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import AdminLayout from '@/components/admin/AdminLayout';
 import Modal from '@/components/admin/Modal';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
 import { Spinner } from '@/components/common/Spinner';
 
@@ -197,7 +198,15 @@ export default function AdminOrganizersPage() {
                                         <div className="flex items-center">
                                             <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mr-3 flex-shrink-0">
                                                 {org.logo_url ? (
-                                                    <img src={org.logo_url} alt={org.name} className="w-full h-full object-cover rounded-lg" />
+                                                    <div className="relative w-full h-full">
+                                                        <OptimizedImage
+                                                            src={org.logo_url}
+                                                            alt={org.name}
+                                                            fill
+                                                            className="object-cover rounded-lg"
+                                                            variant="thumb"
+                                                        />
+                                                    </div>
                                                 ) : (
                                                     <span className="text-sm font-bold text-emerald-600">{org.name.charAt(0)}</span>
                                                 )}

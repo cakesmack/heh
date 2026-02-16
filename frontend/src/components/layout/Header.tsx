@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -59,7 +59,7 @@ export function Header() {
           {/* Logo + Title (grouped) */}
           <Link href="/" className="flex items-center gap-2 group">
             <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-warm-white/20 group-hover:border-golden-heather transition-colors flex-shrink-0">
-              <Image
+              <OptimizedImage
                 src="/logo_knot.jpg"
                 alt="Highland Events Hub"
                 fill

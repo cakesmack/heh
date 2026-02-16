@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { VenueResponse } from '@/types';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 
 interface VenueDiscoveryCardProps {
     venue: VenueResponse;
@@ -17,12 +16,13 @@ export function VenueDiscoveryCard({ venue }: VenueDiscoveryCardProps) {
                 {/* Image Container */}
                 <div className="relative h-48 w-full bg-gray-100 overflow-hidden">
                     {venue.image_url ? (
-                        <Image
-                            src={optimizeCloudinaryUrl(imageSrc, 400)}
+                        <OptimizedImage
+                            src={imageSrc}
                             alt={venue.name}
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            variant="thumb"
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">

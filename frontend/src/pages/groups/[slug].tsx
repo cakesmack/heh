@@ -12,6 +12,7 @@ import { Button } from '@/components/common/Button';
 
 import { useAuth } from '@/hooks/useAuth';
 import { GroupRole } from '@/types';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 // Icons
 const PencilIcon = ({ className }: { className?: string }) => (
@@ -261,10 +262,12 @@ export default function OrganizerProfilePage() {
             {/* Cover Image (3:1 aspect ratio) */}
             <div className="relative h-48 md:h-64 lg:h-80 overflow-hidden">
                 {organizer.cover_image_url || organizer.hero_image_url ? (
-                    <img
+                    <OptimizedImage
                         src={organizer.cover_image_url || organizer.hero_image_url}
+                        variant="hero"
                         alt={`${organizer.name} cover`}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                     />
                 ) : (
                     <div className="w-full h-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600" />
@@ -289,9 +292,15 @@ export default function OrganizerProfilePage() {
                     <div className="flex flex-col md:flex-row md:items-end md:justify-between">
                         {/* Logo + Name */}
                         <div className="flex items-end space-x-4">
-                            <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 border-white shadow-xl overflow-hidden bg-white">
+                            <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 border-white shadow-xl overflow-hidden bg-white relative">
                                 {organizer.logo_url ? (
-                                    <img src={organizer.logo_url} alt={organizer.name} className="w-full h-full object-cover" />
+                                    <OptimizedImage
+                                        src={organizer.logo_url}
+                                        variant="thumb"
+                                        alt={organizer.name}
+                                        fill
+                                        className="object-cover"
+                                    />
                                 ) : (
                                     <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                                         <span className="text-4xl md:text-5xl font-bold text-white">{organizer.name.charAt(0)}</span>

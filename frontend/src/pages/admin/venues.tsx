@@ -9,6 +9,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
 import PlacesAutocomplete from '@/components/maps/PlacesAutocomplete';
 import { venuesAPI, analyticsAPI, venueInvitesAPI } from '@/lib/api';
@@ -380,11 +381,15 @@ export default function AdminVenues() {
       render: (v: VenueResponse) => (
         <div className="flex items-center">
           {v.image_url ? (
-            <img
-              src={v.image_url}
-              alt={v.name}
-              className="w-10 h-10 rounded object-cover mr-3"
-            />
+            <div className="relative w-10 h-10 mr-3">
+              <OptimizedImage
+                src={v.image_url}
+                alt={v.name}
+                fill
+                className="rounded object-cover"
+                variant="thumb"
+              />
+            </div>
           ) : (
             <div className="w-10 h-10 rounded bg-gray-200 mr-3 flex items-center justify-center">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -549,7 +554,15 @@ export default function AdminVenues() {
                     <td className="py-3 px-4">
                       <div className="flex items-center">
                         {venue.image_url ? (
-                          <img src={venue.image_url} alt={venue.name} className="w-10 h-10 rounded object-cover mr-3" />
+                          <div className="relative w-10 h-10 mr-3">
+                            <OptimizedImage
+                              src={venue.image_url}
+                              alt={venue.name}
+                              fill
+                              className="rounded object-cover"
+                              variant="thumb"
+                            />
+                          </div>
                         ) : (
                           <div className="w-10 h-10 rounded bg-gray-200 mr-3 flex items-center justify-center">
                             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

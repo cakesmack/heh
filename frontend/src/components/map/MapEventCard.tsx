@@ -1,5 +1,4 @@
 import React from 'react';
-import Image from 'next/image';
 import { format } from 'date-fns';
 import { EventResponse } from '@/types';
 
@@ -55,7 +54,7 @@ export default function MapEventCard({
                                 HAPPENING TODAY
                             </span>
                         )}
-                        <h3 className="text-sm font-bold text-gray-900 leading-tight line-clamp-2group-hover:text-emerald-700 transition-colors">
+                        <h3 className="text-sm font-bold text-gray-900 leading-tight line-clamp-2 group-hover:text-emerald-700 transition-colors">
                             {event.title}
                         </h3>
                     </div>

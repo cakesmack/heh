@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import dynamic from 'next/dynamic';
 import { GetServerSideProps } from 'next';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Spinner } from '@/components/common/Spinner';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
+import { optimizeImage } from '@/utils/imageOptimizer';
 
 import ShareButtons from '@/components/events/ShareButtons';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
@@ -179,7 +179,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const siteUrl = baseUrl || 'https://www.highlandeventshub.co.uk';
 
   // Use optimized URL for OG image if it's a Cloudflare ID
-  const optimizedOgUrl = event.image_url ? optimizeCloudinaryUrl(event.image_url, 1200) : null;
+  const optimizedOgUrl = event.image_url ? optimizeImage(event.image_url, 1200) : null;
 
   const ogImageUrl = optimizedOgUrl
     ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${siteUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
@@ -262,9 +262,10 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
         {/* Blurred Background */}
         <div className="absolute inset-0">
           {event.image_url ? (
-            <Image
+            <OptimizedImage
               key={`blur-${event.image_url}`}
-              src={optimizeCloudinaryUrl(event.image_url, 200)}
+              src={event.image_url}
+              variant="thumb"
               alt=""
               fill
               className="object-cover blur-2xl scale-110 opacity-60"
@@ -284,9 +285,10 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
           >
             {event.image_url ? (
               <>
-                <Image
+                <OptimizedImage
                   key={`hero-${event.image_url}`}
-                  src={optimizeCloudinaryUrl(event.image_url, 1200)}
+                  src={event.image_url}
+                  variant="hero"
                   alt={`${event.title} at ${venueName}`}
                   fill
                   sizes="100vw"
@@ -712,12 +714,14 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                           className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-emerald-50 border border-gray-100 hover:border-emerald-200 transition-all group hover:shadow-md"
                         >
                           {/* Venue Thumbnail */}
-                          <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-200 mb-2 group-hover:scale-105 transition-transform">
+                          <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-200 mb-2 group-hover:scale-105 transition-transform relative">
                             {pv.image_url ? (
-                              <img
+                              <OptimizedImage
                                 src={pv.image_url}
+                                variant="thumb"
                                 alt={pv.name}
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
                               />
                             ) : (
                               <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
@@ -1127,9 +1131,12 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
             </button>
 
             {/* Full Image */}
-            <img
-              src={optimizeCloudinaryUrl(event.image_url, 1200)}
+            <OptimizedImage
+              src={event.image_url}
+              variant="hero"
               alt={event.title}
+              width={1200}
+              height={800}
               className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
@@ -1172,7 +1179,7 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
       ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...'
       : `Join us for ${event.title} at ${event.venue_name || event.location_name || 'Highland Events Hub'}`;
 
-    const optimizedOgUrl = event.image_url ? optimizeCloudinaryUrl(event.image_url, 1200) : null;
+    const optimizedOgUrl = event.image_url ? optimizeImage(event.image_url, 1200) : null;
     const ogImage = optimizedOgUrl
       ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${baseUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
       : `${baseUrl}/images/og-default.jpg`;

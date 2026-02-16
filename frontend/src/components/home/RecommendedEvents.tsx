@@ -3,8 +3,7 @@ import Link from 'next/link';
 import { recommendationsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import Image from 'next/image';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 // Compact card variant for recommended events - image and title only
 function CompactEventCard({ event }: { event: EventResponse }) {
@@ -12,12 +11,13 @@ function CompactEventCard({ event }: { event: EventResponse }) {
         <Link href={`/events/${event.id}`} className="block group">
             <div className="relative overflow-hidden rounded-xl md:rounded-none">
                 <div className="relative aspect-[4/3] overflow-hidden">
-                    <Image
-                        src={optimizeCloudinaryUrl(event.image_url || '/images/event-placeholder.jpg', 400)}
+                    <OptimizedImage
+                        src={event.image_url || '/images/event-placeholder.jpg'}
                         alt={event.title}
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 768px) 50vw, 25vw"
+                        variant="thumb"
                     />
                 </div>
                 {/* Gradient overlay */}

@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { HeroSlot } from '@/types';
 import { heroAPI } from '@/lib/api';
-import Image from 'next/image';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 
@@ -108,9 +107,10 @@ function HeroCard({ slot, isMain, mobileCompact }: { slot: HeroSlot, isMain: boo
     const Content = () => (
         <>
             <div className="absolute inset-0 transition-transform duration-1000 group-hover:scale-105">
-                <Image
-                    src={optimizeCloudinaryUrl(slot.image_override || '/images/hero-bg.jpg', isMain ? 1600 : 800)}
+                <OptimizedImage
+                    src={slot.image_override || '/images/hero-bg.jpg'}
                     alt={slot.title_override || ''}
+                    variant={isMain ? 'hero' : 'thumb'}
                     fill
                     className="object-cover"
                     priority={isMain}

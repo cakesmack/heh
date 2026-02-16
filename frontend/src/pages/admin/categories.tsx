@@ -8,6 +8,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
 import { categoriesAPI } from '@/lib/api';
 import type { Category } from '@/types';
@@ -120,11 +121,15 @@ export default function AdminCategories() {
       render: (cat: Category) => (
         <div className="flex items-center">
           {cat.image_url ? (
-            <img
-              src={cat.image_url}
-              alt={cat.name}
-              className="w-10 h-10 rounded object-cover mr-3"
-            />
+            <div className="relative w-10 h-10 mr-3">
+              <OptimizedImage
+                src={cat.image_url}
+                alt={cat.name}
+                fill
+                className="rounded object-cover"
+                variant="thumb"
+              />
+            </div>
           ) : (
             <div
               className="w-10 h-10 rounded mr-3"
@@ -143,9 +148,8 @@ export default function AdminCategories() {
       header: 'Status',
       render: (cat: Category) => (
         <span
-          className={`px-2 py-1 text-xs rounded-full ${
-            cat.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-          }`}
+          className={`px-2 py-1 text-xs rounded-full ${cat.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            }`}
         >
           {cat.is_active ? 'Active' : 'Inactive'}
         </span>

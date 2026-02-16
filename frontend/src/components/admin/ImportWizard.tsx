@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Venue, Category } from '@/types';
 import { X, Trash2, Check, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { UnifiedVenueSelect } from '@/components/venues/UnifiedVenueSelect';
 
 interface ImportWizardProps {
@@ -464,7 +465,15 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                         {event.status === 'error' && <span className="text-red-600" title={event.message}>❌</span>}
                                     </td>
                                     <td className="px-3 py-2">
-                                        <img src={event.image_url} alt="" className="h-8 w-12 object-cover rounded bg-gray-100" />
+                                        <div className="relative h-8 w-12 rounded bg-gray-100 overflow-hidden">
+                                            <OptimizedImage
+                                                src={event.image_url}
+                                                alt=""
+                                                fill
+                                                className="object-cover"
+                                                variant="thumb"
+                                            />
+                                        </div>
                                     </td>
                                     <td className="px-3 py-2">
                                         <p className="text-sm font-medium text-gray-900 truncate max-w-[180px]">{event.title}</p>
@@ -516,7 +525,15 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                 {/* Left: Image */}
                                 <div>
                                     {currentEvent.image_url ? (
-                                        <img src={currentEvent.image_url} alt="" className="w-full h-64 object-cover rounded-lg bg-gray-100" />
+                                        <div className="relative w-full h-64 rounded-lg bg-gray-100 overflow-hidden">
+                                            <OptimizedImage
+                                                src={currentEvent.image_url}
+                                                alt=""
+                                                fill
+                                                className="object-cover"
+                                                variant="hero"
+                                            />
+                                        </div>
                                     ) : (
                                         <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
                                             <ImageIcon className="w-12 h-12 text-gray-400" />

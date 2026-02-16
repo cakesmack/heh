@@ -8,6 +8,7 @@ import { Card } from '@/components/common/Card';
 import { Spinner } from '@/components/common/Spinner';
 import ImageUpload from '@/components/common/ImageUpload';
 import { toast } from 'react-hot-toast';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 export default function HeroManager() {
     const [slots, setSlots] = useState<HeroSlot[]>([]);
@@ -128,7 +129,15 @@ function SlotEditor({ slot, onSave, isMain }: { slot: HeroSlot; onSave: (id: num
                     {/* Thumbnail */}
                     <div className={`shrink-0 bg-gray-100 rounded overflow-hidden ${isMain ? 'w-32 h-20' : 'w-20 h-20'}`}>
                         {slot.image_override ? (
-                            <img src={slot.image_override} className="w-full h-full object-cover" alt="Slot" />
+                            <div className="relative w-full h-full">
+                                <OptimizedImage
+                                    src={slot.image_override}
+                                    alt="Slot"
+                                    fill
+                                    className="object-cover"
+                                    variant="thumb"
+                                />
+                            </div>
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">No Image</div>
                         )}

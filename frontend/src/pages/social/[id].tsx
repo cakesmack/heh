@@ -5,6 +5,7 @@ import { toPng } from 'html-to-image';
 import { EventResponse } from '@/types';
 import Link from 'next/link';
 import { eventsAPI } from '@/lib/api';
+import { optimizeImage } from '@/utils/imageOptimizer';
 
 export default function SocialPosterPage() {
     const router = useRouter();
@@ -106,9 +107,12 @@ export default function SocialPosterPage() {
     const categoryName = event.category?.name || 'Event';
 
     // Resolve image URL
-    const imageUrl = event.image_url
+    // For social poster, we want high quality (hero)
+    const rawImageUrl = event.image_url
         ? (event.image_url.startsWith('http') ? event.image_url : `${baseUrl}${event.image_url}`)
         : `${baseUrl}/images/og-default.jpg`;
+
+    const imageUrl = optimizeImage(rawImageUrl, 'hero');
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col items-center py-10">

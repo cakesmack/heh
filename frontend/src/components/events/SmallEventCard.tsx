@@ -4,10 +4,9 @@
  * Fixed aspect ratio 3/4.
  */
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { EventResponse } from '@/types';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 
 interface SmallEventCardProps {
     event: EventResponse;
@@ -27,12 +26,13 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-stone-dark shadow-sm transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-1">
                 {/* Image Background */}
                 {event.image_url ? (
-                    <Image
-                        src={optimizeCloudinaryUrl(event.image_url, 400)}
+                    <OptimizedImage
+                        src={event.image_url}
                         alt={event.title}
                         fill
                         className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                        variant="thumb"
                     />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 to-stone-900 flex items-center justify-center">

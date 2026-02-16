@@ -7,9 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { MarkerClusterer, type Marker, GridAlgorithm } from '@googlemaps/markerclusterer';
 import { format } from 'date-fns';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import type { EventResponse } from '@/types';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
 
 export interface ClusteredEventMarkersProps {
     events: EventResponse[];
@@ -328,12 +327,13 @@ export function ClusteredEventMarkers({
                         {/* Event Image */}
                         {selectedEvent.image_url ? (
                             <div className="relative w-full h-32 bg-gray-100">
-                                <Image
-                                    src={optimizeCloudinaryUrl(selectedEvent.image_url, 500)}
+                                <OptimizedImage
+                                    src={selectedEvent.image_url}
                                     alt={selectedEvent.title}
                                     fill
                                     sizes="280px"
                                     className="object-cover"
+                                    variant="thumb"
                                 />
                             </div>
                         ) : (
@@ -422,12 +422,13 @@ export function ClusteredEventMarkers({
                                     {/* Thumbnail */}
                                     <div className="relative w-12 h-12 flex-shrink-0 rounded overflow-hidden bg-gray-100">
                                         {event.image_url ? (
-                                            <Image
-                                                src={optimizeCloudinaryUrl(event.image_url, 200)}
+                                            <OptimizedImage
+                                                src={event.image_url}
                                                 alt=""
                                                 fill
                                                 sizes="48px"
                                                 className="object-cover"
+                                                variant="thumb"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-300">

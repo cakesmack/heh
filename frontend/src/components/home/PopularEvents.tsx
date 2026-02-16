@@ -9,8 +9,7 @@ import { eventsAPI, searchAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 import EventCardSkeleton from '@/components/events/EventCardSkeleton';
 import Link from 'next/link';
-import Image from 'next/image';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 // Helper: Format event date with multi-day support
 function formatEventDate(event: EventResponse): string {
@@ -149,12 +148,13 @@ export default function PopularEvents() {
                             {/* Card with Image */}
                             <div className="relative aspect-[2/3] rounded-xl md:rounded-none overflow-hidden bg-stone-800 shadow-2xl border border-white/5 group-hover/card:border-white/20 transition-all duration-500">
                                 {event.image_url ? (
-                                    <Image
-                                        src={optimizeCloudinaryUrl(event.image_url, 500)}
+                                    <OptimizedImage
+                                        src={event.image_url}
                                         alt={event.title}
                                         fill
                                         className="object-cover group-hover/card:scale-110 transition-transform duration-700 ease-out opacity-80 group-hover/card:opacity-100"
                                         sizes="500px"
+                                        variant="thumb"
                                     />
                                 ) : (
                                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-emerald-900 opacity-60" />

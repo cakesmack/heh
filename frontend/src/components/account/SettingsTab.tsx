@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { api, userSettingsAPI, followsAPI } from '@/lib/api';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import type { UserPreferences, Category } from '@/types';
 import Link from 'next/link';
 
@@ -318,7 +319,15 @@ export function SettingsTab({ categories }: SettingsTabProps) {
                     <div key={item.id} className="flex items-center justify-between bg-white rounded-lg p-3">
                       <div className="flex items-center gap-3">
                         {item.image_url && (
-                          <img src={item.image_url} alt="" className="w-8 h-8 rounded object-cover" />
+                          <div className="relative w-8 h-8 rounded overflow-hidden">
+                            <OptimizedImage
+                              src={item.image_url}
+                              alt=""
+                              fill
+                              className="object-cover"
+                              variant="thumb"
+                            />
+                          </div>
                         )}
                         <span className="font-medium text-gray-900">{item.name}</span>
                       </div>
@@ -341,7 +350,15 @@ export function SettingsTab({ categories }: SettingsTabProps) {
                     <div key={item.id} className="flex items-center justify-between bg-white rounded-lg p-3">
                       <div className="flex items-center gap-3">
                         {item.logo_url && (
-                          <img src={item.logo_url} alt="" className="w-8 h-8 rounded object-cover" />
+                          <div className="relative w-8 h-8 rounded overflow-hidden">
+                            <OptimizedImage
+                              src={item.logo_url}
+                              alt=""
+                              fill
+                              className="object-cover"
+                              variant="thumb"
+                            />
+                          </div>
                         )}
                         <span className="font-medium text-gray-900">{item.name}</span>
                       </div>

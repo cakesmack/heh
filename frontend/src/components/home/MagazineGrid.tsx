@@ -4,8 +4,7 @@ import { EventResponse } from '@/types';
 import { Button } from '@/components/common/Button';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 import { stripHtml } from '@/lib/stringUtils';
-import Image from 'next/image';
-import { optimizeCloudinaryUrl } from '@/utils/imageOptimizer';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 // Helper: Format event date with multi-day support
 function formatEventDate(event: EventResponse, options?: { long?: boolean }): string {
@@ -146,12 +145,13 @@ export default function MagazineGrid({
                     <Link key={event.id} href={`/events/${event.id}`} className="block">
                         <div className="relative h-48 rounded-xl overflow-hidden shadow-sm bg-stone-800 group hover:scale-[1.02] transition-transform duration-300">
                             {/* Background Image */}
-                            <Image
-                                src={optimizeCloudinaryUrl(event.image_url || '/images/event-placeholder.jpg', 800)}
+                            <OptimizedImage
+                                src={event.image_url || '/images/event-placeholder.jpg'}
                                 alt={event.title}
                                 fill
                                 className="object-cover"
                                 sizes="100vw"
+                                variant="thumb"
                             />
                             {/* Category Ribbon */}
                             {event.category && (
@@ -206,13 +206,14 @@ export default function MagazineGrid({
                                     }`}
                             >
                                 <Link href={`/events/${event.id}`} className="block w-full h-full relative">
-                                    <Image
-                                        src={optimizeCloudinaryUrl(event.image_url || '/images/event-placeholder.jpg', 800)}
+                                    <OptimizedImage
+                                        src={event.image_url || '/images/event-placeholder.jpg'}
                                         alt={event.title}
                                         fill
                                         sizes="(max-width: 1024px) 100vw, 50vw"
                                         className="object-cover transition-transform duration-1000 ease-in-out group-hover:scale-105"
                                         priority={index === 0}
+                                        variant="hero"
                                     />
 
                                     {/* Category Ribbon */}
@@ -297,12 +298,13 @@ export default function MagazineGrid({
                 {gridItems.map((event) => (
                     <div key={event.id} className="relative group h-[300px] rounded-xl md:rounded-none overflow-hidden col-span-1 hover:scale-[1.02] transition-transform duration-300">
                         <Link href={`/events/${event.id}`} className="block w-full h-full relative z-10">
-                            <Image
-                                src={optimizeCloudinaryUrl(event.image_url || '/images/event-placeholder.jpg', 500)}
+                            <OptimizedImage
+                                src={event.image_url || '/images/event-placeholder.jpg'}
                                 alt={event.title}
                                 fill
                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                                 className="object-cover transition-transform duration-1000 ease-in-out group-hover:scale-110"
+                                variant="thumb"
                             />
                             <div className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <BookmarkButton eventId={event.id} size="sm" className="bg-white/90 hover:bg-white shadow-sm" />

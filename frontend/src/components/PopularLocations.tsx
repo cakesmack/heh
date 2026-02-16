@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import React from 'react';
 import { POPULAR_LOCATIONS } from '@/lib/constants';
 
@@ -23,12 +23,13 @@ export default function PopularLocations() {
                         >
                             {/* Background Image with Zoom */}
                             <div className="absolute inset-0 transform group-hover:scale-110 transition-transform duration-700 ease-out">
-                                <Image
+                                <OptimizedImage
                                     src={city.imagePath || '/images/defaults/category_festivals.jpg'}
                                     alt={`Events in ${city.name}`}
                                     fill
                                     className="object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
                                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                                    variant="thumb"
                                 />
                             </div>
 
