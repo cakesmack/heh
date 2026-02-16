@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { collectionsAPI } from '@/lib/api';
 import type { Collection } from '@/types';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 export default function CuratedCollections() {
     const [collections, setCollections] = useState<Collection[]>([]);
@@ -60,20 +61,21 @@ export default function CuratedCollections() {
                             className="group relative aspect-[16/9] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
                         >
                             {/* Background Image */}
-                            <div
-                                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                                style={{
-                                    backgroundImage: collection.image_url
-                                        ? `url(${collection.image_url})`
-                                        : 'url(/images/placeholder-collection.jpg)',
-                                }}
-                            />
+                            <div className="absolute inset-0">
+                                <OptimizedImage
+                                    src={collection.image_url || '/images/placeholder-collection.jpg'}
+                                    alt={collection.title}
+                                    fill
+                                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                    variant="hero"
+                                />
+                            </div>
 
                             {/* Gradient Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-70 transition-opacity" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-70 transition-opacity z-10" />
 
                             {/* Content */}
-                            <div className="absolute bottom-0 left-0 p-8 w-full">
+                            <div className="absolute bottom-0 left-0 p-8 w-full z-20">
                                 <h3 className="text-2xl font-bold text-white mb-1 group-hover:translate-x-1 transition-transform">
                                     {collection.title}
                                 </h3>
