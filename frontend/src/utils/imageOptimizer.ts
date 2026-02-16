@@ -78,9 +78,12 @@ export function optimizeImage(
         }
 
         // Map internal variants to Cloudflare variant names
-        // Note: Reverted to 'public' default due to user feedback on missing variants,
-        // but keeping the structure for future expansion.
-        const cfVariant = 'public';
+        let cfVariant = 'public';
+        if (options === 'thumb') {
+            cfVariant = 'thumbnail';
+        } else if (options === 'hero') {
+            cfVariant = 'public'; // or 'hero' if you have a specific hero variant
+        }
 
         return `https://imagedelivery.net/${hash}/${cleanUrlOrId}/${cfVariant}`;
     }

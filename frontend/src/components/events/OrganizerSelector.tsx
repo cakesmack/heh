@@ -166,7 +166,7 @@ export default function OrganizerSelector({
                                         className={`w-full text-left px-4 py-3 flex items-center space-x-3 hover:bg-gray-50 transition-colors ${selectedId === option.id ? 'bg-emerald-50' : ''
                                             }`}
                                     >
-                                        <div className="h-8 w-8 rounded-full overflow-hidden bg-gray-200 shrink-0 border border-gray-200">
+                                        <div className="relative h-10 w-10 min-w-[40px] flex-shrink-0 overflow-hidden rounded-full bg-gray-200 border border-gray-200">
                                             {option.image_url ? (
                                                 <OptimizedImage
                                                     src={option.image_url}
