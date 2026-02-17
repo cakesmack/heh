@@ -218,8 +218,8 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
               "@context": "https://schema.org",
               "@type": "Event",
               "name": event.title,
-              "startDate": event.date_start,
-              "endDate": event.date_end,
+              "startDate": new Date(event.date_start).toISOString(),
+              "endDate": new Date(event.date_end).toISOString(),
               "eventStatus": "https://schema.org/EventScheduled",
               "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
               "location": {
@@ -227,9 +227,11 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 "name": venueName,
                 "address": {
                   "@type": "PostalAddress",
-                  "streetAddress": event.location_name || venueName,
+                  "streetAddress": event.address_full || event.location_name || venueName,
+                  "addressLocality": event.location_name || "Highlands",
                   "addressRegion": "Highlands",
-                  "addressCountry": "UK"
+                  "postalCode": event.postcode || "",
+                  "addressCountry": "GB"
                 },
                 "geo": (event.latitude && event.longitude) ? {
                   "@type": "GeoCoordinates",
@@ -238,14 +240,14 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 } : undefined
               },
               "image": [ogImageUrl],
-              "description": event.description ? event.description.replace(/<[^>]*>?/gm, '') : pageDescription,
+              "description": event.description ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 300) : pageDescription,
               "offers": {
                 "@type": "Offer",
                 "url": event.ticket_url || canonicalUrl,
                 "price": event.price || 0,
                 "priceCurrency": "GBP",
                 "availability": "https://schema.org/InStock",
-                "validFrom": event.created_at
+                "validFrom": new Date(event.created_at).toISOString()
               },
               "organizer": {
                 "@type": "Organization",
