@@ -108,11 +108,9 @@ export default function SocialPosterPage() {
 
     // Resolve image URL
     // For social poster, we want high quality (hero)
-    const rawImageUrl = event.image_url
-        ? (event.image_url.startsWith('http') ? event.image_url : `${baseUrl}${event.image_url}`)
+    const imageUrl = event.image_url
+        ? optimizeImage(event.image_url, 'hero')
         : `${baseUrl}/images/og-default.jpg`;
-
-    const imageUrl = optimizeImage(rawImageUrl, 'hero');
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col items-center py-10">
