@@ -21,6 +21,7 @@ interface EventLocationSectionProps {
     isLocationValid: boolean;
     // New prop for map display
     onMapDisplayChange?: (updates: { map_display_lat?: number; map_display_lng?: number; map_display_label?: string }) => void;
+    fieldErrors?: Record<string, string>;
 }
 
 export default function EventLocationSection({
@@ -30,7 +31,8 @@ export default function EventLocationSection({
     handleVenueChange,
     participatingVenues,
     setParticipatingVenues,
-    onMapDisplayChange
+    onMapDisplayChange,
+    fieldErrors = {}
 }: EventLocationSectionProps) {
     return (
         <FormSection
@@ -80,6 +82,7 @@ export default function EventLocationSection({
                                 // but here we just pass the venue change.
                             }}
                             placeholder="Search for a venue or add from Google Maps..."
+                            error={fieldErrors.venue_id}
                         />
                         <p className="mt-2 text-xs text-gray-500">
                             Can't find it on Google Maps? <Link href="/venues" target="_blank" className="text-emerald-600 hover:underline">Create a Venue manually.</Link>

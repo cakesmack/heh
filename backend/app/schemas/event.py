@@ -80,7 +80,7 @@ class OrganizerProfileResponse(BaseModel):
 class EventCreate(BaseModel):
     """Schema for creating a new event."""
     title: str = Field(min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=5000)
+    description: Optional[str] = Field(None, max_length=20000)
     date_start: datetime
     date_end: datetime
     venue_id: OptionalUUID = None
@@ -128,7 +128,7 @@ class EventCreate(BaseModel):
 class EventUpdate(BaseModel):
     """Schema for updating an existing event."""
     title: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = Field(None, min_length=1, max_length=5000)
+    description: Optional[str] = Field(None, min_length=1, max_length=20000)
     date_start: Optional[datetime] = None
     date_end: Optional[datetime] = None
     venue_id: OptionalUUID = None

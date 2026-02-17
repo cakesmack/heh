@@ -24,6 +24,7 @@ interface EventScheduleSectionProps {
     setNoEndTime: (noEnd: boolean) => void;
     isAllDay: boolean;
     setIsAllDay: (isAllDay: boolean) => void;
+    fieldErrors?: Record<string, string>;
 }
 
 export default function EventScheduleSection({
@@ -37,7 +38,8 @@ export default function EventScheduleSection({
     noEndTime,
     setNoEndTime,
     isAllDay,
-    setIsAllDay
+    setIsAllDay,
+    fieldErrors = {}
 }: EventScheduleSectionProps) {
     // Custom Recurrence State
     const [customFreq, setCustomFreq] = useState(Frequency.WEEKLY);
@@ -310,6 +312,7 @@ export default function EventScheduleSection({
                                         setFormData((prev: any) => ({ ...prev, date_start: val }));
                                     }
                                 }}
+                                error={fieldErrors.date_start}
                             />
                         </div>
                         {!noEndTime && (
@@ -322,6 +325,7 @@ export default function EventScheduleSection({
                                     value={formData.date_end}
                                     onChange={(val) => setFormData((prev: any) => ({ ...prev, date_end: val }))}
                                     min={formData.date_start}
+                                    error={fieldErrors.date_end}
                                 />
                             </div>
                         )}

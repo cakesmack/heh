@@ -51,7 +51,7 @@ class Event(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
     title: str = Field(max_length=255, index=True)
-    description: Optional[str] = Field(default=None, max_length=5000)
+    description: Optional[str] = Field(default=None, max_length=20000)
 
     # Dates
     date_start: datetime = Field(index=True)

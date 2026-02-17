@@ -73,6 +73,7 @@ export default function SubmitEventPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<{ type: 'published' | 'pending' | 'duplicate'; eventId: string } | null>(null);
   const [isLocationValid, setIsLocationValid] = useState(true);
 
@@ -187,6 +188,7 @@ export default function SubmitEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setOrganizerError(undefined);
     setIsLoading(true);
 
@@ -283,8 +285,32 @@ export default function SubmitEventPage() {
         setSuccessMessage({ type: 'pending', eventId: newEvent.id });
         setTimeout(() => router.push('/events'), 3000);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit event.');
+    } catch (err: any) {
+      if (err.status === 422 && err.detail) {
+        // Handle Pydantic validation errors
+        const newFieldErrors: Record<string, string> = {};
+        let generalError = "Please correct the highlighted errors below.";
+
+        err.detail.forEach((error: any) => {
+          const field = error.loc[error.loc.length - 1];
+          let msg = error.msg;
+
+          // Humanize common error messages
+          if (error.type === 'string_too_long') {
+            const max = error.ctx?.limit_value || (field === 'description' ? 20000 : 255);
+            msg = `This ${field} is too long (Max ${max.toLocaleString()} characters).`;
+          } else if (error.type === 'value_error.missing' || error.type === 'missing') {
+            msg = "This field is required.";
+          }
+
+          newFieldErrors[field] = msg;
+        });
+
+        setFieldErrors(newFieldErrors);
+        setError(generalError);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to submit event.');
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsLoading(false);
@@ -356,6 +382,7 @@ export default function SubmitEventPage() {
                 userEmail={user?.email}
                 selectedTags={selectedTags}
                 setSelectedTags={setSelectedTags}
+                fieldErrors={fieldErrors}
               />
 
               <EventLocationSection
@@ -371,6 +398,7 @@ export default function SubmitEventPage() {
                 setParticipatingVenues={setParticipatingVenues}
                 isLocationValid={isLocationValid}
                 onMapDisplayChange={handleMapDisplayChange}
+                fieldErrors={fieldErrors}
               />
 
               <EventScheduleSection
@@ -385,12 +413,14 @@ export default function SubmitEventPage() {
                 setNoEndTime={setNoEndTime}
                 isAllDay={formData.is_all_day}
                 setIsAllDay={(val) => setFormData(prev => ({ ...prev, is_all_day: val }))}
+                fieldErrors={fieldErrors}
               />
 
               <EventTicketingSection
                 formData={formData}
                 handleChange={handleChange}
                 setFormData={setFormData}
+                fieldErrors={fieldErrors}
               />
             </div>
 

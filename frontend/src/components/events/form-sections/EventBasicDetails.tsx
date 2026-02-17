@@ -16,6 +16,7 @@ interface EventBasicDetailsProps {
     userEmail?: string;
     selectedTags: string[];
     setSelectedTags: (tags: string[]) => void;
+    fieldErrors?: Record<string, string>;
 }
 
 interface Suggestion {
@@ -33,7 +34,8 @@ export default function EventBasicDetails({
     organizers,
     userEmail,
     selectedTags,
-    setSelectedTags
+    setSelectedTags,
+    fieldErrors = {}
 }: EventBasicDetailsProps) {
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -101,13 +103,14 @@ export default function EventBasicDetails({
             {/* Organizer Selection Moved to Top Level */}
 
             <div ref={containerRef} className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Event Title *</label>
                 <Input
                     name="title"
+                    label="Event Title"
                     required
                     value={formData.title}
                     onChange={handleChange}
                     placeholder="e.g. Inverness Photography Club Monthly Meetup"
+                    error={fieldErrors.title}
                 />
 
                 {/* Loading indicator */}
@@ -158,10 +161,14 @@ export default function EventBasicDetails({
                     value={formData.description}
                     onChange={(value) => setFormData((prev: any) => ({ ...prev, description: value }))}
                     placeholder="Describe your event..."
+                    error={fieldErrors.description}
+                    maxLength={20000}
                 />
-                <p className="mt-2 text-sm text-amber-600">
-                    To prevent spam, events with external links in the description require manual approval.
-                </p>
+                {!fieldErrors.description && (
+                    <p className="mt-2 text-sm text-amber-600">
+                        To prevent spam, events with external links in the description require manual approval.
+                    </p>
+                )}
             </div>
 
             <div>
@@ -171,11 +178,14 @@ export default function EventBasicDetails({
                     required
                     value={formData.category_id}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${fieldErrors.category_id ? 'border-red-500' : 'border-gray-300'}`}
                 >
                     <option value="">Select a category</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+                {fieldErrors.category_id && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.category_id}</p>
+                )}
             </div>
 
             <TagInput selectedTags={selectedTags} onChange={setSelectedTags} maxTags={5} />

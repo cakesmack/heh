@@ -14,6 +14,7 @@ interface DateTimePickerProps {
   min?: string;
   disabled?: boolean;
   required?: boolean;
+  error?: string;
 }
 
 // Hour options (0-23)
@@ -61,8 +62,9 @@ export default function DateTimePicker({
   min,
   disabled = false,
   required = false,
+  error,
 }: DateTimePickerProps) {
-  // Use useState for internal state - this is the key fix!
+  // ... (keeping internal state and handlers)
   const [dateValue, setDateValue] = useState('');
   const [hourValue, setHourValue] = useState('12');
   const [minuteValue, setMinuteValue] = useState('00');
@@ -114,55 +116,60 @@ export default function DateTimePicker({
   }, [dateValue, hourValue, onChange]);
 
   return (
-    <div className="flex gap-2 items-center">
-      {/* Date Input */}
-      <input
-        type="date"
-        id={id}
-        name={`${name}_date`}
-        value={dateValue}
-        onChange={(e) => handleDateChange(e.target.value)}
-        min={minDate}
-        disabled={disabled}
-        required={required}
-        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-      />
+    <div className="space-y-1">
+      <div className="flex gap-2 items-center">
+        {/* Date Input */}
+        <input
+          type="date"
+          id={id}
+          name={`${name}_date`}
+          value={dateValue}
+          onChange={(e) => handleDateChange(e.target.value)}
+          min={minDate}
+          disabled={disabled}
+          required={required}
+          className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'}`}
+        />
 
-      {/* Hour Select */}
-      <select
-        id={`${id}_hour`}
-        name={`${name}_hour`}
-        value={hourValue}
-        onChange={(e) => handleHourChange(e.target.value)}
-        disabled={disabled || !dateValue}
-        required={required}
-        className="w-16 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-center"
-      >
-        {HOUR_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        {/* Hour Select */}
+        <select
+          id={`${id}_hour`}
+          name={`${name}_hour`}
+          value={hourValue}
+          onChange={(e) => handleHourChange(e.target.value)}
+          disabled={disabled || !dateValue}
+          required={required}
+          className={`w-16 px-2 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-center ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'}`}
+        >
+          {HOUR_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
 
-      <span className="text-gray-500 font-medium">:</span>
+        <span className="text-gray-500 font-medium">:</span>
 
-      {/* Minute Select (15-minute intervals) */}
-      <select
-        id={`${id}_minute`}
-        name={`${name}_minute`}
-        value={minuteValue}
-        onChange={(e) => handleMinuteChange(e.target.value)}
-        disabled={disabled || !dateValue}
-        required={required}
-        className="w-16 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-center"
-      >
-        {MINUTE_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        {/* Minute Select (15-minute intervals) */}
+        <select
+          id={`${id}_minute`}
+          name={`${name}_minute`}
+          value={minuteValue}
+          onChange={(e) => handleMinuteChange(e.target.value)}
+          disabled={disabled || !dateValue}
+          required={required}
+          className={`w-16 px-2 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-center ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'}`}
+        >
+          {MINUTE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
     </div>
   );
 }
