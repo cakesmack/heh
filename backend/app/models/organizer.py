@@ -29,6 +29,11 @@ class Organizer(SQLModel, table=True):
     social_links: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     
     # Enhanced Profile Fields (Part 2)
+    group_type: Optional[str] = Field(default=None, max_length=50)
+    category_focus: Optional[str] = Field(default=None, max_length=50)
+    upcoming_events_count: int = Field(default=0)
+    is_verified: bool = Field(default=False)
+    
     cover_image_url: Optional[str] = Field(default=None, max_length=500)  # 3:1 aspect ratio banner
     city: Optional[str] = Field(default=None, max_length=100)
     social_facebook: Optional[str] = Field(default=None, max_length=500)

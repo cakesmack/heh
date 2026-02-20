@@ -20,6 +20,8 @@ export interface GroupFormData {
     social_website: string;
     social_linkedin: string;
     contact_number: string;
+    group_type: string;
+    category_focus: string;
 }
 
 interface GroupFormProps {
@@ -56,7 +58,12 @@ export default function GroupForm({
         social_website: '',
         social_linkedin: '',
         contact_number: '',
+        group_type: '',
+        category_focus: '',
     });
+
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [generalError, setGeneralError] = useState<string | null>(null);
 
     // Initialize form data when initialData changes
     useEffect(() => {
@@ -99,9 +106,46 @@ export default function GroupForm({
         });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(formData);
+        setFieldErrors({});
+        setGeneralError(null);
+
+        try {
+            await onSubmit(formData);
+        } catch (err: any) {
+            console.error('Form submission failed:', err);
+
+            // Human-friendly error handling for 422 (Validation Errors)
+            if (err.status === 422 && err.detail) {
+                const newFieldErrors: Record<string, string> = {};
+
+                // Fast API returns detail as a list of error objects
+                if (Array.isArray(err.detail)) {
+                    err.detail.forEach((error: any) => {
+                        // error.loc is typically ['body', 'field_name']
+                        const fieldName = error.loc[error.loc.length - 1];
+
+                        // Map technical messages to human ones
+                        let msg = error.msg;
+                        if (error.type === 'value_error.missing') {
+                            msg = 'This field is required';
+                        } else if (error.type === 'string_too_long') {
+                            msg = `Too long (max ${error.ctx.limit_value} characters)`;
+                        } else if (error.type === 'value_error.url.scheme') {
+                            msg = 'Please enter a valid URL (including https://)';
+                        }
+
+                        newFieldErrors[fieldName] = msg;
+                    });
+                }
+
+                setFieldErrors(newFieldErrors);
+                setGeneralError('Please check the form for errors.');
+            } else {
+                setGeneralError(err.message || 'An unexpected error occurred. Please try again.');
+            }
+        }
     };
 
     return (
@@ -119,7 +163,57 @@ export default function GroupForm({
                         onChange={handleChange}
                         placeholder="e.g., Highland Music Society"
                         disabled={isLoading}
+                        error={fieldErrors.name}
                     />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="group_type" className="block text-sm font-medium text-gray-700 mb-2">
+                            Group Type
+                        </label>
+                        <select
+                            id="group_type"
+                            name="group_type"
+                            value={formData.group_type}
+                            onChange={(e) => handleChange(e as any)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${fieldErrors.group_type ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                            disabled={isLoading}
+                        >
+                            <option value="">Select Type</option>
+                            <option value="Community Group">Community Group</option>
+                            <option value="Venue">Venue</option>
+                            <option value="Business">Business</option>
+                            <option value="Non-Profit">Non-Profit</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        {fieldErrors.group_type && <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.group_type}</p>}
+                    </div>
+
+                    <div>
+                        <label htmlFor="category_focus" className="block text-sm font-medium text-gray-700 mb-2">
+                            Category Focus
+                        </label>
+                        <select
+                            id="category_focus"
+                            name="category_focus"
+                            value={formData.category_focus}
+                            onChange={(e) => handleChange(e as any)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${fieldErrors.category_focus ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                            disabled={isLoading}
+                        >
+                            <option value="">Select Focus</option>
+                            <option value="Music">Music</option>
+                            <option value="Arts">Arts</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Networking">Networking</option>
+                            <option value="Education">Education</option>
+                            <option value="Food & Drink">Food & Drink</option>
+                            <option value="Outdoors">Outdoors</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        {fieldErrors.category_focus && <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.category_focus}</p>}
+                    </div>
                 </div>
 
                 <div>
@@ -132,10 +226,11 @@ export default function GroupForm({
                         rows={4}
                         value={formData.bio}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${fieldErrors.bio ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                         placeholder="Tell people about your organization..."
                         disabled={isLoading}
                     />
+                    {fieldErrors.bio && <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.bio}</p>}
                 </div>
 
                 <div>
@@ -150,6 +245,7 @@ export default function GroupForm({
                         onChange={handleChange}
                         placeholder="https://example.com"
                         disabled={isLoading}
+                        error={fieldErrors.website_url}
                     />
                 </div>
 
@@ -201,6 +297,7 @@ export default function GroupForm({
                         onChange={handleChange}
                         placeholder="e.g., Inverness"
                         disabled={isLoading}
+                        error={fieldErrors.city}
                     />
                 </div>
 
@@ -352,8 +449,12 @@ export default function GroupForm({
                         </Button>
                     </div>
                 </div>
-
                 {/* Actions */}
+                {generalError && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700 font-medium">{generalError}</p>
+                    </div>
+                )}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     {mode === 'edit' && isOwner && onDelete && (
                         <button

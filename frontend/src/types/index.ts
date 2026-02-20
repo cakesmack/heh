@@ -866,6 +866,7 @@ export interface Organizer {
   social_website?: string;
   public_email?: string;
   contact_number?: string;
+  is_verified?: boolean;
   // Computed stats (from API)
   total_events_hosted?: number;
   follower_count?: number;

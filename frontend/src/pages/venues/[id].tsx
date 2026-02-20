@@ -17,14 +17,43 @@ import { optimizeImage } from '@/utils/imageOptimizer';
 import ReportModal from '@/components/common/ReportModal';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
-import { Button } from '@/components/common/Button';
+import { Button, cn } from '@/components/ui/button';
+import { Heart, HeartOff } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { Spinner } from '@/components/common/Spinner';
 import { EventCard } from '@/components/events/EventCard';
 
 import { FollowButton } from '@/components/common/FollowButton';
-import SocialLinks from '@/components/common/SocialLinks';
 import RichText from '@/components/ui/RichText';
 import VenueEditModal from '@/components/venues/VenueEditModal';
+import SocialShare from '@/components/common/SocialShare';
+
+// Icons
+const GlobeIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+  </svg>
+);
+
+const FacebookIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z" />
+  </svg>
+);
+
+const InstagramIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" strokeWidth={2} />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" strokeWidth={2} />
+  </svg>
+);
+
+const TwitterIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
@@ -45,7 +74,6 @@ export default function VenueDetailPage() {
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'events' | 'about' | 'staff'>('events');
 
   // Pagination State
   const [eventsTotal, setEventsTotal] = useState(0);
@@ -178,7 +206,9 @@ export default function VenueDetailPage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Venue Not Found</h1>
         <p className="text-gray-600 mb-6">{error || "The venue you're looking for doesn't exist."}</p>
         <Link href="/locations">
-          <Button variant="primary">Browse Locations</Button>
+          <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-full font-bold transition-all shadow-lg active:scale-95">
+            Browse Locations
+          </button>
         </Link>
       </div>
     );
@@ -301,19 +331,24 @@ export default function VenueDetailPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <FollowButton targetId={venue.id} targetType="venue" />
+            <div className="flex-1 flex items-center justify-center md:justify-end gap-4 flex-wrap">
+              <SocialShare
+                url={typeof window !== 'undefined' ? window.location.href : ''}
+                title={venue.name}
+                description={venue.description}
+                variant="white"
+              />
+              <FollowButton targetId={venue.id} targetType="venue" className="rounded-full" />
               {isOwner && (
-                <Button
-                  variant="primary"
+                <button
                   onClick={() => setEditModalOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg border-none"
+                  className="bg-stone-800 border border-white/10 hover:bg-stone-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center whitespace-nowrap shrink-0"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                   Edit Details
-                </Button>
+                </button>
               )}
             </div>
           </div>
@@ -322,227 +357,167 @@ export default function VenueDetailPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Content Area */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Tabs */}
-            <div className="flex items-center gap-8 border-b border-gray-200">
-              <button
-                onClick={() => setActiveTab('events')}
-                className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'events' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
-                  }`}
-              >
-                Events ({events.length})
-              </button>
-              {/* HIDDEN FOR ALPHA - Promotions feature not ready */}
-
-              <button
-                onClick={() => setActiveTab('about')}
-                className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'about' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
-                  }`}
-              >
-                About
-              </button>
-              {isOwner && (
-                <button
-                  onClick={() => setActiveTab('staff')}
-                  className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === 'staff' ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
-                    }`}
-                >
-                  Staff
-                </button>
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
+          {/* Content Area - 70% */}
+          <div className="lg:col-span-7 space-y-8">
+            {/* About Section */}
+            <Card>
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6 flex items-center">
+                Venue Info
+              </h2>
+              {venue.description ? (
+                <RichText content={venue.description} className="text-gray-600 text-lg leading-relaxed relative z-10" />
+              ) : (
+                <p className="text-gray-400 italic bg-gray-50 rounded-lg p-6 border border-dashed border-gray-200">No description available for this venue.</p>
               )}
-            </div>
 
-            {/* Tab Content */}
-            <div className="min-h-[400px]">
-              {activeTab === 'events' && (
-                <div className="space-y-6">
-                  {events.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {events.map((event) => (
-                        <EventCard key={event.id} event={event} canManage={!!isOwner} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-                      <p className="text-gray-500">No upcoming events scheduled.</p>
-                      {isOwner && (
-                        <Link href="/admin/events/new">
-                          <Button variant="primary" className="mt-4">
-                            Create First Event
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
+              {/* Amenities */}
+              <div className="mt-12">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Amenities & Features</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {venue.is_dog_friendly && (
+                    <AmenityItem
+                      icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c1.5-1 3.5-.5 4.5 1s.5 3.5-1 4.5c-1.5 1-2 3-2 5 0 1-.5 2.5-1.5 3.5m0-14c-1.5-1-3.5-.5-4.5 1s-.5 3.5 1 4.5c1.5 1 2 3 2 5 0 1 .5 2.5 1.5 3.5m0-14v1m0 13v-1" /></svg>}
+                      label="Dog Friendly"
+                      active={true}
+                    />
                   )}
-
-                  {/* Load More Button */}
-                  {events.length < eventsTotal && (
-                    <div className="py-8 flex justify-center">
-                      <Button
-                        variant="outline"
-                        onClick={handleLoadMoreEvents}
-                        isLoading={isLoadingMoreEvents}
-                      >
-                        Load More Events
-                      </Button>
-                    </div>
+                  {venue.has_wheelchair_access && (
+                    <AmenityItem
+                      icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-4 8m4-8h4l2 8m-6-8h-4" /></svg>}
+                      label="Wheelchair Access"
+                      active={true}
+                    />
+                  )}
+                  {venue.has_parking && (
+                    <AmenityItem
+                      icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h3a2 2 0 010 4H9V9z" /></svg>}
+                      label="Parking Available"
+                      active={true}
+                    />
+                  )}
+                  {venue.serves_food && (
+                    <AmenityItem
+                      icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
+                      label="Serves Food"
+                      active={true}
+                    />
                   )}
                 </div>
-              )}
+                {!venue.is_dog_friendly && !venue.has_wheelchair_access && !venue.has_parking && !venue.serves_food && (
+                  <p className="text-gray-500 italic text-sm">No amenities listed for this venue.</p>
+                )}
+                {venue.amenities_notes && (
+                  <div className="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-600 italic">
+                    &ldquo;{venue.amenities_notes}&rdquo;
+                  </div>
+                )}
+              </div>
+            </Card>
 
-              {/* HIDDEN FOR ALPHA - Promotions feature not ready */}
-
-
-              {activeTab === 'about' && (
-                <div className="space-y-8">
-                  <Card>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">About {venue.name}</h2>
-                    {venue.description ? (
-                      <RichText content={venue.description} className="text-gray-700 leading-relaxed" />
-                    ) : (
-                      <p className="text-gray-500 italic">No description available.</p>
-                    )}
-                  </Card>
-
-                  {/* Amenities */}
-                  <Card>
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Amenities & Features</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {venue.is_dog_friendly && (
-                        <AmenityItem
-                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c1.5-1 3.5-.5 4.5 1s.5 3.5-1 4.5c-1.5 1-2 3-2 5 0 1-.5 2.5-1.5 3.5m0-14c-1.5-1-3.5-.5-4.5 1s-.5 3.5 1 4.5c1.5 1 2 3 2 5 0 1 .5 2.5 1.5 3.5m0-14v1m0 13v-1" /></svg>}
-                          label="Dog Friendly"
-                          active={true}
-                        />
-                      )}
-                      {venue.has_wheelchair_access && (
-                        <AmenityItem
-                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-4 8m4-8h4l2 8m-6-8h-4" /></svg>}
-                          label="Wheelchair Access"
-                          active={true}
-                        />
-                      )}
-                      {venue.has_parking && (
-                        <AmenityItem
-                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h3a2 2 0 010 4H9V9z" /></svg>}
-                          label="Parking Available"
-                          active={true}
-                        />
-                      )}
-                      {venue.serves_food && (
-                        <AmenityItem
-                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
-                          label="Serves Food"
-                          active={true}
-                        />
-                      )}
-                    </div>
-                    {!venue.is_dog_friendly && !venue.has_wheelchair_access && !venue.has_parking && !venue.serves_food && (
-                      <p className="text-gray-500 italic text-sm">No amenities listed for this venue.</p>
-                    )}
-                    {venue.amenities_notes && (
-                      <div className="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-600 italic">
-                        &ldquo;{venue.amenities_notes}&rdquo;
-                      </div>
-                    )}
-                  </Card>
+            {/* Staff Section (if owner) */}
+            {isOwner && (
+              <Card>
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Manage Staff</h3>
                 </div>
-              )}
 
-              {activeTab === 'staff' && isOwner && (
-                <div className="space-y-6">
-                  <Card>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Staff</h3>
-                    <form onSubmit={handleAddStaff} className="flex gap-2 mb-6">
-                      <input
-                        type="email"
-                        value={newStaffEmail}
-                        onChange={(e) => setNewStaffEmail(e.target.value)}
-                        placeholder="Staff member email"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        required
-                      />
-                      <Button type="submit" isLoading={isAddingStaff} variant="primary">
-                        Add Staff
-                      </Button>
-                    </form>
+                <form onSubmit={handleAddStaff} className="flex gap-2 mb-8">
+                  <div className="flex-1 relative">
+                    <input
+                      type="email"
+                      value={newStaffEmail}
+                      onChange={(e) => setNewStaffEmail(e.target.value)}
+                      placeholder="Enter staff email address..."
+                      className="w-full pl-4 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isAddingStaff}
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-full transition-all active:scale-95 flex items-center justify-center shadow-lg"
+                  >
+                    {isAddingStaff ? <Spinner size="sm" /> : 'Add Team Member'}
+                  </button>
+                </form>
 
-                    {isStaffLoading ? (
-                      <div className="flex justify-center py-8">
-                        <Spinner />
-                      </div>
-                    ) : staff.length > 0 ? (
-                      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {staff.map((s) => (
-                              <tr key={s.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">{s.user_username || 'User'}</div>
-                                  <div className="text-sm text-gray-500">{s.user_email}</div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <Badge variant="info">{s.role}</Badge>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                  <button
-                                    onClick={() => handleRemoveStaff(s.user_id)}
-                                    className="text-red-600 hover:text-red-900"
-                                  >
-                                    Remove
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                        <p className="text-gray-500">No staff members added yet.</p>
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              )}
-            </div>
+                {isStaffLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Spinner />
+                  </div>
+                ) : staff.length > 0 ? (
+                  <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">User</th>
+                          <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Role</th>
+                          <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {staff.map((s) => (
+                          <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-bold text-gray-900">{s.user_username || 'User'}</div>
+                              <div className="text-xs text-gray-500">{s.user_email}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-600 uppercase tracking-widest border border-blue-100">
+                                {s.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <button
+                                onClick={() => handleRemoveStaff(s.user_id)}
+                                className="text-red-500 hover:text-red-700 font-bold text-xs uppercase tracking-widest"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                    <p className="text-gray-500 font-medium">No team members added yet.</p>
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-8">
+          {/* Sidebar - 30% */}
+          <div className="lg:col-span-3 space-y-6">
             {/* Map Card */}
             <Card className="overflow-hidden p-0">
-              <div className="p-4 border-b border-gray-100">
-                <h3 className="font-bold text-gray-900">Location</h3>
-                <p className="text-sm text-gray-500">{venue.address}</p>
+              <div className="p-6 border-b border-gray-100">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 uppercase">Location</p>
+                <h3 className="text-sm font-bold text-gray-900 leading-snug">{venue.address}</h3>
               </div>
               {venue.latitude && venue.longitude && (
-                <GoogleMiniMap
-                  latitude={venue.latitude}
-                  longitude={venue.longitude}
-                  height="300px"
-                  zoom={15}
-                  interactive={true}
-                />
+                <div className="h-[300px] w-full bg-gray-100">
+                  <GoogleMiniMap
+                    latitude={venue.latitude}
+                    longitude={venue.longitude}
+                    height="300px"
+                    zoom={15}
+                    interactive={true}
+                  />
+                </div>
               )}
               <div className="p-4 bg-gray-50">
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${venue.latitude},${venue.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.3} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   </svg>
                   Get Directions
                 </a>
@@ -551,53 +526,101 @@ export default function VenueDetailPage() {
 
             {/* Contact Card */}
             <Card>
-              <h3 className="font-bold text-gray-900 mb-4">Contact Info</h3>
-              <div className="space-y-4 text-sm">
-                {venue.phone && (
-                  <div className="flex items-center gap-3">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                    <a href={`tel:${venue.phone}`} className="text-gray-600 hover:text-blue-600">{venue.phone}</a>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6">Connect</h3>
+              <div className="space-y-5 text-sm">
+                {(venue.phone || venue.email) && (
+                  <div className="space-y-4">
+                    {venue.phone && (
+                      <div className="pb-4 border-b border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Phone</p>
+                        <a href={`tel:${venue.phone}`} className="text-emerald-600 hover:text-emerald-700 font-bold transition-all text-base">
+                          {venue.phone}
+                        </a>
+                      </div>
+                    )}
+                    {venue.email && (
+                      <div className="pb-4 border-b border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Email</p>
+                        <a href={`mailto:${venue.email}`} className="text-emerald-600 hover:text-emerald-700 font-bold transition-all truncate block text-base">
+                          {venue.email}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
-                {venue.email && (
-                  <div className="flex items-center gap-3">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                    <a href={`mailto:${venue.email}`} className="text-gray-600 hover:text-blue-600">{venue.email}</a>
-                  </div>
-                )}
-                {venue.website && (
-                  <div className="flex items-center gap-3">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
-                    <a href={venue.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Visit Website</a>
-                  </div>
-                )}
-              </div>
 
-              {/* Social Media Links */}
-              <SocialLinks
-                facebook={venue.social_facebook}
-                instagram={venue.social_instagram}
-                x={venue.social_x}
-                linkedin={venue.social_linkedin}
-                tiktok={venue.social_tiktok}
-                website={venue.website_url}
-                className="mt-4 pt-4 border-t border-gray-100"
-              />
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Socials & Website</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {venue.website && (
+                      <a
+                        href={venue.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-emerald-600 hover:border-emerald-200"
+                        title="Website"
+                      >
+                        <GlobeIcon className="w-5 h-5" />
+                      </a>
+                    )}
+                    {venue.social_facebook && (
+                      <a
+                        href={venue.social_facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-blue-600 hover:border-blue-200"
+                        title="Facebook"
+                      >
+                        <FacebookIcon className="w-5 h-5" />
+                      </a>
+                    )}
+                    {venue.social_instagram && (
+                      <a
+                        href={venue.social_instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-pink-600 hover:border-pink-200"
+                        title="Instagram"
+                      >
+                        <InstagramIcon className="w-5 h-5" />
+                      </a>
+                    )}
+                    {venue.social_x && (
+                      <a
+                        href={venue.social_x}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-stone-900 hover:border-stone-300"
+                        title="X (Twitter)"
+                      >
+                        <TwitterIcon className="w-5 h-5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
             </Card>
 
             {/* Opening Hours Card */}
             {venue.opening_hours && (
               <Card>
-                <h3 className="font-bold text-gray-900 mb-4">Opening Hours</h3>
-                <RichText content={venue.opening_hours} className="text-sm text-gray-600" />
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Opening Hours</p>
+                <RichText content={venue.opening_hours} className="text-sm font-medium text-gray-600 leading-relaxed" />
               </Card>
             )}
 
             {/* Claim Card */}
             {!isOwner && (
-              <div className="p-6 bg-stone-900 rounded-2xl text-white">
-                <h3 className="font-bold mb-2">Is this your venue?</h3>
-                <p className="text-sm text-stone-400 mb-4">Claim this listing to manage events, promotions, and more.</p>
+              <div className="p-8 bg-stone-900 rounded-3xl text-white shadow-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-bold text-lg">Is this your venue?</h3>
+                </div>
+                <p className="text-sm text-stone-400 mb-6 leading-relaxed">Claim this listing to manage events, promotions, and verify your details.</p>
                 <button
                   onClick={async () => {
                     const reason = prompt("Why do you want to claim this venue?");
@@ -605,18 +628,73 @@ export default function VenueDetailPage() {
                     try {
                       await api.venueClaims.create(venue.id, reason);
                       alert("Claim submitted successfully!");
-                      refreshUser(); // Refresh state to show "My Venues" tab if approved immediately (or just to sync)
+                      refreshUser();
                     } catch (err) {
                       alert("Failed to submit claim.");
                     }
                   }}
-                  className="w-full py-2 bg-white text-stone-950 rounded-lg text-sm font-bold hover:bg-stone-200 transition-colors"
+                  className="w-full py-3 bg-white text-stone-950 rounded-xl text-sm font-black hover:bg-stone-200 transition-all active:scale-[0.98]"
                 >
                   Claim Venue
                 </button>
               </div>
             )}
           </div>
+        </div>
+
+        {/* Upcoming Events Section - FULL WIDTH BELOW THE GRID */}
+        <div className="mt-16 pt-12 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-12 gap-6">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">Upcoming Events</h2>
+              <p className="text-gray-500 font-medium">Discover what's happening soon at {venue.name}</p>
+            </div>
+            <div className="flex items-center gap-3 self-start sm:self-auto">
+              <span className="text-gray-400 font-bold uppercase text-xs tracking-widest">Total Events</span>
+              <span className="bg-gray-900 text-white text-xs font-black px-3 py-1.5 rounded-full">{eventsTotal} Results</span>
+            </div>
+          </div>
+
+          {events.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
+              {events.map((event) => (
+                <div key={event.id} className="group">
+                  <EventCard event={event} canManage={!!isOwner} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-24 text-center bg-white rounded-[2.5rem] border-2 border-dashed border-gray-100">
+              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">No upcoming events scheduled</h3>
+              <p className="text-gray-500 max-w-xs mx-auto mb-8">Check back later for new event announcements at this venue.</p>
+              {isOwner && (
+                <Link href="/account/events/create">
+                  <button className="px-8 py-4 rounded-full shadow-xl shadow-emerald-100/20 bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all active:scale-95">
+                    Create First Event
+                  </button>
+                </Link>
+              )}
+            </div>
+          )}
+
+          {/* Load More Button */}
+          {events.length < eventsTotal && (
+            <div className="mt-16 flex justify-center">
+              <button
+                onClick={handleLoadMoreEvents}
+                disabled={isLoadingMoreEvents}
+                className="px-10 py-4 border-2 border-gray-200 text-gray-700 font-black rounded-full hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+              >
+                {isLoadingMoreEvents && <Spinner size="sm" />}
+                Load More Results
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

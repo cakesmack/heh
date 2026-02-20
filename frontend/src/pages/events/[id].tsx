@@ -10,6 +10,9 @@ import Head from 'next/head';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import dynamic from 'next/dynamic';
 import { GetServerSideProps } from 'next';
+import { Button, cn } from '@/components/ui/button';
+import { Heart, HeartOff } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/common/Card';
@@ -17,7 +20,7 @@ import { Badge } from '@/components/common/Badge';
 import { Spinner } from '@/components/common/Spinner';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
-import ShareButtons from '@/components/events/ShareButtons';
+import SocialShare from '@/components/common/SocialShare';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 import ClaimEventModal from '@/components/events/ClaimEventModal';
 import ReportModal from '@/components/common/ReportModal';
@@ -381,68 +384,77 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
               </div>
             </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-              {/* Get Tickets Button Logic */}
-              {event.ticket_url ? (
-                <a
-                  href={event.ticket_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackTicketClick(event.id)}
-                  className="flex-1 md:flex-none px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center"
-                >
-                  Get Tickets
-                </a>
-              ) : (event.showtimes && event.showtimes.length > 0) ? (
-                <button
-                  onClick={() => {
-                    const mobileSidebar = document.getElementById('mobile-dates-sidebar');
-                    const desktopSidebar = document.getElementById('dates-sidebar');
-                    const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
-                    if (sidebar) {
-                      sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                      setTimeout(() => {
-                        sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                      }, 1000);
-                    }
+            <div className="flex-1 flex items-center justify-center md:justify-end gap-x-4 gap-y-3 flex-wrap">
+              {/* Action Group */}
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <SocialShare
+                  url={typeof window !== 'undefined' ? window.location.href : ''}
+                  title={event.title}
+                  description={event.description}
+                  variant="white"
+                />
+
+                {/* Get Tickets Button Logic */}
+                {event.ticket_url ? (
+                  <a
+                    href={event.ticket_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackTicketClick(event.id)}
+                    className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
+                  >
+                    Get Tickets
+                  </a>
+                ) : (event.showtimes && event.showtimes.length > 0) ? (
+                  <button
+                    onClick={() => {
+                      const mobileSidebar = document.getElementById('mobile-dates-sidebar');
+                      const desktopSidebar = document.getElementById('dates-sidebar');
+                      const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
+                      if (sidebar) {
+                        sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                        setTimeout(() => {
+                          sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                        }, 1000);
+                      }
+                    }}
+                    className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
+                  >
+                    Get Tickets
+                  </button>
+                ) : null}
+
+                {/* Visit Website Button */}
+                {event.website_url && (
+                  <a
+                    href={event.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-2.5 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:white text-sm font-bold rounded-full transition-all transform hover:scale-105 text-center whitespace-nowrap shrink-0"
+                  >
+                    Visit Website
+                  </a>
+                )}
+
+                <BookmarkButton
+                  eventId={event.id}
+                  showLabel={true}
+                  className="transform hover:scale-105 shadow-lg shrink-0 whitespace-nowrap"
+                  onToggle={(isBookmarked) => {
+                    setEvent(prev => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        save_count: isBookmarked
+                          ? (prev.save_count || 0) + 1
+                          : Math.max(0, (prev.save_count || 0) - 1)
+                      };
+                    });
+                    setBookmarkCount(prev => isBookmarked ? prev + 1 : Math.max(0, prev - 1));
                   }}
-                  className="flex-1 md:flex-none px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center"
-                >
-                  Get Tickets
-                </button>
-              ) : null}
-
-              {/* Visit Website Button */}
-              {event.website_url && (
-                <a
-                  href={event.website_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 md:flex-none px-6 py-3 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:text-white font-semibold rounded-full transition-all transform hover:scale-105 text-center"
-                >
-                  Visit Website
-                </a>
-              )}
-
-              <BookmarkButton
-                eventId={event.id}
-                showLabel={true}
-                className="flex-1 md:flex-none transform hover:scale-105 shadow-lg"
-                onToggle={(isBookmarked) => {
-                  setEvent(prev => {
-                    if (!prev) return null;
-                    return {
-                      ...prev,
-                      save_count: isBookmarked
-                        ? (prev.save_count || 0) + 1
-                        : Math.max(0, (prev.save_count || 0) - 1)
-                    };
-                  });
-                  setBookmarkCount(prev => isBookmarked ? prev + 1 : Math.max(0, prev - 1));
-                }}
-              />
-
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -669,7 +681,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
 
               {/* Share Buttons */}
               <div className="pt-4 border-t border-gray-100 mt-4">
-                <ShareButtons
+                <SocialShare
                   url={typeof window !== 'undefined' ? window.location.href : ''}
                   title={event.title}
                   description={event.description}

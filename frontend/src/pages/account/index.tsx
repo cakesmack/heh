@@ -229,7 +229,7 @@ function AccountPageContent() {
 
         // Fetch organizer profiles
         try {
-          const orgData = await api.organizers.list(user.id);
+          const orgData = await api.organizers.list({ user_id: user.id });
           setMyOrganizers(orgData.organizers || []);
         } catch (err) {
           console.error('Error fetching organizers:', err);

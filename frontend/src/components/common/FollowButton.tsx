@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
+import { Button, cn } from '@/components/ui/button';
 import { Heart, HeartOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -64,7 +64,7 @@ export function FollowButton({ targetId, targetType, className }: FollowButtonPr
             size="sm"
             onClick={handleToggleFollow}
             disabled={isLoading}
-            className={className}
+            className={cn("rounded-full px-6", className)}
         >
             {isFollowing ? (
                 <>

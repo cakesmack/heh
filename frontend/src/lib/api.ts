@@ -1701,8 +1701,8 @@ export const api = {
     },
   },
   organizers: {
-    list: async (userId?: string) => {
-      const query = userId ? `?user_id=${userId}` : '';
+    list: async (filters?: { user_id?: string; city?: string; group_type?: string; skip?: number; limit?: number }) => {
+      const query = filters ? buildQueryString(filters) : '';
       return apiFetch<{ organizers: any[], total: number }>(`/api/organizers${query}`);
     },
     create: async (data: any) => {

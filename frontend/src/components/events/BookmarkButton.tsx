@@ -117,7 +117,7 @@ export function BookmarkButton({
         ${isBookmarked
                     ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md'
                     : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'}
-        ${showLabel ? 'px-6 py-3 w-auto gap-2' : sizeClasses[size]}
+        ${showLabel ? 'px-6 py-2.5 w-auto gap-2 whitespace-nowrap shrink-0' : sizeClasses[size]}
         ${className}
       `}
             title={isBookmarked ? 'Not attending' : 'Mark as attending'}

@@ -25,37 +25,65 @@ def list_organizers(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=100),
     user_id: Optional[str] = None,
+    city: Optional[str] = None,
+    group_type: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
     """
     List organizers with optional filtering.
     """
-    query = select(Organizer)
+    # Base query selecting Organizer and counting distinct event titles
+    # Outer join ensures we get organizers even if they have zero upcoming events
+    query = (
+        select(Organizer, func.count(func.distinct(Event.title)).label("computed_count"))
+        .outerjoin(
+            Event,
+            (Event.organizer_profile_id == Organizer.id) &
+            (Event.date_end >= datetime.utcnow()) &
+            (Event.status == "published")
+        )
+    )
     
+    # Apply Filters
     if user_id:
         from sqlmodel import or_
         user_uuid = normalize_uuid(user_id)
-        
-        # Subquery for memberships
         member_subquery = select(GroupMember.group_id).where(GroupMember.user_id == user_uuid)
-        
         query = query.where(
             or_(
                 Organizer.user_id == user_uuid,
                 Organizer.id.in_(member_subquery)
             )
         )
+    
+    if city:
+        query = query.where(Organizer.city == city)
+    
+    if group_type:
+        query = query.where(Organizer.group_type == group_type)
 
-    # Count total
-    count_query = select(func.count()).select_from(query.subquery())
+    # Grouping and Sorting
+    query = query.group_by(Organizer.id)
+    query = query.order_by(func.count(func.distinct(Event.title)).desc(), Organizer.name.asc())
+
+    # Count total (distinct organizers)
+    count_query = select(func.count(func.distinct(Organizer.id))).select_from(query.subquery())
     total = session.exec(count_query).one()
     
     # Pagination
     query = query.offset(skip).limit(limit)
-    organizers = session.exec(query).all()
+    
+    # Execute query
+    results = session.exec(query).all()
+    
+    final_organizers = []
+    for org, count in results:
+        # Populate the field for the response schema
+        org.upcoming_events_count = count or 0
+        final_organizers.append(org)
     
     return OrganizerListResponse(
-        organizers=organizers,
+        organizers=final_organizers,
         total=total
     )
 
@@ -107,6 +135,22 @@ def get_organizer_by_slug(
             detail="Organizer not found"
         )
     
+    # Compute upcoming events count (unique titles)
+    upcoming_events = session.exec(
+        select(func.count(func.distinct(Event.title))).select_from(Event).where(
+            Event.organizer_profile_id == organizer.id,
+            Event.date_end >= datetime.utcnow(),
+            Event.status == "published"
+        )
+    ).one() or 0
+    
+    # Sync with DB if changed
+    if organizer.upcoming_events_count != upcoming_events:
+        organizer.upcoming_events_count = upcoming_events
+        session.add(organizer)
+        session.commit()
+        session.refresh(organizer)
+
     # Compute total events hosted (past events only)
     total_events = session.exec(
         select(func.count()).select_from(Event).where(

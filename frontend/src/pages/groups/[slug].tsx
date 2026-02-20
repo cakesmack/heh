@@ -8,11 +8,15 @@ import { Spinner } from '@/components/common/Spinner';
 import { EventCard } from '@/components/events/EventCard';
 import { FollowButton } from '@/components/common/FollowButton';
 import { Input } from '@/components/common/Input';
-import { Button } from '@/components/common/Button';
+import { Button, cn } from '@/components/ui/button';
+import { Heart, HeartOff } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
+import { Card } from '@/components/common/Card';
 import { useAuth } from '@/hooks/useAuth';
 import { GroupRole } from '@/types';
 import OptimizedImage from '@/components/ui/OptimizedImage';
+import SocialShare from '@/components/common/SocialShare';
 
 // Icons
 const PencilIcon = ({ className }: { className?: string }) => (
@@ -90,6 +94,15 @@ export default function OrganizerProfilePage() {
     const [canEdit, setCanEdit] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 50);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Invite Modal State
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -259,8 +272,8 @@ export default function OrganizerProfilePage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Cover Image (3:1 aspect ratio) */}
-            <div className="relative h-48 md:h-64 lg:h-80 overflow-hidden">
+            {/* Cover Image (3:1 aspect ratio) - No overflow-hidden to allow logo overlap */}
+            <div className="relative h-48 md:h-64 lg:h-80">
                 {organizer.cover_image_url || organizer.hero_image_url ? (
                     <OptimizedImage
                         src={organizer.cover_image_url || organizer.hero_image_url}
@@ -272,362 +285,356 @@ export default function OrganizerProfilePage() {
                 ) : (
                     <div className="w-full h-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600" />
                 )}
+                {/* Navigation Ribbon for mobile only */}
                 <div className="absolute inset-0 bg-black/20" />
+                <div className="absolute top-4 left-4 z-40">
+                    <Link
+                        href="/groups"
+                        className="flex items-center gap-2 px-4 py-2 bg-stone-900/60 backdrop-blur-md text-white rounded-full text-sm font-medium hover:bg-stone-800 transition-colors border border-white/10"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back to Groups
+                    </Link>
+                </div>
 
-                {/* Back Button */}
-                <Link
-                    href="/events"
-                    className="absolute top-4 left-4 inline-flex items-center text-sm text-white bg-black/30 hover:bg-black/50 px-3 py-1.5 rounded-full backdrop-blur transition-colors"
-                >
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Back
-                </Link>
+                {/* Floating Logo for Mobile - part of hero so it scrolls away */}
+                <div className="md:hidden absolute -bottom-16 left-1/2 -translate-x-1/2 w-32 h-32 rounded-3xl border-4 border-stone-900 shadow-2xl overflow-hidden bg-white z-40">
+                    {organizer.logo_url ? (
+                        <OptimizedImage
+                            src={organizer.logo_url}
+                            variant="thumb"
+                            alt={organizer.name}
+                            fill
+                            className="object-cover"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                            <span className="text-5xl font-bold text-white">{organizer.name.charAt(0)}</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Profile Header - Overlapping Logo */}
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="relative -mt-16 mb-6">
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between">
-                        {/* Logo + Name */}
-                        <div className="flex items-end space-x-4">
-                            <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 border-white shadow-xl overflow-hidden bg-white relative">
-                                {organizer.logo_url ? (
-                                    <OptimizedImage
-                                        src={organizer.logo_url}
-                                        variant="thumb"
-                                        alt={organizer.name}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                                        <span className="text-4xl md:text-5xl font-bold text-white">{organizer.name.charAt(0)}</span>
+            {/* Info Ribbon */}
+            <div className="sticky top-0 z-30 bg-stone-950/80 backdrop-blur-xl border-y border-white/5 text-white min-h-[80px] flex items-center shadow-2xl">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative w-full py-6">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8 w-full">
+                        {/* Floating Logo for Desktop - tied to ribbon so it stays sticky */}
+                        <div className="hidden md:block absolute -top-16 left-8 w-40 h-40 rounded-3xl border-4 border-stone-900 shadow-2xl overflow-hidden bg-white z-40">
+                            {organizer.logo_url ? (
+                                <OptimizedImage
+                                    src={organizer.logo_url}
+                                    variant="thumb"
+                                    alt={organizer.name}
+                                    fill
+                                    className="object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                                    <span className="text-5xl font-bold text-white">{organizer.name.charAt(0)}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Text Content - Collapses padding on scroll for a tighter top bar on mobile */}
+                        <div className={cn(
+                            "flex-1 min-w-0 md:pl-52 text-center md:text-left md:pt-0 transition-all duration-300",
+                            isScrolled ? "pt-4" : "pt-12"
+                        )}>
+                            <div className="flex items-center gap-3 mb-1 flex-wrap justify-center md:justify-start">
+                                <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">{organizer.name}</h1>
+                                {organizer.is_verified && (
+                                    <div className="text-blue-500 shrink-0 mt-1" title="Verified Organizer">
+                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                        </svg>
                                     </div>
                                 )}
                             </div>
-                            <div className="mb-2">
-                                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{organizer.name}</h1>
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-2 text-stone-400 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <MapPinIcon className="w-4 h-4 text-emerald-500" />
+                                    <span className="text-stone-200">{organizer.city || 'Highlands'}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Group</span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Follow Button (desktop) */}
-                        <div className="hidden md:flex items-center space-x-3 mt-4 md:mt-0">
+                        {/* Action Group - Far right on desktop */}
+                        <div className="flex items-center gap-4 flex-wrap justify-center md:justify-end">
+                            <SocialShare
+                                url={typeof window !== 'undefined' ? window.location.href : ''}
+                                title={organizer.name}
+                                description={organizer.bio}
+                                variant="white"
+                            />
+                            <FollowButton targetId={organizer.id} targetType="group" className="rounded-full shrink-0 whitespace-nowrap" />
                             {canEdit && (
-                                <>
+                                <div className="flex items-center gap-2 md:ml-2 flex-wrap justify-center">
                                     <Link
                                         href={`/submit-event?organizer_profile_id=${organizer.id}`}
-                                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none"
+                                        className="inline-flex items-center px-6 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-full shadow-lg shadow-emerald-900/20 hover:bg-emerald-700 transition-all active:scale-95 whitespace-nowrap shrink-0"
                                     >
-                                        <PlusIcon className="w-4 h-4 mr-2" />
+                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
                                         Create Event
                                     </Link>
                                     <Link
                                         href={`/account/organizers/${organizer.id}/edit`}
-                                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                                        className="inline-flex items-center px-6 py-2.5 bg-stone-800 border border-white/10 text-white text-sm font-bold rounded-full hover:bg-stone-700 transition-all active:scale-95 whitespace-nowrap shrink-0"
                                     >
                                         <PencilIcon className="w-4 h-4 mr-2" />
-                                        Edit Page
+                                        Edit
                                     </Link>
-                                    <button
-                                        onClick={() => setIsInviteModalOpen(true)}
-                                        className="inline-flex items-center px-4 py-2 border border-emerald-600 shadow-sm text-sm font-medium rounded-md text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none"
-                                    >
-                                        <UsersIcon className="w-4 h-4 mr-2" />
-                                        Invite
-                                    </button>
-                                </>
+                                </div>
                             )}
-                            <FollowButton targetId={organizer.id} targetType="group" />
                         </div>
                     </div>
                 </div>
-
-                {/* Stats Bar */}
-                <div className="bg-white rounded-xl shadow-sm p-4 mb-8 flex flex-wrap items-center gap-6">
-                    {organizer.city && (
-                        <div className="flex items-center text-gray-600">
-                            <MapPinIcon className="w-5 h-5 mr-2 text-emerald-600" />
-                            <span className="font-medium">{organizer.city}</span>
-                        </div>
-                    )}
-                    <div className="flex items-center text-gray-600">
-                        <CalendarIcon className="w-5 h-5 mr-2 text-emerald-600" />
-                        <span className="font-medium">{organizer.total_events_hosted || 0} Events Hosted</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                        <UsersIcon className="w-5 h-5 mr-2 text-emerald-600" />
-                        <span className="font-medium">{organizer.follower_count || 0} Followers</span>
-                    </div>
-
-                    {/* Follow Button (mobile) */}
-                    <div className="md:hidden ml-auto flex items-center space-x-3">
-                        {canEdit && (
-                            <>
-                                <Link
-                                    href={`/submit-event?organizer_profile_id=${organizer.id}`}
-                                    className="inline-flex items-center p-2 bg-emerald-600 text-white shadow-sm text-sm font-medium rounded-md hover:bg-emerald-700 focus:outline-none"
-                                    title="Create Event"
-                                >
-                                    <PlusIcon className="w-4 h-4" />
-                                </Link>
-                                <Link
-                                    href={`/account/organizers/${organizer.id}/edit`}
-                                    className="inline-flex items-center p-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-                                    title="Edit Page"
-                                >
-                                    <PencilIcon className="w-4 h-4" />
-                                </Link>
-                                <button
-                                    onClick={() => setIsInviteModalOpen(true)}
-                                    className="inline-flex items-center p-2 border border-emerald-600 shadow-sm text-sm font-medium rounded-md text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none"
-                                    title="Invite Members"
-                                >
-                                    <UsersIcon className="w-4 h-4" />
-                                </button>
-                            </>
-                        )}
-                        <FollowButton targetId={organizer.id} targetType="group" />
-                    </div>
-                </div>
-
             </div>
 
-            {/* About Section (Always Visible) */}
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                    {/* About Section (2/3 width) */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white rounded-xl shadow-sm p-6">
-                            <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
+            {/* Main Content Layout */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 mb-16">
+                    {/* Left: About Section (70%) */}
+                    <div className="lg:col-span-7 space-y-6">
+                        <Card>
+                            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6 flex items-center">
+                                About
+                            </h2>
                             {organizer.bio ? (
-                                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{organizer.bio}</p>
+                                <p className="text-gray-600 text-lg leading-relaxed whitespace-pre-wrap relative z-10">
+                                    {organizer.bio}
+                                </p>
                             ) : (
-                                <p className="text-gray-500 italic">No description available.</p>
+                                <p className="text-gray-400 italic bg-gray-50 rounded-lg p-6 border border-dashed border-gray-200">This organizer hasn't added a bio yet.</p>
                             )}
-                        </div>
+                        </Card>
                     </div>
 
-                    {/* Sidebar: Quick Info (1/3 width) */}
-                    <div className="space-y-6">
-                        {/* Contact Organizer */}
-                        {(organizer.public_email || organizer.contact_number) && (
-                            <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-                                {organizer.contact_number && (
-                                    <div className="flex items-center text-gray-600">
-                                        <PhoneIcon className="w-5 h-5 mr-3 text-emerald-600" />
-                                        <span className="font-medium">{organizer.contact_number}</span>
-                                    </div>
-                                )}
-                                {organizer.public_email && (
-                                    <a
-                                        href={`mailto:${organizer.public_email}`}
-                                        className="w-full inline-flex items-center justify-center px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors"
-                                    >
-                                        <MailIcon className="w-5 h-5 mr-2" />
-                                        Contact Organizer
-                                    </a>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Social Links */}
-                        {hasSocials && (
-                            <div className="bg-white rounded-xl shadow-sm p-6">
-                                <h3 className="text-sm font-semibold text-gray-900 mb-4">Connect With Us</h3>
-                                <div className="space-y-3">
-                                    {(organizer.social_website || organizer.website_url) && (
-                                        <a
-                                            href={organizer.social_website || organizer.website_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center text-gray-600 hover:text-emerald-600 transition-colors"
-                                        >
-                                            <GlobeIcon className="w-5 h-5 mr-3" />
-                                            <span>Website</span>
-                                        </a>
-                                    )}
-                                    {organizer.social_facebook && (
-                                        <a
-                                            href={organizer.social_facebook}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"
-                                        >
-                                            <FacebookIcon className="w-5 h-5 mr-3" />
-                                            <span>Facebook</span>
-                                        </a>
-                                    )}
-                                    {organizer.social_instagram && (
-                                        <a
-                                            href={organizer.social_instagram}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center text-gray-600 hover:text-pink-600 transition-colors"
-                                        >
-                                            <InstagramIcon className="w-5 h-5 mr-3" />
-                                            <span>Instagram</span>
-                                        </a>
-                                    )}
-                                    {organizer.public_email && (
-                                        <a
-                                            href={`mailto:${organizer.public_email}`}
-                                            className="flex items-center text-gray-600 hover:text-emerald-600 transition-colors"
-                                        >
-                                            <MailIcon className="w-5 h-5 mr-3" />
-                                            <span>Email</span>
-                                        </a>
-                                    )}
+                    {/* Right: Sidebar (30%) */}
+                    <div className="lg:col-span-3 space-y-6">
+                        {/* Stats Summary */}
+                        <Card>
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6">Quick Stats</h3>
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="text-center">
+                                    <p className="text-4xl font-black text-gray-900 leading-none mb-2">{organizer.total_events_hosted || 0}</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hosted</p>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-4xl font-black text-gray-900 leading-none mb-2">{organizer.follower_count || 0}</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Followers</p>
                                 </div>
                             </div>
-                        )}
+                        </Card>
+
+                        {/* Contact Card */}
+                        <Card>
+                            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6">Connect</h3>
+                            <div className="space-y-5">
+                                {organizer.public_email && (
+                                    <div className="pb-4 border-b border-gray-100">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Email</p>
+                                        <a
+                                            href={`mailto:${organizer.public_email}`}
+                                            className="text-emerald-600 hover:text-emerald-700 font-bold transition-all truncate block"
+                                        >
+                                            {organizer.public_email}
+                                        </a>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Socials & Website</p>
+                                    <div className="flex items-center gap-2">
+                                        {(organizer.social_website || organizer.website_url) && (
+                                            <a
+                                                href={organizer.social_website || organizer.website_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all"
+                                                title="Website"
+                                            >
+                                                <GlobeIcon className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                        {organizer.social_facebook && (
+                                            <a
+                                                href={organizer.social_facebook}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all"
+                                                title="Facebook"
+                                            >
+                                                <FacebookIcon className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                        {organizer.social_instagram && (
+                                            <a
+                                                href={organizer.social_instagram}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all"
+                                                title="Instagram"
+                                            >
+                                                <InstagramIcon className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                        {organizer.public_email && (
+                                            <a
+                                                href={`mailto:${organizer.public_email}`}
+                                                className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all"
+                                                title="Contact via Email"
+                                            >
+                                                <MailIcon className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => {/* Contact Logic */ }}
+                                    className="w-full py-3 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all text-sm mt-4"
+                                >
+                                    Contact Organizer
+                                </button>
+                            </div>
+                        </Card>
                     </div>
                 </div>
-            </div>
 
-            {/* Tabs */}
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                    {[
-                        { id: 'upcoming', name: 'Upcoming Events' },
-                        { id: 'past', name: 'Past Events' },
-                        ...(isMember ? [{ id: 'team', name: 'Members' }] : [])
+                {/* Tabs & Events Feed */}
+                <div className="mb-20">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 mb-10 gap-6">
+                        <nav className="flex space-x-10">
+                            {[
+                                { id: 'upcoming', name: 'Upcoming Events' },
+                                { id: 'past', name: 'Past History' },
+                                ...(isMember ? [{ id: 'team', name: 'Team Members' }] : [])
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as any)}
+                                    className={`
+                                        whitespace-nowrap py-5 px-1 border-b-4 font-bold text-sm transition-all
+                                        ${activeTab === tab.id
+                                            ? 'border-emerald-500 text-emerald-700'
+                                            : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'}
+                                    `}
+                                >
+                                    {tab.name}
+                                </button>
+                            ))}
+                        </nav>
+                        <div className="hidden sm:flex items-center gap-2">
+                            <span className="text-gray-400 font-bold uppercase text-xs tracking-widest">Displaying</span>
+                            <span className="bg-gray-900 text-white text-xs font-black px-3 py-1 rounded-full">{eventsTotal} Results</span>
+                        </div>
+                    </div>
 
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`
-                                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                                ${activeTab === tab.id
-                                    ? 'border-emerald-500 text-emerald-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                            `}
-                        >
-                            {tab.name}
-                        </button>
-                    ))}
-                </nav>
-            </div>
-
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-12">
                     {activeTab === 'team' ? (
-                        <GroupTeamList organizerId={organizer.id} />
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100">
+                            <GroupTeamList organizerId={organizer.id} />
+                        </div>
                     ) : (
-                        <>
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-2xl font-bold text-gray-900">
-                                    {activeTab === 'upcoming' ? 'Upcoming Events' : 'Past Events'}
-                                </h2>
-                                <span className="bg-emerald-100 text-emerald-800 text-sm font-medium px-3 py-1 rounded-full">
-                                    {eventsTotal}
-                                </span>
-                            </div>
-
+                        <div>
                             {events.length > 0 ? (
                                 <>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
                                         {events.map((event) => (
-                                            <div key={event.id} className={activeTab === 'past' ? 'opacity-75 grayscale transition-all hover:grayscale-0 hover:opacity-100' : ''}>
+                                            <div key={event.id} className={activeTab === 'past' ? 'opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all' : 'group'}>
                                                 <EventCard event={event} />
                                             </div>
                                         ))}
                                     </div>
-
                                     {events.length < eventsTotal && (
-                                        <div className="mt-8 flex justify-center">
-                                            <Button
-                                                variant="outline"
+                                        <div className="mt-16 flex justify-center">
+                                            <button
                                                 onClick={handleLoadMore}
-                                                isLoading={isLoadingMore}
+                                                disabled={isLoadingMore}
+                                                className="px-10 py-4 border-2 border-emerald-600 text-emerald-700 font-black rounded-full hover:bg-emerald-600 hover:text-white transition-all shadow-xl shadow-emerald-50 flex items-center justify-center gap-2"
                                             >
-                                                Load More Events
-                                            </Button>
+                                                {isLoadingMore && <Spinner size="sm" />}
+                                                Load More Results
+                                            </button>
                                         </div>
                                     )}
                                 </>
                             ) : (
-                                <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
-                                    <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                                    <p className="text-gray-500">
+                                <div className="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+                                    <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-8">
+                                        <CalendarIcon className="w-10 h-10 text-gray-200" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-3">No activity found</h3>
+                                    <p className="text-gray-500 max-w-sm mx-auto font-medium">
                                         {activeTab === 'upcoming'
-                                            ? 'No upcoming events scheduled.'
-                                            : 'No past events found.'}
+                                            ? 'This organizer hasn\'t scheduled any future events. Check back soon for updates!'
+                                            : 'We couldn\'t find any past event history for this profile.'}
                                     </p>
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </div>
-            </div>
+            </div >
 
             {/* Invite Modal */}
             {
                 isInviteModalOpen && (
                     <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
                         <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                            {/* Background overlay */}
-                            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setIsInviteModalOpen(false)}></div>
-
-                            {/* Modal panel */}
+                            <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" onClick={() => setIsInviteModalOpen(false)}></div>
                             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-                                <div>
-                                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100">
-                                        <UsersIcon className="h-6 w-6 text-emerald-600" />
+                            <div className="inline-block align-bottom bg-white rounded-3xl px-8 pt-10 pb-8 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                                <div className="text-center">
+                                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-2xl bg-emerald-50 mb-6">
+                                        <UsersIcon className="h-8 w-8 text-emerald-600" />
                                     </div>
-                                    <div className="mt-3 text-center sm:mt-5">
-                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                            Invite Member
-                                        </h3>
-                                        <div className="mt-2">
-                                            <p className="text-sm text-gray-500">
-                                                Enter an email address to invite someone to this group. They will receive an email with a link to join.
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <h3 className="text-2xl font-black text-gray-900 mb-2">Invite Collaborator</h3>
+                                    <p className="text-gray-500 font-medium mb-8">
+                                        Invite a member to help manage {organizer.name}.
+                                    </p>
                                 </div>
-
-                                <div className="mt-6 space-y-4">
+                                <div className="space-y-6 mb-10">
                                     <Input
                                         label="Email Address"
                                         type="email"
-                                        placeholder="new.member@example.com"
+                                        placeholder="name@example.com"
                                         value={inviteEmail}
                                         onChange={(e) => setInviteEmail(e.target.value)}
                                         disabled={isInviting}
+                                        className="rounded-xl border-gray-200 focus:ring-emerald-500"
                                     />
-
                                     {inviteMessage && (
-                                        <div className={`text-sm p-3 rounded-md ${inviteMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                        <div className={`p-4 rounded-xl font-bold text-sm ${inviteMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                                             {inviteMessage.text}
                                         </div>
                                     )}
                                 </div>
-
-                                <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                                    <Button
-                                        variant="primary"
-                                        className="w-full sm:col-start-2"
+                                <div className="flex flex-col gap-3">
+                                    <button
                                         onClick={handleSendInvite}
-                                        isLoading={isInviting}
-                                        disabled={!inviteEmail}
+                                        disabled={!inviteEmail || isInviting}
+                                        className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-full font-black shadow-lg shadow-emerald-100/20 active:scale-95 transition-all flex items-center justify-center"
                                     >
-                                        Send Invite
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        className="mt-3 w-full sm:mt-0 sm:col-start-1"
+                                        {isInviting ? <Spinner size="sm" /> : 'Send Invitation'}
+                                    </button>
+                                    <button
                                         onClick={() => {
                                             setIsInviteModalOpen(false);
                                             setInviteMessage(null);
                                             setInviteEmail('');
                                         }}
+                                        className="w-full py-4 rounded-full font-bold text-gray-400 hover:bg-gray-50 transition-all"
                                     >
                                         Cancel
-                                    </Button>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -637,4 +644,3 @@ export default function OrganizerProfilePage() {
         </div >
     );
 }
-

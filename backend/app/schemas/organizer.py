@@ -10,6 +10,8 @@ class OrganizerBase(BaseModel):
     website_url: Optional[str] = None
     social_links: Optional[Dict[str, Any]] = None
     # Enhanced profile fields
+    group_type: Optional[str] = None
+    category_focus: Optional[str] = None
     cover_image_url: Optional[str] = None
     city: Optional[str] = None
     social_facebook: Optional[str] = None
@@ -17,6 +19,7 @@ class OrganizerBase(BaseModel):
     social_website: Optional[str] = None
     public_email: Optional[str] = None
     contact_number: Optional[str] = None
+    is_verified: bool = False
 
 class OrganizerCreate(OrganizerBase):
     pass
@@ -29,6 +32,8 @@ class OrganizerUpdate(BaseModel):
     website_url: Optional[str] = None
     social_links: Optional[Dict[str, Any]] = None
     # Enhanced profile fields
+    group_type: Optional[str] = None
+    category_focus: Optional[str] = None
     cover_image_url: Optional[str] = None
     city: Optional[str] = None
     social_facebook: Optional[str] = None
@@ -36,6 +41,7 @@ class OrganizerUpdate(BaseModel):
     social_website: Optional[str] = None
     public_email: Optional[str] = None
     contact_number: Optional[str] = None
+    is_verified: Optional[bool] = None
 
 class OrganizerResponse(OrganizerBase):
     id: str
@@ -43,6 +49,7 @@ class OrganizerResponse(OrganizerBase):
     user_id: str
     created_at: datetime
     updated_at: datetime
+    upcoming_events_count: int = 0
     # Computed stats (populated by API)
     total_events_hosted: Optional[int] = None
     follower_count: Optional[int] = None

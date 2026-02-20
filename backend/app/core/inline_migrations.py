@@ -114,5 +114,14 @@ def run_inline_migrations(session: Session) -> None:
     except Exception as e:
         logger.warning(f"User migration skipped: {e}")
 
+    # --- Organizer enhancements ---
+    try:
+        session.exec(text("ALTER TABLE organizers ADD COLUMN IF NOT EXISTS group_type VARCHAR(50);"))
+        session.exec(text("ALTER TABLE organizers ADD COLUMN IF NOT EXISTS category_focus VARCHAR(50);"))
+        session.exec(text("ALTER TABLE organizers ADD COLUMN IF NOT EXISTS upcoming_events_count INTEGER DEFAULT 0;"))
+        session.exec(text("ALTER TABLE organizers ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;"))
+    except Exception as e:
+        logger.warning(f"Organizer migration skipped: {e}")
+
     session.commit()
     logger.info("Inline migrations complete")
