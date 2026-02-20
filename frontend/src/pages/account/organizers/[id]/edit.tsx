@@ -77,6 +77,8 @@ export default function EditOrganizerPage() {
                     public_email: org.public_email || '',
                     social_linkedin: org.social_linkedin || '', // Added
                     contact_number: org.contact_number || '', // Added
+                    group_type: org.group_type || '', // Added
+                    category_focus: org.category_focus || '', // Added
                 });
                 setOrganizerUserId(org.user_id);
                 setOrganizerSlug(org.slug || null);
@@ -134,6 +136,8 @@ export default function EditOrganizerPage() {
                 social_linkedin: data.social_linkedin || undefined,
                 public_email: data.public_email || undefined,
                 contact_number: data.contact_number || undefined,
+                group_type: data.group_type || undefined,
+                category_focus: data.category_focus || undefined,
             };
 
             const updatedOrg = await api.organizers.update(id as string, updateData);

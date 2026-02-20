@@ -45,6 +45,8 @@ function CreateOrganizerContent() {
                 social_instagram: formData.social_instagram || undefined,
                 social_website: formData.social_website || undefined,
                 social_linkedin: formData.social_linkedin || undefined,
+                group_type: formData.group_type || undefined,
+                category_focus: formData.category_focus || undefined,
             };
 
             await api.organizers.create(data);
