@@ -288,6 +288,7 @@ def list_events(
     organizer_profile_id: Optional[str] = Query(None, description="Filter by organizer profile (group) ID"),
     venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
     include_past: bool = Query(False, description="Include past events"),
+    status: Optional[str] = Query(None, description="Filter by explicit status (e.g. 'pending')"),
     is_recurring: Optional[bool] = Query(None, description="Filter by recurrence status"),
 
     time_range: Optional[str] = Query(None, description="'upcoming', 'past', or 'all'"),
@@ -304,17 +305,18 @@ def list_events(
     if category:
          print(f"[EVENTS_DEBUG] Filtering by category slug: {category}")
 
-    # Define absolute now
-    now_utc = datetime.utcnow()
+    # Define absolute now (for Python-side logic)
+    from datetime import timezone
+    now_utc = datetime.now(timezone.utc)
 
     # Handle time_range shortcuts
     if time_range == "past":
         include_past = True
         date_from = None
-        # Explicitly filter by end date
     elif time_range == "upcoming":
         include_past = False
-        date_from = now_utc
+        if date_from is None:
+            date_from = now_utc
     elif time_range == "all":
         include_past = True
     elif date_from is None and not include_past:
@@ -357,7 +359,12 @@ def list_events(
         # STRICTLY PUBLISHED
         query = query.where(Event.status == "published")
 
+    # Explicit Status Filter (requested via param)
+    if status:
+        query = query.where(Event.status == status)
 
+    # Use SQL-side func.now() for more reliable filtering
+    sql_now = func.now()
     # Additional Organizer Filter (if param provided)
     if organizer_id:
         query = query.where(Event.organizer_id == normalize_uuid(organizer_id))
@@ -473,8 +480,8 @@ def list_events(
                  return EventListResponse(events=[], total=0, skip=skip, limit=limit)
         
         # 4. APPLY DATE FILTER (Time Range / Custom Dates)
-        now = datetime.utcnow()
-        today = now.date()
+        sql_now = func.now()
+        today = now_utc.date()
         from datetime import timedelta
 
         # Resolve Presets if custom dates aren't provided
@@ -505,7 +512,7 @@ def list_events(
                     date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59)
 
         if time_range == "past":
-            query = query.where(Event.date_end < now)
+            query = query.where(Event.date_end < sql_now)
         elif date_from or date_to:
              # Custom Range Logic (Overlap)
             query = query.outerjoin(EventShowtime, Event.id == EventShowtime.event_id)
@@ -523,7 +530,7 @@ def list_events(
         else:
             # Default "Upcoming" behavior if no specific range
             # (Matches standard feed behavior)
-            query = query.where(Event.date_end >= now)
+            query = query.where(Event.date_end >= sql_now)
             
         
         # 5. GET TOTAL COUNT (Before slicing)
@@ -623,10 +630,10 @@ def list_events(
     
     # Handle explicit Time Range filters
     if time_range == "past":
-        query = query.where(Event.date_end < now_utc)
+        query = query.where(Event.date_end < func.now())
     elif not include_past:
         # For "Upcoming", we must be very strict: the event or its occurrences must happen in the future
-        query = query.where(Event.date_end >= now_utc)
+        query = query.where(Event.date_end >= func.now())
 
     # Filter by recurrence status
     if is_recurring is not None:
@@ -641,7 +648,7 @@ def list_events(
     # Filter by featured status
     if featured_only:
         query = query.where(Event.featured == True)
-        query = query.where((Event.featured_until == None) | (Event.featured_until > now_utc))
+        query = query.where((Event.featured_until == None) | (Event.featured_until > sql_now))
 
     # Default radius to 20 miles when lat/lng provided but no radius specified
     if latitude is not None and longitude is not None and radius_miles is None:
