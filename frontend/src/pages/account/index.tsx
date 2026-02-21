@@ -99,6 +99,7 @@ function AccountPageContent() {
           filters.status = 'pending';
           filters.include_past = true;
         } else if (eventFilter === 'rejected') {
+          // 'rejected' is the database equivalent for 'Needs Attention'
           filters.status = 'rejected';
           filters.include_past = true;
         }
@@ -825,139 +826,152 @@ function AccountPageContent() {
               )}
 
               {eventsSubTab === 'hosting' ? (
-                submittedEvents.length > 0 ? (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {submittedEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                          onClick={() => router.push(event.status === 'rejected' ? `/events/${event.id}/edit` : `/events/${event.id}`)}
-                        >
-                          {/* Image */}
-                          {event.image_url ? (
-                            <OptimizedImage
-                              src={event.image_url}
-                              alt={event.title}
-                              fill
-                              className="object-cover group-hover:scale-110 transition-transform duration-500"
-                              sizes="500px"
-                              variant="hero"
-                            />
-                          ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700" />
-                          )}
+                (() => {
+                  const now = new Date();
+                  const displayEvents = submittedEvents.filter(event => {
+                    const startDate = new Date(event.date_start);
 
-                          {/* Gradient Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    if (eventFilter === 'upcoming') {
+                      return startDate >= now;
+                    } else if (eventFilter === 'past') {
+                      return startDate < now;
+                    } else if (eventFilter === 'pending') {
+                      return event.status === 'pending';
+                    } else if (eventFilter === 'rejected') {
+                      return event.status === 'rejected' || event.status === 'needs_attention';
+                    }
+                    return true;
+                  });
 
-                          {/* Edit Button Overlay */}
-                          <Link
-                            href={`/events/${event.id}/edit`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                  return displayEvents.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {displayEvents.map((event) => (
+                          <div
+                            key={event.id}
+                            className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
+                            onClick={() => router.push(event.status === 'rejected' ? `/events/${event.id}/edit` : `/events/${event.id}`)}
                           >
-                            <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                          </Link>
+                            {/* ... Image and Overlay (unchanged) ... */}
+                            {event.image_url ? (
+                              <OptimizedImage
+                                src={event.image_url}
+                                alt={event.title}
+                                fill
+                                className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                sizes="500px"
+                                variant="hero"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700" />
+                            )}
 
-                          {/* Status Badges */}
-                          <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-40px)]">
-                            {event.status === 'rejected' && (
-                              <div className="flex flex-col gap-1 items-start">
-                                <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">
-                                  Rejected
-                                </span>
-                                {event.moderation_reason && (
-                                  <span className="px-1.5 py-0.5 bg-black/50 backdrop-blur-sm text-white text-[10px] rounded border border-red-500/50 max-w-[150px] truncate">
-                                    {event.moderation_reason}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                            <Link
+                              href={`/events/${event.id}/edit`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                            >
+                              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </Link>
+
+                            <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-40px)]">
+                              {event.status === 'rejected' && (
+                                <div className="flex flex-col gap-1 items-start">
+                                  <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">
+                                    Rejected
                                   </span>
-                                )}
-                              </div>
-                            )}
-                            {event.status === 'pending' && (
-                              <span className="px-1.5 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded uppercase">
-                                Pending
-                              </span>
-                            )}
-                            {event.featured && (
-                              <span className="px-1.5 py-0.5 bg-blue-400 text-white text-[10px] font-bold rounded uppercase">
-                                Featured
-                              </span>
-                            )}
-                            {event.is_recurring && (
-                              <span className="px-1.5 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded uppercase">
-                                Series
-                              </span>
-                            )}
-                          </div>
+                                  {event.moderation_reason && (
+                                    <span className="px-1.5 py-0.5 bg-black/50 backdrop-blur-sm text-white text-[10px] rounded border border-red-500/50 max-w-[150px] truncate">
+                                      {event.moderation_reason}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {event.status === 'pending' && (
+                                <span className="px-1.5 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded uppercase">
+                                  Pending
+                                </span>
+                              )}
+                              {event.featured && (
+                                <span className="px-1.5 py-0.5 bg-blue-400 text-white text-[10px] font-bold rounded uppercase">
+                                  Featured
+                                </span>
+                              )}
+                              {event.is_recurring && (
+                                <span className="px-1.5 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded uppercase">
+                                  Series
+                                </span>
+                              )}
+                            </div>
 
-                          {/* Content */}
-                          <div className="absolute bottom-0 left-0 right-0 p-3">
-                            <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
-                              {event.title}
-                            </h3>
-                            <p className="text-white/70 text-[10px] mb-2">
-                              {formatDate(event.date_start)}
-                            </p>
+                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                              <h3 className="font-semibold text-white text-sm leading-tight mb-0.5 line-clamp-2">
+                                {event.title}
+                              </h3>
+                              <p className="text-white/70 text-[10px] mb-2">
+                                {formatDate(event.date_start)}
+                              </p>
 
-                            {/* Analytics Stats */}
-                            <div className="flex items-center space-x-3 pt-2 border-t border-white/10">
-                              <div className="flex items-center text-white/90 text-[10px]" title="Total Views">
-                                <svg className="w-3 h-3 mr-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                                {event.view_count || 0}
-                              </div>
-                              <div className="flex items-center text-white/90 text-[10px]" title="Going">
-                                <svg className="w-3 h-3 mr-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                                {event.save_count || 0}
+                              <div className="flex items-center space-x-3 pt-2 border-t border-white/10">
+                                <div className="flex items-center text-white/90 text-[10px]" title="Total Views">
+                                  <svg className="w-3 h-3 mr-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  {event.view_count || 0}
+                                </div>
+                                <div className="flex items-center text-white/90 text-[10px]" title="Going">
+                                  <svg className="w-3 h-3 mr-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  {event.save_count || 0}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Load More Button */}
-                    {submittedEvents.length < hostedTotal && (
-                      <div className="mt-8 flex justify-center">
-                        <button
-                          onClick={handleLoadMoreHosted}
-                          disabled={isLoadingMore}
-                          className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isLoadingMore ? (
-                            <span className="flex items-center">
-                              <Spinner size="sm" className="mr-2" />
-                              Loading...
-                            </span>
-                          ) : (
-                            'Load More Events'
-                          )}
-                        </button>
+                        ))}
                       </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-12 bg-gray-50 rounded-xl">
-                    <p className="text-gray-500 mb-4">
-                      {eventFilter === 'all'
-                        ? "You haven't submitted any events yet."
-                        : `No ${eventFilter} events found.`}
-                    </p>
-                    <Link
-                      href="/submit-event"
-                      className="text-emerald-600 hover:text-emerald-700 font-medium"
-                    >
-                      Submit your first event
-                    </Link>
-                  </div>
-                )
+
+                      {/* Load More Button */}
+                      {submittedEvents.length < hostedTotal && (
+                        <div className="mt-8 flex justify-center">
+                          <button
+                            onClick={handleLoadMoreHosted}
+                            disabled={isLoadingMore}
+                            className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isLoadingMore ? (
+                              <span className="flex items-center">
+                                <Spinner size="sm" className="mr-2" />
+                                Loading...
+                              </span>
+                            ) : (
+                              'Load More Events'
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12 bg-gray-50 rounded-xl">
+                      <p className="text-gray-500 mb-4">
+                        {eventFilter === 'all'
+                          ? "You haven't submitted any events yet."
+                          : `No ${eventFilter} events found.`}
+                      </p>
+                      <Link
+                        href="/submit-event"
+                        className="text-emerald-600 hover:text-emerald-700 font-medium"
+                      >
+                        Submit your first event
+                      </Link>
+                    </div>
+                  );
+                })()
               ) : (
                 bookmarks.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

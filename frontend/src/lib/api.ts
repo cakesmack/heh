@@ -305,6 +305,7 @@ export const eventsAPI = {
       if (filters.limit !== undefined) params.limit = filters.limit;
       if (filters.sort_by) params.sort_by = filters.sort_by;
       if (filters.city_filter) params.city_filter = filters.city_filter;
+      if (filters.status) params.status = filters.status;
       if (filters.is_recurring !== undefined) params.is_recurring = filters.is_recurring;
     }
 
