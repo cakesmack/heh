@@ -618,6 +618,9 @@ def list_events(
     # Handle explicit Time Range filters
     if time_range == "past":
         query = query.where(Event.date_end < datetime.utcnow())
+        # Default sort for past events is descending
+        if sort_by == "date":
+            sort_by = "date_desc"
         query = query.order_by(Event.date_start.desc())
     elif not include_past:
         query = query.where(Event.date_end >= datetime.utcnow())
