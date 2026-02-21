@@ -814,10 +814,12 @@ function AccountPageContent() {
                           >
                             {/* Image */}
                             {event.image_url ? (
-                              <img
+                              <OptimizedImage
                                 src={event.image_url}
                                 alt={event.title}
+                                fill
                                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                variant="thumb"
                               />
                             ) : (
                               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700" />
@@ -940,10 +942,12 @@ function AccountPageContent() {
                       >
                         {/* Image */}
                         {event.image_url ? (
-                          <img
+                          <OptimizedImage
                             src={event.image_url}
                             alt={event.title}
+                            fill
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            variant="thumb"
                           />
                         ) : (
                           <div className="absolute inset-0 bg-gradient-to-br from-gray-500 to-gray-700" />
