@@ -304,17 +304,25 @@ def list_events(
     if category:
          print(f"[EVENTS_DEBUG] Filtering by category slug: {category}")
 
+    # Define absolute now
+    now_utc = datetime.utcnow()
+
     # Handle time_range shortcuts
     if time_range == "past":
         include_past = True
         date_from = None
+        # Explicitly filter by end date
     elif time_range == "upcoming":
-        if date_from is None:
-            date_from = datetime.utcnow()
+        include_past = False
+        date_from = now_utc
     elif time_range == "all":
         include_past = True
     elif date_from is None and not include_past:
-        date_from = datetime.utcnow()
+        date_from = now_utc
+
+    # Update sort_by for past events automatically if not already specified
+    if time_range == "past" and sort_by == "date":
+        sort_by = "date_desc"
 
     query = select(Event)
 
@@ -598,32 +606,27 @@ def list_events(
     if age_restriction:
         query = query.where(Event.age_restriction == age_restriction)
 
-    # Filter by date range using OVERLAP logic for multi-day events
+    # Filter by date range using OVERLAP logic
+    # We apply this directly to Event dates for simplicity and reliability in listings.
+    # Showtime-specific filtering is handled by the overall date_end filters above.
     if date_from or date_to:
-        query = query.outerjoin(EventShowtime, Event.id == EventShowtime.event_id)
         overlap_conditions = []
         if date_from and date_to:
             overlap_conditions.append((Event.date_start <= date_to) & (Event.date_end >= date_from))
-            overlap_conditions.append((EventShowtime.start_time >= date_from) & (EventShowtime.start_time <= date_to))
         elif date_from:
             overlap_conditions.append(Event.date_end >= date_from)
-            overlap_conditions.append(EventShowtime.start_time >= date_from)
         elif date_to:
             overlap_conditions.append(Event.date_start <= date_to)
-            overlap_conditions.append(EventShowtime.start_time <= date_to)
         
-        query = query.where(or_(*overlap_conditions))
-        query = query.group_by(Event.id)
+        if overlap_conditions:
+            query = query.where(or_(*overlap_conditions))
     
     # Handle explicit Time Range filters
     if time_range == "past":
-        query = query.where(Event.date_end < datetime.utcnow())
-        # Default sort for past events is descending
-        if sort_by == "date":
-            sort_by = "date_desc"
-        query = query.order_by(Event.date_start.desc())
+        query = query.where(Event.date_end < now_utc)
     elif not include_past:
-        query = query.where(Event.date_end >= datetime.utcnow())
+        # For "Upcoming", we must be very strict: the event or its occurrences must happen in the future
+        query = query.where(Event.date_end >= now_utc)
 
     # Filter by recurrence status
     if is_recurring is not None:
@@ -638,7 +641,7 @@ def list_events(
     # Filter by featured status
     if featured_only:
         query = query.where(Event.featured == True)
-        query = query.where((Event.featured_until == None) | (Event.featured_until > datetime.utcnow()))
+        query = query.where((Event.featured_until == None) | (Event.featured_until > now_utc))
 
     # Default radius to 20 miles when lat/lng provided but no radius specified
     if latitude is not None and longitude is not None and radius_miles is None:
@@ -677,46 +680,14 @@ def list_events(
     events = []
     total = 0
 
-    if has_date_filter:
-        from sqlalchemy import func as sa_func
-        # Sort Order
-        pinned_priority = sa_func.min(case(
-            (FeaturedBooking.slot_type == SlotType.GLOBAL_PINNED, 1),
-            (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 2),
-            (FeaturedBooking.slot_type == SlotType.HERO_HOME, 3),
-            else_=4
-        ))
-        if sort_by == "created":
-             query = query.group_by(Event.id)
-             query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.created_at.desc())
-        elif sort_by == "random":
-             query = query.group_by(Event.id)
-             query = query.order_by(pinned_priority.asc(), Event.featured.desc(), sa_func.random())
-        else:
-             query = query.group_by(Event.id)
-             query = query.order_by(pinned_priority.asc(), Event.featured.desc(), Event.date_start.asc())
-        
-        if not is_radius_search:
-            from sqlalchemy import func as sa_func
-            count_query = select(sa_func.count()).select_from(query.subquery())
-            total = session.exec(count_query).one() or 0
-            
-            if skip:
-                query = query.offset(skip)
-            if limit:
-                query = query.limit(limit)
-
-        events = list(session.exec(query).all())
-        
-    else:
-        events, total = deduplicate_recurring_events(
-            session=session,
-            base_query=query,
-            limit=None if is_radius_search else limit,
-            offset=0 if is_radius_search else skip,
-            order_by_featured=True,
-            sort_field=sort_by
-        )
+    events, total = deduplicate_recurring_events(
+        session=session,
+        base_query=query,
+        limit=None if is_radius_search else limit,
+        offset=0 if is_radius_search else skip,
+        order_by_featured=True,
+        sort_field=sort_by
+    )
 
     # Apply true Haversine distance filtering
     if is_radius_search:

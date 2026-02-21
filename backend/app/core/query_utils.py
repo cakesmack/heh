@@ -27,6 +27,9 @@ def deduplicate_recurring_events(
     """
     Deduplicate recurring events, showing only one event per series.
     """
+    from app.models.featured_booking import FeaturedBooking, SlotType, BookingStatus
+    from sqlalchemy import case, func as sa_func
+
     is_postgres = get_dialect_name(session) == "postgresql"
     group_key = func.coalesce(Event.parent_event_id, Event.id)
 
@@ -34,13 +37,20 @@ def deduplicate_recurring_events(
     if excluded_series_ids:
         base_query = base_query.where(group_key.notin_(excluded_series_ids))
 
+    # Calculate pinned priority (promoted slots)
+    # We want this to be available for both Postgres and SQLite sorting
+    pinned_priority = sa_func.min(case(
+        (FeaturedBooking.slot_type == SlotType.GLOBAL_PINNED, 1),
+        (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 2),
+        (FeaturedBooking.slot_type == SlotType.HERO_HOME, 3),
+        else_=4
+    ))
+
     if is_postgres:
         # PostgreSQL approach: Use subquery to get one ID per series
         base_subquery = base_query.subquery()
 
         # Step 2: Use DISTINCT ON to get one event per series
-        # For historical/past events, we might want the latest, but usually earliest is fine for identifying series.
-        # However, the final sort depends on sort_field.
         distinct_ids_query = (
             select(base_subquery.c.id)
             .distinct(func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id))
@@ -65,7 +75,26 @@ def deduplicate_recurring_events(
             return [], total
 
         # Step 5: Fetch full Event objects with correct final sorting
-        events_query = select(Event).where(Event.id.in_(dedup_ids))
+        # Join FeaturedBooking again to apply pinning order
+        from datetime import date as date_today
+        today = date_today.today()
+        
+        events_query = (
+            select(Event)
+            .where(Event.id.in_(dedup_ids))
+            .outerjoin(
+                FeaturedBooking,
+                (FeaturedBooking.event_id == Event.id) &
+                (FeaturedBooking.status == BookingStatus.ACTIVE) &
+                (FeaturedBooking.start_date <= today) &
+                (FeaturedBooking.end_date >= today)
+            )
+            .group_by(Event.id) # Needed because join might return multiple bookings
+        )
+
+        # Apply Pinning Priority first
+        # Use sa_func.min to handle multiple bookings per event (pick highest priority)
+        events_query = events_query.order_by(pinned_priority.asc())
 
         if order_by_featured:
             events_query = events_query.order_by(Event.featured.desc())
@@ -96,6 +125,9 @@ def deduplicate_recurring_events(
         total = session.exec(count_query).one() or 0
 
         # Apply ordering
+        # Note: SQLite grouping requires aggregation for joined columns typically
+        query = query.order_by(pinned_priority.asc())
+        
         if order_by_featured:
             query = query.order_by(Event.featured.desc())
 
