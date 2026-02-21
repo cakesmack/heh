@@ -24,9 +24,7 @@ class UserPreferences(SQLModel, table=True):
     user_id: str = Field(foreign_key="users.id", primary_key=True)
 
     # Email permissions (GDPR-compliant, default opt-in)
-    marketing_emails: bool = Field(default=True)
-    weekly_digest: bool = Field(default=True)
-    organizer_alerts: bool = Field(default=True)
+    receives_email_updates: bool = Field(default=True)
 
     # Category preferences for personalized digest (stores category slugs)
     preferred_categories: List[str] = Field(default=[], sa_column=Column(JSON))

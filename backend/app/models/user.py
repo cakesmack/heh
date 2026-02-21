@@ -51,8 +51,6 @@ class User(SQLModel, table=True):
     # Account status (False = banned/inactive)
     is_active: bool = Field(default=True)
     
-    # Notification preferences
-    receive_interest_notifications: bool = Field(default=True)
 
     # Timestamps
     last_login: Optional[datetime] = Field(default=None)

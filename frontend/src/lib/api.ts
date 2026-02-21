@@ -1767,28 +1767,6 @@ export const searchAPI = {
   },
 };
 
-// ============================================================
-// USER SETTINGS API
-// ============================================================
-
-export const userSettingsAPI = {
-  /**
-   * Get notification settings
-   */
-  getNotificationSettings: async (): Promise<{ receive_interest_notifications: boolean }> => {
-    return apiFetch<{ receive_interest_notifications: boolean }>('/api/users/me/notification-settings');
-  },
-
-  /**
-   * Update notification settings
-   */
-  updateNotificationSettings: async (settings: { receive_interest_notifications: boolean }): Promise<{ receive_interest_notifications: boolean }> => {
-    return apiFetch<{ receive_interest_notifications: boolean }>('/api/users/me/notification-settings', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    });
-  },
-};
 
 // ============================================================
 // FOLLOWS API

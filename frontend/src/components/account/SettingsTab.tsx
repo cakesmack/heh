@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { api, userSettingsAPI, followsAPI } from '@/lib/api';
+import { api, followsAPI } from '@/lib/api';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import type { UserPreferences, Category } from '@/types';
 import Link from 'next/link';
@@ -32,8 +32,6 @@ export function SettingsTab({ categories }: SettingsTabProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<SaveMessage | null>(null);
 
-  // Notification settings state
-  const [receiveInterestNotifications, setReceiveInterestNotifications] = useState(true);
 
   // Follows state
   const [followedCategories, setFollowedCategories] = useState<FollowedItem[]>([]);
@@ -51,9 +49,7 @@ export function SettingsTab({ categories }: SettingsTabProps) {
       } catch (error) {
         console.error('Failed to load preferences:', error);
         setPreferences({
-          weekly_digest: true,
-          organizer_alerts: true,
-          marketing_emails: false,
+          receives_email_updates: false,
           preferred_categories: [],
         });
       } finally {
@@ -63,18 +59,6 @@ export function SettingsTab({ categories }: SettingsTabProps) {
     loadPreferences();
   }, []);
 
-  // Load notification settings
-  useEffect(() => {
-    async function loadNotificationSettings() {
-      try {
-        const settings = await userSettingsAPI.getNotificationSettings();
-        setReceiveInterestNotifications(settings.receive_interest_notifications);
-      } catch (error) {
-        console.error('Failed to load notification settings:', error);
-      }
-    }
-    loadNotificationSettings();
-  }, []);
 
   // Load followed items - fetch each separately to avoid one failure blocking all
   useEffect(() => {
@@ -148,22 +132,6 @@ export function SettingsTab({ categories }: SettingsTabProps) {
     updatePreference('preferred_categories', newCategories);
   };
 
-  // Update notification setting
-  const toggleInterestNotifications = async () => {
-    const newValue = !receiveInterestNotifications;
-    setReceiveInterestNotifications(newValue);
-    setIsSaving(true);
-
-    try {
-      await userSettingsAPI.updateNotificationSettings({ receive_interest_notifications: newValue });
-      showSaveMessage('success', 'Notification settings saved');
-    } catch (error) {
-      setReceiveInterestNotifications(!newValue);
-      showSaveMessage('error', 'Failed to save');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   // Unfollow handlers
   const handleUnfollowCategory = async (id: string) => {
@@ -225,34 +193,6 @@ export function SettingsTab({ categories }: SettingsTabProps) {
         </div>
       )}
 
-      {/* In-App Notifications Section */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          In-App Notifications
-        </h2>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
-            <div>
-              <p className="font-medium text-gray-900">New Event Alerts</p>
-              <p className="text-sm text-gray-500">
-                Get notified when new events are posted in categories, venues, or groups you follow
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={receiveInterestNotifications}
-              onClick={toggleInterestNotifications}
-              disabled={isSaving}
-              className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${receiveInterestNotifications ? 'bg-emerald-500' : 'bg-gray-200'
-                }`}
-            >
-              <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${receiveInterestNotifications ? 'translate-x-5' : 'translate-x-0'
-                }`} />
-            </button>
-          </div>
-        </div>
-      </section>
 
       {/* Manage Follows Section */}
       <section>
@@ -383,68 +323,24 @@ export function SettingsTab({ categories }: SettingsTabProps) {
           Email Notifications
         </h2>
         <div className="space-y-3">
-          {/* Weekly Digest Toggle */}
+          {/* News & Updates Toggle */}
           <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
             <div>
-              <p className="font-medium text-gray-900">Weekly Digest</p>
+              <p className="font-medium text-gray-900">News & Updates</p>
               <p className="text-sm text-gray-500">
-                Personalised event picks every Thursday
+                Receive occasional emails about major upcoming events, new features, and platform news.
               </p>
             </div>
             <button
               type="button"
               role="switch"
-              aria-checked={preferences.weekly_digest}
-              onClick={() => updatePreference('weekly_digest', !preferences.weekly_digest)}
+              aria-checked={preferences.receives_email_updates}
+              onClick={() => updatePreference('receives_email_updates', !preferences.receives_email_updates)}
               disabled={isSaving}
-              className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${preferences.weekly_digest ? 'bg-emerald-500' : 'bg-gray-200'
+              className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${preferences.receives_email_updates ? 'bg-emerald-500' : 'bg-gray-200'
                 }`}
             >
-              <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${preferences.weekly_digest ? 'translate-x-5' : 'translate-x-0'
-                }`} />
-            </button>
-          </div>
-
-          {/* Organizer Alerts Toggle */}
-          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
-            <div>
-              <p className="font-medium text-gray-900">Organizer Alerts</p>
-              <p className="text-sm text-gray-500">
-                Get notified when your events go live
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={preferences.organizer_alerts}
-              onClick={() => updatePreference('organizer_alerts', !preferences.organizer_alerts)}
-              disabled={isSaving}
-              className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${preferences.organizer_alerts ? 'bg-emerald-500' : 'bg-gray-200'
-                }`}
-            >
-              <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${preferences.organizer_alerts ? 'translate-x-5' : 'translate-x-0'
-                }`} />
-            </button>
-          </div>
-
-          {/* Marketing Emails Toggle */}
-          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
-            <div>
-              <p className="font-medium text-gray-900">Marketing & Announcements</p>
-              <p className="text-sm text-gray-500">
-                Occasional updates about new features
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={preferences.marketing_emails}
-              onClick={() => updatePreference('marketing_emails', !preferences.marketing_emails)}
-              disabled={isSaving}
-              className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${preferences.marketing_emails ? 'bg-emerald-500' : 'bg-gray-200'
-                }`}
-            >
-              <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${preferences.marketing_emails ? 'translate-x-5' : 'translate-x-0'
+              <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${preferences.receives_email_updates ? 'translate-x-5' : 'translate-x-0'
                 }`} />
             </button>
           </div>

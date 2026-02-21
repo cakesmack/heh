@@ -962,16 +962,12 @@ export interface VenueStats {
 // ============================================================
 
 export interface UserPreferences {
-  marketing_emails: boolean;
-  weekly_digest: boolean;
-  organizer_alerts: boolean;
+  receives_email_updates: boolean;
   preferred_categories: string[];
 }
 
 export interface UserPreferencesUpdate {
-  marketing_emails?: boolean;
-  weekly_digest?: boolean;
-  organizer_alerts?: boolean;
+  receives_email_updates?: boolean;
   preferred_categories?: string[];
 }
 

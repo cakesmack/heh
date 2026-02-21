@@ -18,17 +18,13 @@ router = APIRouter(prefix="/users/me/preferences", tags=["Preferences"])
 
 class PreferencesResponse(BaseModel):
     """Response schema for user preferences."""
-    marketing_emails: bool
-    weekly_digest: bool
-    organizer_alerts: bool
+    receives_email_updates: bool
     preferred_categories: List[str]
 
 
 class PreferencesUpdate(BaseModel):
     """Request schema for updating preferences."""
-    marketing_emails: Optional[bool] = None
-    weekly_digest: Optional[bool] = None
-    organizer_alerts: Optional[bool] = None
+    receives_email_updates: Optional[bool] = None
     preferred_categories: Optional[List[str]] = None
 
 
@@ -50,9 +46,7 @@ def get_preferences(
         session.refresh(preferences)
 
     return PreferencesResponse(
-        marketing_emails=preferences.marketing_emails,
-        weekly_digest=preferences.weekly_digest,
-        organizer_alerts=preferences.organizer_alerts,
+        receives_email_updates=preferences.receives_email_updates,
         preferred_categories=preferences.preferred_categories or []
     )
 
@@ -74,12 +68,8 @@ def update_preferences(
         session.add(preferences)
 
     # Apply updates
-    if updates.marketing_emails is not None:
-        preferences.marketing_emails = updates.marketing_emails
-    if updates.weekly_digest is not None:
-        preferences.weekly_digest = updates.weekly_digest
-    if updates.organizer_alerts is not None:
-        preferences.organizer_alerts = updates.organizer_alerts
+    if updates.receives_email_updates is not None:
+        preferences.receives_email_updates = updates.receives_email_updates
     if updates.preferred_categories is not None:
         preferences.preferred_categories = updates.preferred_categories
 
@@ -90,9 +80,7 @@ def update_preferences(
     session.refresh(preferences)
 
     return PreferencesResponse(
-        marketing_emails=preferences.marketing_emails,
-        weekly_digest=preferences.weekly_digest,
-        organizer_alerts=preferences.organizer_alerts,
+        receives_email_updates=preferences.receives_email_updates,
         preferred_categories=preferences.preferred_categories or []
     )
 
@@ -119,12 +107,8 @@ def unsubscribe(
         )
 
     # Update the appropriate setting
-    if type == "weekly_digest":
-        preferences.weekly_digest = False
-    elif type == "marketing_emails":
-        preferences.marketing_emails = False
-    elif type == "organizer_alerts":
-        preferences.organizer_alerts = False
+    if type in ["weekly_digest", "marketing_emails", "organizer_alerts", "news_updates"]:
+        preferences.receives_email_updates = False
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
