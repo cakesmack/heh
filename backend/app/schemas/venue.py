@@ -3,9 +3,30 @@ Pydantic schemas for venue-related API requests and responses.
 Handles venue creation, updates, and listings.
 """
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Union
+import re
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+
+def _sanitize_url(value: Union[str, None]) -> Union[str, None]:
+    """Trim whitespace, convert blanks to None, auto-prepend https:// if missing."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    
+    # If it is already a full URL, or a Cloudinary shortcut, return it
+    if re.match(r'^https?://', trimmed, re.IGNORECASE):
+        return trimmed
+    
+    # If it looks like a Cloudflare Image ID (UUID format), do NOT prepend https://
+    if re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', trimmed, re.IGNORECASE):
+        return trimmed
+
+    # Otherwise prepend https://
+    return f'https://{trimmed}'
 
 
 class VenueCategoryResponse(BaseModel):
@@ -66,6 +87,15 @@ class VenueCreate(BaseModel):
     website_url: Optional[str] = Field(None, max_length=255)
     status: str = "UNVERIFIED"
 
+    @model_validator(mode='before')
+    @classmethod
+    def sanitize_urls(cls, data):
+        if isinstance(data, dict):
+            for field in ('website', 'image_url', 'website_url'):
+                if field in data:
+                    data[field] = _sanitize_url(data.get(field))
+        return data
+
 
 class VenueUpdate(BaseModel):
     """Schema for updating an existing venue."""
@@ -99,6 +129,15 @@ class VenueUpdate(BaseModel):
     social_tiktok: Optional[str] = Field(None, max_length=255)
     website_url: Optional[str] = Field(None, max_length=255)
     status: Optional[str] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def sanitize_urls(cls, data):
+        if isinstance(data, dict):
+            for field in ('website', 'image_url', 'website_url'):
+                if field in data:
+                    data[field] = _sanitize_url(data.get(field))
+        return data
 
 
 class VenueResponse(BaseModel):

@@ -163,10 +163,9 @@ class EventUpdate(BaseModel):
     status: Optional[str] = Field(None, description="Admin only: Update event status")
 
     @model_validator(mode='before')
-    @classmethod
     def sanitize_urls(cls, data):
         if isinstance(data, dict):
-            for field in ('ticket_url', 'website_url'):
+            for field in ('ticket_url', 'website_url', 'image_url'):
                 if field in data:
                     data[field] = _sanitize_url(data.get(field))
         return data

@@ -40,20 +40,17 @@ export function optimizeImage(
         return cleanUrlOrId;
     }
 
-    // SELF-HEALING: If it's a Cloudflare ID that got corrupted with 'https://' by the backend sanitizer
+    // SELF-HEALING: If it's a Cloudflare ID that got corrupted with 'https://' or 'http://' by the backend sanitizer
     // Example: https://5ed3e706-cbf4-46be-b0c9-3e89f7d7da00/
-    if (cleanUrlOrId.startsWith('https://')) {
-        // Strip protocol and any trailing slashes to see if what's left is a Cloudflare ID (UUID)
-        const stripped = cleanUrlOrId.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    if (cleanUrlOrId.startsWith('https://') || cleanUrlOrId.startsWith('http://')) {
+        // Extract just the UUID part - Cloudflare IDs are standard UUIDs
+        const uuidMatch = cleanUrlOrId.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
 
-        // Cloudflare IDs are UUIDs (36 chars with 4 hyphens)
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(stripped);
-
-        if (isUuid) {
-            cleanUrlOrId = stripped;
-        } else if (cleanUrlOrId.startsWith('https:///')) {
-            // Handle accidental triple slashes
-            cleanUrlOrId = cleanUrlOrId.replace('https:///', '').replace(/\/+$/, '');
+        if (uuidMatch) {
+            cleanUrlOrId = uuidMatch[0];
+        } else if (cleanUrlOrId.includes(':////')) {
+            // Handle accidental triple/quad slashes if no UUID matched
+            cleanUrlOrId = cleanUrlOrId.replace(/^https?:\/\/+/i, '').replace(/\/+$/, '');
         }
     }
 
@@ -73,7 +70,11 @@ export function optimizeImage(
 
     if (!cleanUrlOrId.startsWith('http')) {
         if (!hash) {
-            console.warn('[imageOptimizer] Account Hash missing. Cannot construct Cloudflare URL for:', cleanUrlOrId);
+            console.warn('[imageOptimizer] Account Hash missing. Cannot construct Cloudflare URL for:', cleanUrlOrId, {
+                env: process.env.NODE_ENV,
+                has_public: !!process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH,
+                has_secret: !!process.env.CLOUDFLARE_ACCOUNT_HASH
+            });
             return '';
         }
 
