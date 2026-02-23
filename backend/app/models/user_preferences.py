@@ -3,6 +3,7 @@ UserPreferences model for email notification settings.
 Stores per-user preferences for marketing emails, weekly digest, and category interests.
 """
 import secrets
+import uuid
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship, Column
@@ -30,7 +31,7 @@ class UserPreferences(SQLModel, table=True):
     preferred_categories: List[str] = Field(default=[], sa_column=Column(JSON))
 
     # One-click unsubscribe token (no login required)
-    unsubscribe_token: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    unsubscribe_token: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)

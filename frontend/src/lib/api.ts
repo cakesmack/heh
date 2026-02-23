@@ -1177,6 +1177,12 @@ const preferencesAPI = {
     if (!response.ok) throw new Error('Failed to update preferences');
     return response.json();
   },
+
+  async unsubscribe(token: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/preferences/unsubscribe/${token}`);
+    if (!response.ok) throw new Error('Failed to unsubscribe');
+    return response.json();
+  },
 };
 
 // ============================================================

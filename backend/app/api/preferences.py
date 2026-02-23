@@ -14,6 +14,7 @@ from app.models.user import User
 from app.models.user_preferences import UserPreferences
 
 router = APIRouter(prefix="/users/me/preferences", tags=["Preferences"])
+public_router = APIRouter(prefix="/preferences", tags=["Preferences"])
 
 
 class PreferencesResponse(BaseModel):
@@ -85,15 +86,14 @@ def update_preferences(
     )
 
 
-@router.get("/unsubscribe")
-def unsubscribe(
+@public_router.get("/unsubscribe/{token}")
+def unsubscribe_public(
     token: str,
-    type: str,
     session: Session = Depends(get_session)
 ):
     """
-    One-click unsubscribe from email type.
-    No authentication required - uses unsubscribe token.
+    One-click unsubscribe using a public token.
+    No authentication required.
     """
     # Find preferences by token
     preferences = session.exec(
@@ -102,21 +102,15 @@ def unsubscribe(
 
     if not preferences:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid unsubscribe token"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unsubscribe token not found"
         )
 
-    # Update the appropriate setting
-    if type in ["weekly_digest", "marketing_emails", "organizer_alerts", "news_updates"]:
-        preferences.receives_email_updates = False
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email type"
-        )
-
+    # Simple one-click opt-out
+    preferences.receives_email_updates = False
     preferences.updated_at = datetime.utcnow()
+
     session.add(preferences)
     session.commit()
 
-    return {"message": f"Successfully unsubscribed from {type.replace('_', ' ')}"}
+    return {"message": "You have been successfully unsubscribed from News & Updates."}
