@@ -21,6 +21,20 @@ def list_collections(
     collections = session.exec(query).all()
     return collections
 
+@router.get("/slug/{slug}", response_model=CollectionSchema)
+def get_collection_by_slug(
+    slug: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Get a single active collection by its URL slug (public).
+    """
+    collection = session.exec(
+        select(Collection).where(Collection.slug == slug, Collection.is_active == True)
+    ).first()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return collection
 @router.post("", response_model=CollectionSchema, status_code=status.HTTP_201_CREATED)
 def create_collection(
     collection_data: CollectionCreate,

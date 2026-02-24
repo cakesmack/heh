@@ -3,7 +3,7 @@
  * CRUD interface for managing curated collections
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import DataTable from '@/components/admin/DataTable';
@@ -28,7 +28,11 @@ export default function AdminCollections() {
         sort_order: 0,
         fixed_start_date: '',
         fixed_end_date: '',
+        slug: '',
+        description: '',
+        filter_params: null as Record<string, any> | null,
     });
+    const slugManuallyEdited = useRef(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -63,8 +67,12 @@ export default function AdminCollections() {
         fetchCollections();
     }, []);
 
+    const slugify = (text: string) =>
+        text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
     const openCreateModal = () => {
         setEditingCollection(null);
+        slugManuallyEdited.current = false;
         setFormData({
             title: '',
             subtitle: '',
@@ -74,6 +82,9 @@ export default function AdminCollections() {
             sort_order: collections.length + 1,
             fixed_start_date: '',
             fixed_end_date: '',
+            slug: '',
+            description: '',
+            filter_params: null,
         });
         setQbState({
             category: [],
@@ -90,6 +101,7 @@ export default function AdminCollections() {
 
     const openEditModal = (collection: Collection) => {
         setEditingCollection(collection);
+        slugManuallyEdited.current = !!collection.slug;
         setFormData({
             title: collection.title,
             subtitle: collection.subtitle || '',
@@ -99,6 +111,9 @@ export default function AdminCollections() {
             sort_order: collection.sort_order,
             fixed_start_date: collection.fixed_start_date || '',
             fixed_end_date: collection.fixed_end_date || '',
+            slug: collection.slug || '',
+            description: collection.description || '',
+            filter_params: collection.filter_params || null,
         });
 
         // Parse target_link to populate builder state
@@ -133,10 +148,11 @@ export default function AdminCollections() {
         }
     };
 
-    // Update target_link when builder state changes
+    // Dual-write: Update both target_link AND filter_params when builder state changes
     useEffect(() => {
         if (!queryBuilderMode || !modalOpen) return;
 
+        // Build legacy URL params (target_link)
         const params = new URLSearchParams();
         if (qbState.category.length > 0) params.append('category', qbState.category.join(','));
         if (qbState.q) params.append('q', qbState.q);
@@ -156,7 +172,22 @@ export default function AdminCollections() {
         const queryString = params.toString();
         const newLink = queryString ? `/events?${queryString}` : '/events';
 
-        setFormData(prev => ({ ...prev, target_link: newLink }));
+        // Build structured filter_params JSON from the same state
+        const filterObj: Record<string, any> = {};
+        if (qbState.category.length > 0) filterObj.category = qbState.category;
+        if (qbState.q) filterObj.q = qbState.q;
+        if (qbState.tags) filterObj.tag_names = qbState.tags;
+        if (qbState.age) filterObj.age_restriction = qbState.age;
+        if (qbState.price !== 'any') filterObj.price = qbState.price;
+        if (qbState.recurrence === 'recurring') filterObj.is_recurring = true;
+        if (qbState.recurrence === 'single') filterObj.is_recurring = false;
+        if (formData.fixed_start_date || formData.fixed_end_date) filterObj.date = 'custom';
+        if (formData.fixed_start_date) filterObj.date_from = formData.fixed_start_date;
+        if (formData.fixed_end_date) filterObj.date_to = formData.fixed_end_date;
+
+        const newFilterParams = Object.keys(filterObj).length > 0 ? filterObj : null;
+
+        setFormData(prev => ({ ...prev, target_link: newLink, filter_params: newFilterParams }));
     }, [qbState, queryBuilderMode, modalOpen, formData.fixed_start_date, formData.fixed_end_date]);
 
     const handleImageUpload = (urls: { url: string }) => {
@@ -315,10 +346,37 @@ export default function AdminCollections() {
                             <input
                                 type="text"
                                 value={formData.title}
-                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                onChange={(e) => {
+                                    const newTitle = e.target.value;
+                                    const updates: any = { title: newTitle };
+                                    if (!slugManuallyEdited.current) {
+                                        updates.slug = slugify(newTitle);
+                                    }
+                                    setFormData(prev => ({ ...prev, ...updates }));
+                                }}
                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                                 required
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                URL Slug
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-400">/collections/</span>
+                                <input
+                                    type="text"
+                                    value={formData.slug}
+                                    onChange={(e) => {
+                                        slugManuallyEdited.current = true;
+                                        setFormData(prev => ({ ...prev, slug: slugify(e.target.value) }));
+                                    }}
+                                    className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 font-mono text-sm"
+                                    placeholder="auto-generated-from-title"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">Auto-generated from title. Edit to override.</p>
                         </div>
 
                         <div>
@@ -330,6 +388,19 @@ export default function AdminCollections() {
                                 value={formData.subtitle}
                                 onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Description
+                            </label>
+                            <textarea
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                rows={3}
+                                placeholder="Optional description for this collection..."
                             />
                         </div>
 

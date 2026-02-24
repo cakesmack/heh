@@ -12,6 +12,10 @@ class CollectionBase(BaseModel):
     # Custom date range fields - override dynamic date filters
     fixed_start_date: Optional[date] = None
     fixed_end_date: Optional[date] = None
+    # New structured fields
+    slug: Optional[str] = None
+    description: Optional[str] = None
+    filter_params: Optional[dict] = None
 
 class CollectionCreate(CollectionBase):
     pass
@@ -23,6 +27,9 @@ class CollectionUpdate(CollectionBase):
     sort_order: Optional[int] = None
     fixed_start_date: Optional[date] = None
     fixed_end_date: Optional[date] = None
+    slug: Optional[str] = None
+    description: Optional[str] = None
+    filter_params: Optional[dict] = None
 
 class Collection(CollectionBase):
     id: int

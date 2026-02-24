@@ -1,6 +1,8 @@
 from typing import Optional
 from datetime import date
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Column
+from sqlalchemy import Text
+from sqlalchemy.dialects.postgresql import JSONB
 
 class Collection(SQLModel, table=True):
     __tablename__ = "collections"
@@ -15,3 +17,7 @@ class Collection(SQLModel, table=True):
     # Custom date range fields - when set, these override dynamic date filters
     fixed_start_date: Optional[date] = Field(default=None)
     fixed_end_date: Optional[date] = Field(default=None)
+    # New fields for structured collections
+    slug: Optional[str] = Field(default=None, sa_column_kwargs={"unique": True})
+    description: Optional[str] = Field(default=None, sa_column=Column(Text))
+    filter_params: Optional[dict] = Field(default=None, sa_column=Column(JSONB))

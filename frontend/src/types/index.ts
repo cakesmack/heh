@@ -819,6 +819,9 @@ export interface Collection {
   sort_order: number;
   fixed_start_date?: string;
   fixed_end_date?: string;
+  slug?: string;
+  description?: string;
+  filter_params?: Record<string, any> | null;
 }
 
 export interface CollectionCreate {
@@ -830,6 +833,9 @@ export interface CollectionCreate {
   sort_order?: number;
   fixed_start_date?: string;
   fixed_end_date?: string;
+  slug?: string;
+  description?: string;
+  filter_params?: Record<string, any> | null;
 }
 
 export interface CollectionUpdate {
@@ -841,6 +847,9 @@ export interface CollectionUpdate {
   sort_order?: number;
   fixed_start_date?: string;
   fixed_end_date?: string;
+  slug?: string;
+  description?: string;
+  filter_params?: Record<string, any> | null;
 }
 
 // ============================================================

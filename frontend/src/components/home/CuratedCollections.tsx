@@ -57,7 +57,7 @@ export default function CuratedCollections() {
                     {collections.map((collection) => (
                         <Link
                             key={collection.id}
-                            href={collection.target_link}
+                            href={collection.slug ? `/collections/${collection.slug}` : collection.target_link}
                             className="group relative aspect-[16/9] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
                         >
                             {/* Background Image */}

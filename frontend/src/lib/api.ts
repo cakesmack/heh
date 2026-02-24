@@ -1490,6 +1490,13 @@ export const collectionsAPI = {
   },
 
   /**
+   * Get a single collection by its URL slug (public)
+   */
+  getBySlug: async (slug: string): Promise<Collection> => {
+    return apiFetch<Collection>(`/api/collections/slug/${slug}`, {}, false);
+  },
+
+  /**
    * Update collection (admin only)
    */
   update: async (id: number, data: CollectionUpdate): Promise<Collection> => {
