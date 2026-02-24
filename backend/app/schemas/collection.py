@@ -1,6 +1,7 @@
+import json
 from typing import Optional
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 class CollectionBase(BaseModel):
     title: str
@@ -16,6 +17,13 @@ class CollectionBase(BaseModel):
     slug: Optional[str] = None
     description: Optional[str] = None
     filter_params: Optional[dict] = None
+
+    @field_validator('filter_params', mode='before')
+    @classmethod
+    def parse_filter_params(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
 
 class CollectionCreate(CollectionBase):
     pass
