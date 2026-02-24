@@ -74,8 +74,14 @@ export default function SubmitEventPage() {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [successMessage, setSuccessMessage] = useState<{ type: 'published' | 'pending' | 'duplicate'; eventId: string } | null>(null);
   const [isLocationValid, setIsLocationValid] = useState(true);
+
+  // Post-submit modal state
+  const [showPostSubmitModal, setShowPostSubmitModal] = useState(false);
+  const [newEventUrl, setNewEventUrl] = useState('');
+  const [eventStatus, setEventStatus] = useState<'published' | 'pending' | 'pending_moderation'>('pending');
+  const [newEventId, setNewEventId] = useState('');
+  const [shareCopied, setShareCopied] = useState(false);
 
   // Organizer Selection State
   // null = not selected (validation error if submitting)
@@ -273,18 +279,16 @@ export default function SubmitEventPage() {
       };
 
       const newEvent = await api.events.create(eventData);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      if (newEvent.status === 'published') {
-        setSuccessMessage({ type: 'published', eventId: newEvent.id });
-        setTimeout(() => router.push(`/events/${newEvent.id}`), 2000);
-      } else if (newEvent.status === 'pending_moderation') {
-        setSuccessMessage({ type: 'duplicate', eventId: newEvent.id });
-        setTimeout(() => router.push('/events'), 4000);
-      } else {
-        setSuccessMessage({ type: 'pending', eventId: newEvent.id });
-        setTimeout(() => router.push('/events'), 3000);
-      }
+      // Build absolute public URL for sharing
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const publicUrl = `${origin}/events/${newEvent.id}`;
+
+      setNewEventId(newEvent.id);
+      setNewEventUrl(publicUrl);
+      setEventStatus(newEvent.status === 'published' ? 'published' : newEvent.status === 'pending_moderation' ? 'pending_moderation' : 'pending');
+      setShowPostSubmitModal(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       if (err.status === 422 && err.detail) {
         // Handle Pydantic validation errors
@@ -327,26 +331,8 @@ export default function SubmitEventPage() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            {/* Status Messages */}
+            {/* Error Messages */}
             <div className="max-w-3xl mb-8">
-              {successMessage?.type === 'published' && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg mb-6">
-                  <p className="text-emerald-800 font-medium">Event published! Redirecting...</p>
-                </div>
-              )}
-              {successMessage?.type === 'pending' && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-6">
-                  <p className="text-amber-800 font-medium">Event submitted for review.</p>
-                </div>
-              )}
-              {successMessage?.type === 'duplicate' && (
-                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
-                  <p className="text-orange-800 font-bold">Event submitted for review.</p>
-                  <p className="text-orange-700 text-sm mt-1">
-                    Our system detected a similar event. We'll verify it shortly.
-                  </p>
-                </div>
-              )}
               {error && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm mb-6">
                   {error}
@@ -433,6 +419,119 @@ export default function SubmitEventPage() {
           </form>
         </div>
       </div>
+
+      {/* Post-Submit Modal */}
+      {showPostSubmitModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowPostSubmitModal(false);
+            router.push(eventStatus === 'published' ? `/events/${newEventId}` : '/account');
+          }}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+          {/* Modal */}
+          <div
+            className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {eventStatus === 'published' ? (
+              /* ===== Branch A: Live / Approved ===== */
+              <>
+                <div className="w-16 h-16 mx-auto mb-5 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Your event is live on the map.</h2>
+                <p className="text-gray-600 mb-8">
+                  Now, get it in front of your audience.
+                </p>
+
+                {/* Share Action — Web Share API with clipboard fallback */}
+                <div className="mb-6">
+                  <button
+                    onClick={async () => {
+                      try {
+                        if (navigator.share) {
+                          await navigator.share({ title: 'Check out my event!', url: newEventUrl });
+                        } else {
+                          await navigator.clipboard.writeText(newEventUrl);
+                          setShareCopied(true);
+                          setTimeout(() => setShareCopied(false), 2500);
+                        }
+                      } catch (err: any) {
+                        // User cancelled share or API unavailable — fall back to clipboard
+                        if (err?.name !== 'AbortError') {
+                          await navigator.clipboard.writeText(newEventUrl);
+                          setShareCopied(true);
+                          setTimeout(() => setShareCopied(false), 2500);
+                        }
+                      }
+                    }}
+                    className={`w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-medium transition-all duration-200 ${shareCopied
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                      }`}
+                  >
+                    {shareCopied ? (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Link Copied!
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                        Share Event
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowPostSubmitModal(false);
+                    router.push(`/events/${newEventId}`);
+                  }}
+                  className="text-sm text-gray-500 hover:text-emerald-600 transition-colors"
+                >
+                  Skip and view my event page &rarr;
+                </button>
+              </>
+            ) : (
+              /* ===== Branch B: Pending ===== */
+              <>
+                <div className="w-16 h-16 mx-auto mb-5 bg-amber-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Event submitted for review.</h2>
+                <p className="text-gray-600 mb-8">
+                  Your event is currently pending approval by our moderation team to ensure quality. You will receive an email the moment it goes live on the map.
+                </p>
+
+                <button
+                  onClick={() => {
+                    setShowPostSubmitModal(false);
+                    router.push('/account');
+                  }}
+                  className="w-full px-5 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium"
+                >
+                  Got it, take me to my dashboard
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
     </AuthGuard>
   );
 }

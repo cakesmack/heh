@@ -348,43 +348,98 @@ class ResendEmailService:
             subtitle = "Your event has been approved"
             message = f"Great news! Your event <strong>'{event_title}'</strong> has been approved by our moderation team and is now published on the Highland Events Hub."
 
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
-                .container {{ max-width: 600px; margin: 0 auto; }}
-                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
-                .header h1 {{ color: white; margin: 0; font-size: 28px; }}
-                .header p {{ color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; }}
-                .content {{ padding: 40px 30px; background: #ffffff; }}
-                .success-icon {{ width: 60px; height: 60px; background: #d1fae5; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 30px; }}
-                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
-                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>{subject}</h1>
-                    <p>{subtitle}</p>
-                </div>
-                <div class="content">
-                    <div class="success-icon">&#x2705;</div>
-                    <p>Hey {name}!</p>
-                    <p>{message}</p>
-                    <p>People can now discover your event on the Hub. Share it with your community to boost attendance!</p>
-                    <p style="text-align: center;">
-                        <a href="{event_url}" class="button">View Your Event</a>
-                    </p>
-                </div>
-                <div class="footer">
-                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
-                </div>
-            </div>
-        </body>
-        </html>
+        facebook_share = f"https://www.facebook.com/sharer/sharer.php?u={event_url}"
+        x_share = f"https://twitter.com/intent/tweet?url={event_url}"
+
+        html_content = f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1a2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <!-- Outer wrapper table -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #1a1a2e;">
+        <tr>
+            <td align="center" style="padding: 40px 16px;">
+
+                <!-- Card container -->
+                <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #2d2d44;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #10b981, #059669); padding: 36px 32px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #ffffff; line-height: 1.3;">{subject}</h1>
+                            <p style="margin: 10px 0 0 0; font-size: 15px; color: rgba(255,255,255,0.85);">{subtitle}</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style="background-color: #24243e; padding: 36px 32px;">
+                            <!-- Success icon -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding-bottom: 24px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="width: 56px; height: 56px; background-color: #064e3b; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 28px;">&#x2705;</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 0 0 12px 0; font-size: 17px; color: #e2e8f0; line-height: 1.6;">Hey {name}!</p>
+                            <p style="margin: 0 0 12px 0; font-size: 16px; color: #cbd5e1; line-height: 1.6;">{message}</p>
+                            <p style="margin: 0 0 28px 0; font-size: 16px; color: #cbd5e1; line-height: 1.6;">People can now discover your event on the Hub. Share it with your community to boost attendance!</p>
+
+                            <!-- Primary CTA -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding-bottom: 32px;">
+                                        <a href="{event_url}" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.02em;">View Your Event</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Share Section -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #3b3b5c; border-radius: 8px;">
+                                <tr>
+                                    <td style="padding: 24px;">
+                                        <p style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: #e2e8f0; text-align: center;">Maximize your local reach. Share your event directly to your community:</p>
+
+                                        <!-- Share buttons table -->
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td width="50%" align="center" style="padding: 0 4px 0 0;">
+                                                    <a href="{facebook_share}" target="_blank" style="display: block; background-color: #1877F2; color: #ffffff; padding: 12px 8px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; text-align: center;">Share on Facebook</a>
+                                                </td>
+                                                <td width="50%" align="center" style="padding: 0 0 0 4px;">
+                                                    <a href="{x_share}" target="_blank" style="display: block; background-color: #000000; color: #ffffff; padding: 12px 8px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; text-align: center;">Share on X</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #16162b; padding: 24px 32px; text-align: center;">
+                            <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 1.6;">Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
         """
 
         return await smart_email_service.send_smart_email(
