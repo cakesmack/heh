@@ -4,6 +4,7 @@
  */
 
 import { useRouter } from 'next/router';
+import { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import Head from 'next/head';
 import OptimizedImage from '@/components/ui/OptimizedImage';
@@ -58,13 +59,17 @@ const TwitterIcon = ({ className }: { className?: string }) => (
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
-export default function VenueDetailPage() {
+interface VenueDetailPageProps {
+  initialVenue?: VenueResponse;
+}
+
+export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) {
   const router = useRouter();
   const { id } = router.query;
-  const [venue, setVenue] = useState<VenueResponse | null>(null);
+  const [venue, setVenue] = useState<VenueResponse | null>(initialVenue || null);
   const [events, setEvents] = useState<EventResponse[]>([]);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialVenue);
   const [error, setError] = useState<string | null>(null);
   const { user: currentUser, refreshUser } = useAuth();
   const { trackVenueView } = useAnalytics();
@@ -781,3 +786,48 @@ function AmenityItem({ icon, label, active }: { icon: React.ReactNode; label: st
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<VenueDetailPageProps> = async (context) => {
+  const { id } = context.params as { id: string };
+
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
+    const res = await fetch(`${apiUrl}/api/venues/${id}`);
+
+    if (res.status === 404) {
+      return { notFound: true };
+    }
+
+    if (!res.ok) {
+      // Let client-side handle errors
+      return { props: {} };
+    }
+
+    const venue: VenueResponse = await res.json();
+
+    // --- 301 Redirect Enforcer ---
+    // If accessed via UUID (or outdated slug) and a canonical slug exists,
+    // permanently redirect to the slug URL to kill UUID exposure.
+    if (venue.slug && id !== venue.slug) {
+      // Preserve query parameters (UTM, etc.) through the redirect
+      const queryString = context.resolvedUrl.includes('?')
+        ? context.resolvedUrl.substring(context.resolvedUrl.indexOf('?'))
+        : '';
+      return {
+        redirect: {
+          destination: `/venues/${venue.slug}${queryString}`,
+          permanent: true,
+        },
+      };
+    }
+
+    return {
+      props: {
+        initialVenue: venue,
+      },
+    };
+  } catch (error) {
+    console.error('SSR Error fetching venue:', error);
+    return { props: {} };
+  }
+};

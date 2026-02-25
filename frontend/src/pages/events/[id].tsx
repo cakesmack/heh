@@ -1205,6 +1205,22 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
     const event: EventResponse = await res.json();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
 
+    // --- 301 Redirect Enforcer ---
+    // If accessed via UUID (or outdated slug) and a canonical slug exists, 
+    // permanently redirect to the slug URL to kill UUID exposure.
+    if (event.slug && id !== event.slug) {
+      // Preserve query parameters (UTM, ticket, etc.) through the redirect
+      const queryString = context.resolvedUrl.includes('?')
+        ? context.resolvedUrl.substring(context.resolvedUrl.indexOf('?'))
+        : '';
+      return {
+        redirect: {
+          destination: `/events/${event.slug}${queryString}`,
+          permanent: true,
+        },
+      };
+    }
+
     // Construct rich text description safely
     const description = event.description
       ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...'
