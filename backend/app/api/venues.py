@@ -495,6 +495,32 @@ def create_venue(
     )
 
     session.add(new_venue)
+    session.flush()
+
+    # --- Generate SEO Slug ---
+    from app.core.utils import generate_seo_slug
+    base_slug = generate_seo_slug(new_venue.name)
+    # Append city from address for keyword richness
+    if new_venue.address:
+        parts = [p.strip() for p in new_venue.address.split(',')]
+        if len(parts) >= 2:
+            city_part = generate_seo_slug(parts[-2], max_length=30)
+            base_slug = f"{base_slug}-{city_part}"
+    base_slug = base_slug[:300]
+    # Collision prevention
+    candidate_slug = base_slug
+    suffix = 1
+    while session.exec(
+        select(Venue).where(Venue.slug == candidate_slug, Venue.id != new_venue.id)
+    ).first():
+        candidate_slug = f"{base_slug}-{suffix}"
+        suffix += 1
+    new_venue.slug = candidate_slug
+    # SEO overrides
+    new_venue.seo_title = venue_data.seo_title
+    new_venue.seo_description = venue_data.seo_description
+
+    session.add(new_venue)
     session.commit()
     session.refresh(new_venue)
 
@@ -507,11 +533,18 @@ def get_venue(
     session: Session = Depends(get_session)
 ):
     """
-    Get a specific venue by ID.
-
-    Returns venue details with upcoming events count.
+    Get a specific venue by ID or slug.
+    Supports dual-resolution: tries slug first, falls back to UUID.
     """
-    venue = session.get(Venue, normalize_uuid(venue_id))
+    # Try slug lookup first
+    venue = session.exec(
+        select(Venue).where(Venue.slug == venue_id)
+    ).first()
+
+    # Fall back to UUID lookup
+    if not venue:
+        venue = session.get(Venue, normalize_uuid(venue_id))
+
     if not venue:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

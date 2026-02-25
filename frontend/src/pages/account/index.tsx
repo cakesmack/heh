@@ -682,7 +682,7 @@ function AccountPageContent() {
                         });
 
                         return displayedVenues.map((venue: any) => (
-                          <Link key={venue.id} href={`/venues/${venue.id}`}>
+                          <Link key={venue.id} href={`/venues/${venue.slug || venue.id}`}>
                             <div className="group relative rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all h-full bg-white">
                               <div className="aspect-video bg-gray-200 relative">
                                 {venue.image_url ? (
@@ -850,7 +850,7 @@ function AccountPageContent() {
                           <div
                             key={event.id}
                             className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                            onClick={() => router.push(event.status === 'rejected' ? `/events/${event.id}/edit` : `/events/${event.id}`)}
+                            onClick={() => router.push(event.status === 'rejected' ? `/events/${event.id}/edit` : `/events/${event.slug || event.id}`)}
                           >
                             {/* ... Image and Overlay (unchanged) ... */}
                             {event.image_url ? (
@@ -979,7 +979,7 @@ function AccountPageContent() {
                       <div
                         key={event.id}
                         className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer shadow-sm hover:shadow-md transition-all"
-                        onClick={() => router.push(`/events/${event.id}`)}
+                        onClick={() => router.push(`/events/${event.slug || event.id}`)}
                       >
                         {/* Image */}
                         {event.image_url ? (

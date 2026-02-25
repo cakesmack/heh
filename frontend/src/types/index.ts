@@ -183,6 +183,10 @@ export interface Venue {
   serves_food?: boolean;
   amenities_notes?: string;
   google_place_id?: string;
+  // SEO fields
+  seo_title?: string;
+  seo_description?: string;
+  slug?: string;
 }
 
 export interface VenueResponse extends Venue {
@@ -325,6 +329,10 @@ export interface Event {
   is_recurring?: boolean;
   parent_event_id?: string;
   recurrence_group_id?: string;
+  // SEO fields
+  seo_title?: string;
+  seo_description?: string;
+  slug?: string;
 }
 
 export interface OrganizerProfileResponse {

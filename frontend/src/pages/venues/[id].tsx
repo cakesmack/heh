@@ -214,30 +214,78 @@ export default function VenueDetailPage() {
     );
   }
 
-  const pageTitle = `${venue.name} | Highland Events Hub`;
-  const pageDescription = venue.description
-    ? (venue.description.length > 160 ? `${venue.description.substring(0, 157)}...` : venue.description)
-    : `Discover events and promotions at ${venue.name} in ${venue.address}.`;
+  // Extract city from address for localized SEO templates
+  const city = venue.address
+    ? (venue.address.split(',').slice(-2, -1)[0]?.trim() || venue.address.split(',').pop()?.trim() || 'Highlands')
+    : 'Highlands';
+
+  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
+
+  // SEO: Priority → manual override → high-CTR template
+  const pageTitle = venue.seo_title
+    || `${venue.name} Events, Tickets & Venue Guide | ${city} | Highland Events Hub`;
+
+  const pageDescription = venue.seo_description
+    || (venue.description
+      ? (venue.description.length > 160 ? `${venue.description.substring(0, 157)}...` : venue.description)
+      : `Discover upcoming events, tickets and venue info for ${venue.name} in ${city}. Opening hours, directions & accessibility info.`);
+
+  const canonicalUrl = `${siteUrl}/venues/${venue.slug || venue.id}`;
+  const venueImageUrl = venue.image_url ? optimizeImage(venue.image_url, 1200) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
       <Head>
         <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
+        <meta name="description" content={pageDescription} key="description" />
+        <link rel="canonical" href={canonicalUrl} key="canonical" />
 
         {/* Open Graph / Facebook */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={`https://highlandeventshub.com/venues/${venue.id}`} />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-        {venue.image_url && <meta property="og:image" content={optimizeImage(venue.image_url, 1200)} />}
+        <meta property="og:type" content="website" key="og-type" />
+        <meta property="og:url" content={canonicalUrl} key="og-url" />
+        <meta property="og:title" content={pageTitle} key="og-title" />
+        <meta property="og:description" content={pageDescription} key="og-description" />
+        {venueImageUrl && <meta property="og:image" content={venueImageUrl} key="og-image" />}
 
         {/* Twitter */}
-        <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content={`https://highlandeventshub.com/venues/${venue.id}`} />
-        <meta property="twitter:title" content={pageTitle} />
-        <meta property="twitter:description" content={pageDescription} />
-        {venue.image_url && <meta property="twitter:image" content={optimizeImage(venue.image_url, 1200)} />}
+        <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
+        <meta name="twitter:url" content={canonicalUrl} key="twitter-url" />
+        <meta name="twitter:title" content={pageTitle} key="twitter-title" />
+        <meta name="twitter:description" content={pageDescription} key="twitter-description" />
+        {venueImageUrl && <meta name="twitter:image" content={venueImageUrl} key="twitter-image" />}
+
+        {/* JSON-LD Structured Data for Venue */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Place",
+              "name": venue.name,
+              ...(venue.description ? {
+                "description": venue.description.replace(/<[^>]*>?/gm, '').substring(0, 300)
+              } : {}),
+              ...(venueImageUrl ? { "image": venueImageUrl } : {}),
+              "address": {
+                "@type": "PostalAddress",
+                "streetAddress": venue.address_full || venue.address,
+                "addressLocality": city,
+                "addressRegion": "Highland",
+                "postalCode": venue.postcode || "",
+                "addressCountry": "GB"
+              },
+              ...((venue.latitude && venue.longitude) ? {
+                "geo": {
+                  "@type": "GeoCoordinates",
+                  "latitude": venue.latitude,
+                  "longitude": venue.longitude
+                }
+              } : {}),
+              ...(venue.phone ? { "telephone": venue.phone } : {}),
+              ...(venue.website ? { "url": venue.website } : {}),
+            })
+          }}
+        />
       </Head>
 
       {/* Cinematic Hero */}

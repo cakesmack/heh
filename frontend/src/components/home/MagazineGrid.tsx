@@ -142,7 +142,7 @@ export default function MagazineGrid({
             {/* Mobile View: Vertical Card List */}
             <div className="md:hidden flex flex-col gap-4 px-4 py-4">
                 {events.map((event) => (
-                    <Link key={event.id} href={`/events/${event.id}`} className="block">
+                    <Link key={event.id} href={`/events/${event.slug || event.id}`} className="block">
                         <div className="relative h-48 rounded-xl overflow-hidden shadow-sm bg-stone-800 group hover:scale-[1.02] transition-transform duration-300">
                             {/* Background Image */}
                             <OptimizedImage
@@ -205,7 +205,7 @@ export default function MagazineGrid({
                                 className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === carouselIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
                                     }`}
                             >
-                                <Link href={`/events/${event.id}`} className="block w-full h-full relative">
+                                <Link href={`/events/${event.slug || event.id}`} className="block w-full h-full relative">
                                     <OptimizedImage
                                         src={event.image_url || '/images/event-placeholder.jpg'}
                                         alt={event.title}
@@ -297,7 +297,7 @@ export default function MagazineGrid({
                 {/* Grid Items */}
                 {gridItems.map((event) => (
                     <div key={event.id} className="relative group h-[300px] rounded-xl md:rounded-none overflow-hidden col-span-1 hover:scale-[1.02] transition-transform duration-300">
-                        <Link href={`/events/${event.id}`} className="block w-full h-full relative z-10">
+                        <Link href={`/events/${event.slug || event.id}`} className="block w-full h-full relative z-10">
                             <OptimizedImage
                                 src={event.image_url || '/images/event-placeholder.jpg'}
                                 alt={event.title}

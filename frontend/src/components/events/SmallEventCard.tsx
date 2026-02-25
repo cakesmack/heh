@@ -22,7 +22,7 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
     };
 
     return (
-        <Link href={`/events/${event.id}`} className="group block h-full">
+        <Link href={`/events/${event.slug || event.id}`} className="group block h-full">
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-stone-dark shadow-sm transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-1">
                 {/* Image Background */}
                 {event.image_url ? (

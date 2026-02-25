@@ -271,7 +271,7 @@ export function MapPage() {
           selectedMarkerId={selectedMarkerId}
           hoveredEventId={hoveredEventId}
           onEventClick={(event) => {
-            router.push(`/events/${event.id}`);
+            router.push(`/events/${event.slug || event.id}`);
           }}
           onHover={(eventId) => setHoveredEventId(eventId)}
           onFocusEvent={(eventId) => {
@@ -349,7 +349,7 @@ export function MapPage() {
                   <MapEventCard
                     key={event.id}
                     event={event}
-                    onClick={() => router.push(`/events/${event.id}`)}
+                    onClick={() => router.push(`/events/${event.slug || event.id}`)}
                   />
                 ))}
               </div>

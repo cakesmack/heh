@@ -142,7 +142,7 @@ export default function PopularEvents() {
                     {events.map((event, index) => (
                         <Link
                             key={event.id}
-                            href={`/events/${event.id}`}
+                            href={`/events/${event.slug || event.id}`}
                             className={`snap-start shrink-0 w-64 group/card relative transition-all duration-500 hover:z-10 ${index === 0 ? 'ml-4 md:ml-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''} ${index === events.length - 1 ? 'mr-4 md:mr-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''}`}
                         >
                             {/* Card with Image */}

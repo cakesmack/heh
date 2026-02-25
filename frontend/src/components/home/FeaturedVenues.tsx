@@ -77,7 +77,7 @@ export default function FeaturedVenues() {
                 {venues.map((venue, index) => (
                     <Link
                         key={venue.id}
-                        href={`/venues/${venue.id}`}
+                        href={`/venues/${venue.slug || venue.id}`}
                         className={`snap-center shrink-0 flex flex-col items-center group ${index === 0 ? 'ml-4 md:ml-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''
                             } ${index === venues.length - 1 ? 'mr-4 md:mr-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''}`}
                     >

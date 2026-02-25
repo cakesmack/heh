@@ -86,6 +86,9 @@ class VenueCreate(BaseModel):
     social_tiktok: Optional[str] = Field(None, max_length=255)
     website_url: Optional[str] = Field(None, max_length=255)
     status: str = "UNVERIFIED"
+    # SEO Overrides
+    seo_title: Optional[str] = Field(None, max_length=120)
+    seo_description: Optional[str] = Field(None, max_length=500)
 
     @model_validator(mode='before')
     @classmethod
@@ -129,6 +132,9 @@ class VenueUpdate(BaseModel):
     social_tiktok: Optional[str] = Field(None, max_length=255)
     website_url: Optional[str] = Field(None, max_length=255)
     status: Optional[str] = None
+    # SEO Overrides
+    seo_title: Optional[str] = Field(None, max_length=120)
+    seo_description: Optional[str] = Field(None, max_length=500)
 
     @model_validator(mode='before')
     @classmethod
@@ -161,6 +167,11 @@ class VenueResponse(BaseModel):
     owner_id: Optional[UUID]
     created_at: datetime
     status: str
+
+    # SEO fields
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    slug: Optional[str] = None
 
     # Phase 2.10 additions
     postcode: Optional[str] = None

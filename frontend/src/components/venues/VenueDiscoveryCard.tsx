@@ -11,7 +11,7 @@ export function VenueDiscoveryCard({ venue }: VenueDiscoveryCardProps) {
     const imageSrc = venue.image_url || '/images/placeholders/venue-placeholder.jpg';
 
     return (
-        <Link href={`/venues/${venue.id}`} className="group block h-full">
+        <Link href={`/venues/${venue.slug || venue.id}`} className="group block h-full">
             <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col border border-gray-100">
                 {/* Image Container */}
                 <div className="relative h-48 w-full bg-gray-100 overflow-hidden">

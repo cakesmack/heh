@@ -53,6 +53,11 @@ class Event(SQLModel, table=True):
     title: str = Field(max_length=255, index=True)
     description: Optional[str] = Field(default=None, max_length=20000)
 
+    # SEO Overrides
+    seo_title: Optional[str] = Field(default=None, max_length=120)
+    seo_description: Optional[str] = Field(default=None, max_length=500)
+    slug: Optional[str] = Field(default=None, max_length=300, index=True)
+
     # Dates
     date_start: datetime = Field(index=True)
     date_end: datetime = Field(index=True)

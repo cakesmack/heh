@@ -8,7 +8,7 @@ import OptimizedImage from '@/components/ui/OptimizedImage';
 // Compact card variant for recommended events - image and title only
 function CompactEventCard({ event }: { event: EventResponse }) {
     return (
-        <Link href={`/events/${event.id}`} className="block group">
+        <Link href={`/events/${event.slug || event.id}`} className="block group">
             <div className="relative overflow-hidden rounded-xl md:rounded-none">
                 <div className="relative aspect-[4/3] overflow-hidden">
                     <OptimizedImage

@@ -1008,10 +1008,12 @@ async def create_event(
         recurrence_group_id=normalize_uuid(uuid4()) if (event_data.is_recurring if event_data.is_recurring is not None else False) else None,
         # Status will be set below based on trust evaluation
         status="pending",
-    # Map Display Point
         map_display_lat=event_data.map_display_lat,
         map_display_lng=event_data.map_display_lng,
-        map_display_label=event_data.map_display_label
+        map_display_label=event_data.map_display_label,
+    # SEO Overrides
+        seo_title=event_data.seo_title,
+        seo_description=event_data.seo_description,
     )
     
     
@@ -1103,6 +1105,30 @@ async def create_event(
                 detail="An event with this title, date, and venue already exists."
             )
         raise e
+
+    # --- Generate SEO Slug ---
+    from app.core.utils import generate_seo_slug
+    slug_parts = [generate_seo_slug(new_event.title)]
+    # Append venue name for keyword richness
+    if venue_id_normalized:
+        venue_obj = session.get(Venue, venue_id_normalized)
+        if venue_obj:
+            slug_parts.append(generate_seo_slug(venue_obj.name, max_length=30))
+    elif event_data.location_name:
+        slug_parts.append(generate_seo_slug(event_data.location_name, max_length=30))
+    # Append month-year
+    if new_event.date_start:
+        slug_parts.append(new_event.date_start.strftime("%b-%Y").lower())
+    base_slug = "-".join(p for p in slug_parts if p)[:300]
+    # Collision prevention
+    candidate_slug = base_slug
+    suffix = 1
+    while session.exec(
+        select(Event).where(Event.slug == candidate_slug, Event.id != new_event.id)
+    ).first():
+        candidate_slug = f"{base_slug}-{suffix}"
+        suffix += 1
+    new_event.slug = candidate_slug
 
     # Handle tags
     if event_data.tags:
@@ -1251,24 +1277,25 @@ def get_event(
     session: Session = Depends(get_session)
 ):
     """
-    Get a specific event by ID.
+    Get a specific event by ID or slug.
+    Supports dual-resolution: tries slug first, falls back to UUID.
     """
-    event = session.get(Event, normalize_uuid(event_id))
+    # Try slug lookup first
+    event = session.exec(
+        select(Event).where(Event.slug == event_id)
+    ).first()
+
+    # Fall back to UUID lookup
+    if not event:
+        event = session.get(Event, normalize_uuid(event_id))
+
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event not found"
         )
 
-    # Increment View Count (Public & Admin)
-    # Using SQL expression to be race-condition resistant (partially)
-    # event.view_count += 1 
-    # session.add(event)
-    # session.commit()
-    # session.refresh(event)
-    
-    # Optimization: Direct SQL update to avoid race conditions and overhead
-    # But for simplicity with SQLModel objects:
+    # Increment View Count
     event.view_count += 1
     session.add(event)
     session.commit()

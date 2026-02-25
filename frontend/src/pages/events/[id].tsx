@@ -175,10 +175,19 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
 
   // Build rich description for social sharing
   const venueName = event.venue_name || event.location_name || 'the Highlands';
-  const pageDescription = `Join us at ${venueName} on ${formattedOgDate}. ${event.description ? event.description.substring(0, 100) : 'Discover this amazing event in the Scottish Highlands!'}`;
 
-  // SEO: Dynamic Title (Title | Venue | Date | Site Name)
-  const pageTitle = `${event.title} at ${venueName} | ${formattedOgDate} | Highland Events Hub`;
+  // Extract city from address for localized SEO templates
+  const city = event.address_full
+    ? (event.address_full.split(',').slice(-2, -1)[0]?.trim() || 'Highlands')
+    : (event.location_name || 'Highlands');
+
+  // SEO: Priority → manual override → high-CTR template
+  const pageTitle = event.seo_title
+    || `${event.title} at ${venueName}, ${city} | Tickets, Dates & Info | Highland Events Hub`;
+
+  const pageDescription = event.seo_description
+    || `${event.title} at ${venueName} on ${formattedOgDate}. Get tickets, dates, venue info & directions. Your guide to events in the Scottish Highlands.`;
+
   const siteUrl = baseUrl || 'https://www.highlandeventshub.co.uk';
 
   // Use optimized URL for OG image if it's a Cloudflare ID
@@ -187,7 +196,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const ogImageUrl = optimizedOgUrl
     ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${siteUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
     : `${siteUrl}/images/og-default.jpg`;
-  const canonicalUrl = `${siteUrl}/events/${event.id}`;
+  const canonicalUrl = `${siteUrl}/events/${event.slug || event.id}`;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -231,23 +240,25 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 "address": {
                   "@type": "PostalAddress",
                   "streetAddress": event.address_full || event.location_name || venueName,
-                  "addressLocality": event.location_name || "Highlands",
-                  "addressRegion": "Highlands",
+                  "addressLocality": city,
+                  "addressRegion": "Highland",
                   "postalCode": event.postcode || "",
                   "addressCountry": "GB"
                 },
-                "geo": (event.latitude && event.longitude) ? {
-                  "@type": "GeoCoordinates",
-                  "latitude": event.latitude,
-                  "longitude": event.longitude
-                } : undefined
+                ...((event.latitude && event.longitude) ? {
+                  "geo": {
+                    "@type": "GeoCoordinates",
+                    "latitude": event.latitude,
+                    "longitude": event.longitude
+                  }
+                } : {})
               },
               "image": [ogImageUrl],
               "description": event.description ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 300) : pageDescription,
               "offers": {
                 "@type": "Offer",
                 "url": event.ticket_url || canonicalUrl,
-                "price": event.price || 0,
+                "price": String(event.price || 0),
                 "priceCurrency": "GBP",
                 "availability": "https://schema.org/InStock",
                 "validFrom": new Date(event.created_at).toISOString()
@@ -256,7 +267,13 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 "@type": "Organization",
                 "name": event.organizer_profile?.name || "Highland Events Hub",
                 "url": siteUrl
-              }
+              },
+              ...(event.organizer_profile?.name ? {
+                "performer": {
+                  "@type": "PerformingGroup",
+                  "name": event.organizer_profile.name
+                }
+              } : {})
             })
           }}
         />
@@ -1204,9 +1221,9 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
         baseUrl,
         // Pass metadata to _app.tsx for immediate SEO
         meta: {
-          title: `${event.title} | Highland Events Hub`,
-          description,
-          url: `${baseUrl}/events/${event.id}`,
+          title: event.seo_title || `${event.title} at ${event.venue_name || event.location_name || 'Highlands'} | Tickets, Dates & Info | Highland Events Hub`,
+          description: event.seo_description || description,
+          url: `${baseUrl}/events/${event.slug || event.id}`,
           image: ogImage,
           type: 'event',
         }

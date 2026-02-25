@@ -32,7 +32,7 @@ export function VenueCard({ venue }: VenueCardProps) {
   };
 
   return (
-    <Link href={`/venues/${venue.id}`}>
+    <Link href={`/venues/${venue.slug || venue.id}`}>
       <Card hover padding="md">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">

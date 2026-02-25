@@ -384,7 +384,7 @@ export function ClusteredEventMarkers({
 
                             {/* View Details Button */}
                             <a
-                                href={`/events/${selectedEvent.id}`}
+                                href={`/events/${selectedEvent.slug || selectedEvent.id}`}
                                 className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors"
                             >
                                 View Details
@@ -416,7 +416,7 @@ export function ClusteredEventMarkers({
                             {clusterPopup.events.map((event) => (
                                 <a
                                     key={event.id}
-                                    href={`/events/${event.id}`}
+                                    href={`/events/${event.slug || event.id}`}
                                     className="flex gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                                 >
                                     {/* Thumbnail */}

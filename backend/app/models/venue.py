@@ -60,6 +60,11 @@ class Venue(SQLModel, table=True):
 
     # Additional info
     description: Optional[str] = Field(default=None, max_length=2000)
+
+    # SEO Overrides
+    seo_title: Optional[str] = Field(default=None, max_length=120)
+    seo_description: Optional[str] = Field(default=None, max_length=500)
+    slug: Optional[str] = Field(default=None, max_length=300, index=True)
     website: Optional[str] = Field(default=None, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=20)
     email: Optional[str] = Field(default=None, max_length=255)

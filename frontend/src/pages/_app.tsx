@@ -5,6 +5,7 @@
 
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { Inter } from 'next/font/google';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { APIProvider } from '@vis.gl/react-google-maps';
@@ -33,13 +34,17 @@ const siteUrl = 'https://www.highlandeventshub.co.uk';
 const defaultOgImage = 'https://www.highlandeventshub.co.uk/images/og-preview.jpg?v=2';
 
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter();
+
   // Extract metadata from pageProps (if provided by the page)
   const meta = pageProps.meta || {};
 
   // Defaults
   const title = meta.title || "Highland Events Hub";
   const description = meta.description || "Discover the best events, gigs, markets and festivals across the Scottish Highlands.";
-  const url = meta.url || siteUrl;
+  // Strip query params and hash from canonical URL (prevents UTM/tracking param duplication)
+  const cleanPath = router.asPath.split('?')[0].split('#')[0];
+  const url = meta.url || `${siteUrl}${cleanPath}`;
   const type = meta.type || "website";
   const image = meta.image || defaultOgImage;
 

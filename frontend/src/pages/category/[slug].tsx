@@ -337,7 +337,7 @@ export default function CategoryPage() {
                             {pinnedEvents.map((event) => (
                                 <Link
                                     key={event.id}
-                                    href={`/events/${event.id}`}
+                                    href={`/events/${event.slug || event.id}`}
                                     className="group relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
                                 >
                                     <div className="aspect-[16/9] relative overflow-hidden">

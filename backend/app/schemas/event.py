@@ -115,6 +115,9 @@ class EventCreate(BaseModel):
     map_display_lat: Optional[float] = None
     map_display_lng: Optional[float] = None
     map_display_label: Optional[str] = Field(None, max_length=255)
+    # SEO Overrides
+    seo_title: Optional[str] = Field(None, max_length=120)
+    seo_description: Optional[str] = Field(None, max_length=500)
 
     @model_validator(mode='before')
     @classmethod
@@ -161,6 +164,9 @@ class EventUpdate(BaseModel):
     recurrence_end_date: Optional[datetime] = None
     weekdays: Optional[List[int]] = Field(None, description="Days of the week for recurring events (0=Mon, 6=Sun)")
     status: Optional[str] = Field(None, description="Admin only: Update event status")
+    # SEO Overrides
+    seo_title: Optional[str] = Field(None, max_length=120)
+    seo_description: Optional[str] = Field(None, max_length=500)
 
     @model_validator(mode='before')
     def sanitize_urls(cls, data):
@@ -194,6 +200,11 @@ class EventResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+    # SEO fields
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    slug: Optional[str] = None
 
     # Phase 2.10 additions
     ticket_url: Optional[str] = None

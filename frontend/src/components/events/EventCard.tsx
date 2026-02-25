@@ -60,7 +60,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
   return (
     <Card hover padding="none" className="group relative overflow-hidden h-full flex flex-col">
       {/* Main Link Overlay */}
-      <Link href={`/events/${event.id}`} className="absolute inset-0 z-10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-label={`View ${event.title}`}>
+      <Link href={`/events/${event.slug || event.id}`} className="absolute inset-0 z-10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-label={`View ${event.title}`}>
         <span className="sr-only">View Event</span>
       </Link>
 
