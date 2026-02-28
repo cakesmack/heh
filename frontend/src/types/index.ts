@@ -455,7 +455,8 @@ export interface EventFilter {
   skip?: number;
   limit?: number;
   sort_by?: string;
-  time_range?: 'upcoming' | 'past' | 'all';
+  time_range?: 'upcoming' | 'past' | 'all' | string;
+  date?: string;
   status?: string;
   is_recurring?: boolean;
   city_filter?: string;

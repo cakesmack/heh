@@ -301,6 +301,13 @@ export const eventsAPI = {
       if (filters.skip !== undefined) params.skip = filters.skip;
       if (filters.include_past) params.include_past = 'true';
       if (filters.time_range) params.time_range = filters.time_range;
+
+      // Phase 2 Fix: Support mapping frontend `date` preset strings (e.g. 'weekend')
+      // directly to the backend's `time_range` parameter
+      if (filters.date && filters.date !== 'custom') {
+        params.time_range = filters.date;
+      }
+
       if (filters.skip !== undefined) params.skip = filters.skip;
       if (filters.limit !== undefined) params.limit = filters.limit;
       if (filters.sort_by) params.sort_by = filters.sort_by;

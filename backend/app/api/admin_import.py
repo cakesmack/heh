@@ -137,6 +137,16 @@ def import_single_event(
     # 2. Upsert Event (get-or-create)
     normalized_venue_id = normalize_uuid(req.venue_id) if req.venue_id else None
 
+    # NEW: Dynamic Venue Matching
+    if not normalized_venue_id and req.location_name:
+        # Try to find a venue by exact or ilike match
+        from sqlalchemy import func
+        venue_match = session.exec(
+            select(Venue).where(Venue.name.ilike(f"%{req.location_name}%"))
+        ).first()
+        if venue_match:
+            normalized_venue_id = venue_match.id
+
     # Validate or Create Venue
     if normalized_venue_id:
         venue = session.get(Venue, normalized_venue_id)

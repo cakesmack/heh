@@ -76,13 +76,18 @@ export default function EventsPage() {
 
     // Handle date logic
     if (date || date_from || date_to) {
-      const dateRange = getDateRangeFromFilter(
-        (date as string) || '',
-        date_from as string,
-        date_to as string
-      );
-      if (dateRange.date_from) filters.date_from = dateRange.date_from;
-      if (dateRange.date_to) filters.date_to = dateRange.date_to;
+      if (date && date !== 'custom') {
+        // Phase 2 Fix: Pass predefined date filters to API's time_range mapping
+        filters.date = date as string;
+      } else {
+        const dateRange = getDateRangeFromFilter(
+          (date as string) || '',
+          date_from as string,
+          date_to as string
+        );
+        if (dateRange.date_from) filters.date_from = dateRange.date_from;
+        if (dateRange.date_to) filters.date_to = dateRange.date_to;
+      }
     }
 
     // Location

@@ -306,8 +306,9 @@ def list_events(
          print(f"[EVENTS_DEBUG] Filtering by category slug: {category}")
 
     # Define absolute now (for Python-side logic)
-    from datetime import timezone
+    from datetime import timezone, timedelta
     now_utc = datetime.now(timezone.utc)
+    today_date = now_utc.date()
 
     # Handle time_range shortcuts
     if time_range == "past":
@@ -319,6 +320,30 @@ def list_events(
             date_from = now_utc
     elif time_range == "all":
         include_past = True
+    elif not date_from and not date_to and time_range in ["today", "tomorrow", "weekend", "this_weekend"]:
+        # Phase 3 Refactor: Elevated date parsing covers BOTH standard + SEO scenarios
+        if time_range == "today":
+            date_from = now_utc
+            date_to = datetime(today_date.year, today_date.month, today_date.day, 23, 59, 59, tzinfo=timezone.utc)
+        elif time_range == "tomorrow":
+            tmrw = today_date + timedelta(days=1)
+            date_from = datetime(tmrw.year, tmrw.month, tmrw.day, 0, 0, 0, tzinfo=timezone.utc)
+            date_to = datetime(tmrw.year, tmrw.month, tmrw.day, 23, 59, 59, tzinfo=timezone.utc)
+        elif time_range in ["weekend", "this_weekend"]:
+            weekday = today_date.weekday() # Mon=0, Sun=6
+            if weekday >= 4: # Fri(4), Sat(5), Sun(6)
+                date_from = now_utc
+                days_until_sunday = 6 - weekday
+                sun = today_date + timedelta(days=days_until_sunday)
+                date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59, tzinfo=timezone.utc)
+            else: 
+                # Mon-Thu: Next Friday
+                days_until_friday = 4 - weekday
+                fri = today_date + timedelta(days=days_until_friday)
+                sun = fri + timedelta(days=2)
+                date_from = datetime(fri.year, fri.month, fri.day, 0, 0, 0, tzinfo=timezone.utc)
+                date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59, tzinfo=timezone.utc)
+        include_past = True  # We have explicit bounds, don't force Upcoming 'func.now()' filter
     elif date_from is None and not include_past:
         date_from = now_utc
 
@@ -418,7 +443,10 @@ def list_events(
         cat_id_list = [normalize_uuid(cid.strip()) for cid in category_ids.split(",")]
     # Filter by venue ID (Host OR Participating)
     if venue_id:
-        v_id = normalize_uuid(venue_id)
+        # Try dual-resolution to translate a potential slug into a UUID
+        venue_lookup = session.exec(select(Venue).where(Venue.slug == venue_id)).first()
+        v_id = venue_lookup.id if venue_lookup else normalize_uuid(venue_id)
+        
         query = query.outerjoin(EventParticipatingVenue, Event.id == EventParticipatingVenue.event_id)
         query = query.where(
             (Event.venue_id == v_id) | 
@@ -481,35 +509,7 @@ def list_events(
         
         # 4. APPLY DATE FILTER (Time Range / Custom Dates)
         sql_now = func.now()
-        today = now_utc.date()
-        from datetime import timedelta
-
-        # Resolve Presets if custom dates aren't provided
-        if not date_from and not date_to and time_range in ["today", "tomorrow", "weekend", "this_weekend"]:
-            if time_range == "today":
-                date_from = now
-                date_to = datetime(today.year, today.month, today.day, 23, 59, 59)
-            elif time_range == "tomorrow":
-                tmrw = today + timedelta(days=1)
-                date_from = datetime(tmrw.year, tmrw.month, tmrw.day, 0, 0, 0)
-                date_to = datetime(tmrw.year, tmrw.month, tmrw.day, 23, 59, 59)
-            elif time_range in ["weekend", "this_weekend"]:
-                # Logic: If today is Fri/Sat/Sun, it's "This Weekend" (Now until Sun end)
-                # Else: Next Friday until Sunday end
-                weekday = today.weekday() # Mon=0, Sun=6
-                
-                if weekday >= 4: # Fri(4), Sat(5), Sun(6)
-                    date_from = now
-                    days_until_sunday = 6 - weekday
-                    sun = today + timedelta(days=days_until_sunday)
-                    date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59)
-                else: 
-                    # Mon-Thu: Next Friday
-                    days_until_friday = 4 - weekday
-                    fri = today + timedelta(days=days_until_friday)
-                    sun = fri + timedelta(days=2)
-                    date_from = datetime(fri.year, fri.month, fri.day, 0, 0, 0)
-                    date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59)
+        # Time Range presets (today, tomorrow, weekend) are now resolved universally at the top of the function.
 
         if time_range == "past":
             query = query.where(Event.date_end < sql_now)
@@ -1405,7 +1405,8 @@ async def update_event(
     event_data: EventUpdate,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
+    unlink_venue: bool = Query(False, description="Explicitly allow unlinking a venue (wiping venue_id to None)")
 ):
     """
     Update an existing event.
@@ -1440,6 +1441,12 @@ async def update_event(
 
     # Update fields (exclude tags, participating_venue_ids, showtimes, and explicit dates for special handling)
     update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring"})
+
+    # Prevent destructive scraper wipes for venue_id
+    if "venue_id" in update_data and update_data["venue_id"] is None:
+        if event.venue_id is not None and not unlink_venue:
+            logger.warning(f"[UPDATE_EVENT] Prevented wiping venue_id for event {event.id}. Use unlink_venue=True to force.")
+            update_data.pop("venue_id")
 
     # DEBUG: Log what we received
     logger.info(f"[UPDATE_EVENT] Event ID: {event_id}")

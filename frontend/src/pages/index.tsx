@@ -126,7 +126,9 @@ export default function HomePage() {
     setSearchPage(1);
     setIsSearchOpen(true);
 
-    const dateRange = getDateRangeFromFilter(filters.date || '', filters.dateFrom, filters.dateTo);
+    const dateRange = filters.date === 'custom'
+      ? getDateRangeFromFilter('custom', filters.dateFrom, filters.dateTo)
+      : {};
 
     const searchFilters: any = {
       limit: SEARCH_ITEMS_PER_PAGE,
@@ -136,9 +138,12 @@ export default function HomePage() {
       ...dateRange,
     };
 
-    // Remove raw date params that aren't needed by API
-    if (filters.date) {
+    // Remove raw date params for custom, but KEEP 'date' for presets so api.ts can map it to time_range
+    if (filters.date === 'custom') {
       delete searchFilters.date;
+      delete searchFilters.dateFrom;
+      delete searchFilters.dateTo;
+    } else {
       delete searchFilters.dateFrom;
       delete searchFilters.dateTo;
     }
@@ -175,11 +180,9 @@ export default function HomePage() {
   const handleSortChange = async (newSort: string) => {
     setSearchSort(newSort);
 
-    const dateRange = getDateRangeFromFilter(
-      activeFilters.date || '',
-      activeFilters.dateFrom,
-      activeFilters.dateTo
-    );
+    const dateRange = activeFilters.date === 'custom'
+      ? getDateRangeFromFilter('custom', activeFilters.dateFrom, activeFilters.dateTo)
+      : {};
 
     // Trigger search with new sort
     const searchFilters: any = {
@@ -190,8 +193,11 @@ export default function HomePage() {
       ...dateRange,
     };
 
-    if (activeFilters.date) {
+    if (activeFilters.date === 'custom') {
       delete searchFilters.date;
+      delete searchFilters.dateFrom;
+      delete searchFilters.dateTo;
+    } else {
       delete searchFilters.dateFrom;
       delete searchFilters.dateTo;
     }
@@ -204,11 +210,9 @@ export default function HomePage() {
     setSearchPage(newPage);
     const skip = (newPage - 1) * SEARCH_ITEMS_PER_PAGE;
 
-    const dateRange = getDateRangeFromFilter(
-      activeFilters.date || '',
-      activeFilters.dateFrom,
-      activeFilters.dateTo
-    );
+    const dateRange = activeFilters.date === 'custom'
+      ? getDateRangeFromFilter('custom', activeFilters.dateFrom, activeFilters.dateTo)
+      : {};
 
     const searchFilters: any = {
       limit: SEARCH_ITEMS_PER_PAGE,
@@ -218,8 +222,11 @@ export default function HomePage() {
       ...dateRange,
     };
 
-    if (activeFilters.date) {
+    if (activeFilters.date === 'custom') {
       delete searchFilters.date;
+      delete searchFilters.dateFrom;
+      delete searchFilters.dateTo;
+    } else {
       delete searchFilters.dateFrom;
       delete searchFilters.dateTo;
     }

@@ -43,10 +43,32 @@ export default function MapDateFilter({ selectedRangeId, onRangeSelect, currentD
         {
             id: 'weekend',
             label: 'This Weekend',
-            getRange: () => ({
-                start: nextSaturday(today),
-                end: endOfDay(nextSunday(today))
-            })
+            getRange: () => {
+                const dayOfWeek = today.getDay(); // 0 is Sunday, 6 is Saturday
+                if (dayOfWeek === 6) {
+                    // Today is Saturday
+                    return {
+                        start: startOfDay(today),
+                        end: endOfDay(addDays(today, 1)) // Sunday
+                    };
+                } else if (dayOfWeek === 0) {
+                    // Today is Sunday
+                    return {
+                        start: startOfDay(today),
+                        end: endOfDay(today)
+                    };
+                } else {
+                    // Weekday: next Friday to Sunday
+                    // The date-fns 'nextFriday', 'nextSunday' behavior: 
+                    // To accurately get the upcoming Friday to Sunday:
+                    const daysUntilFriday = 5 - dayOfWeek + (dayOfWeek > 5 ? 7 : 0);
+                    const friday = addDays(today, daysUntilFriday);
+                    return {
+                        start: startOfDay(friday),
+                        end: endOfDay(addDays(friday, 2)) // Sunday
+                    };
+                }
+            }
         },
         {
             id: 'week',
