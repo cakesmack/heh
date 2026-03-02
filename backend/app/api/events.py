@@ -271,6 +271,7 @@ def list_events(
     category: Optional[str] = Query(None, description="Category slug for filtering"),
     category_ids: Optional[str] = Query(None, description="Comma-separated category IDs"),
     tag_names: Optional[str] = Query(None, description="Comma-separated tag names"),
+    tag_ids: Optional[str] = Query(None, description="Comma-separated tag IDs"),
     tag: Optional[str] = Query(None, description="Single tag slug/name for filtering"),
     q: Optional[str] = Query(None, description="Search query for title/description"),
     location: Optional[str] = Query(None, description="Search query for location (name, address, postcode)"),
@@ -453,20 +454,39 @@ def list_events(
             (EventParticipatingVenue.venue_id == v_id)
         )
 
-    # Filter by single tag
-    if tag and not tag_names:
-        normalized_tag = normalize_tag_name(tag)
-        query = query.join(EventTag, Event.id == EventTag.event_id).join(
-            Tag, EventTag.tag_id == Tag.id
-        ).where(Tag.name == normalized_tag)
+    # Tag filtering logic with join tracking
+    event_tag_joined = False
+    tag_joined = False
 
-    # Filter by multiple tags
-    if tag_names:
+    # 1. Prioritize tag_ids (JSON-first, SEO-heavy architecture)
+    if tag_ids:
+        # Ensure it's a list even if a single string is passed
+        actual_ids = tag_ids if isinstance(tag_ids, list) else [tag_ids]
+        print(f"DATABASE_CHECK: Filtering for IDs: {actual_ids}", flush=True)
+        query = query.join(Event.tags).filter(Tag.id.in_(actual_ids))
+        event_tag_joined = True
+        tag_joined = True
+        
+    # 2. Filter by multiple tags (legacy/fallback)
+    elif tag_names:
         tag_list = [normalize_tag_name(t.strip()) for t in tag_names.split(",")]
-        # Join with EventTag and Tag to filter
-        query = query.join(EventTag, Event.id == EventTag.event_id).join(
-            Tag, EventTag.tag_id == Tag.id
-        ).where(Tag.name.in_(tag_list))
+        if not event_tag_joined:
+            query = query.join(EventTag, Event.id == EventTag.event_id)
+            event_tag_joined = True
+        query = query.join(Tag, EventTag.tag_id == Tag.id)
+        tag_joined = True
+        query = query.where(Tag.name.in_(tag_list))
+        
+    # 3. Filter by single tag (legacy/fallback)
+    elif tag:
+        normalized_tag = normalize_tag_name(tag)
+        if not event_tag_joined:
+            query = query.join(EventTag, Event.id == EventTag.event_id)
+            event_tag_joined = True
+        if not tag_joined:
+            query = query.join(Tag, EventTag.tag_id == Tag.id)
+            tag_joined = True
+        query = query.where(Tag.name == normalized_tag)
 
     # --- SCENARIO B: SEO Page (Strict City Filter) ---
     if city_filter:
@@ -564,33 +584,61 @@ def list_events(
         # Generate slugified version for tag matching (e.g., "Live Music" -> "live-music")
         search_slug = normalize_tag_name(q)
         
+        # Track joins to prevent DuplicateAlias
+        event_tag_joined = False
+        tag_joined = False
+        
         # Join with Venue if not already joined
         if not venue_joined:
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)
             venue_joined = True
         
-        # Join with EventTag and Tag for tag search
-        query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
-        query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
+        # Join with EventTag and Tag for tag search if not already joined
+        if tag_names or tag:
+            event_tag_joined = True
+            tag_joined = True
+        else:
+            query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
+            query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
+            event_tag_joined = True
+            tag_joined = True
         
-        # Join with Category for category name search
-        query = query.outerjoin(Category, Event.category_id == Category.id)
+        # Join with Category for category name search if not already joined
+        category_joined = False
+        if category or category_id or category_ids:
+            # Not strictly joined in the above logic unless necessary, but safer to assume we might need it
+            pass
+        else:
+            query = query.outerjoin(Category, Event.category_id == Category.id)
+            category_joined = True
+
         
-        query = query.where(
-            (Event.title.ilike(search_term)) | 
-            (Event.description.ilike(search_term)) |
-            (Event.location_name.ilike(search_term)) |  # Custom location name
-            (Event.address_full.ilike(search_term)) |  # Custom location address
-            (Event.postcode.ilike(search_term)) |      # Custom location postcode
-            (Venue.name.ilike(search_term)) |
-            (Venue.address.ilike(search_term)) |
-            (Venue.formatted_address.ilike(search_term)) |
-            (Venue.postcode.ilike(search_term)) |
-            (Tag.name == search_slug) |  # Exact match on slugified tag
-            (Tag.name.ilike(f"%{search_slug}%")) |  # Partial match on tag
-            (Category.name.ilike(search_term)) |  # Match category name
-            (Category.slug.ilike(search_term))  # Match category slug
-        )
+        # Build search conditions
+        search_conditions = [
+            Event.title.ilike(search_term),
+            Event.description.ilike(search_term),
+            Event.location_name.ilike(search_term),
+            Event.address_full.ilike(search_term),
+            Event.postcode.ilike(search_term),
+            Venue.name.ilike(search_term),
+            Venue.address.ilike(search_term),
+            Venue.formatted_address.ilike(search_term),
+            Venue.postcode.ilike(search_term)
+        ]
+
+        if tag_joined:
+            search_conditions.extend([
+                Tag.name == search_slug,
+                Tag.name.ilike(f"%{search_slug}%")
+            ])
+            
+        if category_joined:
+             search_conditions.extend([
+                Category.name.ilike(search_term),
+                Category.slug.ilike(search_term)
+             ])
+             
+        query = query.where(or_(*search_conditions))
 
     # Location Search...
     if location and (latitude is None or longitude is None) and not city_filter:

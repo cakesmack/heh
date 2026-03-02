@@ -20,4 +20,8 @@ class Collection(SQLModel, table=True):
     # New fields for structured collections
     slug: Optional[str] = Field(default=None, sa_column_kwargs={"unique": True})
     description: Optional[str] = Field(default=None, sa_column=Column(Text))
+    long_description: Optional[str] = Field(default=None, sa_column=Column(Text))
+    seo_title: Optional[str] = Field(default=None, max_length=255)
+    seo_description: Optional[str] = Field(default=None, max_length=500)
+    is_featured: bool = Field(default=False)
     filter_params: Optional[dict] = Field(default=None, sa_column=Column(JSONB))

@@ -16,6 +16,10 @@ class CollectionBase(BaseModel):
     # New structured fields
     slug: Optional[str] = None
     description: Optional[str] = None
+    long_description: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    is_featured: bool = False
     filter_params: Optional[dict] = None
 
     @field_validator('filter_params', mode='before')
@@ -37,6 +41,10 @@ class CollectionUpdate(CollectionBase):
     fixed_end_date: Optional[date] = None
     slug: Optional[str] = None
     description: Optional[str] = None
+    long_description: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    is_featured: Optional[bool] = None
     filter_params: Optional[dict] = None
 
 class Collection(CollectionBase):

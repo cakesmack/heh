@@ -28,12 +28,13 @@ function buildEventFilter(params: Record<string, any>): EventFilter {
             ? params.category.join(',') as any
             : params.category;
     }
-    if (params.q) filter.q = params.q;
-    if (params.tag_names) {
-        filter.tag_names = Array.isArray(params.tag_names)
-            ? params.tag_names
-            : params.tag_names.split(',');
+    if (params.category_ids) {
+        filter.category_ids = Array.isArray(params.category_ids)
+            ? params.category_ids
+            : params.category_ids.split(',');
     }
+    if (params.q) filter.q = params.q;
+
     if (params.age_restriction) filter.age_restriction = params.age_restriction;
 
     // Price handling: 'free' → price_max: 0
@@ -78,9 +79,14 @@ export default function CollectionPage() {
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+    // Prevent infinite loop on fetchEvents
+    const initialFiltersSet = useRef(false);
+
     // Fetch collection by slug
     useEffect(() => {
         if (!router.isReady || !slug) return;
+
+        initialFiltersSet.current = false;
 
         const fetchCollection = async () => {
             setCollectionLoading(true);
@@ -113,6 +119,7 @@ export default function CollectionPage() {
         setEventsError(null);
 
         try {
+            console.log("SENDING TO API:", filters);
             const response = await eventsAPI.list({
                 ...filters,
                 limit: EVENTS_PER_PAGE,
@@ -135,26 +142,21 @@ export default function CollectionPage() {
     }, [events.length]);
 
     useEffect(() => {
-        if (!collection) return;
+        if (!collection || initialFiltersSet.current) return;
+
+        initialFiltersSet.current = true;
 
         if (collection.filter_params && Object.keys(collection.filter_params).length > 0) {
-            const filters = buildEventFilter(collection.filter_params);
-            fetchEvents(filters);
-        } else if (collection.target_link) {
-            // Fallback: parse the legacy target_link URL
-            try {
-                const searchParams = new URLSearchParams(collection.target_link.split('?')[1] || '');
-                const params: Record<string, any> = {};
-                searchParams.forEach((value, key) => { params[key] = value; });
-                const filters = buildEventFilter(params);
-                fetchEvents(filters);
-            } catch {
-                fetchEvents({});
-            }
+            const initialFilters = buildEventFilter(collection.filter_params);
+
+
+
+            fetchEvents(initialFilters);
         } else {
+            // Strictly enforce JSON filtering fallback or empty if none exists
             fetchEvents({});
         }
-    }, [collection]);
+    }, [collection, fetchEvents]);
 
     // Infinite scroll observer
     useEffect(() => {
@@ -206,93 +208,74 @@ export default function CollectionPage() {
     }
 
     return (
-        <>
+        <div className="min-h-screen bg-white">
             <Head>
-                <title>{collection.title} | Highland Events Hub</title>
-                {collection.description && (
-                    <meta name="description" content={collection.description} />
+                <title>{(collection as any).seo_title || collection.title} | Highland Events Hub</title>
+                {/* Fallback to seo_description, then subtitle, then description */}
+                {((collection as any).seo_description || collection.subtitle || collection.description) && (
+                    <meta name="description" content={((collection as any).seo_description || collection.subtitle || collection.description)} />
                 )}
             </Head>
 
-            {/* Hero Section */}
-            <section
-                className="relative w-full overflow-hidden"
-                style={{ minHeight: '340px' }}
-            >
-                {/* Background Image */}
+            {/* SECTION 1: HERO - ONLY PLACE FOR SHORT DESCRIPTION */}
+            <section className="relative h-[40vh] flex items-end pb-12">
+                {/* Background Image Logic Here */}
                 {collection.image_url && (
                     <div
                         className="absolute inset-0 bg-cover bg-center"
                         style={{ backgroundImage: `url(${optimizeImage(collection.image_url, 'hero')})` }}
                     />
                 )}
-
                 {/* Dark gradient overlay for text legibility */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+                <div className="absolute inset-0 bg-black/40 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
 
-                {/* Hero Content */}
-                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end"
-                    style={{ minHeight: '340px', paddingBottom: '3rem', paddingTop: '5rem' }}
-                >
-                    {/* Breadcrumb */}
-                    <nav className="mb-4">
-                        <ol className="flex items-center gap-2 text-sm text-white/70">
-                            <li>
-                                <Link href="/" className="hover:text-white transition-colors">Home</Link>
-                            </li>
-                            <li>/</li>
-                            <li className="text-white font-medium">{collection.title}</li>
-                        </ol>
-                    </nav>
-
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg">
-                        {collection.title}
-                    </h1>
-
+                <div className="relative z-10 max-w-7xl mx-auto px-4 text-white w-full">
                     {collection.subtitle && (
-                        <p className="text-xl md:text-2xl text-white/90 mb-3 drop-shadow-md max-w-3xl">
+                        <span className="block mb-2 text-sm font-semibold tracking-wide uppercase text-emerald-400">
                             {collection.subtitle}
-                        </p>
+                        </span>
                     )}
-
+                    <h1 className="text-5xl font-bold">{collection.title}</h1>
                     {collection.description && (
-                        <p className="text-base text-white/80 max-w-2xl leading-relaxed drop-shadow-sm">
-                            {collection.description}
-                        </p>
+                        <p className="text-xl mt-4">{collection.description}</p>
                     )}
                 </div>
             </section>
 
-            {/* Event Grid Section */}
-            <section className="bg-gray-50 py-8 pb-24">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Results count */}
-                    {!eventsLoading && !eventsError && (
+
+
+            {/* SECTION 3: EVENTS LIST */}
+            <section className="max-w-7xl mx-auto py-12 px-4">
+                {eventsLoading && !events.length ? (
+                    <div className="flex justify-center py-8">
+                        <Spinner size="lg" />
+                    </div>
+                ) : (
+                    <>
                         <div className="mb-6">
                             <p className="text-sm text-gray-600">
                                 {total} event{total !== 1 ? 's' : ''} in this collection
                             </p>
                         </div>
-                    )}
+                        <EventList events={events} isLoading={eventsLoading} error={eventsError} />
 
-                    <EventList events={events} isLoading={eventsLoading} error={eventsError} />
-
-                    {/* Infinite Scroll Sentinel */}
-                    {hasMore && !eventsLoading && !eventsError && (
-                        <div ref={loadMoreRef} className="mt-8 flex justify-center py-4">
-                            {isLoadingMore && (
-                                <div className="flex items-center gap-2 text-gray-500">
-                                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                    </svg>
-                                    <span>Loading more events...</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                        {/* Infinite Scroll Sentinel */}
+                        {hasMore && !eventsLoading && !eventsError && (
+                            <div ref={loadMoreRef} className="mt-8 flex justify-center py-4">
+                                {isLoadingMore && (
+                                    <div className="flex items-center gap-2 text-gray-500">
+                                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                        <span>Loading more events...</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
+                )}
             </section>
-        </>
+        </div>
     );
 }

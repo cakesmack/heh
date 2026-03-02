@@ -71,6 +71,22 @@ def get_popular_tags(
     )
 
 
+@router.get("/{tag_id}", response_model=TagResponse)
+def get_tag(
+    tag_id: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Get a specific tag by ID.
+    Used for resolving UUIDs to human-readable names.
+    """
+    tag = session.get(Tag, normalize_uuid(tag_id))
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    
+    return TagResponse.model_validate(tag)
+
+
 # ============================================================
 # Admin Endpoints
 # ============================================================

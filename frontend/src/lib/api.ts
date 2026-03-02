@@ -281,8 +281,10 @@ export const eventsAPI = {
     if (filters) {
       if (filters.category) params.category = filters.category;
       if (filters.category_id) params.category_id = filters.category_id;
+      if (filters.category_ids) params.category_ids = filters.category_ids.join(',');
       if (filters.tag) params.tag = filters.tag;
-      if (filters.tag_names) params.tag_names = filters.tag_names;
+      if (filters.tag_names) params.tag_names = Array.isArray(filters.tag_names) ? filters.tag_names.join(',') : filters.tag_names;
+      if (filters.tag_ids) params.tag_ids = Array.isArray(filters.tag_ids) ? filters.tag_ids.join(',') : filters.tag_ids;
       if (filters.q) params.q = filters.q;
       if (filters.location) params.location = filters.location;
       if (filters.date_from) params.date_from = filters.date_from;
@@ -785,6 +787,13 @@ export const tagsAPI = {
    */
   popular: async (limit = 20): Promise<TagListResponse> => {
     return apiFetch<TagListResponse>(`/api/tags/popular?limit=${limit}`, {}, false);
+  },
+
+  /**
+   * Get a single tag by ID
+   */
+  getById: async (tagId: string): Promise<Tag> => {
+    return apiFetch<Tag>(`/api/tags/${tagId}`, {}, false);
   },
 
   /**

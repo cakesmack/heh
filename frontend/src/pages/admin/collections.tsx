@@ -10,7 +10,7 @@ import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
-import { collectionsAPI, categoriesAPI } from '@/lib/api';
+import { collectionsAPI, categoriesAPI, tagsAPI } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 import type { Collection, Category } from '@/types';
 
@@ -23,13 +23,17 @@ export default function AdminCollections() {
         title: '',
         subtitle: '',
         image_url: '',
-        target_link: '',
+        target_link: '', // Kept for backwards compatibility payload, but UI removed
         is_active: true,
         sort_order: 0,
         fixed_start_date: '',
         fixed_end_date: '',
         slug: '',
         description: '',
+        long_description: '',
+        seo_title: '',
+        seo_description: '',
+        is_featured: false,
         filter_params: null as Record<string, any> | null,
     });
     const slugManuallyEdited = useRef(false);
@@ -38,11 +42,9 @@ export default function AdminCollections() {
 
     // Query Builder State
     const [categories, setCategories] = useState<Category[]>([]);
-    const [queryBuilderMode, setQueryBuilderMode] = useState(true);
     const [qbState, setQbState] = useState({
         category: [] as string[],
         q: '',
-        tags: '',
         age: '',
         price: 'any', // 'any', 'free', 'paid'
         recurrence: 'any', // 'any', 'recurring', 'single'
@@ -84,17 +86,19 @@ export default function AdminCollections() {
             fixed_end_date: '',
             slug: '',
             description: '',
+            long_description: '',
+            seo_title: '',
+            seo_description: '',
+            is_featured: false,
             filter_params: null,
         });
         setQbState({
             category: [],
             q: '',
-            tags: '',
             age: '',
             price: 'any',
             recurrence: 'any',
         });
-        setQueryBuilderMode(true);
         setError(null);
         setModalOpen(true);
     };
@@ -102,93 +106,134 @@ export default function AdminCollections() {
     const openEditModal = (collection: Collection) => {
         setEditingCollection(collection);
         slugManuallyEdited.current = !!collection.slug;
+
         setFormData({
             title: collection.title,
             subtitle: collection.subtitle || '',
             image_url: collection.image_url || '',
-            target_link: collection.target_link,
+            target_link: collection.target_link || '',
             is_active: collection.is_active,
             sort_order: collection.sort_order,
             fixed_start_date: collection.fixed_start_date || '',
             fixed_end_date: collection.fixed_end_date || '',
             slug: collection.slug || '',
             description: collection.description || '',
+            long_description: (collection as any).long_description || '',
+            seo_title: (collection as any).seo_title || '',
+            seo_description: (collection as any).seo_description || '',
+            is_featured: (collection as any).is_featured || false,
             filter_params: collection.filter_params || null,
         });
 
-        // Parse target_link to populate builder state
-        parseLinkToBuilder(collection.target_link);
+        // Initialize QB State from filter_params FIRST (JSON-first architecture)
+        if (collection.filter_params) {
+            setQbState({
+                category: collection.filter_params.category_ids || collection.filter_params.category || [], // Handle arrays // Handle arrays
+                q: collection.filter_params.q || '',
+                age: collection.filter_params.age_restriction || '',
+                price: collection.filter_params.price === 'free' ? 'free' : (collection.filter_params.price === 'paid' ? 'paid' : 'any'),
+                recurrence: collection.filter_params.is_recurring === true ? 'recurring' : (collection.filter_params.is_recurring === false ? 'single' : 'any'),
+            });
+        }
+        // Fallback for legacy target_link parsing only if JSON doesn't exist
+        else if (collection.target_link && collection.target_link.startsWith('/events')) {
+            parseLinkToBuilder(collection.target_link);
+        } else {
+            // Reset to default
+            setQbState({ category: [], q: '', age: '', price: 'any', recurrence: 'any' });
+        }
 
         setError(null);
         setModalOpen(true);
     };
 
-    // Parse URL params to builder state
+    // Safe Resolve Tags on Modal Open
+    useEffect(() => {
+        if (!modalOpen || !editingCollection) return;
+
+        const resolveTags = async () => {
+            const ids = editingCollection?.filter_params?.tag_ids || [];
+            if (ids.length > 0 && Array.isArray(ids)) {
+                try {
+                    const names: string[] = [];
+                    for (const tagId of ids) {
+                        const tag = await tagsAPI.getById(tagId);
+                        names.push(tag.name);
+                    }
+                    setQbState(prev => ({ ...prev, tag_ids_manual: names.join(', ') }));
+                } catch (err) {
+                    console.error("Failed to resolve tag names:", err);
+                    setQbState(prev => ({ ...prev, tag_ids_manual: ids.join(', ') })); // fallback
+                }
+            } else {
+                setQbState(prev => ({ ...prev, tag_ids_manual: '' }));
+            }
+        };
+
+        resolveTags();
+
+        // Cleanup function for modal close safety
+        return () => {
+            // Let the specific open functions handle strict cleanup, but this safely wipes state on remounts
+        };
+    }, [modalOpen, editingCollection]);
+
+    // Parse URL params to builder state (Legacy Fallback Only)
     const parseLinkToBuilder = (url: string) => {
         try {
-            // Check if it's a standard events URL
-            if (!url.startsWith('/events')) {
-                setQueryBuilderMode(false);
-                return;
-            }
-
             const searchParams = new URLSearchParams(url.split('?')[1] || '');
 
             setQbState({
                 category: searchParams.get('category')?.split(',') || [],
                 q: searchParams.get('q') || '',
-                tags: searchParams.get('tag_names') || searchParams.get('tag') || '',
                 age: searchParams.get('age_restriction') || '',
                 price: searchParams.get('price') === 'free' ? 'free' : (searchParams.get('price') === 'paid' ? 'paid' : 'any'),
                 recurrence: searchParams.get('is_recurring') === 'true' ? 'recurring' : (searchParams.get('is_recurring') === 'false' ? 'single' : 'any'),
             });
-            setQueryBuilderMode(true);
         } catch (e) {
-            setQueryBuilderMode(false);
+            console.error("Failed to parse fallback URL:", e);
         }
     };
 
-    // Dual-write: Update both target_link AND filter_params when builder state changes
+    // Single-write: Update filter_params when builder state changes
     useEffect(() => {
-        if (!queryBuilderMode || !modalOpen) return;
+        if (!modalOpen) return;
 
-        // Build legacy URL params (target_link)
-        const params = new URLSearchParams();
-        if (qbState.category.length > 0) params.append('category', qbState.category.join(','));
-        if (qbState.q) params.append('q', qbState.q);
-        if (qbState.tags) params.append('tag_names', qbState.tags);
-        if (qbState.age) params.append('age_restriction', qbState.age);
-        if (qbState.price === 'free') params.append('price', 'free');
-        if (qbState.recurrence === 'recurring') params.append('is_recurring', 'true');
-        if (qbState.recurrence === 'single') params.append('is_recurring', 'false');
-
-        // Add fixed date range to URL params if set
-        if (formData.fixed_start_date || formData.fixed_end_date) {
-            params.append('date', 'custom');
-        }
-        if (formData.fixed_start_date) params.append('date_from', formData.fixed_start_date);
-        if (formData.fixed_end_date) params.append('date_to', formData.fixed_end_date);
-
-        const queryString = params.toString();
-        const newLink = queryString ? `/events?${queryString}` : '/events';
-
-        // Build structured filter_params JSON from the same state
+        // Build structured filter_params JSON from the state
         const filterObj: Record<string, any> = {};
-        if (qbState.category.length > 0) filterObj.category = qbState.category;
+
+        // Use category_ids logic to enforce ID usage
+        if (qbState.category.length > 0) {
+            // Note: Currently qbState.category stores names due to legacy UI. 
+            // In a full refactor, the checkbox should store `c.id` instead of `c.name`. 
+            // We pass it to the backend which will either resolve names->slugs or we should pass IDs.
+            // For now, mapping name to ID if found in our local categories list.
+            const catIds = qbState.category.map(name => {
+                const found = categories.find(c => c.name === name);
+                return found ? found.id : name; // fallback to name if not found in list
+            }).filter(Boolean);
+
+            filterObj.category_ids = catIds;
+        }
+
         if (qbState.q) filterObj.q = qbState.q;
-        if (qbState.tags) filterObj.tag_names = qbState.tags;
+
+
         if (qbState.age) filterObj.age_restriction = qbState.age;
         if (qbState.price !== 'any') filterObj.price = qbState.price;
         if (qbState.recurrence === 'recurring') filterObj.is_recurring = true;
         if (qbState.recurrence === 'single') filterObj.is_recurring = false;
-        if (formData.fixed_start_date || formData.fixed_end_date) filterObj.date = 'custom';
+
+        if (formData.fixed_start_date || formData.fixed_end_date) {
+            filterObj.date = 'custom';
+        }
         if (formData.fixed_start_date) filterObj.date_from = formData.fixed_start_date;
         if (formData.fixed_end_date) filterObj.date_to = formData.fixed_end_date;
 
         const newFilterParams = Object.keys(filterObj).length > 0 ? filterObj : null;
 
-        setFormData(prev => ({ ...prev, target_link: newLink, filter_params: newFilterParams }));
-    }, [qbState, queryBuilderMode, modalOpen, formData.fixed_start_date, formData.fixed_end_date]);
+        setFormData(prev => ({ ...prev, filter_params: newFilterParams }));
+    }, [qbState, modalOpen, formData.fixed_start_date, formData.fixed_end_date, categories]);
 
     const handleImageUpload = (urls: { url: string }) => {
         setFormData(prev => ({ ...prev, image_url: urls.url }));
@@ -204,10 +249,19 @@ export default function AdminCollections() {
         setError(null);
 
         try {
+            const finalFormData = { ...formData };
+            if (finalFormData.filter_params) {
+                finalFormData.filter_params = { ...finalFormData.filter_params };
+            }
+            // Tag filtering has been removed via directive; clean old tag_ids explicitly upon saving
+            if (finalFormData.filter_params && finalFormData.filter_params.tag_ids) {
+                delete finalFormData.filter_params.tag_ids;
+            }
+
             if (editingCollection) {
-                await collectionsAPI.update(editingCollection.id, formData);
+                await collectionsAPI.update(editingCollection.id, finalFormData);
             } else {
-                await collectionsAPI.create(formData);
+                await collectionsAPI.create(finalFormData);
             }
             setModalOpen(false);
             fetchCollections();
@@ -407,199 +461,216 @@ export default function AdminCollections() {
                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <div className="flex justify-between items-center mb-3">
                                 <label className="block text-sm font-medium text-gray-700">
-                                    Target Link Configuration
+                                    Filter Configuration
                                 </label>
-                                <button
-                                    type="button"
-                                    onClick={() => setQueryBuilderMode(!queryBuilderMode)}
-                                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
-                                >
-                                    {queryBuilderMode ? 'Switch to Manual Input' : 'Switch to Query Builder'}
-                                </button>
                             </div>
 
-                            {queryBuilderMode ? (
-                                <div className="space-y-3">
-                                    {/* Categories (Multi-select) */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-2">Categories (Select matches)</label>
-                                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded bg-white">
-                                            {categories.map(c => (
-                                                <label key={c.id} className="flex items-center space-x-2 text-sm">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={qbState.category.includes(c.name)} // Assuming name handles slug matching for now as per previous logic
-                                                        onChange={(e) => {
-                                                            const newCats = e.target.checked
-                                                                ? [...qbState.category, c.name]
-                                                                : qbState.category.filter(cat => cat !== c.name);
-                                                            setQbState({ ...qbState, category: newCats });
-                                                        }}
-                                                        className="rounded text-emerald-600 focus:ring-emerald-500"
-                                                    />
-                                                    <span className="truncate">{c.name}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Search Query */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Search Keywords (Title/Desc)</label>
-                                        <input
-                                            type="text"
-                                            value={qbState.q}
-                                            onChange={(e) => setQbState({ ...qbState, q: e.target.value })}
-                                            className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                            placeholder="e.g. workshop, gala"
-                                        />
-                                    </div>
-
-                                    {/* Tags */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Tags (Comma separated)</label>
-                                        <input
-                                            type="text"
-                                            value={qbState.tags}
-                                            onChange={(e) => setQbState({ ...qbState, tags: e.target.value })}
-                                            className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                            placeholder="e.g. jazz, outdoor, family"
-                                        />
-                                    </div>
-
-                                    {/* Age Restriction */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Age Restriction</label>
-                                        <select
-                                            value={qbState.age}
-                                            onChange={(e) => setQbState({ ...qbState, age: e.target.value })}
-                                            className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                        >
-                                            {AGE_RESTRICTION_OPTIONS.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* Price */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Price</label>
-                                        <div className="flex gap-4">
-                                            <label className="flex items-center text-sm text-gray-600">
+                            <div className="space-y-3">
+                                {/* Categories (Multi-select) */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-2">Categories (Select matches)</label>
+                                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded bg-white">
+                                        {categories.map(c => (
+                                            <label key={c.id} className="flex items-center space-x-2 text-sm">
                                                 <input
-                                                    type="radio"
-                                                    name="qb_price"
-                                                    checked={qbState.price === 'any'}
-                                                    onChange={() => setQbState({ ...qbState, price: 'any' })}
-                                                    className="mr-1.5"
+                                                    type="checkbox"
+                                                    checked={qbState.category.includes(c.name)} // Assuming name handles slug matching for now as per previous logic
+                                                    onChange={(e) => {
+                                                        const newCats = e.target.checked
+                                                            ? [...qbState.category, c.name]
+                                                            : qbState.category.filter(cat => cat !== c.name);
+                                                        setQbState({ ...qbState, category: newCats });
+                                                    }}
+                                                    className="rounded text-emerald-600 focus:ring-emerald-500"
                                                 />
-                                                Any
+                                                <span className="truncate">{c.name}</span>
                                             </label>
-                                            <label className="flex items-center text-sm text-gray-600">
-                                                <input
-                                                    type="radio"
-                                                    name="qb_price"
-                                                    checked={qbState.price === 'free'}
-                                                    onChange={() => setQbState({ ...qbState, price: 'free' })}
-                                                    className="mr-1.5"
-                                                />
-                                                Free
-                                            </label>
-                                        </div>
-                                    </div>
-
-
-                                    {/* Recurrence Filter */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Recurrence</label>
-                                        <div className="flex gap-4">
-                                            <label className="flex items-center text-sm text-gray-600">
-                                                <input
-                                                    type="radio"
-                                                    name="qb_recurrence"
-                                                    checked={qbState.recurrence === 'any'}
-                                                    onChange={() => setQbState({ ...qbState, recurrence: 'any' })}
-                                                    className="mr-1.5"
-                                                />
-                                                Any
-                                            </label>
-                                            <label className="flex items-center text-sm text-gray-600">
-                                                <input
-                                                    type="radio"
-                                                    name="qb_recurrence"
-                                                    checked={qbState.recurrence === 'recurring'}
-                                                    onChange={() => setQbState({ ...qbState, recurrence: 'recurring' })}
-                                                    className="mr-1.5"
-                                                />
-                                                Recurring Only
-                                            </label>
-                                            <label className="flex items-center text-sm text-gray-600">
-                                                <input
-                                                    type="radio"
-                                                    name="qb_recurrence"
-                                                    checked={qbState.recurrence === 'single'}
-                                                    onChange={() => setQbState({ ...qbState, recurrence: 'single' })}
-                                                    className="mr-1.5"
-                                                />
-                                                Single Only
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* Custom Date Range */}
-                                    <div className="pt-3 border-t border-gray-200">
-                                        <label className="block text-xs font-medium text-gray-500 mb-2">
-                                            📅 Custom Date Range (Optional)
-                                        </label>
-                                        <p className="text-xs text-gray-400 mb-2">
-                                            Set specific dates for themed collections like "Easter Weekend" or "Festival Week"
-                                        </p>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Start Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={formData.fixed_start_date}
-                                                    onChange={(e) => setFormData({ ...formData, fixed_start_date: e.target.value })}
-                                                    className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">End Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={formData.fixed_end_date}
-                                                    onChange={(e) => setFormData({ ...formData, fixed_end_date: e.target.value })}
-                                                    min={formData.fixed_start_date}
-                                                    className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                                />
-                                            </div>
-                                        </div>
-                                        {formData.fixed_start_date && formData.fixed_end_date && formData.fixed_end_date < formData.fixed_start_date && (
-                                            <p className="text-xs text-red-500 mt-1">End date must be after start date</p>
-                                        )}
-                                    </div>
-
-                                    <div className="pt-2 border-t border-gray-200">
-                                        <p className="text-xs text-gray-500">Generated Link:</p>
-                                        <code className="block w-full bg-gray-100 p-2 rounded text-xs text-gray-700 break-all mt-1">
-                                            {formData.target_link}
-                                        </code>
+                                        ))}
                                     </div>
                                 </div>
-                            ) : (
+
+                                {/* Search Query */}
                                 <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Search Keywords (Title/Desc)</label>
                                     <input
                                         type="text"
-                                        value={formData.target_link}
-                                        onChange={(e) => setFormData({ ...formData, target_link: e.target.value })}
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                                        placeholder="/events?category=music"
-                                        required
+                                        value={qbState.q}
+                                        onChange={(e) => setQbState({ ...qbState, q: e.target.value })}
+                                        className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
+                                        placeholder="e.g. workshop, gala"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">Internal path, e.g., /events?category=music</p>
                                 </div>
-                            )}
+
+
+                                {/* Age Restriction */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Age Restriction</label>
+                                    <select
+                                        value={qbState.age}
+                                        onChange={(e) => setQbState({ ...qbState, age: e.target.value })}
+                                        className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
+                                    >
+                                        {AGE_RESTRICTION_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Price */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Price</label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center text-sm text-gray-600">
+                                            <input
+                                                type="radio"
+                                                name="qb_price"
+                                                checked={qbState.price === 'any'}
+                                                onChange={() => setQbState({ ...qbState, price: 'any' })}
+                                                className="mr-1.5"
+                                            />
+                                            Any
+                                        </label>
+                                        <label className="flex items-center text-sm text-gray-600">
+                                            <input
+                                                type="radio"
+                                                name="qb_price"
+                                                checked={qbState.price === 'free'}
+                                                onChange={() => setQbState({ ...qbState, price: 'free' })}
+                                                className="mr-1.5"
+                                            />
+                                            Free
+                                        </label>
+                                    </div>
+                                </div>
+
+
+                                {/* Recurrence Filter */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Recurrence</label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center text-sm text-gray-600">
+                                            <input
+                                                type="radio"
+                                                name="qb_recurrence"
+                                                checked={qbState.recurrence === 'any'}
+                                                onChange={() => setQbState({ ...qbState, recurrence: 'any' })}
+                                                className="mr-1.5"
+                                            />
+                                            Any
+                                        </label>
+                                        <label className="flex items-center text-sm text-gray-600">
+                                            <input
+                                                type="radio"
+                                                name="qb_recurrence"
+                                                checked={qbState.recurrence === 'recurring'}
+                                                onChange={() => setQbState({ ...qbState, recurrence: 'recurring' })}
+                                                className="mr-1.5"
+                                            />
+                                            Recurring Only
+                                        </label>
+                                        <label className="flex items-center text-sm text-gray-600">
+                                            <input
+                                                type="radio"
+                                                name="qb_recurrence"
+                                                checked={qbState.recurrence === 'single'}
+                                                onChange={() => setQbState({ ...qbState, recurrence: 'single' })}
+                                                className="mr-1.5"
+                                            />
+                                            Single Only
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Custom Date Range */}
+                                <div className="pt-3 border-t border-gray-200">
+                                    <label className="block text-xs font-medium text-gray-500 mb-2">
+                                        📅 Custom Date Range (Optional)
+                                    </label>
+                                    <p className="text-xs text-gray-400 mb-2">
+                                        Set specific dates for themed collections like "Easter Weekend" or "Festival Week"
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                                            <input
+                                                type="date"
+                                                value={formData.fixed_start_date}
+                                                onChange={(e) => setFormData({ ...formData, fixed_start_date: e.target.value })}
+                                                className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                                            <input
+                                                type="date"
+                                                value={formData.fixed_end_date}
+                                                onChange={(e) => setFormData({ ...formData, fixed_end_date: e.target.value })}
+                                                min={formData.fixed_start_date}
+                                                className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    {formData.fixed_start_date && formData.fixed_end_date && formData.fixed_end_date < formData.fixed_start_date && (
+                                        <p className="text-xs text-red-500 mt-1">End date must be after start date</p>
+                                    )}
+                                </div>
+
+                                <div className="pt-2 border-t border-gray-200">
+                                    <p className="text-xs text-gray-500">Collection URL Preview:</p>
+                                    <code className="block w-full bg-gray-100 p-2 rounded text-xs text-gray-700 break-all mt-1">
+                                        {formData.slug ? `/collections/${formData.slug}` : 'URL will be generated from title'}
+                                    </code>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* --- NEW SEO FIELDS --- */}
+                        <div className="border-t pt-4 mt-6">
+                            <h4 className="text-sm font-semibold text-gray-900 mb-3">SEO & Metadata</h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Long Description (Markdown Supported)
+                                    </label>
+                                    <textarea
+                                        value={formData.long_description}
+                                        onChange={(e) => setFormData({ ...formData, long_description: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 font-mono text-sm"
+                                        rows={6}
+                                        placeholder="Detailed content for the main body of the collection page..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        SEO Meta Title
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.seo_title}
+                                        onChange={(e) => setFormData({ ...formData, seo_title: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        placeholder="Defaults to Collection Title if empty"
+                                        maxLength={100}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Keep under 60 characters for best results.</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        SEO Meta Description
+                                    </label>
+                                    <textarea
+                                        value={formData.seo_description}
+                                        onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        rows={2}
+                                        placeholder="Defaults to Subtitle or Description if empty"
+                                        maxLength={300}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Keep between 150-160 characters for optimal search snippet display.</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

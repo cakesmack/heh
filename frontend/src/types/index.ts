@@ -436,6 +436,7 @@ export interface EventFilter {
   category_id?: string;
   category_ids?: string[];
   tag_names?: string[];
+  tag_ids?: string[];
   tag?: string;
   q?: string;
   location?: string;
