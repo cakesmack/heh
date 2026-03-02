@@ -192,6 +192,7 @@ def list_events_map(
     latitude: Optional[float] = Query(None, description="User latitude"),
     longitude: Optional[float] = Query(None, description="User longitude"),
     radius_miles: Optional[float] = Query(None, alias="radius", description="Search radius in miles"),
+    q: Optional[str] = Query(None, description="Search keyword"),
     session: Session = Depends(get_session)
 ):
     """
@@ -224,21 +225,39 @@ def list_events_map(
     if category_id:
         query = query.where(Event.category_id == normalize_uuid(category_id))
         
-    # 5. Radius Filter
-    if latitude is not None and longitude is not None and radius_miles:
-        radius_km = radius_miles * 1.60934
-        min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius_km)
-        
-        # Simple BBox filter for speed (SQL-side)
         query = query.where(
             (Event.latitude.between(min_lat, max_lat)) & 
             (Event.longitude.between(min_lon, max_lon))
         )
 
-    # 6. Select Limit (Safety)
+    # 6. Keyword Filter (Search)
+    if q:
+        search_term = f"%{q}%"
+        # Always join Venue for keyword search if not already filtered by radius
+        # (Though listinload(Event.venue) is used above, we need a join for where clause)
+        query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+        
+        # Tags joining logic (matching list_events)
+        from app.models.tag import EventTag, Tag
+        query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
+        query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
+
+        # Build conditions
+        search_conditions = [
+            Event.title.ilike(search_term),
+            Event.description.ilike(search_term),
+            Event.location_name.ilike(search_term),
+            Event.address_full.ilike(search_term),
+            Venue.name.ilike(search_term),
+            Venue.address.ilike(search_term),
+            Tag.name.ilike(search_term)
+        ]
+        query = query.where(or_(*search_conditions)).distinct()
+
+    # 7. Select Limit (Safety)
     query = query.limit(1000)
 
-    # 7. Execute
+    # 8. Execute
     events = session.exec(query).all()
     
     # 8. Build lightweight responses

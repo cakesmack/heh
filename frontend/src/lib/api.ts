@@ -353,6 +353,7 @@ export const eventsAPI = {
       // Note: checking `map.tsx` might clarify. 
       // For now, I will blindly copy the `list` logic to maintain consistency.
       if (filters.radius_km !== undefined) params.radius = filters.radius_km;
+      if (filters.q) params.q = filters.q;
     }
     const queryString = buildQueryString(params);
     return apiFetch<MapEventResponse[]>(`/api/events/map${queryString}`, {}, false);
@@ -1489,10 +1490,11 @@ export const eventClaimsAPI = {
 
 export const collectionsAPI = {
   /**
-   * List active collections
+   * List active curated collections
    */
-  list: async (): Promise<Collection[]> => {
-    return apiFetch<Collection[]>('/api/collections', {}, false);
+  list: async (filters?: { show_on_map?: boolean }): Promise<Collection[]> => {
+    const query = filters ? buildQueryString(filters) : '';
+    return apiFetch<Collection[]>(`/api/collections${query}`, {}, false);
   },
 
   /**

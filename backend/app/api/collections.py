@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
@@ -12,12 +12,18 @@ router = APIRouter(tags=["Collections"])
 
 @router.get("", response_model=List[CollectionSchema])
 def list_collections(
+    show_on_map: Optional[bool] = None,
     session: Session = Depends(get_session)
 ):
     """
     List active curated collections.
     """
-    query = select(Collection).where(Collection.is_active == True).order_by(Collection.sort_order)
+    query = select(Collection).where(Collection.is_active == True)
+    
+    if show_on_map is not None:
+        query = query.where(Collection.show_on_map == show_on_map)
+        
+    query = query.order_by(Collection.sort_order)
     collections = session.exec(query).all()
     return collections
 

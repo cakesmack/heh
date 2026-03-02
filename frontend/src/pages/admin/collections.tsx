@@ -34,6 +34,7 @@ export default function AdminCollections() {
         seo_title: '',
         seo_description: '',
         is_featured: false,
+        show_on_map: false,
         filter_params: null as Record<string, any> | null,
     });
     const slugManuallyEdited = useRef(false);
@@ -90,6 +91,7 @@ export default function AdminCollections() {
             seo_title: '',
             seo_description: '',
             is_featured: false,
+            show_on_map: false,
             filter_params: null,
         });
         setQbState({
@@ -122,6 +124,7 @@ export default function AdminCollections() {
             seo_title: (collection as any).seo_title || '',
             seo_description: (collection as any).seo_description || '',
             is_featured: (collection as any).is_featured || false,
+            show_on_map: (collection as any).show_on_map || false,
             filter_params: collection.filter_params || null,
         });
 
@@ -320,13 +323,16 @@ export default function AdminCollections() {
             ),
         },
         {
-            key: 'target_link',
-            header: 'Link',
+            key: 'show_on_map',
+            header: 'Map',
             render: (col: Collection) => (
-                <div className="max-w-[200px] truncate text-gray-500 text-xs" title={col.target_link}>
-                    {col.target_link}
-                </div>
-            )
+                <span
+                    className={`px-2 py-1 text-xs rounded-full ${(col as any).show_on_map ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                        }`}
+                >
+                    {(col as any).show_on_map ? 'Visible' : 'Hidden'}
+                </span>
+            ),
         },
         { key: 'sort_order', header: 'Order' },
         {
@@ -709,17 +715,32 @@ export default function AdminCollections() {
                             </div>
                         </div>
 
-                        <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                id="is_active"
-                                checked={formData.is_active}
-                                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                className="w-4 h-4 text-emerald-600 rounded"
-                            />
-                            <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
-                                Active
-                            </label>
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="is_active"
+                                    checked={formData.is_active}
+                                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                    className="w-4 h-4 text-emerald-600 rounded"
+                                />
+                                <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
+                                    Active
+                                </label>
+                            </div>
+
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="show_on_map"
+                                    checked={(formData as any).show_on_map}
+                                    onChange={(e) => setFormData({ ...formData, show_on_map: e.target.checked } as any)}
+                                    className="w-4 h-4 text-blue-600 rounded"
+                                />
+                                <label htmlFor="show_on_map" className="ml-2 text-sm text-gray-700">
+                                    Feature on Map
+                                </label>
+                            </div>
                         </div>
 
                         <div className="flex justify-end gap-3 pt-4 border-t">

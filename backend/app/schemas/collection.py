@@ -20,6 +20,7 @@ class CollectionBase(BaseModel):
     seo_title: Optional[str] = None
     seo_description: Optional[str] = None
     is_featured: bool = False
+    show_on_map: bool = False
     filter_params: Optional[dict] = None
 
     @field_validator('filter_params', mode='before')
@@ -45,6 +46,7 @@ class CollectionUpdate(CollectionBase):
     seo_title: Optional[str] = None
     seo_description: Optional[str] = None
     is_featured: Optional[bool] = None
+    show_on_map: Optional[bool] = None
     filter_params: Optional[dict] = None
 
 class Collection(CollectionBase):

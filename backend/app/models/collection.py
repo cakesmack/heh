@@ -24,4 +24,5 @@ class Collection(SQLModel, table=True):
     seo_title: Optional[str] = Field(default=None, max_length=255)
     seo_description: Optional[str] = Field(default=None, max_length=500)
     is_featured: bool = Field(default=False)
+    show_on_map: bool = Field(default=False)
     filter_params: Optional[dict] = Field(default=None, sa_column=Column(JSONB))

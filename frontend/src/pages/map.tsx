@@ -10,8 +10,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { format, isSameDay, startOfDay, endOfDay, addDays, nextSaturday, nextSunday } from 'date-fns';
-import { eventsAPI, categoriesAPI } from '@/lib/api';
-import type { EventResponse, Category } from '@/types';
+import { eventsAPI, categoriesAPI, collectionsAPI } from '@/lib/api';
+import type { EventResponse, Category, Collection } from '@/types';
 import type { MapMarker } from '@/components/events/GoogleMapView';
 import MapDateFilter, { DateRange } from '@/components/map/MapDateFilter';
 import MapSidebar from '@/components/map/MapSidebar';
@@ -71,6 +71,9 @@ export function MapPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [selectedCollectionSlug, setSelectedCollectionSlug] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -122,29 +125,90 @@ export function MapPage() {
     }
   };
 
-  // Fetch events and categories
+  // Fetch events, categories, and collections
   useEffect(() => {
+    if (!router.isReady) return;
+
+    // Handle initial URL sync before first fetch
+    if (!isInitialized) {
+      if (router.query.collection) {
+        setSelectedCollectionSlug(router.query.collection as string);
+        setSelectedCategory(null);
+        setIsInitialized(true);
+        // We return here because the state updates above will trigger this effect again
+        return;
+      }
+      setIsInitialized(true);
+    }
+
     async function fetchData() {
       setLoading(true);
       setError(null);
 
       try {
         // Build filter params
-        const eventFilters: { limit: number; date_from?: string; date_to?: string } = {
+        const eventFilters: any = {
           limit: 500,
           date_from: dateRange.start.toISOString(),
           date_to: dateRange.end.toISOString(),
         };
 
-        const [eventsResponse, categoriesResponse] = await Promise.all([
-          eventsAPI.listMap(eventFilters),
-          categoriesAPI.list(),
-        ]);
+        // Fetch categories and collections if not already loaded
+        const promises: Promise<any>[] = [];
+        if (categories.length === 0) promises.push(categoriesAPI.list());
+        if (collections.length === 0) promises.push(collectionsAPI.list({ show_on_map: true }));
 
-        // Cast to EventResponse[] as MapEventResponse is a compatible subset for the map view's needs
-        // (This avoids rewriting all child components to accept a union type)
+        const results = await Promise.all(promises);
+
+        // REFINED: Index-based handling is safer since we know the order we pushed
+        let resultIdx = 0;
+        if (categories.length === 0) {
+          const res = results[resultIdx++];
+          if (res) {
+            const cats = res.categories || (Array.isArray(res) ? res : []);
+            setCategories(cats);
+          }
+        }
+        if (collections.length === 0) {
+          const res = results[resultIdx++];
+          if (res) {
+            const cols = res.collections || (Array.isArray(res) ? res : []);
+            setCollections(cols);
+          }
+        }
+
+        // Current collections state might be empty on first run, use results if needed
+        // We need to find where collections are in the results array if we just fetched them
+        const fetchedCollections = (collections.length === 0 && results.length > 0)
+          ? (categories.length === 0 // If categories were also fetched
+            ? (results[1]?.collections || (Array.isArray(results[1]) ? results[1] : [])) // Collections are at index 1
+            : (results[0]?.collections || (Array.isArray(results[0]) ? results[0] : []))) // Collections are at index 0
+          : [];
+
+        const currentCollections = collections.length > 0 ? collections : fetchedCollections;
+
+        // Mutual Exclusivity Logic: Collections take priority
+        const activeCollection = selectedCollectionSlug
+          ? currentCollections.find((c: Collection) => c.slug === selectedCollectionSlug)
+          : null;
+
+        if (activeCollection) {
+          // Merge collection's filter_params
+          if (activeCollection.filter_params) {
+            Object.entries(activeCollection.filter_params).forEach(([key, value]) => {
+              if (key === 'q') eventFilters.q = value;
+              // Add other relevant filter_params if necessary
+            });
+          }
+          // Force Override: ignore category_id when collection is active
+        } else if (selectedCategory) {
+          eventFilters.category_id = selectedCategory;
+        }
+
+        const eventsResponse = await eventsAPI.listMap(eventFilters);
+
+        // Cast to EventResponse[] as MapEventResponse is a compatible subset
         setEvents(eventsResponse as unknown as EventResponse[]);
-        setCategories(categoriesResponse.categories);
       } catch (err) {
         console.error('Failed to fetch map data:', err);
         setError('Failed to load map data. Please try again.');
@@ -154,9 +218,33 @@ export function MapPage() {
     }
 
     fetchData();
-  }, [dateRange]); // Refetch when date range changes
+  }, [router.isReady, isInitialized, dateRange, selectedCategory, selectedCollectionSlug]); // Refetch when filters change
 
-  // Clear selected event when date/category changes
+  // Synchronize state back to URL (Two-way binding)
+  useEffect(() => {
+    if (!router.isReady || !isInitialized) return;
+
+    const currentCollectionInUrl = router.query.collection as string || null;
+
+    if (selectedCollectionSlug !== currentCollectionInUrl) {
+      const newQuery = { ...router.query };
+
+      if (selectedCollectionSlug) {
+        newQuery.collection = selectedCollectionSlug;
+      } else {
+        delete newQuery.collection;
+      }
+
+      router.replace(
+        {
+          pathname: router.pathname,
+          query: newQuery,
+        },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [selectedCollectionSlug, isInitialized, router.isReady]);
   useEffect(() => {
     setSelectedEvents([]);
     setSelectedMarkerId(undefined);
@@ -227,14 +315,38 @@ export function MapPage() {
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-bold text-gray-900 hidden md:block">Event Map</h1>
 
+              {/* Collection Filter */}
+              <div className="relative">
+                <select
+                  value={selectedCollectionSlug || ''}
+                  onChange={(e) => {
+                    const slug = e.target.value || null;
+                    setSelectedCollectionSlug(slug);
+                    if (slug) setSelectedCategory(null); // Mutual Exclusivity
+                  }}
+                  className="text-sm font-medium border-none bg-emerald-50 text-emerald-800 rounded-full px-4 py-1.5 pr-8 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-emerald-100 transition-colors"
+                >
+                  <option value="">All Collections</option>
+                  {collections.map((col) => (
+                    <option key={col.id} value={col.slug}>
+                      {col.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Category Filter */}
               <div className="relative">
                 <select
                   value={selectedCategory || ''}
+                  disabled={!!selectedCollectionSlug}
                   onChange={(e) => setSelectedCategory(e.target.value || null)}
-                  className="text-sm font-medium border-none bg-gray-100/50 rounded-full px-4 py-1.5 pr-8 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                  className={`text-sm font-medium border-none rounded-full px-4 py-1.5 pr-8 focus:ring-2 focus:ring-emerald-500 transition-colors ${selectedCollectionSlug
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-100/50 text-gray-700 cursor-pointer hover:bg-gray-100'
+                    }`}
                 >
-                  <option value="">All Categories</option>
+                  <option value="">{selectedCollectionSlug ? 'Disabled by Collection' : 'All Categories'}</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
