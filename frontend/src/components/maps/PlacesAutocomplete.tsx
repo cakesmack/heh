@@ -21,6 +21,8 @@ interface PlacesAutocompleteProps {
   defaultValue?: string;
   placeholder?: string;
   disabled?: boolean;
+  onInputChange?: (value: string) => void;
+  hideAttribution?: boolean;
 }
 
 export default function PlacesAutocomplete({
@@ -28,6 +30,8 @@ export default function PlacesAutocomplete({
   defaultValue = '',
   placeholder = 'Search for an address...',
   disabled = false,
+  onInputChange,
+  hideAttribution = false,
 }: PlacesAutocompleteProps) {
   const [inputValue, setInputValue] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
@@ -91,8 +95,8 @@ export default function PlacesAutocomplete({
         componentRestrictions: { country: 'gb' },
         // Use locationRestriction for strict bounds (not just bias)
         locationRestriction: highlandsBounds,
-        // Note: 'address' cannot be mixed with other types, using 'establishment' for venues
-        types: ['establishment'],
+        // Note: '(regions)' is good for towns, cities, and postcodes
+        types: ['(regions)'],
       },
       (predictions, status) => {
         setIsLoading(false);
@@ -136,6 +140,10 @@ export default function PlacesAutocomplete({
     debounceTimerRef.current = setTimeout(() => {
       searchPlaces(value);
     }, 300);
+
+    if (onInputChange) {
+      onInputChange(value);
+    }
   };
 
   // Handle suggestion selection
@@ -199,7 +207,7 @@ export default function PlacesAutocomplete({
           onChange={handleInputChange}
           placeholder={placeholder}
           disabled={disabled || !placesLib}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full px-3 h-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           autoComplete="off"
         />
 
@@ -238,9 +246,11 @@ export default function PlacesAutocomplete({
         <p className="text-xs text-amber-600">Loading Google Places...</p>
       )}
 
-      <p className="text-xs text-gray-500">
-        Powered by Google Places
-      </p>
+      {!hideAttribution && (
+        <p className="text-xs text-gray-500">
+          Powered by Google Places
+        </p>
+      )}
     </div>
   );
 }

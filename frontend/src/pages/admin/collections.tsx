@@ -591,7 +591,18 @@ export default function AdminCollections() {
                                     </p>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-xs text-gray-500">Start Date</label>
+                                                {formData.fixed_start_date && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, fixed_start_date: '' })}
+                                                        className="text-[10px] text-red-500 hover:text-red-600 underline"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                )}
+                                            </div>
                                             <input
                                                 type="date"
                                                 value={formData.fixed_start_date}
@@ -600,7 +611,18 @@ export default function AdminCollections() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-xs text-gray-500">End Date</label>
+                                                {formData.fixed_end_date && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, fixed_end_date: '' })}
+                                                        className="text-[10px] text-red-500 hover:text-red-600 underline"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                )}
+                                            </div>
                                             <input
                                                 type="date"
                                                 value={formData.fixed_end_date}

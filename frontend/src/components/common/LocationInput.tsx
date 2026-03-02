@@ -10,9 +10,19 @@ interface LocationInputProps {
     className?: string; // Kept for compatibility, though wrapper styling might be limited
     initialValue?: string;
     onKeyDown?: (e: React.KeyboardEvent) => void;
+    onChange?: (value: string) => void;
+    hideAttribution?: boolean;
 }
 
-export function LocationInput({ onSelect, placeholder = 'Town or Postcode', className = '', initialValue = '', onKeyDown }: LocationInputProps) {
+export function LocationInput({
+    onSelect,
+    placeholder = 'Town or Postcode',
+    className = '',
+    initialValue = '',
+    onKeyDown,
+    onChange,
+    hideAttribution = false
+}: LocationInputProps) {
 
     const handleSelect = (place: { address: string; latitude: number; longitude: number }) => {
         onSelect({
@@ -26,8 +36,10 @@ export function LocationInput({ onSelect, placeholder = 'Town or Postcode', clas
         <div className={className} onKeyDown={onKeyDown}>
             <PlacesAutocomplete
                 onSelect={handleSelect}
+                onInputChange={onChange}
                 defaultValue={initialValue}
                 placeholder={placeholder}
+                hideAttribution={hideAttribution}
             />
         </div>
     );

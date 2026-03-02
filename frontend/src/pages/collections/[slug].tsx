@@ -11,6 +11,7 @@ import { collectionsAPI, eventsAPI } from '@/lib/api';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { EventList } from '@/components/events/EventList';
 import { Spinner } from '@/components/common/Spinner';
+import { EventFilters } from '@/components/events/EventFilters';
 import type { Collection, EventFilter, EventResponse } from '@/types';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
@@ -59,6 +60,20 @@ function buildEventFilter(params: Record<string, any>): EventFilter {
     return filter;
 }
 
+/**
+ * Merge base collection filters with user-facing interactive filters.
+ */
+function mergeFilters(base: EventFilter, user: EventFilter): EventFilter {
+    const merged = { ...base, ...user };
+
+    // Special logic for keywords: Append user keywords to base keywords
+    if (base.q && user.q && base.q !== user.q) {
+        merged.q = `${base.q} ${user.q}`;
+    }
+
+    return merged;
+}
+
 export default function CollectionPage() {
     const router = useRouter();
     const { slug } = router.query;
@@ -73,6 +88,7 @@ export default function CollectionPage() {
     const [total, setTotal] = useState(0);
     const [eventsLoading, setEventsLoading] = useState(false);
     const [eventsError, setEventsError] = useState<string | null>(null);
+    const [userFilters, setUserFilters] = useState<EventFilter>({});
     const [currentFilters, setCurrentFilters] = useState<EventFilter>({});
 
     // Infinite scroll
@@ -109,7 +125,7 @@ export default function CollectionPage() {
     }, [router.isReady, slug]);
 
     // Fetch events when collection is loaded
-    const fetchEvents = useCallback(async (filters: EventFilter, append = false) => {
+    const fetchEvents = useCallback(async (filters: EventFilter, append = false, skipOverride?: number) => {
         if (append) {
             setIsLoadingMore(true);
         } else {
@@ -123,7 +139,7 @@ export default function CollectionPage() {
             const response = await eventsAPI.list({
                 ...filters,
                 limit: EVENTS_PER_PAGE,
-                skip: append ? events.length : 0,
+                skip: append ? (skipOverride !== undefined ? skipOverride : 0) : 0,
             });
 
             if (append) {
@@ -139,24 +155,19 @@ export default function CollectionPage() {
             setEventsLoading(false);
             setIsLoadingMore(false);
         }
-    }, [events.length]);
+    }, []);
 
     useEffect(() => {
-        if (!collection || initialFiltersSet.current) return;
-
-        initialFiltersSet.current = true;
+        if (!collection) return;
 
         if (collection.filter_params && Object.keys(collection.filter_params).length > 0) {
-            const initialFilters = buildEventFilter(collection.filter_params);
-
-
-
-            fetchEvents(initialFilters);
+            const baseFilters = buildEventFilter(collection.filter_params);
+            const merged = mergeFilters(baseFilters, userFilters);
+            fetchEvents(merged);
         } else {
-            // Strictly enforce JSON filtering fallback or empty if none exists
-            fetchEvents({});
+            fetchEvents(userFilters);
         }
-    }, [collection, fetchEvents]);
+    }, [collection, userFilters, fetchEvents]);
 
     // Infinite scroll observer
     useEffect(() => {
@@ -166,7 +177,7 @@ export default function CollectionPage() {
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
-                    fetchEvents(currentFilters, true);
+                    fetchEvents(currentFilters, true, events.length);
                 }
             },
             { threshold: 0.1, rootMargin: '100px' }
@@ -243,6 +254,15 @@ export default function CollectionPage() {
             </section>
 
 
+
+            {/* SECTION 2: FILTERS */}
+            <section className="max-w-7xl mx-auto py-8 px-4 border-b border-gray-100">
+                <EventFilters
+                    onFilterChange={(newFilters) => setUserFilters(newFilters as any)}
+                    initialFilters={userFilters}
+                    isCollectionMode={true}
+                />
+            </section>
 
             {/* SECTION 3: EVENTS LIST */}
             <section className="max-w-7xl mx-auto py-12 px-4">

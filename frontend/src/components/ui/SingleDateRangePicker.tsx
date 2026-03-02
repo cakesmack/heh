@@ -72,9 +72,9 @@ export function SingleDateRangePicker({ dateFrom, dateTo, onChange }: SingleDate
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-2 pl-4 pr-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${isActive
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
-                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                className={`flex items-center gap-2 pl-4 pr-3 h-11 rounded-lg border text-sm font-medium transition-all ${isActive
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                     }`}
             >
                 <CalendarIcon className={`w-4 h-4 ${isActive ? 'text-emerald-600' : 'text-gray-400'}`} />
