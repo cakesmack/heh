@@ -238,6 +238,7 @@ def create_checkout_session(
         base_url = settings.FRONTEND_URL
 
     checkout_session = stripe.checkout.Session.create(
+        customer_email=user.email,
         payment_method_types=["card"],
         line_items=[{
             "price_data": {
