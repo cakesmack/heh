@@ -1115,6 +1115,64 @@ class ResendEmailService:
             html_content=html_content
         )
 
+    async def send_featured_notification(
+        self,
+        to_email: str,
+        event_title: str,
+        username: Optional[str] = None
+    ) -> bool:
+        """
+        Send notification when an event becomes featured (Type: MODERATION -> SMTP).
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send featured notification to {mask_email(to_email)}")
+            return True
+
+        name = username or "there"
+        subject = "🚀 Your Event is Now Featured on Highland Events!"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 28px; }}
+                .content {{ padding: 40px 30px; background: #ffffff; text-align: center; }}
+                .button {{ display: inline-block; background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+                .footer {{ background: #f3f4f6; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🌟 Status: Featured!</h1>
+                </div>
+                <div class="content">
+                    <p>Hey {name},</p>
+                    <p>Great news! Your event <strong>'{event_title}'</strong> is now officially featured on the Highland Events Hub.</p>
+                    <p>It will now appear in our premium carousels and at the top of category listings, helping you reach more people across the Highlands.</p>
+                    <p style="text-align: center;">
+                        <a href="{settings.FRONTEND_URL}" class="button">Visit the Homepage</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
+
     # Alias for backward compatibility in some modules
     async def send_password_reset_email(self, to_email: str, reset_token: str) -> bool:
         return await self.send_password_reset(to_email, reset_token)

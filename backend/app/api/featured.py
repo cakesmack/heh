@@ -26,6 +26,7 @@ from app.services.featured import (
     get_slot_pricing,
     activate_booking
 )
+from app.services.resend_email import resend_email_service
 
 router = APIRouter(tags=["Featured"])
 

@@ -14,6 +14,7 @@ from app.models.featured_booking import (
 from app.models.slot_pricing import SlotPricing, DEFAULT_PRICING
 from app.models.event import Event
 from app.models.user import User
+from app.services.resend_email import resend_email_service
 
 # Initialize Stripe
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -297,6 +298,47 @@ def activate_booking(session: Session, booking: FeaturedBooking, payment_intent_
     
     session.commit()
     print(f"[FEATURED SERVICE] Activated booking {booking.id} for event {booking.event_id}")
+
+    # 3. Send success email notification (Phase 6 Restoration)
+    # We do this in a try/except to ensure activation doesn't fail if email fails
+    try:
+        user = session.get(User, booking.organizer_id)
+        if user and user.email:
+            print(f"[FEATURED SERVICE] Sending success notification to {user.email}")
+            import asyncio
+            
+            # Using asyncio.create_task or similar would require a running loop
+            # and may be tricky in sync context. We'll just await it for now 
+            # as our services are generally async-compatible or we can use a helper.
+            # Since activate_booking is sync, we need a way to run it.
+            # However, handle_checkout_completed is sync, but verify_stripe_session is sync too.
+            # Wait, verify_stripe_session is sync (no async def).
+            # But resend_email_service.send_featured_notification IS async.
+            
+            # We need to bridge sync to async.
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(resend_email_service.send_featured_notification(
+                        to_email=user.email,
+                        event_title=event.title if event else "Your Event",
+                        username=user.username
+                    ))
+                else:
+                    loop.run_until_complete(resend_email_service.send_featured_notification(
+                        to_email=user.email,
+                        event_title=event.title if event else "Your Event",
+                        username=user.username
+                    ))
+            except RuntimeError:
+                # No event loop
+                asyncio.run(resend_email_service.send_featured_notification(
+                    to_email=user.email,
+                    event_title=event.title if event else "Your Event",
+                    username=user.username
+                ))
+    except Exception as e:
+        print(f"[FEATURED SERVICE ERROR] Failed to send notification: {e}")
 
 
 def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
