@@ -154,20 +154,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     return response
 
 
-# Static Files Mounts
-# ------------------------------------------------------------
-
-# Explicit Root Route (Must be before any catch-all mounts)
-# This handles the homepage specifically, ignoring query params like ?fbclid=...
+# Health Check Root Route
 @app.get("/", tags=["Initial Load"])
-async def root(request: Request):
-    return FileResponse(os.path.join(static_dir, "index.html"))
-
-# Mount static files for uploads (create directory if it doesn't exist)
-static_dir = "static"
-if not os.path.exists(static_dir):
-    os.makedirs(static_dir, exist_ok=True)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+async def root():
+    return {"status": "online", "message": "Highland Events API"}
 
 
 # Root endpoint
@@ -204,49 +194,4 @@ app.include_router(admin_import.router, prefix="/api/admin", tags=["Admin Import
 app.include_router(cron.router, prefix="/api")
 
 
-# SPA Catch-All Route
-# Must be the LAST route to avoid overshadowing API endpoints
-@app.get("/{rest_of_path:path}", tags=["SPA"])
-async def spa_catch_all(request: Request, rest_of_path: str):
-    """
-    Catch-all route for Single Page Application (SPA) client-side routing.
-    
-    Logic:
-    1. If request is for API (starts with 'api/'), bypass SPA logic:
-       - If missing trailing slash, redirect to slash-appended URL (standard FastAPI behavior).
-       - Otherwise, return 404 (do NOT serve index.html for API errors).
-    2. If the requested path corresponds to a real file in 'static/', serve it.
-    3. Otherwise, serve 'index.html' (allowing the frontend router to handle the path).
-    """
-    # 0. Special handling for API routes (prevent swallowing by catch-all)
-    if rest_of_path.startswith("api/"):
-        # Mimic FastAPI's standard behavior: Redirect if missing trailing slash
-        if not rest_of_path.endswith("/"):
-            new_path = request.url.path
-            if not new_path.endswith("/"):
-                new_path += "/"
-            
-            query = request.url.query
-            if query:
-                new_path += f"?{query}"
-                
-            return RedirectResponse(url=new_path)
-            
-        # If it has a slash but didn't match any router, it's a real 404
-        return JSONResponse(status_code=404, content={"detail": "API Endpoint not found"})
-
-    # 1. Check if it's a file in static directory
-    if rest_of_path:
-        file_path = os.path.join(static_dir, rest_of_path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            return FileResponse(file_path)
-
-    # 2. Fallback to index.html for SPA routing (and root /)
-    # This ensures messy URLs (e.g., /?fbclid=...) receive the app entry point
-    index_path = os.path.join(static_dir, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    
-    # 3. Last resource: return 404 if index.html is missing (e.g. build issue)
-    return JSONResponse(status_code=404, content={"detail": "Frontend build not found"})
 
