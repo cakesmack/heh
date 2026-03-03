@@ -404,7 +404,18 @@ def verify_stripe_session(
         # Update if still pending payment
         if booking.status == BookingStatus.PENDING_PAYMENT:
             print(f"[VERIFY SESSION] Updating booking {booking.id} status via activate_booking")
-            activate_booking(session, booking, stripe_session.get("payment_intent"))
+            
+            # Retrieve invoice URL if available
+            invoice_url = None
+            invoice_id = stripe_session.get("invoice")
+            if invoice_id:
+                try:
+                    invoice = stripe.Invoice.retrieve(invoice_id)
+                    invoice_url = invoice.get("hosted_invoice_url")
+                except Exception as e:
+                    print(f"[VERIFY SESSION ERROR] Failed to retrieve invoice {invoice_id}: {e}")
+
+            activate_booking(session, booking, stripe_session.get("payment_intent"), invoice_url)
         
         return VerifySessionResponse(
             success=True,

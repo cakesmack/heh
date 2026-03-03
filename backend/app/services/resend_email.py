@@ -1119,7 +1119,8 @@ class ResendEmailService:
         self,
         to_email: str,
         event_title: str,
-        username: Optional[str] = None
+        username: Optional[str] = None,
+        invoice_url: Optional[str] = None
     ) -> bool:
         """
         Send notification when an event becomes featured (Type: MODERATION -> SMTP).
@@ -1131,6 +1132,15 @@ class ResendEmailService:
         name = username or "there"
         subject = "🚀 Your Event is Now Featured on Highland Events!"
         
+        invoice_button = ""
+        if invoice_url:
+            invoice_button = f"""
+            <div style="margin-top: 20px; padding: 20px; background: #f0fdf4; border: 1px dashed #10b981; border-radius: 8px;">
+                <p style="margin: 0 0 15px 0; font-size: 14px; color: #15803d; font-weight: 600;">Need a VAT invoice for your records?</p>
+                <a href="{invoice_url}" class="button" style="background: #059669; margin: 0;">Download PDF Invoice</a>
+            </div>
+            """
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -1154,6 +1164,9 @@ class ResendEmailService:
                     <p>Hey {name},</p>
                     <p>Great news! Your event <strong>'{event_title}'</strong> is now officially featured on the Highland Events Hub.</p>
                     <p>It will now appear in our premium carousels and at the top of category listings, helping you reach more people across the Highlands.</p>
+                    
+                    {invoice_button}
+
                     <p style="text-align: center;">
                         <a href="{settings.FRONTEND_URL}" class="button">Visit the Homepage</a>
                     </p>

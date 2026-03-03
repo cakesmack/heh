@@ -273,7 +273,12 @@ def create_checkout_session(
     }
 
 
-def activate_booking(session: Session, booking: FeaturedBooking, payment_intent_id: Optional[str] = None) -> None:
+def activate_booking(
+    session: Session, 
+    booking: FeaturedBooking, 
+    payment_intent_id: Optional[str] = None,
+    invoice_url: Optional[str] = None
+) -> None:
     """
     Standardized activation logic for featured bookings.
     Used by both the Webhook and the Verify-Session fallback.
@@ -322,20 +327,23 @@ def activate_booking(session: Session, booking: FeaturedBooking, payment_intent_
                     loop.create_task(resend_email_service.send_featured_notification(
                         to_email=user.email,
                         event_title=event.title if event else "Your Event",
-                        username=user.username
+                        username=user.username,
+                        invoice_url=invoice_url
                     ))
                 else:
                     loop.run_until_complete(resend_email_service.send_featured_notification(
                         to_email=user.email,
                         event_title=event.title if event else "Your Event",
-                        username=user.username
+                        username=user.username,
+                        invoice_url=invoice_url
                     ))
             except RuntimeError:
                 # No event loop
                 asyncio.run(resend_email_service.send_featured_notification(
                     to_email=user.email,
                     event_title=event.title if event else "Your Event",
-                    username=user.username
+                    username=user.username,
+                    invoice_url=invoice_url
                 ))
     except Exception as e:
         print(f"[FEATURED SERVICE ERROR] Failed to send notification: {e}")
@@ -355,7 +363,18 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
         return
     
     payment_intent_id = stripe_session.get("payment_intent")
-    activate_booking(session, booking, payment_intent_id)
+    
+    # Retrieve invoice URL if available
+    invoice_url = None
+    invoice_id = stripe_session.get("invoice")
+    if invoice_id:
+        try:
+            invoice = stripe.Invoice.retrieve(invoice_id)
+            invoice_url = invoice.get("hosted_invoice_url")
+        except Exception as e:
+            print(f"[FEATURED SERVICE ERROR] Failed to retrieve invoice {invoice_id}: {e}")
+
+    activate_booking(session, booking, payment_intent_id, invoice_url)
 
 
 def handle_checkout_expired(session: Session, stripe_session: dict) -> None:
