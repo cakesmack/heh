@@ -436,7 +436,6 @@ export interface EventFilter {
   category_id?: string;
   category_ids?: string[];
   tag_names?: string[];
-  tag_ids?: string[];
   tag?: string;
   q?: string;
   location?: string;
@@ -449,6 +448,7 @@ export interface EventFilter {
   latitude?: number;
   longitude?: number;
   radius_km?: number;
+  tag_ids?: string[] | string;
   featured_only?: boolean;
   organizer_id?: string;
   organizer_profile_id?: string;
@@ -995,7 +995,7 @@ export interface UserPreferencesUpdate {
 // FEATURED BOOKING TYPES
 // ============================================================
 
-export type SlotType = 'hero_home' | 'global_pinned' | 'category_pinned' | 'magazine_carousel';
+export type SlotType = 'category_pinned' | 'magazine_carousel';
 export type BookingStatus = 'pending_payment' | 'pending_approval' | 'active' | 'completed' | 'cancelled' | 'rejected';
 
 export interface SlotConfig {

@@ -21,7 +21,6 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
 
     // Magazine Carousel: Paid bookings take priority
     const [magazineBookingEvents, setMagazineBookingEvents] = useState<EventResponse[]>([]);
-    const [heroEventIds, setHeroEventIds] = useState<Set<string>>(new Set());
 
     // Helper to normalize IDs (handle dash vs no-dash UUIDs)
     const normalizeId = (id: string) => {
@@ -31,14 +30,13 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
         return id.split('_')[0].replace(/-/g, '');
     };
 
-    // Fetch magazine_carousel AND hero_home bookings on mount
+    // Fetch magazine_carousel bookings on mount
     useEffect(() => {
         const fetchBookings = async () => {
             try {
-                // Parallel fetch: Magazine (for display) nad Hero (for exclusion)
-                const [magazineBookings, heroBookings] = await Promise.all([
-                    api.featured.getActive('magazine_carousel'),
-                    api.featured.getActive('hero_home').catch(() => [])
+                // Parallel fetch: Magazine (for display)
+                const [magazineBookings] = await Promise.all([
+                    api.featured.getActive('magazine_carousel')
                 ]);
 
                 // 1. Setup Magazine Events
@@ -47,18 +45,6 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                 );
                 const events = (await Promise.all(eventPromises)).filter(Boolean) as EventResponse[];
                 setMagazineBookingEvents(events);
-
-                // 2. Setup Hero IDs for Exclusion (Normalized)
-
-                // Update this block inside your useEffect
-                const heroIds = new Set(heroBookings.map(b => {
-                    // Check event_id first (per your JSON), fallback to target_id
-                    const id = b.event_id || b.target_id;
-                    return id ? normalizeId(id) : null;
-                }).filter(Boolean) as string[]);
-
-                setHeroEventIds(heroIds);
-
             } catch (err) {
                 console.error('Error fetching bookings:', err);
             }
@@ -67,24 +53,9 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
     }, []);
 
     // Merge magazine booking events with latest events (bookings first)
-    // STRICT SEPARATION: Filter out any event that is currently in the Hero Carousel
     const mergedLatestEvents = React.useMemo(() => {
-        // Normalize Magazine IDs for dedup
-        const magazineIds = new Set(
-            magazineBookingEvents.map(e => normalizeId(e.id))
-        );
-
-        // Filter latestEvents:
-        // 1. Must not be already in magazineBookingEvents (deduplication)
-        // 2. Must not be a Hero Event (strict separation)
-        const nonBookingLatest = latestEvents.filter(e => {
-            const nId = normalizeId(e.id);
-            // Strict check using normalized IDs
-            return !magazineIds.has(nId) && !heroEventIds.has(nId);
-        });
-
-        return [...magazineBookingEvents, ...nonBookingLatest];
-    }, [magazineBookingEvents, latestEvents, heroEventIds]);
+        return [...magazineBookingEvents, ...latestEvents];
+    }, [magazineBookingEvents, latestEvents]);
 
     // Fetch Upcoming events when tab is clicked
     useEffect(() => {
@@ -205,7 +176,12 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                             </div>
                         ) : (
                             <>
-                                <MagazineGrid events={upcomingEvents} hideHeader={true} hideFooter={true} />
+                                <MagazineGrid
+                                    events={upcomingEvents}
+                                    carouselEvents={magazineBookingEvents}
+                                    hideHeader={true}
+                                    hideFooter={true}
+                                />
                                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 text-center">
                                     <Link
                                         href="/events?time_range=upcoming"
@@ -222,7 +198,12 @@ export default function HomeFeedTabs({ latestEvents, user }: HomeFeedTabsProps) 
                     </div>
                 ) : activeTab === 'latest' ? (
                     <>
-                        <MagazineGrid events={mergedLatestEvents} carouselEvents={magazineBookingEvents} hideHeader={true} hideFooter={true} />
+                        <MagazineGrid
+                            events={mergedLatestEvents}
+                            carouselEvents={magazineBookingEvents}
+                            hideHeader={true}
+                            hideFooter={true}
+                        />
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 text-center">
                             <Link
                                 href="/events"

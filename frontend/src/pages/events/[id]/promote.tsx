@@ -12,9 +12,7 @@ import { api } from '@/lib/api';
 import { Spinner } from '@/components/common/Spinner';
 import type { EventResponse, SlotConfig, SlotType, AvailabilityResponse, Category } from '@/types';
 
-const SLOT_DESCRIPTIONS: Record<SlotType, { name: string; description: string }> = {
-  hero_home: { name: 'Hero Carousel', description: 'Maximum visibility on homepage' },
-  global_pinned: { name: 'Homepage Pinned', description: 'Top of all events list' },
+const SLOT_DESCRIPTIONS: Record<string, { name: string; description: string }> = {
   category_pinned: { name: 'Category Pinned', description: 'Top of category page' },
   magazine_carousel: { name: 'Magazine Feature', description: 'Featured in Magazine section' },
 };
@@ -37,7 +35,6 @@ export default function PromoteEventPage() {
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [customSubtitle, setCustomSubtitle] = useState<string>('');  // For hero carousel
 
   useEffect(() => {
     if (!id) return;
@@ -106,7 +103,6 @@ export default function PromoteEventPage() {
         start_date: startDate,
         end_date: endDate,
         target_id: selectedSlot === 'category_pinned' ? event.category_id : undefined,
-        custom_subtitle: selectedSlot === 'hero_home' ? customSubtitle || undefined : undefined,
       });
 
       // Redirect to Stripe Checkout
@@ -189,9 +185,8 @@ export default function PromoteEventPage() {
 
           {/* Slot Selection */}
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Placement</h2>
             <div className="space-y-3">
-              {(['hero_home', 'global_pinned', 'category_pinned', 'magazine_carousel'] as SlotType[]).map(slotType => {
+              {(['category_pinned', 'magazine_carousel'] as SlotType[]).map(slotType => {
                 const config = getSlotConfig(slotType);
                 const info = SLOT_DESCRIPTIONS[slotType];
                 if (!config) return null;
@@ -235,26 +230,6 @@ export default function PromoteEventPage() {
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Your event will be pinned to the top of this category page.
-                </p>
-              </div>
-            )}
-
-            {/* Custom Subtitle for Hero Carousel */}
-            {selectedSlot === 'hero_home' && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Custom Subtitle <span className="text-gray-400">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={customSubtitle}
-                  onChange={(e) => setCustomSubtitle(e.target.value)}
-                  placeholder="e.g. Don't miss this spectacular Highland experience!"
-                  maxLength={200}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  This text will appear below your event title in the hero carousel. Max 200 characters.
                 </p>
               </div>
             )}

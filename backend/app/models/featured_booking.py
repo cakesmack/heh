@@ -16,26 +16,24 @@ if TYPE_CHECKING:
 
 class SlotType(str, Enum):
     """Types of featured placements available."""
-    HERO_HOME = "hero_home"
-    GLOBAL_PINNED = "global_pinned"
     CATEGORY_PINNED = "category_pinned"
     MAGAZINE_CAROUSEL = "magazine_carousel"
+    HERO_HOME = "hero_home"  # Legacy - Do not use for new bookings
+    GLOBAL_PINNED = "global_pinned"  # Legacy - Do not use for new bookings
 
 
 class BookingStatus(str, Enum):
     """Status workflow for featured bookings."""
     PENDING_PAYMENT = "pending_payment"
-    PENDING_APPROVAL = "pending_approval"
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
-    REJECTED = "rejected"
+    PENDING_APPROVAL = "pending_approval"  # Legacy
+    REJECTED = "rejected"  # Legacy
 
 
 # Slot limits and pricing (pence)
 SLOT_CONFIG = {
-    SlotType.HERO_HOME: {"max": 5, "price_per_day": 4000, "min_days": 3},
-    SlotType.GLOBAL_PINNED: {"max": 3, "price_per_day": 2000, "min_days": 3},
     SlotType.CATEGORY_PINNED: {"max": 3, "price_per_day": 1000, "min_days": 3},
     SlotType.MAGAZINE_CAROUSEL: {"max": 3, "price_per_day": 1500, "min_days": 1},
 }

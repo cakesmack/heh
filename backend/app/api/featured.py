@@ -23,7 +23,8 @@ from app.services.featured import (
     handle_checkout_completed,
     handle_checkout_expired,
     get_active_featured,
-    get_slot_pricing
+    get_slot_pricing,
+    activate_booking
 )
 
 router = APIRouter(tags=["Featured"])
@@ -57,7 +58,7 @@ class CheckoutRequest(BaseModel):
     start_date: date
     end_date: date
     target_id: Optional[str] = None
-    custom_subtitle: Optional[str] = None  # For hero carousel customization
+    custom_subtitle: Optional[str] = None
 
 
 class CheckoutResponse(BaseModel):
@@ -401,31 +402,8 @@ def verify_stripe_session(
         
         # Update if still pending payment
         if booking.status == BookingStatus.PENDING_PAYMENT:
-            print(f"[VERIFY SESSION] Updating booking {booking.id} status")
-            
-            # Get payment intent ID
-            booking.stripe_payment_intent_id = stripe_session.payment_intent
-            
-            # Check if organizer is trusted
-            organizer = session.get(User, booking.organizer_id)
-            if organizer and organizer.is_trusted_organizer:
-                booking.status = BookingStatus.ACTIVE
-                print(f"[VERIFY SESSION] Set to ACTIVE (trusted organizer)")
-                # Also update event featured status
-                event = session.get(Event, booking.event_id)
-                if event:
-                    event.featured = True
-                    event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
-                    session.add(event)
-                    print(f"[VERIFY SESSION] Set event.featured = True")
-            else:
-                booking.status = BookingStatus.PENDING_APPROVAL
-                print(f"[VERIFY SESSION] Set to PENDING_APPROVAL")
-            
-            booking.updated_at = datetime.utcnow()
-            session.add(booking)
-            session.commit()
-            session.refresh(booking)
+            print(f"[VERIFY SESSION] Updating booking {booking.id} status via activate_booking")
+            activate_booking(session, booking, stripe_session.get("payment_intent"))
         
         return VerifySessionResponse(
             success=True,
@@ -511,10 +489,6 @@ def admin_create_featured(
     event.featured = True
     event.featured_until = datetime.combine(end, datetime.max.time())
     session.add(event)
-    
-    # If HERO_HOME, try to assign to a Hero Slot
-    # if request.slot_type == SlotType.HERO_HOME:
-    #     assign_hero_slot(session, event_id)
     
     session.commit()
     

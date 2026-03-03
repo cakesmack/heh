@@ -37,18 +37,14 @@ interface SlotPricingAdmin {
 
 const STATUS_COLORS: Record<string, string> = {
   pending_payment: 'bg-gray-100 text-gray-700',
-  pending_approval: 'bg-amber-100 text-amber-700',
   active: 'bg-green-100 text-green-700',
   completed: 'bg-blue-100 text-blue-700',
   cancelled: 'bg-gray-100 text-gray-500',
-  rejected: 'bg-red-100 text-red-700',
 };
 
 const SLOT_LABELS: Record<string, string> = {
-  hero_home: 'Hero Carousel',
-  global_pinned: 'Homepage Pinned',
   category_pinned: 'Category Pinned',
-  newsletter: 'Newsletter',
+  magazine_carousel: 'Magazine Feature',
 };
 
 export default function AdminFeatured() {
@@ -132,29 +128,6 @@ export default function AdminFeatured() {
     }
   };
 
-  const handleApprove = async (bookingId: string) => {
-    if (!confirm('Approve this booking? The organizer will be notified and marked as trusted.')) {
-      return;
-    }
-    try {
-      await apiFetch(`/api/admin/featured/${bookingId}/approve`, { method: 'PATCH' });
-      await fetchBookings();
-    } catch (err: any) {
-      alert(err.message || 'Failed to approve booking');
-    }
-  };
-
-  const handleReject = async (bookingId: string) => {
-    if (!confirm('Reject this booking? A refund will be issued to the organizer.')) {
-      return;
-    }
-    try {
-      await apiFetch(`/api/admin/featured/${bookingId}/reject`, { method: 'PATCH' });
-      await fetchBookings();
-    } catch (err: any) {
-      alert(err.message || 'Failed to reject booking');
-    }
-  };
 
   const handleCancel = async (bookingId: string, isPaid: boolean) => {
     const message = isPaid
@@ -207,7 +180,6 @@ export default function AdminFeatured() {
     return `£${(pence / 100).toFixed(2)}`;
   };
 
-  const pendingCount = bookings.filter(b => b.status === 'pending_approval').length;
   const activeCount = bookings.filter(b => b.status === 'active').length;
   const totalRevenue = bookings
     .filter(b => ['active', 'completed'].includes(b.status))
@@ -248,10 +220,6 @@ export default function AdminFeatured() {
           <>
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-amber-50 rounded-xl p-4">
-                <p className="text-sm text-amber-600 font-medium">Pending Approval</p>
-                <p className="text-2xl font-bold text-amber-700">{pendingCount}</p>
-              </div>
               <div className="bg-green-50 rounded-xl p-4">
                 <p className="text-sm text-green-600 font-medium">Active Bookings</p>
                 <p className="text-2xl font-bold text-green-700">{activeCount}</p>
@@ -279,11 +247,11 @@ export default function AdminFeatured() {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">All Statuses</option>
-                <option value="pending_approval">Pending Approval</option>
+                <option value="">All Statuses</option>
+                <option value="pending_payment">Pending Payment</option>
                 <option value="active">Active</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
-                <option value="rejected">Rejected</option>
               </select>
 
               <select
@@ -292,10 +260,9 @@ export default function AdminFeatured() {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">All Slot Types</option>
-                <option value="hero_home">Hero Carousel</option>
-                <option value="global_pinned">Homepage Pinned</option>
+                <option value="">All Slot Types</option>
                 <option value="category_pinned">Category Pinned</option>
-                <option value="newsletter">Newsletter</option>
+                <option value="magazine_carousel">Magazine Feature</option>
               </select>
             </div>
 
@@ -374,22 +341,6 @@ export default function AdminFeatured() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          {booking.status === 'pending_approval' && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleApprove(booking.id)}
-                                className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleReject(booking.id)}
-                                className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          )}
                           {booking.status === 'pending_payment' && (
                             <button
                               onClick={() => handleCancel(booking.id, false)}

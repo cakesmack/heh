@@ -53,6 +53,16 @@ def check_availability(
     Check slot availability for a date range.
     STRICT MODE: Filters strictly by slot_type.
     """
+    # STRICT ENFORCEMENT: Block legacy types for new checks
+    if slot_type in [SlotType.HERO_HOME, SlotType.GLOBAL_PINNED]:
+        return {
+            "available": False,
+            "error": f"Slot type {slot_type.value} is no longer available",
+            "unavailable_dates": [],
+            "slots_remaining": {},
+            "price_quote": 0,
+            "num_days": (end_date - start_date).days + 1
+        }
     config = get_slot_pricing(session, slot_type)
     max_slots = config["max"]
     price_per_day = config["price_per_day"]
@@ -73,7 +83,6 @@ def check_availability(
     # Query existing bookings that overlap
     blocking_statuses = [
         BookingStatus.PENDING_PAYMENT,
-        BookingStatus.PENDING_APPROVAL,
         BookingStatus.ACTIVE
     ]
 
@@ -181,6 +190,15 @@ def create_checkout_session(
     """
     Create a Stripe Checkout session and FeaturedBooking.
     """
+    # TRANSACTIONAL LOCK: Lock the pricing record to prevent concurrent availability races
+    session.exec(
+        select(SlotPricing).where(SlotPricing.slot_type == slot_type.value).with_for_update()
+    )
+
+    # STRICT ENFORCEMENT: Block legacy types for new checkouts
+    if slot_type in [SlotType.HERO_HOME, SlotType.GLOBAL_PINNED]:
+        raise ValueError(f"Slot type {slot_type.value} is no longer available for purchase")
+
     # Check availability first
     availability = check_availability(session, slot_type, start_date, end_date, target_id)
     if not availability["available"]:
@@ -212,6 +230,12 @@ def create_checkout_session(
     eid = event.id
     formatted_event_id = f"{eid[:8]}-{eid[8:12]}-{eid[12:16]}-{eid[16:20]}-{eid[20:]}" if len(eid) == 32 else eid
 
+    # Check if we are running locally or in production
+    if settings.DEBUG:
+        base_url = "http://localhost:3000"
+    else:
+        base_url = settings.FRONTEND_URL
+
     checkout_session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         line_items=[{
@@ -226,8 +250,8 @@ def create_checkout_session(
             "quantity": 1,
         }],
         mode="payment",
-        success_url=f"{settings.FRONTEND_URL}/account?featured=success&booking_id={booking.id}",
-        cancel_url=f"{settings.FRONTEND_URL}/events/{formatted_event_id}/promote?cancelled=true",
+        success_url=f"{base_url}/featured/success?session_id={{CHECKOUT_SESSION_ID}}&booking_id={booking.id}",
+        cancel_url=f"{base_url}/events/{formatted_event_id}/promote?cancelled=true",
         metadata={
             "booking_id": booking.id,
             "event_id": event.id,
@@ -239,6 +263,7 @@ def create_checkout_session(
     # Update booking with Stripe session ID
     booking.stripe_checkout_session_id = checkout_session.id
     session.add(booking)
+    # commit() is handled by the caller or we can do it here if within its own transaction
     session.commit()
 
     return {
@@ -247,40 +272,48 @@ def create_checkout_session(
     }
 
 
+def activate_booking(session: Session, booking: FeaturedBooking, payment_intent_id: Optional[str] = None) -> None:
+    """
+    Standardized activation logic for featured bookings.
+    Used by both the Webhook and the Verify-Session fallback.
+    """
+    if booking.status == BookingStatus.ACTIVE:
+        return
+
+    # 1. Update booking status
+    booking.status = BookingStatus.ACTIVE
+    if payment_intent_id:
+        booking.stripe_payment_intent_id = payment_intent_id
+    booking.updated_at = datetime.utcnow()
+    session.add(booking)
+
+    # 2. Sync event.featured flag (Phase 2 Directive)
+    event = session.get(Event, booking.event_id)
+    if event:
+        event.featured = True
+        # Set featured_until to the end of the booking day
+        event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
+        session.add(event)
+    
+    session.commit()
+    print(f"[FEATURED SERVICE] Activated booking {booking.id} for event {booking.event_id}")
+
+
 def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
     """
     Handle successful Stripe checkout.
-    PAID bookings are ACTIVE immediately.
-    We NO LONGER sync to 'event.featured' or 'HeroSlot'.
-    The FeaturedBooking record is the single source of truth.
+    Uses centralized activate_booking logic.
     """
-    print(f"[CHECKOUT COMPLETED] Starting processing")
-    
     booking_id = stripe_session.get("metadata", {}).get("booking_id")
-    print(f"[CHECKOUT COMPLETED] Booking ID: {booking_id}")
-    
     if not booking_id:
-        print("[CHECKOUT COMPLETED] No booking_id in metadata, returning early")
         return
 
     booking = session.get(FeaturedBooking, booking_id)
     if not booking:
-        print(f"[CHECKOUT COMPLETED] Booking not found: {booking_id}")
         return
     
-    print(f"[CHECKOUT COMPLETED] Found booking, slot_type: {booking.slot_type}, current status: {booking.status}")
-
-    # Get payment intent ID
-    booking.stripe_payment_intent_id = stripe_session.get("payment_intent")
-
-    # Paid bookings are ACTIVE immediately
-    booking.status = BookingStatus.ACTIVE
-    print(f"[CHECKOUT COMPLETED] Setting status to ACTIVE")
-    
-    booking.updated_at = datetime.utcnow()
-    session.add(booking)
-    session.commit()
-    print(f"[CHECKOUT COMPLETED] Committed successfully. Booking is now ACTIVE.")
+    payment_intent_id = stripe_session.get("payment_intent")
+    activate_booking(session, booking, payment_intent_id)
 
 
 def handle_checkout_expired(session: Session, stripe_session: dict) -> None:

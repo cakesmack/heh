@@ -69,7 +69,7 @@ export default function AdminEvents() {
   // Admin Promote Modal State
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [promotingEvent, setPromotingEvent] = useState<{ id: string; title: string } | null>(null);
-  const [promoteSlotType, setPromoteSlotType] = useState<'hero_home' | 'global_pinned' | 'magazine_carousel'>('hero_home');
+  const [promoteSlotType, setPromoteSlotType] = useState<'category_pinned' | 'magazine_carousel'>('category_pinned');
   const [promoteLoading, setPromoteLoading] = useState(false);
 
   // Track active promotions for each event: { eventId: [{id, slot_type},...] }
@@ -644,7 +644,7 @@ export default function AdminEvents() {
                         {/* Show Promote button only if not already promoted */}
                         {!activePromotions[event.id]?.length && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); setPromotingEvent(event); setPromoteSlotType('hero_home'); setPromoteModalOpen(true); }}
+                            onClick={(e) => { e.stopPropagation(); setPromotingEvent(event); setPromoteSlotType('category_pinned'); setPromoteModalOpen(true); }}
                             className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
                           >
                             Promote
@@ -1068,8 +1068,8 @@ export default function AdminEvents() {
               </label>
 
               <div className="flex flex-col gap-3">
-                {/* Option 1: Hero Carousel */}
-                <label className={`relative border rounded-lg p-4 cursor-pointer transition-all ${promoteSlotType === 'hero_home'
+                {/* Option 1: Category Pinned */}
+                <label className={`relative border rounded-lg p-4 cursor-pointer transition-all ${promoteSlotType === 'category_pinned'
                   ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500'
                   : 'border-gray-200 hover:border-gray-300'
                   }`}>
@@ -1077,19 +1077,19 @@ export default function AdminEvents() {
                     <input
                       type="radio"
                       name="slotType"
-                      value="hero_home"
-                      checked={promoteSlotType === 'hero_home'}
+                      value="category_pinned"
+                      checked={promoteSlotType === 'category_pinned'}
                       onChange={(e) => setPromoteSlotType(e.target.value as any)}
                       className="h-4 w-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
                     />
                     <div>
-                      <span className="block text-sm font-medium text-gray-900">Hero Carousel</span>
-                      <span className="block text-xs text-gray-500">Big slide at the top (Max 4 slots)</span>
+                      <span className="block text-sm font-medium text-gray-900">Category Pinned</span>
+                      <span className="block text-xs text-gray-500">Top of category search results</span>
                     </div>
                   </div>
                 </label>
 
-                {/* Option 2: Magazine Carousel */}
+                {/* Option 2: Magazine Feature */}
                 <label className={`relative border rounded-lg p-4 cursor-pointer transition-all ${promoteSlotType === 'magazine_carousel'
                   ? 'border-purple-500 bg-purple-50 ring-1 ring-purple-500'
                   : 'border-gray-200 hover:border-gray-300'
@@ -1104,8 +1104,8 @@ export default function AdminEvents() {
                       className="h-4 w-4 text-purple-600 border-gray-300 focus:ring-purple-500"
                     />
                     <div>
-                      <span className="block text-sm font-medium text-gray-900">Magazine Carousel</span>
-                      <span className="block text-xs text-gray-500">Grid feature (Max 3 slots)</span>
+                      <span className="block text-sm font-medium text-gray-900">Magazine Feature</span>
+                      <span className="block text-xs text-gray-500">Large grid feature for magazine style layout</span>
                     </div>
                   </div>
                 </label>

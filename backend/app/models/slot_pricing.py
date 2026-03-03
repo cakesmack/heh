@@ -28,18 +28,6 @@ class SlotPricing(SQLModel, table=True):
 
 # Default pricing configuration (used for seeding)
 DEFAULT_PRICING = {
-    SlotType.HERO_HOME.value: {
-        "price_per_day": 4000,
-        "min_days": 3,
-        "max_concurrent": 5,
-        "description": "Homepage hero carousel - maximum visibility"
-    },
-    SlotType.GLOBAL_PINNED.value: {
-        "price_per_day": 2000,
-        "min_days": 3,
-        "max_concurrent": 3,
-        "description": "Pinned at top of all events list"
-    },
     SlotType.CATEGORY_PINNED.value: {
         "price_per_day": 1000,
         "min_days": 3,

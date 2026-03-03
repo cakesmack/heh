@@ -138,6 +138,16 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
+    // 401 handling: If unauthorized, token might be expired
+    if (response.status === 401 && includeAuth) {
+      console.warn('API 401 Unauthorized - clearing token');
+      clearAuthToken();
+      // If we are on the client, we might want to trigger a refresh or redirect
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        // Optionally: window.location.href = '/login?expired=true';
+      }
+    }
+
     const error = await response.json().catch(() => ({
       detail: `HTTP ${response.status}: ${response.statusText}`,
     }));
@@ -1206,51 +1216,60 @@ const preferencesAPI = {
 // FEATURED API
 // ============================================================
 
-const featuredAPI = {
-  async getConfig(): Promise<SlotConfig[]> {
-    const response = await fetch(`${API_BASE_URL}/api/featured/config`);
-    if (!response.ok) throw new Error('Failed to fetch config');
-    return response.json();
+export const featuredAPI = {
+  /**
+   * Get pricing and limits for all slot types
+   */
+  getConfig: async (): Promise<SlotConfig[]> => {
+    return apiFetch<SlotConfig[]>('/api/featured/config', {}, false);
   },
 
-  async checkAvailability(request: AvailabilityRequest): Promise<AvailabilityResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/featured/check-availability`, {
+  /**
+   * Check if dates are available for a slot type
+   */
+  checkAvailability: async (request: AvailabilityRequest): Promise<AvailabilityResponse> => {
+    return apiFetch<AvailabilityResponse>('/api/featured/check-availability', {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(request),
     });
-    if (!response.ok) throw new Error('Failed to check availability');
-    return response.json();
   },
 
-  async createCheckout(request: CheckoutRequest): Promise<CheckoutResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/featured/create-checkout`, {
+  /**
+   * Create Stripe checkout session
+   */
+  createCheckout: async (request: CheckoutRequest): Promise<CheckoutResponse> => {
+    return apiFetch<CheckoutResponse>('/api/featured/create-checkout', {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(request),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to create checkout');
-    }
-    return response.json();
   },
 
-  async getMyBookings(): Promise<FeaturedBooking[]> {
-    const response = await fetch(`${API_BASE_URL}/api/featured/my-bookings`, {
-      headers: getHeaders(),
-    });
-    if (!response.ok) throw new Error('Failed to fetch bookings');
-    return response.json();
+  /**
+   * Get current user's featured bookings
+   */
+  getMyBookings: async (): Promise<FeaturedBooking[]> => {
+    return apiFetch<FeaturedBooking[]>('/api/featured/my-bookings');
   },
 
-  async getActive(slotType: SlotType, targetId?: string): Promise<ActiveFeatured[]> {
-    const params = new URLSearchParams({ slot_type: slotType });
-    if (targetId) params.append('target_id', targetId);
+  /**
+   * Get currently active featured events for display
+   */
+  getActive: async (slotType: SlotType, targetId?: string): Promise<ActiveFeatured[]> => {
+    const params: Record<string, any> = { slot_type: slotType };
+    if (targetId) params.target_id = targetId;
+    const queryString = buildQueryString(params);
+    return apiFetch<ActiveFeatured[]>(`/api/featured/active${queryString}`, {}, false);
+  },
 
-    const response = await fetch(`${API_BASE_URL}/api/featured/active?${params}`);
-    if (!response.ok) throw new Error('Failed to fetch active featured');
-    return response.json();
+  /**
+   * Verify a Stripe session (fallback for webhook)
+   */
+  verifySession: async (sessionId?: string, bookingId?: string): Promise<{ success: boolean; message: string; status?: string }> => {
+    const params: Record<string, any> = {};
+    if (sessionId) params.session_id = sessionId;
+    if (bookingId) params.booking_id = bookingId;
+    const queryString = buildQueryString(params);
+    return apiFetch(`/api/featured/verify-session${queryString}`);
   },
 };
 

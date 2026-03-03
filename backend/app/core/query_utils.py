@@ -40,10 +40,9 @@ def deduplicate_recurring_events(
     # Calculate pinned priority (promoted slots)
     # We want this to be available for both Postgres and SQLite sorting
     pinned_priority = sa_func.min(case(
-        (FeaturedBooking.slot_type == SlotType.GLOBAL_PINNED, 1),
-        (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 2),
-        (FeaturedBooking.slot_type == SlotType.HERO_HOME, 3),
-        else_=4
+        (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 1),
+        (FeaturedBooking.slot_type == SlotType.MAGAZINE_CAROUSEL, 2),
+        else_=3
     ))
 
     if is_postgres:

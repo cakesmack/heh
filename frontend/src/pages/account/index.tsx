@@ -178,58 +178,6 @@ function AccountPageContent() {
     }
   };
 
-  // Auto-verify featured payment when redirected from Stripe
-  useEffect(() => {
-    const verifyFeaturedPayment = async () => {
-      const { featured, booking_id, cancelled } = router.query;
-
-      // Handle cancelled checkout
-      if (cancelled === 'true') {
-        setFeaturedStatus({ success: false, message: 'Featured promotion checkout was cancelled.' });
-        // Clean up URL
-        router.replace('/account', undefined, { shallow: true });
-        return;
-      }
-
-      // Handle successful checkout - verify with backend
-      if (featured === 'success' && booking_id && typeof booking_id === 'string') {
-        try {
-          // Use the shared API client which automatically attaches the Bearer token
-          const data = await api.get<{ success: boolean; status?: string; message: string }>(
-            `/api/featured/verify-session?booking_id=${booking_id}`
-          );
-
-          if (data.success) {
-            setFeaturedStatus({
-              success: true,
-              message: `Payment verified! Your event is now ${data.status === 'active' ? 'featured' : 'pending admin approval'}.`
-            });
-          } else {
-            // Verification returned but wasn't marked success — show gentle message
-            setFeaturedStatus({
-              success: true,
-              message: 'Payment received! Your featured promotion is being processed.'
-            });
-          }
-        } catch (err) {
-          // Graceful fallback: the webhook likely already processed the payment.
-          // Don't show a scary error — just confirm payment was received.
-          console.warn('Verification endpoint failed (webhook likely already processed):', err);
-          setFeaturedStatus({
-            success: true,
-            message: 'Payment received! Your featured promotion is being processed.'
-          });
-        }
-
-        // Clean up URL
-        router.replace('/account', undefined, { shallow: true });
-      }
-    };
-
-    if (router.isReady) {
-      verifyFeaturedPayment();
-    }
-  }, [router.isReady, router.query]);
 
   useEffect(() => {
     if (!isAuthenticated || !user) {

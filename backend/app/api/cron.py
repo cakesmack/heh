@@ -15,13 +15,14 @@ from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.models.event import Event
 from app.models.venue import Venue
+from app.models.featured_booking import FeaturedBooking, BookingStatus
 from app.api.email_testing import get_featured_events, format_event_data
 from app.services.resend_email import resend_email_service
 
 router = APIRouter(prefix="/cron", tags=["Cron Jobs"])
 logger = logging.getLogger(__name__)
 
-CRON_SECRET = os.getenv("CRON_SECRET", "super-secret-cron-key")
+CRON_SECRET = os.getenv("CRON_SECRET_KEY", "super-secret-cron-key")
 
 def verify_cron_access(
     x_cron_secret: Optional[str] = Header(None, alias="X-Cron-Secret"),
@@ -168,37 +169,82 @@ async def trigger_weekly_digest(
     }
 
 
-@router.post("/expire-featured")
-def expire_featured_events(
+@router.post("/run-cleanup")
+def run_system_cleanup(
     session: Session = Depends(get_session),
     authorized: bool = Depends(verify_cron_access)
 ):
     """
-    Cron job to expire featured events.
-    Checks for events where featured_until < now and resets featured status.
+    Cron job to cleanup featured bookings and expire events.
+    1. STALE LOCKS: Cancels PENDING_PAYMENT older than 35 mins.
+    2. EXPIRY: ACTIVE bookings with end_date in the past -> COMPLETED.
+    3. EVENT SYNC: Resets event.featured if no active bookings remain.
     """
     now = datetime.utcnow()
+    today = now.date()
     
-    # query for expired events
-    expired_events = session.exec(
-        select(Event)
-        .where(Event.featured == True)
-        .where(Event.featured_until < now)
+    # 1. CLEANUP STALE LOCKS
+    stale_cutoff = now - timedelta(minutes=35)
+    stale_bookings = session.exec(
+        select(FeaturedBooking)
+        .where(FeaturedBooking.status == BookingStatus.PENDING_PAYMENT)
+        .where(FeaturedBooking.created_at < stale_cutoff)
     ).all()
     
-    count = 0
-    for event in expired_events:
-        event.featured = False
-        event.featured_until = None
-        session.add(event)
-        count += 1
+    stale_count = 0
+    for b in stale_bookings:
+        b.status = BookingStatus.CANCELLED
+        b.updated_at = now
+        session.add(b)
+        stale_count += 1
+        
+    # 2. EXPIRE ACTIVE BOOKINGS
+    expired_bookings = session.exec(
+        select(FeaturedBooking)
+        .where(FeaturedBooking.status == BookingStatus.ACTIVE)
+        .where(FeaturedBooking.end_date < today)
+    ).all()
+    
+    expired_count = 0
+    for b in expired_bookings:
+        b.status = BookingStatus.COMPLETED
+        b.updated_at = now
+        session.add(b)
+        expired_count += 1
         
     session.commit()
     
-    logger.info(f"[CRON] Expired {count} featured events.")
+    # 3. SYNC EVENT FLAGS
+    # Reset event.featured if they have no active bookings
+    # This is safer than just relying on featured_until
+    all_featured_events = session.exec(
+        select(Event).where(Event.featured == True)
+    ).all()
+    
+    sync_count = 0
+    for event in all_featured_events:
+        # Check if any ACTIVE booking still exists for this event
+        still_active = session.exec(
+            select(FeaturedBooking)
+            .where(FeaturedBooking.event_id == event.id)
+            .where(FeaturedBooking.status == BookingStatus.ACTIVE)
+            .where(FeaturedBooking.start_date <= today)
+            .where(FeaturedBooking.end_date >= today)
+        ).first()
+        
+        if not still_active:
+            event.featured = False
+            event.featured_until = None
+            session.add(event)
+            sync_count += 1
+            
+    session.commit()
+    
+    logger.info(f"[CRON] Cleanup complete: {stale_count} stale locks cancelled, {expired_count} bookings completed, {sync_count} events synced.")
     
     return {
         "status": "success",
-        "message": f"Expired {count} featured events.",
-        "processed_count": count
+        "stale_cancelled": stale_count,
+        "bookings_completed": expired_count,
+        "events_synced": sync_count
     }
