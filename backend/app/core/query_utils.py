@@ -50,11 +50,19 @@ def deduplicate_recurring_events(
         base_subquery = base_query.subquery()
 
         # Step 2: Use DISTINCT ON to get one event per series
+        # We want the representative to be the soonest UPCOMING instance if possible.
+        # Logic: (Starts in future?) DESC, Date ASC
+        sql_now = func.now()
+        
         distinct_ids_query = (
             select(base_subquery.c.id)
             .distinct(func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id))
             .order_by(
                 func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id),
+                case(
+                    (base_subquery.c.date_start >= sql_now, 0),
+                    else_=1
+                ).asc(),
                 base_subquery.c.date_start.desc() if sort_field == "date_desc" else base_subquery.c.date_start.asc()
             )
         )

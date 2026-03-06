@@ -179,6 +179,27 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
         response.organizer_profile_name = event.organizer_profile.name
         response.organizer_profile = OrganizerProfileResponse.model_validate(event.organizer_profile)
 
+    # Resolve Next Occurrence for Display
+    # Because our query deduplication prioritizes upcoming rows, 
+    # the 'event' passed here is already the best candidate for 'Next'.
+    if event.is_recurring:
+        # Check if the start date is in the future relative to server time
+        # We use naive comparison if DB is naive, or TZ-aware if event is aware.
+        # Most of our DB dates are naive UTC.
+        now = datetime.utcnow()
+        if event.date_start >= now:
+            response.next_occurrence = event.date_start
+            response.is_upcoming_occurrence = True
+        else:
+            # It's an old instance or a finished series representative
+            response.next_occurrence = None
+            response.is_upcoming_occurrence = False
+    else:
+        # For non-recurring events (Exhibits), we don't label as "Upcoming Occurrence"
+        # but the frontend will just use standard date_start.
+        response.next_occurrence = None
+        response.is_upcoming_occurrence = False
+
     return response
 
 

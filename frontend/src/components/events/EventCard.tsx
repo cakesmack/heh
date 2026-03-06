@@ -178,7 +178,16 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
                 })() : (
                 /* Case 3: Single day event */
                 <span>
-                  {formatDate(event.date_start)} · {formatTime(event.date_start)}
+                  {event.is_recurring && event.next_occurrence ? (
+                    <span className="flex items-center">
+                      <span className="font-semibold text-indigo-600 mr-1">Next:</span>
+                      {formatDate(event.next_occurrence)} · {formatTime(event.next_occurrence)}
+                    </span>
+                  ) : (
+                    <>
+                      {formatDate(event.date_start)} · {formatTime(event.date_start)}
+                    </>
+                  )}
                 </span>
               )}
             {event.is_recurring && (

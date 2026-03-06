@@ -65,7 +65,14 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
                                     const endDate = formatDate(event.date_end);
                                     return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
                                 })() : (
-                                formatDate(event.date_start)
+                                event.is_recurring && event.next_occurrence ? (
+                                    <span className="flex items-center">
+                                        <span className="text-emerald-300 font-bold mr-1">Next:</span>
+                                        {formatDate(event.next_occurrence)}
+                                    </span>
+                                ) : (
+                                    formatDate(event.date_start)
+                                )
                             )}
                         </span>
                         {event.category && (

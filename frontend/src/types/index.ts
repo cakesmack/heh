@@ -329,6 +329,8 @@ export interface Event {
   is_recurring?: boolean;
   parent_event_id?: string;
   recurrence_group_id?: string;
+  next_occurrence?: string;
+  is_upcoming_occurrence?: boolean;
   // SEO fields
   seo_title?: string;
   seo_description?: string;
