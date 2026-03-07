@@ -1393,6 +1393,29 @@ export const adminAPI = {
       method: 'PATCH',
     });
   },
+
+  // Campaign Management
+  getSubscriberCount: async (): Promise<{ subscriber_count: number }> => {
+    return apiFetch<{ subscriber_count: number }>('/api/admin/campaigns/subscribers');
+  },
+
+  sendTestCampaign: async (subject: string, body: string): Promise<{ message: string; success: boolean }> => {
+    return apiFetch<{ message: string; success: boolean }>('/api/admin/campaigns/test', {
+      method: 'POST',
+      body: JSON.stringify({ subject, body }),
+    });
+  },
+
+  sendCampaign: async (subject: string, body: string): Promise<{ message: string; campaign_id: string; recipient_count: number }> => {
+    return apiFetch<{ message: string; campaign_id: string; recipient_count: number }>('/api/admin/campaigns/send', {
+      method: 'POST',
+      body: JSON.stringify({ subject, body }),
+    });
+  },
+
+  getCampaignLogs: async (campaignId: string): Promise<any> => {
+    return apiFetch<any>(`/api/admin/campaigns/logs/${campaignId}`);
+  },
 };
 
 // ============================================================

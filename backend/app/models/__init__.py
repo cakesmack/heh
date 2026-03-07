@@ -30,6 +30,7 @@ from .notification import Notification, NotificationType
 from .featured_booking import FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
 from .slot_pricing import SlotPricing, DEFAULT_PRICING
 from .showtime import EventShowtime
+from .campaign_log import CampaignLog
 
 __all__ = [
     # User
@@ -93,4 +94,6 @@ __all__ = [
     "VenueInvite",
     # Event Claim
     "EventClaim",
+    # Campaign Logs
+    "CampaignLog",
 ]

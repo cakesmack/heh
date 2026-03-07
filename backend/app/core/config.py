@@ -96,6 +96,13 @@ class Settings(BaseSettings):
     PASSWORD_RESET_EXPIRE_MINUTES: int = 60
     ADMIN_EMAIL: Optional[str] = None
 
+    # Campaign Email (Amazon SES SMTP) — isolated from transactional
+    CAMPAIGN_SMTP_HOST: str = "email-smtp.eu-west-2.amazonaws.com"
+    CAMPAIGN_SMTP_PORT: int = 587
+    CAMPAIGN_SMTP_USER: Optional[str] = None
+    CAMPAIGN_SMTP_PASS: Optional[str] = None
+    CAMPAIGN_FROM_ADDRESS: str = "Highland Events Hub <contact@highlandeventshub.co.uk>"
+
     # Media Upload
     UPLOAD_DIR: str = "static/uploads"
 

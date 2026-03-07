@@ -18,14 +18,11 @@ export default function MapEventCard({
     onFocus
 }: MapEventCardProps) {
     // Format date
-    const displayDate = (event.is_recurring && event.next_occurrence)
-        ? new Date(event.next_occurrence)
-        : new Date(event.date_start);
-
-    const month = format(displayDate, 'MMM').toUpperCase();
-    const day = format(displayDate, 'd');
-    const time = format(displayDate, 'h:mm a');
-    const isToday = new Date().toDateString() === displayDate.toDateString();
+    const startDate = new Date(event.date_start);
+    const month = format(startDate, 'MMM').toUpperCase();
+    const day = format(startDate, 'd');
+    const time = format(startDate, 'h:mm a');
+    const isToday = new Date().toDateString() === startDate.toDateString();
 
     return (
         <div

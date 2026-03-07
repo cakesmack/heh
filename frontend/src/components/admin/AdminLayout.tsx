@@ -32,6 +32,7 @@ const navItems = [
   { href: '/admin/claims', label: 'Claims', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', section: 'actions' },
   { href: '/admin/moderation', label: 'Moderation', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', section: 'actions' },
   { href: '/admin/import', label: 'Import Events', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12', section: 'actions' },
+  { href: '/admin/campaigns', label: 'Campaigns', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', section: 'actions' },
 ];
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
