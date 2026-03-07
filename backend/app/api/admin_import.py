@@ -1,6 +1,6 @@
 """
 Admin API for importing single events.
-Handles external image sideloading via Cloudinary and showtime parsing.
+Handles external image sideloading via Cloudflare Images and showtime parsing.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
@@ -17,7 +17,7 @@ from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
 from app.models.showtime import EventShowtime
-from app.services.cloudinary_service import init_cloudinary, is_cloudinary_configured
+from app.services.cloudflare_service import is_cloudflare_configured, sideload_url_to_cloudflare, get_cloudflare_url
 from app.services.event_service import upsert_event, cleanup_stale_venue_events
 
 # Define Router
@@ -96,37 +96,31 @@ def parse_showtime_string(raw_str: str, year: int) -> datetime:
 
 
 @router.post("/events/import-single", status_code=status.HTTP_201_CREATED)
-def import_single_event(
+async def import_single_event(
     req: SingleEventImportRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
     """
     Import a single event from external data.
-    Sideloads image from external URL to Cloudinary.
+    Sideloads image from external URL to Cloudflare Images.
     Uses upsert logic: if an event with the same title + date + venue
     already exists, it is updated instead of duplicated.
     """
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    # 1. Image Processing (Sideload)
+    # 1. Image Processing (Sideload to Cloudflare Images)
     final_image_url = req.image_url
     
-    if req.image_url and "cloudinary" not in req.image_url:
-        if not is_cloudinary_configured():
-             raise HTTPException(status_code=500, detail="Cloudinary not configured")
-        
-        import cloudinary.uploader
-        init_cloudinary()
+    if req.image_url and "imagedelivery.net" not in req.image_url:
+        if not is_cloudflare_configured():
+             raise HTTPException(status_code=500, detail="Cloudflare Images not configured")
         
         try:
-            # Upload from remote URL
-            upload_response = cloudinary.uploader.upload(
-                req.image_url, 
-                folder="highland_events/events"
-            )
-            final_image_url = upload_response.get("secure_url")
+            # Upload from remote URL via Cloudflare
+            image_id = await sideload_url_to_cloudflare(req.image_url)
+            final_image_url = get_cloudflare_url(image_id, "public")
         except Exception as e:
             # If upload fails, abort the import
             raise HTTPException(

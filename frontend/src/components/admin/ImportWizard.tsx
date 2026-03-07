@@ -2,8 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Venue, Category } from '@/types';
 import { X, Trash2, Check, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
-import OptimizedImage from '@/components/ui/OptimizedImage';
 import { UnifiedVenueSelect } from '@/components/venues/UnifiedVenueSelect';
+
+/**
+ * Proxy external image URLs through our backend to bypass hotlink protection.
+ * Only proxies non-Cloudflare external URLs; Cloudflare and local URLs pass through.
+ */
+function proxyImageUrl(url: string | undefined): string {
+    if (!url) return '/images/event-placeholder.jpg';
+    // Already a Cloudflare delivery URL or local path — no proxy needed
+    if (url.includes('imagedelivery.net') || url.startsWith('/') || url.startsWith('data:')) return url;
+    // External URL — route through backend proxy
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    return `${base}/api/media/proxy-image?url=${encodeURIComponent(url)}&token=${token || ''}`;
+}
 
 interface ImportWizardProps {
     venues: Venue[];
@@ -466,12 +479,11 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                     </td>
                                     <td className="px-3 py-2">
                                         <div className="relative h-8 w-12 rounded bg-gray-100 overflow-hidden">
-                                            <OptimizedImage
-                                                src={event.image_url}
+                                            <img
+                                                src={proxyImageUrl(event.image_url)}
                                                 alt=""
-                                                fill
-                                                className="object-cover"
-                                                variant="thumb"
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { (e.target as HTMLImageElement).src = '/images/event-placeholder.jpg'; }}
                                             />
                                         </div>
                                     </td>
@@ -526,12 +538,11 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                 <div>
                                     {currentEvent.image_url ? (
                                         <div className="relative w-full h-64 rounded-lg bg-gray-100 overflow-hidden">
-                                            <OptimizedImage
-                                                src={currentEvent.image_url}
+                                            <img
+                                                src={proxyImageUrl(currentEvent.image_url)}
                                                 alt=""
-                                                fill
-                                                className="object-cover"
-                                                variant="hero"
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { (e.target as HTMLImageElement).src = '/images/event-placeholder.jpg'; }}
                                             />
                                         </div>
                                     ) : (

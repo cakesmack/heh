@@ -106,3 +106,66 @@ async def delete_media(
 
     return {"deleted": True}
 
+
+@router.get("/proxy-image")
+async def proxy_image(
+    url: str = Query(..., description="External image URL to proxy"),
+    token: str = Query("", description="Auth token for admin verification")
+):
+    """
+    Proxy an external image through the backend with browser-like headers.
+    Bypasses hotlink protection that blocks direct browser requests.
+    Admin-only — token passed as query param since <img> tags cannot send headers.
+    """
+    # Manual auth check (img tags can't send Authorization headers)
+    if not token:
+        raise HTTPException(status_code=401, detail="Token required")
+
+    from app.core.security import decode_access_token
+    from app.core.database import get_session
+    from app.models.user import User
+
+    try:
+        user_id = decode_access_token(token)
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Verify admin status
+    session = next(get_session())
+    try:
+        from app.core.utils import normalize_uuid
+        user = session.get(User, normalize_uuid(user_id))
+        if not user or not user.is_admin:
+            raise HTTPException(status_code=403, detail="Admin access required")
+    finally:
+        session.close()
+
+    import httpx
+    from fastapi.responses import Response
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Referer": "https://www.hiclimatefest.co.uk/",
+        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    }
+
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
+            resp = await client.get(url, headers=headers)
+            resp.raise_for_status()
+
+            content_type = resp.headers.get("content-type", "image/jpeg")
+            return Response(
+                content=resp.content,
+                media_type=content_type,
+                headers={"Cache-Control": "public, max-age=3600"}
+            )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch image: {str(e)}")
+
