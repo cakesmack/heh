@@ -19,6 +19,7 @@ from app.models.venue import Venue
 from app.models.showtime import EventShowtime
 from app.services.cloudflare_service import is_cloudflare_configured, sideload_url_to_cloudflare, get_cloudflare_url
 from app.services.event_service import upsert_event, cleanup_stale_venue_events
+from app.services.duplicate_detection import check_duplicate_risk
 
 # Define Router
 router = APIRouter()
@@ -109,6 +110,29 @@ async def import_single_event(
     """
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
+
+    # 0. Fuzzy Duplicate Check (PROACTIVE)
+    # We create a temporary object to pass to the detector.
+    # We use normalize_dt logic from duplicate_detection indirectly 
+    # (check_duplicate_risk does it internally when comparing).
+    temp_event = Event(
+        title=req.title,
+        date_start=req.date_start,
+        venue_id=normalize_uuid(req.venue_id) if req.venue_id else None,
+        location_name=req.location_name,
+        # Set dummy date_end for overlap checks in detector
+        date_end=req.date_end or req.date_start
+    )
+
+    risk_score, meta = check_duplicate_risk(temp_event, session)
+    if risk_score >= 85:
+        # Return a response the frontend Wizard expects
+        return {
+            "success": True, 
+            "skipped": True, 
+            "reason": f"Potential duplicate detected: {meta.get('matched_title')} ({risk_score}%)",
+            "match_details": meta
+        }
 
     # 1. Image Processing (Sideload to Cloudflare Images)
     final_image_url = req.image_url

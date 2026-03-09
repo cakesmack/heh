@@ -297,7 +297,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                     next[currentReviewIndex] = { ...next[currentReviewIndex], status: 'duplicate', message: data.reason };
                     return next;
                 });
-                setImportError(`Duplicate detected: ${data.reason}. Click Reject to skip this event.`);
+                setImportError(`Duplicate detected: ${data.reason}. Verify manually if this is a new event.`);
             } else {
                 // Success - mark imported and move to next
                 setStagedEvents(prev => {
