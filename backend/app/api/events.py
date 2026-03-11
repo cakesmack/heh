@@ -57,6 +57,35 @@ from app.schemas.event_claim import EventClaimCreate, EventClaimResponse
 from app.core.query_utils import deduplicate_recurring_events
 
 router = APIRouter(tags=["Events"])
+from app.services.cloudflare_service import get_cloudflare_url, is_cloudflare_configured
+import re
+
+def get_thumbnail_url(image_url: str) -> Optional[str]:
+    """
+    Generate a compressed thumbnail URL based on the provider.
+    """
+    if not image_url:
+        return None
+    
+    # 1. Cloudflare Image ID (exactly 36-char UUID or similar)
+    if re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', image_url, re.IGNORECASE):
+        if is_cloudflare_configured():
+            return get_cloudflare_url(image_url, "thumbnail")
+        return image_url # Fallback if IDs used but env missing
+        
+    # 2. Cloudinary URL
+    if "res.cloudinary.com" in image_url:
+        if "/upload/" in image_url and "/upload/f_auto" not in image_url:
+            # Inject auto format, high compression, and specific width
+            return image_url.replace("/upload/", "/upload/f_auto,q_auto,c_limit,w_600/")
+        return image_url
+
+    # 3. Local/Relative paths
+    if image_url.startswith("/"):
+        return image_url
+
+    # 4. Fallback for external URLs or already processed URLs
+    return image_url
 
 
 def get_or_create_tags(session: Session, tag_names: List[str]) -> List[Tag]:
@@ -135,6 +164,11 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
 
     response.category = category_response
     response.participating_venues = participating_venue_responses
+    
+    # Generate thumbnail URL
+    if event.image_url:
+        response.thumbnail_url = get_thumbnail_url(event.image_url)
+    
     # Fetch analytics counts
     from app.models.analytics import AnalyticsEvent
     
@@ -297,6 +331,10 @@ def list_events_map(
         # Force populate location_name (ensure it carries over)
         if not resp.location_name and event.location_name:
              resp.location_name = event.location_name
+        
+        # Populate thumbnail_url
+        if event.image_url:
+            resp.thumbnail_url = get_thumbnail_url(event.image_url)
         
         responses.append(resp)
         

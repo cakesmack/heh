@@ -307,6 +307,7 @@ export interface Event {
   price_display?: string;  // User-friendly text like "Free", "£5-£10"
   min_price?: number;      // Numeric for filtering
   image_url?: string;
+  thumbnail_url?: string;
   featured: boolean;
   featured_until?: string;
   organizer_id: string;
@@ -476,6 +477,7 @@ export interface MapEventResponse {
   date_start: string;
   date_end: string;
   image_url?: string;
+  thumbnail_url?: string;
   category?: Category;
   venue_name?: string;
   location_name?: string;

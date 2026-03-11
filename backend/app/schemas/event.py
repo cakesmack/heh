@@ -197,6 +197,7 @@ class EventResponse(BaseModel):
     featured_until: Optional[datetime]
     organizer_id: UUID
     image_url: Optional[str]
+    thumbnail_url: Optional[str] = None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -289,6 +290,7 @@ class MapEventResponse(BaseModel):
     date_start: datetime
     date_end: datetime
     image_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     category: Optional[CategoryResponse] = None
     venue_name: Optional[str] = None
     latitude: Optional[float] = None

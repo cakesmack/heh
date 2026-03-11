@@ -191,8 +191,9 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const siteUrl = baseUrl || 'https://www.highlandeventshub.co.uk';
 
   // Use optimized URL for OG image if it's a Cloudflare ID
-  const optimizedOgUrl = event.image_url ? optimizeImage(event.image_url, 1200) : null;
-
+  // Prefer backend-provided thumbnail_url for WhatsApp compatibility
+  const optimizedOgUrl = event.thumbnail_url || (event.image_url ? optimizeImage(event.image_url, 1200) : null);
+  
   const ogImageUrl = optimizedOgUrl
     ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${siteUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
     : `${siteUrl}/images/og-default.jpg`;
