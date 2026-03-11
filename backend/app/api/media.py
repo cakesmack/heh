@@ -164,7 +164,10 @@ async def proxy_image(
             return Response(
                 content=resp.content,
                 media_type=content_type,
-                headers={"Cache-Control": "public, max-age=3600"}
+                headers={
+                    "Cache-Control": "public, max-age=3600",
+                    "Content-Disposition": "inline"
+                }
             )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to fetch image: {str(e)}")

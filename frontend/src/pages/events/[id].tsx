@@ -164,6 +164,32 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
     (event.venue_owner_id && user.id === event.venue_owner_id) ||
     (event.organizer_profile_id && user.organizer_profiles?.some(p => p.id === event.organizer_profile_id))
   );
+  
+  // SANITIZATION HELPERS for Social Sharing
+  const stripHtml = (html: string) => {
+    if (!html) return '';
+    // Remove HTML tags
+    let text = html.replace(/<[^>]*>?/gm, ' ');
+    // Decode common HTML entities
+    text = text
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#039;/g, "'")
+      .replace(/&#39;/g, "'");
+    // Collapse multiple whitespaces
+    return text.replace(/\s+/g, ' ').trim();
+  };
+
+  const truncate = (text: string, length: number) => {
+    if (!text) return '';
+    if (text.length <= length) return text;
+    const lastSpace = text.lastIndexOf(' ', length);
+    return text.substring(0, lastSpace > 0 ? lastSpace : length) + '...'; // Truncate at word boundary
+  };
 
   // Format date for OG description
   const eventDate = new Date(event.date_start);
@@ -185,8 +211,14 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const pageTitle = event.seo_title
     || `${event.title} at ${venueName}, ${city} | Tickets, Dates & Info | Highland Events Hub`;
 
+  // Sanitize the event description if no SEO override exists
+  const sanitizedDescription = stripHtml(event.description || '');
+  const truncatedDescription = truncate(sanitizedDescription, 155);
+
   const pageDescription = event.seo_description
-    || `${event.title} at ${venueName} on ${formattedOgDate}. Get tickets, dates, venue info & directions. Your guide to events in the Scottish Highlands.`;
+    || (truncatedDescription 
+        ? `${truncatedDescription} | Highland Events Hub`
+        : `${event.title} at ${venueName} on ${formattedOgDate}. Get tickets, dates, venue info & directions. Your guide to events in the Scottish Highlands.`);
 
   const siteUrl = baseUrl || 'https://www.highlandeventshub.co.uk';
 
