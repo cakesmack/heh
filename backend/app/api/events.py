@@ -203,8 +203,24 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
 
     # response.view_count = view_count
     response.view_count = event.view_count
+    response.attending_count = event.attending_count
     response.save_count = save_count
-    response.ticket_click_count = ticket_click_count
+    response.ticket_click_count = event.ticket_click_count
+    response.website_click_count = event.website_click_count
+    
+    # Calculate Velocity Score (Trending/Popularity)
+    # Algorithm: (Raw Score) / (Days Live)
+    # Raw Score = (Views * 1) + (Attending * 5) + (Tickets * 10) + (Website * 5)
+    raw_score = (
+        event.view_count + 
+        (event.attending_count * 5) + 
+        (event.ticket_click_count * 10) + 
+        (event.website_click_count * 5)
+    )
+    # Days Live = max(1, days since created_at)
+    now = datetime.utcnow()
+    days_live = max(1, (now - event.created_at).days)
+    response.popularity_score = round(raw_score / days_live, 2)
     
     # Populate organizer details for admin/dashboard
     if event.organizer:
@@ -985,25 +1001,35 @@ def get_top_events(
     session: Session = Depends(get_session)
 ):
     """
-    Get top events ranked by Weighted Popularity Score.
+    Get top events ranked by Velocity Score.
     
-    Formula: Score = (view_count * 1) + (attending_count * 5) + (ticket_click_count * 10) + (website_click_count * 5)
+    Algorithm:
+    1. Raw Score = (view_count * 1) + (attending_count * 5) + (ticket_click_count * 10) + (website_click_count * 5)
+    2. Days Live = max(1, days between created_at and today)
+    3. Final Score = Raw Score / Days Live
     
     Sorting:
-    - Primary: Score DESC
+    - Primary: Final Score DESC
     - Secondary: Date ASC (upcoming first)
     """
-    now = datetime.utcnow()
+    # Efficient Database-Side Scoring using Velocity Algorithm
+    # Use max(1, days_live) to avoid division by zero and normalize new vs old events
+    days_live_expr = func.greatest(1, func.extract('day', func.age(func.now(), Event.created_at)))
     
-    # Efficient Database-Side Sorting
-    # We calculate the score directly in the ORDER BY clause
-    # This avoids fetching 50 events and sorting in Python, allowing true "Top N" from the entire DB.
+    raw_score_expr = (
+        Event.view_count + 
+        (Event.attending_count * 5) + 
+        (Event.ticket_click_count * 10) + 
+        (Event.website_click_count * 5)
+    )
+    
+    velocity_score = raw_score_expr / days_live_expr
     
     query = select(Event).where(
-        (Event.date_start > now) & 
+        (Event.date_end > func.now()) & # Include ongoing events (approved fix)
         (Event.status == "published")
     ).order_by(
-        (Event.view_count + (Event.attending_count * 5) + (Event.ticket_click_count * 10) + (Event.website_click_count * 5)).desc(),
+        velocity_score.desc(),
         Event.date_start.asc()
     ).limit(limit)
 

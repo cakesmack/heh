@@ -244,6 +244,7 @@ class EventResponse(BaseModel):
     map_display_label: Optional[str] = None
 
     view_count: int = 0
+    attending_count: int = 0
     save_count: int = 0
     ticket_click_count: int = 0
     website_click_count: int = 0
@@ -252,6 +253,7 @@ class EventResponse(BaseModel):
     organizer_profile_name: Optional[str] = None
     venue_owner_id: Optional[str] = None
     moderation_reason: Optional[str] = None
+    popularity_score: float = 0.0
 
     class Config:
         from_attributes = True
