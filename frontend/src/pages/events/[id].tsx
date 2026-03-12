@@ -48,7 +48,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const router = useRouter();
   const { id } = router.query;
   const { isAuthenticated, user } = useAuth();
-  const { trackEventView, trackTicketClick } = useAnalytics();
+  const { trackEventView, trackTicketClick, trackWebsiteClick } = useAnalytics();
 
   const [event, setEvent] = useState<EventResponse | null>(initialEvent || null);
   const [loading, setLoading] = useState(!initialEvent);
