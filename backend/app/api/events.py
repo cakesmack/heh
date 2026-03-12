@@ -219,7 +219,8 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
     )
     # Days Live = max(1, days since created_at)
     now = datetime.utcnow()
-    days_live = max(1, (now - event.created_at).days)
+    duration = now - event.created_at
+    days_live = max(1.0, duration.total_seconds() / 86400.0)
     response.popularity_score = round(raw_score / days_live, 2)
     
     # Populate organizer details for admin/dashboard
@@ -1012,10 +1013,7 @@ def get_top_events(
     - Primary: Final Score DESC
     - Secondary: Date ASC (upcoming first)
     """
-    # Efficient Database-Side Scoring using Velocity Algorithm
-    # Use max(1, days_live) to avoid division by zero and normalize new vs old events
-    days_live_expr = func.greatest(1, func.extract('day', func.age(func.now(), Event.created_at)))
-    
+    # Step 1: Calculate the raw score: (Views * 1) + (Attending * 5) + (Tickets * 10) + (Website * 5)
     raw_score_expr = (
         Event.view_count + 
         (Event.attending_count * 5) + 
@@ -1023,10 +1021,16 @@ def get_top_events(
         (Event.website_click_count * 5)
     )
     
+    # Step 2: Calculate days live: (current_time - created_at) in days, minimum 1 to avoid /0
+    # We use extract('epoch') to get total seconds since creation, then divide by 86400 (seconds in a day)
+    days_live_expr = func.greatest(1, func.extract('epoch', func.now() - Event.created_at) / 86400.0)
+    
+    # Step 3: Velocity Score = Raw Score / Days Live
     velocity_score = raw_score_expr / days_live_expr
     
+    # Step 4: Filter by date_end >= today (now) and limit to top 10
     query = select(Event).where(
-        (Event.date_end > func.now()) & # Include ongoing events (approved fix)
+        (Event.date_end >= func.now()) & # Include ongoing events until they finish
         (Event.status == "published")
     ).order_by(
         velocity_score.desc(),
