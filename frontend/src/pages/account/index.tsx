@@ -829,6 +829,11 @@ function AccountPageContent() {
                             </Link>
 
                             <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-40px)]">
+                              {event.status === 'archived' && (
+                                <span className="px-1.5 py-0.5 bg-gray-500 text-white text-[10px] font-bold rounded uppercase">
+                                  Cancelled
+                                </span>
+                              )}
                               {event.status === 'rejected' && (
                                 <div className="flex flex-col gap-1 items-start">
                                   <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">

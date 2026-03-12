@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING, List
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import Column, String, ForeignKey
 import re
 
 if TYPE_CHECKING:
@@ -24,7 +25,9 @@ class EventTag(SQLModel, table=True):
     """Junction table for Event-Tag many-to-many relationship."""
     __tablename__ = "event_tags"
 
-    event_id: str = Field(foreign_key="events.id", primary_key=True)
+    event_id: str = Field(
+        sa_column=Column(String, ForeignKey("events.id", ondelete="CASCADE"), primary_key=True)
+    )
     tag_id: str = Field(foreign_key="tags.id", primary_key=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

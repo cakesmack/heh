@@ -426,6 +426,11 @@ export const eventsAPI = {
       method: 'POST',
     }, false);
   },
+  trackWebsiteClick: async (id: string): Promise<void> => {
+    return apiFetch(`/api/events/${id}/website-click`, {
+      method: 'POST',
+    }, false);
+  },
 
   /**
    * Get filtered list of events (Top)

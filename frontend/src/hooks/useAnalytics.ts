@@ -33,6 +33,12 @@ export const useAnalytics = () => {
         eventsAPI.trackTicketClick(eventId).catch(err => console.error('Failed to track ticket click:', err));
     }, [trackEvent]);
 
+    const trackWebsiteClick = useCallback((eventId: string) => {
+        trackEvent('click_website', eventId);
+        // Track for internal popularity scoring
+        eventsAPI.trackWebsiteClick(eventId).catch(err => console.error('Failed to track website click:', err));
+    }, [trackEvent]);
+
     return {
         trackEvent,
         trackEventView,
@@ -40,5 +46,6 @@ export const useAnalytics = () => {
         trackCategoryClick,
         trackSearch,
         trackTicketClick,
+        trackWebsiteClick,
     };
 };

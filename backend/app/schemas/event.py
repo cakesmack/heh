@@ -246,6 +246,7 @@ class EventResponse(BaseModel):
     view_count: int = 0
     save_count: int = 0
     ticket_click_count: int = 0
+    website_click_count: int = 0
     organizer_email: Optional[str] = None
     organizer_name: Optional[str] = None
     organizer_profile_name: Optional[str] = None

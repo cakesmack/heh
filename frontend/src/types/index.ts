@@ -350,6 +350,7 @@ export interface EventResponse extends Event {
   view_count?: number;
   save_count?: number;
   ticket_click_count?: number;
+  website_click_count?: number;
   category?: Category;
   tags?: Tag[];
   organizer_email?: string;

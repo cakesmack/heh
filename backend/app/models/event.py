@@ -116,6 +116,7 @@ class Event(SQLModel, table=True):
     view_count: int = Field(default=0)
     attending_count: int = Field(default=0)  # User marked as "Going"
     ticket_click_count: int = Field(default=0) # User clicked "Tickets"
+    website_click_count: int = Field(default=0) # User clicked "Website"
 
 
     # Media
@@ -144,5 +145,5 @@ class Event(SQLModel, table=True):
     organizer_profile: Optional["Organizer"] = Relationship(back_populates="events")
     category_rel: Optional["Category"] = Relationship(back_populates="events")
     tags: List["Tag"] = Relationship(back_populates="events", link_model=EventTag)
-    bookmarks: List["Bookmark"] = Relationship(back_populates="event")
+    bookmarks: List["Bookmark"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     showtimes: List["EventShowtime"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

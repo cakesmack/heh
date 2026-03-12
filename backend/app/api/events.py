@@ -456,8 +456,8 @@ def list_events(
         # User request: "If Admin: Show all statuses."
         pass 
     elif is_self_viewer:
-        # Organizer sees own events in all states
-        query = query.where(Event.status.in_(["published", "pending", "rejected", "draft", "pending_moderation"]))
+        # Organizer sees own events in all states, including archived
+        query = query.where(Event.status.in_(["published", "pending", "rejected", "draft", "pending_moderation", "archived"]))
     else:
         # Public / Guest / Other Users
         # STRICTLY PUBLISHED
@@ -954,6 +954,31 @@ def track_ticket_click(
     return build_event_response(event, session)
 
 
+@router.post("/{event_id}/website-click", response_model=EventResponse)
+def track_website_click(
+    event_id: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Track an "External Website" click.
+    Increments website_click_count and returns updated event.
+    Public endpoint (no auth required).
+    """
+    event = session.get(Event, normalize_uuid(event_id))
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found"
+        )
+    
+    event.website_click_count += 1
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    
+    return build_event_response(event, session)
+
+
 @router.get("/top", response_model=EventListResponse)
 def get_top_events(
     limit: int = Query(default=10, ge=1, le=50),
@@ -962,7 +987,7 @@ def get_top_events(
     """
     Get top events ranked by Weighted Popularity Score.
     
-    Formula: Score = (view_count * 1) + (attending_count * 5) + (ticket_click_count * 10)
+    Formula: Score = (view_count * 1) + (attending_count * 5) + (ticket_click_count * 10) + (website_click_count * 5)
     
     Sorting:
     - Primary: Score DESC
@@ -978,7 +1003,7 @@ def get_top_events(
         (Event.date_start > now) & 
         (Event.status == "published")
     ).order_by(
-        (Event.view_count + (Event.attending_count * 5) + (Event.ticket_click_count * 10)).desc(),
+        (Event.view_count + (Event.attending_count * 5) + (Event.ticket_click_count * 10) + (Event.website_click_count * 5)).desc(),
         Event.date_start.asc()
     ).limit(limit)
 
@@ -1997,59 +2022,81 @@ def delete_event(
 
     children_deleted = 0
     
-    # If this is a recurring parent event, delete all child instances first
-    if event.is_recurring and delete_children:
-        children = session.exec(
-            select(Event).where(Event.parent_event_id == event.id)
-        ).all()
-        children_deleted = len(children)
-        for child in children:
-            # Cleanup dependencies for child
-            child_featured = session.exec(select(FeaturedBooking).where(FeaturedBooking.event_id == child.id)).all()
-            for fb in child_featured:
-                session.delete(fb)
-            
-            child_venues = session.exec(select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == child.id)).all()
-            for pv in child_venues:
-                session.delete(pv)
-
-            # Decrement tag usage counts for child
-            child_event_tags = session.exec(
-                select(EventTag).where(EventTag.event_id == child.id)
+    # Track B: Admin "Hard Delete" (Failsafe Cleaning)
+    if current_user.is_admin:
+        # If this is a recurring parent event, delete all child instances first
+        if event.is_recurring and delete_children:
+            children = session.exec(
+                select(Event).where(Event.parent_event_id == event.id)
             ).all()
-            for et in child_event_tags:
-                tag = session.get(Tag, et.tag_id)
-                if tag and tag.usage_count > 0:
-                    tag.usage_count -= 1
-                session.delete(et)
-            session.delete(child)
+            children_deleted = len(children)
+            for child in children:
+                # Manual cleanup for children to avoid any FK issues before CASCADE kicks in
+                from app.models.bookmark import Bookmark
+                session.exec(delete(Bookmark).where(Bookmark.event_id == child.id))
+                
+                # Cleanup other dependencies for child
+                child_featured = session.exec(select(FeaturedBooking).where(FeaturedBooking.event_id == child.id)).all()
+                for fb in child_featured:
+                    session.delete(fb)
+                
+                child_venues = session.exec(select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == child.id)).all()
+                for pv in child_venues:
+                    session.delete(pv)
 
-    # Cleanup dependencies for main event
-    featured_bookings = session.exec(select(FeaturedBooking).where(FeaturedBooking.event_id == event.id)).all()
-    for fb in featured_bookings:
-        session.delete(fb)
+                # Decrement tag usage counts for child
+                child_event_tags = session.exec(
+                    select(EventTag).where(EventTag.event_id == child.id)
+                ).all()
+                for et in child_event_tags:
+                    tag = session.get(Tag, et.tag_id)
+                    if tag and tag.usage_count > 0:
+                        tag.usage_count -= 1
+                    session.delete(et)
+                session.delete(child)
 
-    participating_venues = session.exec(select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == event.id)).all()
-    for pv in participating_venues:
-        session.delete(pv)
+        # Cleanup dependencies for main event
+        from app.models.bookmark import Bookmark
+        session.exec(delete(Bookmark).where(Bookmark.event_id == event.id))
 
-    # Cleanup showtimes
-    from app.models.showtime import EventShowtime
-    showtimes = session.exec(select(EventShowtime).where(EventShowtime.event_id == event.id)).all()
-    for st in showtimes:
-        session.delete(st)
+        featured_bookings = session.exec(select(FeaturedBooking).where(FeaturedBooking.event_id == event.id)).all()
+        for fb in featured_bookings:
+            session.delete(fb)
 
-    # Decrement tag usage counts for main event
-    event_tags = session.exec(
-        select(EventTag).where(EventTag.event_id == event.id)
-    ).all()
-    for et in event_tags:
-        tag = session.get(Tag, et.tag_id)
-        if tag and tag.usage_count > 0:
-            tag.usage_count -= 1
-        session.delete(et)
+        participating_venues = session.exec(select(EventParticipatingVenue).where(EventParticipatingVenue.event_id == event.id)).all()
+        for pv in participating_venues:
+            session.delete(pv)
 
-    session.delete(event)
+        # Cleanup showtimes
+        from app.models.showtime import EventShowtime
+        showtimes = session.exec(select(EventShowtime).where(EventShowtime.event_id == event.id)).all()
+        for st in showtimes:
+            session.delete(st)
+
+        # Decrement tag usage counts for main event
+        event_tags = session.exec(
+            select(EventTag).where(EventTag.event_id == event.id)
+        ).all()
+        for et in event_tags:
+            tag = session.get(Tag, et.tag_id)
+            if tag and tag.usage_count > 0:
+                tag.usage_count -= 1
+            session.delete(et)
+
+        session.delete(event)
+    else:
+        # Track A: User "Soft Delete" (Cancellation)
+        # Logic: When a non-admin owner deletes an event, it's archived.
+        event.status = 'archived'
+        
+        # If recurring, archive children too
+        if event.is_recurring and delete_children:
+            session.exec(
+                update(Event)
+                .where(Event.parent_event_id == event.id)
+                .values(status='archived')
+            )
+            
     session.commit()
 
     return None

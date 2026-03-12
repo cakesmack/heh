@@ -481,6 +481,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                     href={event.website_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackWebsiteClick(event.id)}
                     className="px-6 py-2.5 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:white text-sm font-bold rounded-full transition-all transform hover:scale-105 text-center whitespace-nowrap shrink-0"
                   >
                     Visit Website
