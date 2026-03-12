@@ -110,6 +110,33 @@ export default function MagazineGrid({
 }: MagazineGridProps) {
     // Carousel state
     const [carouselIndex, setCarouselIndex] = useState(0);
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+    // Minimum swipe distance in pixels
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            setCarouselIndex((prev) => (prev + 1) % featuredEvents.length);
+        } else if (isRightSwipe) {
+            setCarouselIndex((prev) => (prev - 1 + featuredEvents.length) % featuredEvents.length);
+        }
+    };
     const featuredEvents = carouselEvents.length > 0 ? carouselEvents.slice(0, 3) : [events[0]].filter(Boolean);
 
     // Auto-rotate carousel every 5 seconds
@@ -139,58 +166,156 @@ export default function MagazineGrid({
                 </div>
             )}
 
-            {/* Mobile View: Vertical Card List */}
+            {/* Mobile View: Vertical Card List + Carousel for Featured */}
             <div className="md:hidden flex flex-col gap-4 px-4 py-4">
-                {events.map((event) => (
-                    <Link key={event.id} href={`/events/${event.slug || event.id}`} className="block">
-                        <div className="relative h-48 rounded-xl overflow-hidden shadow-sm bg-stone-800 group hover:scale-[1.02] transition-transform duration-300">
-                            {/* Background Image */}
-                            <OptimizedImage
-                                src={event.image_url || '/images/event-placeholder.jpg'}
-                                alt={event.title}
-                                fill
-                                className="object-cover"
-                                sizes="100vw"
-                                variant="hero"
-                            />
-                            {/* Category Ribbon */}
-                            {event.category && (
-                                <div className="absolute top-3 right-[-2px] z-20">
-                                    <div
-                                        className="relative px-2 py-0.5 text-white text-[10px] font-bold uppercase tracking-wider shadow-md"
-                                        style={{ backgroundColor: event.category.gradient_color || '#10b981' }}
+                {/* Mobile Carousel Portion */}
+                {featuredEvents.length > 0 && (
+                    <div
+                        className="relative group h-[400px] rounded-2xl overflow-hidden shadow-2xl mb-2"
+                        onTouchStart={onTouchStart}
+                        onTouchMove={onTouchMove}
+                        onTouchEnd={onTouchEnd}
+                    >
+                        <div className="relative w-full h-full">
+                            {featuredEvents.map((event, index) => (
+                                <div
+                                    key={event.id}
+                                    className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === carouselIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                                        }`}
+                                >
+                                    <Link href={`/events/${event.slug || event.id}`} className="block w-full h-full relative">
+                                        <OptimizedImage
+                                            src={event.image_url || '/images/event-placeholder.jpg'}
+                                            alt={event.title}
+                                            fill
+                                            sizes="100vw"
+                                            className="object-cover"
+                                            priority={index === 0}
+                                            variant="hero"
+                                        />
+
+                                        {/* Category Ribbon */}
+                                        {event.category && (
+                                            <div className="absolute top-4 right-[-2px] z-20">
+                                                <div
+                                                    className="relative px-3 py-1 text-white text-[10px] font-bold uppercase tracking-wider shadow-md"
+                                                    style={{ backgroundColor: event.category.gradient_color || '#059669' }}
+                                                >
+                                                    {event.category.name}
+                                                    <div
+                                                        className="absolute top-full right-0 w-[3px] h-[3px] brightness-75"
+                                                        style={{
+                                                            backgroundColor: event.category.gradient_color || '#059669',
+                                                            clipPath: 'polygon(0 0, 100% 0, 0 100%)'
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="absolute top-4 left-4 z-20">
+                                            <BookmarkButton eventId={event.id} size="sm" className="bg-white/90 hover:bg-white shadow-lg" />
+                                        </div>
+
+                                        <div className="absolute inset-0 flex flex-col justify-end">
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+                                            <div className="relative z-10 backdrop-blur-md bg-stone-dark/60 p-5 p border-t border-white/10">
+                                                <h3 className="text-xl font-bold text-white mb-1 leading-tight">
+                                                    {event.title}
+                                                </h3>
+                                                <div className="flex items-center text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+                                                    {formatEventDate(event)}
+                                                </div>
+                                                <p className="text-gray-200 text-xs line-clamp-2">
+                                                    {stripHtml(event.description || '')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Progress Indicators */}
+                        {featuredEvents.length > 1 && (
+                            <div className="absolute bottom-0 left-0 right-0 z-30 flex gap-0">
+                                {featuredEvents.map((_, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={(e) => { e.preventDefault(); setCarouselIndex(index); }}
+                                        className="relative flex-1 h-1 bg-white/20 overflow-hidden"
+                                        aria-label={`Go to slide ${index + 1}`}
                                     >
-                                        {event.category.name}
                                         <div
-                                            className="absolute top-full right-0 w-[3px] h-[3px] brightness-75"
+                                            className={`absolute inset-0 ${index === carouselIndex
+                                                ? 'bg-emerald-500'
+                                                : index < carouselIndex
+                                                    ? 'bg-white/60'
+                                                    : 'bg-transparent'
+                                                }`}
                                             style={{
-                                                backgroundColor: event.category.gradient_color || '#10b981',
-                                                clipPath: 'polygon(0 0, 100% 0, 0 100%)'
+                                                width: index === carouselIndex ? '100%' : index < carouselIndex ? '100%' : '0%',
+                                                animation: index === carouselIndex ? 'progressFill 5s linear forwards' : 'none',
                                             }}
                                         />
-                                    </div>
-                                </div>
-                            )}
-                            {/* Blurred Glass Overlay at Bottom */}
-                            <div className="absolute inset-x-0 bottom-0 backdrop-blur-md bg-black/50 p-3 border-t border-white/10">
-                                <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider block mb-0.5">
-                                    {formatEventDate(event)}
-                                </span>
-                                <h3 className="text-white font-bold text-base leading-tight line-clamp-1">
-                                    {event.title}
-                                </h3>
-                                {event.venue_name && (
-                                    <p className="text-gray-300 text-xs mt-0.5 truncate flex items-center">
-                                        <svg className="w-3 h-3 mr-1 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        </svg>
-                                        {event.venue_name}
-                                    </p>
-                                )}
+                                    </button>
+                                ))}
                             </div>
-                        </div>
-                    </Link>
-                ))}
+                        )}
+                    </div>
+                )}
+
+                {/* Remaining Grid Items for Mobile */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {gridItems.map((event) => (
+                        <Link key={event.id} href={`/events/${event.slug || event.id}`} className="block">
+                            <div className="relative h-48 rounded-xl overflow-hidden shadow-sm bg-stone-800 group transition-transform duration-300">
+                                <OptimizedImage
+                                    src={event.image_url || '/images/event-placeholder.jpg'}
+                                    alt={event.title}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 640px) 100vw, 50vw"
+                                    variant="hero"
+                                />
+                                {event.category && (
+                                    <div className="absolute top-3 right-[-2px] z-20">
+                                        <div
+                                            className="relative px-2 py-0.5 text-white text-[10px] font-bold uppercase tracking-wider shadow-md"
+                                            style={{ backgroundColor: event.category.gradient_color || '#10b981' }}
+                                        >
+                                            {event.category.name}
+                                            <div
+                                                className="absolute top-full right-0 w-[3px] h-[3px] brightness-75"
+                                                style={{
+                                                    backgroundColor: event.category.gradient_color || '#10b981',
+                                                    clipPath: 'polygon(0 0, 100% 0, 0 100%)'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="absolute inset-x-0 bottom-0 backdrop-blur-md bg-black/50 p-3 border-t border-white/10">
+                                    <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider block mb-0.5">
+                                        {formatEventDate(event)}
+                                    </span>
+                                    <h3 className="text-white font-bold text-base leading-tight line-clamp-1">
+                                        {event.title}
+                                    </h3>
+                                    {event.venue_name && (
+                                        <p className="text-gray-300 text-xs mt-0.5 truncate flex items-center">
+                                            <svg className="w-3 h-3 mr-1 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            </svg>
+                                            {event.venue_name}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
             </div>
 
             {/* Desktop View: Full Width Grid */}
