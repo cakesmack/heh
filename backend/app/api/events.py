@@ -60,6 +60,82 @@ router = APIRouter(tags=["Events"])
 from app.services.cloudflare_service import get_cloudflare_url, is_cloudflare_configured
 import re
 
+# NC500 Geographic Data for Automated Tagging
+NC500_WAYPOINTS = [
+    (57.4778, -4.2247, "Inverness"),
+    (57.5954, -4.4284, "Dingwall"),
+    (57.8812, -4.0298, "Dornoch"),
+    (58.1189, -3.6521, "Helmsdale"),
+    (58.4419, -3.0945, "Wick"),
+    (58.6373, -3.0686, "John o' Groats"),
+    (58.5936, -3.5221, "Thurso"),
+    (58.4819, -4.4170, "Tongue"),
+    (58.5705, -4.7431, "Durness"),
+    (58.1465, -5.2443, "Lochinver"),
+    (57.8956, -5.1609, "Ullapool"),
+    (57.7279, -5.6904, "Gairloch"),
+    (57.4322, -5.8147, "Applecross"),
+    (57.5593, -5.7588, "Torridon"),
+    (57.5185, -4.4611, "Muir of Ord"),
+    (57.3000, -4.4500, "Beauly"),
+    (57.8105, -3.9871, "Golspie"), # Approx
+    (58.0125, -3.8544, "Brora"), # Approx
+]
+
+NC500_TOWNS = [
+    "inverness", "dingwall", "dornoch", "wick", "thurso", "durness", 
+    "ullapool", "gairloch", "applecross", "lochinver", "helmsdale", 
+    "john o' groats", "john o groats", "tongue", "scourie", 
+    "kinlochbervie", "poolewe", "shieldaig", "torridon", "contin", "garve",
+    "muir of ord", "strathpeffer", "golspie", "brora", "lybster", "dunbeath",
+    "castletown", "halkirk", "bettyhill", "kylesku", "drumbeg", "achiltibuie", 
+    "laide", "aultbea", "kinlochewe", "strathcarron", "lochcarron", "stromeferry", 
+    "plockton", "kyle of lochalsh", "beauly"
+]
+
+def apply_geographic_tagging(session: Session, event: Event):
+    """
+    Automatically applies 'nc500' tag based on location name or coordinates.
+    Uses radial coordinate checks (15-mile radius) and fuzzy town matching.
+    """
+    is_nc500 = False
+    
+    # 1. Fuzzy Location Name Match (case-insensitive substring)
+    if event.location_name:
+        loc_lower = event.location_name.lower()
+        if any(town in loc_lower for town in NC500_TOWNS):
+            is_nc500 = True
+            
+    # 2. Radial Coordinate Check (if not already matched)
+    if not is_nc500 and event.latitude is not None and event.longitude is not None:
+        # Check against core waypoints
+        for waypoint_lat, waypoint_lon, name in NC500_WAYPOINTS:
+            # 10km radius (approx 6.2 miles) to prevent jumps over water (e.g. to Skye)
+            distance = haversine_distance(event.latitude, event.longitude, waypoint_lat, waypoint_lon)
+            if distance <= 10.0: 
+                is_nc500 = True
+                logger.info(f"[NC500_AUTO] Coordinate match: '{event.title}' is within 10km of {name}")
+                break
+                
+    if is_nc500:
+        # Apply 'nc500' tag
+        tags = get_or_create_tags(session, ["nc500"])
+        if tags:
+            tag = tags[0]
+            # Check if association already exists
+            existing = session.exec(
+                select(EventTag).where(
+                    EventTag.event_id == event.id,
+                    EventTag.tag_id == tag.id
+                )
+            ).first()
+            
+            if not existing:
+                event_tag = EventTag(event_id=event.id, tag_id=tag.id)
+                session.add(event_tag)
+                tag.usage_count += 1
+                logger.info(f"[NC500_AUTO] Automatically tagged event '{event.title}' ({event.id}) with 'nc500'")
+
 def get_thumbnail_url(image_url: str) -> Optional[str]:
     """
     Generate a compressed thumbnail URL based on the provider.
@@ -1319,6 +1395,9 @@ async def create_event(
             session.add(event_tag)
             tag.usage_count += 1
             
+    # Apply automated NC500 tagging
+    apply_geographic_tagging(session, new_event)
+            
     # Handle participating venues
     if event_data.participating_venue_ids:
         for p_venue_id in event_data.participating_venue_ids:
@@ -1898,7 +1977,10 @@ async def update_event(
                 event_tag = EventTag(event_id=event.id, tag_id=tag.id)
                 session.add(event_tag)
                 tag.usage_count += 1
-
+                
+        # Apply automated NC500 tagging
+        apply_geographic_tagging(session, event)
+    
     event.updated_at = datetime.utcnow()
 
     # ---------------------------------------------------------
