@@ -3,7 +3,7 @@ import { api } from '@/lib/api';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
 interface ImageUploadProps {
-  folder: 'events' | 'venues' | 'categories' | 'organizers' | 'hero';
+  folder: 'events' | 'venues' | 'categories' | 'organizers' | 'hero' | 'locations';
   currentImageUrl?: string;
   onUpload: (urls: { url: string; thumbnail_url: string; medium_url: string }) => void;
   onRemove?: () => void;

@@ -351,6 +351,7 @@ export interface EventResponse extends Event {
   save_count?: number;
   ticket_click_count?: number;
   website_click_count?: number;
+  popularity_score?: number;
   category?: Category;
   tags?: Tag[];
   organizer_email?: string;
@@ -1060,4 +1061,29 @@ export interface ActiveFeatured {
   start_date: string;
   end_date: string;
   custom_subtitle?: string;
+}
+
+// ============================================================
+// GEOGRAPHIC HUB TYPES
+// ============================================================
+
+export interface GeographicHub {
+  id: number;
+  name: string;
+  slug: string;
+  seo_meta_title?: string;
+  seo_meta_description?: string;
+  seo_anchor_text?: string;
+  hero_image_url?: string;
+  featured_event_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeographicHubUpdate {
+  seo_meta_title?: string;
+  seo_meta_description?: string;
+  seo_anchor_text?: string;
+  hero_image_url?: string;
+  featured_event_id?: string;
 }

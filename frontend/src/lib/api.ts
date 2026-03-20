@@ -842,7 +842,7 @@ export const mediaAPI = {
    */
   upload: async (
     file: File,
-    folder: 'events' | 'venues' | 'categories' | 'organizers' | 'hero'
+    folder: 'events' | 'venues' | 'categories' | 'organizers' | 'hero' | 'locations'
   ): Promise<{
     url: string;
     thumbnail_url: string;
@@ -1965,5 +1965,35 @@ export const adminEventsAPI = {
   list: async (filters?: AdminEventsFilter): Promise<AdminEventsListResponse> => {
     const queryString = filters ? buildQueryString(filters) : '';
     return apiFetch<AdminEventsListResponse>(`/api/admin/events${queryString}`);
+  },
+};
+
+// ============================================================
+// LOCATIONS (Geographic Hubs) API
+// ============================================================
+
+export const locationsAPI = {
+  /**
+   * List all geographic hubs
+   */
+  list: async (): Promise<any[]> => {
+    return apiFetch<any[]>('/api/locations');
+  },
+
+  /**
+   * Get a single geographic hub by ID
+   */
+  get: async (id: number): Promise<any> => {
+    return apiFetch<any>(`/api/locations/${id}`);
+  },
+
+  /**
+   * Update a geographic hub (admin-only)
+   */
+  update: async (id: number, data: Record<string, any>): Promise<any> => {
+    return apiFetch<any>(`/api/locations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 };

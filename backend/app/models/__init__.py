@@ -31,6 +31,7 @@ from .featured_booking import FeaturedBooking, SlotType, BookingStatus, SLOT_CON
 from .slot_pricing import SlotPricing, DEFAULT_PRICING
 from .showtime import EventShowtime
 from .campaign_log import CampaignLog
+from .location import Location
 
 __all__ = [
     # User
