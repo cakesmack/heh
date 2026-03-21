@@ -47,17 +47,25 @@ def toggle_bookmark(
     print(f"[DEBUG] Found {len(bookmarks)} existing bookmarks")
 
     if bookmarks:
-        # Remove bookmark(s) - handle potential duplicates by deleting all
+        # Remove bookmark(s)
         for bookmark in bookmarks:
             session.delete(bookmark)
+        
+        # Decrement save_count
+        event.save_count = max(0, (event.save_count or 0) - 1)
+        session.add(event)
         session.commit()
-        return {"bookmarked": False, "message": "Event removed from bookmarks"}
+        return {"bookmarked": False, "count": event.save_count, "message": "Event removed from bookmarks"}
     else:
         # Add bookmark
         new_bookmark = Bookmark(user_id=current_user.id, event_id=normalized_event_id)
         session.add(new_bookmark)
+        
+        # Increment save_count
+        event.save_count = (event.save_count or 0) + 1
+        session.add(event)
         session.commit()
-        return {"bookmarked": True, "message": "Event added to bookmarks"}
+        return {"bookmarked": True, "count": event.save_count, "message": "Event added to bookmarks"}
 
 
 @router.get("/check/{event_id}", status_code=status.HTTP_200_OK)

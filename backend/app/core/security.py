@@ -1,8 +1,7 @@
-"""
-Security utilities for authentication and authorization.
-Handles JWT token creation/validation and password hashing.
-"""
+import logging
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -12,6 +11,7 @@ from sqlmodel import Session, select
 
 from .config import settings
 from .database import get_session
+from .utils import normalize_uuid
 
 
 # Password hashing context
@@ -114,8 +114,8 @@ async def get_current_user(
     if user_id_str is None:
         raise credentials_exception
 
-    # Normalize UUID (remove hyphens) to match DB storage format
-    user_id_normalized = user_id_str.replace("-", "")
+    # Normalize UUID (remove hyphens, lowercase) to match DB storage format
+    user_id_normalized = normalize_uuid(user_id_str)
 
     # Use session.get() to load the full ORM model with ALL columns
     user = session.get(User, user_id_normalized)
@@ -142,6 +142,7 @@ async def get_current_user_optional(
     Does not raise HTTPException for invalid/missing credentials.
     """
     if not credentials:
+        logger.info("DEBUG SECURITY: No credentials found in request headers")
         return None
 
     try:
@@ -151,8 +152,8 @@ async def get_current_user_optional(
         if user_id_str is None:
             return None
 
-        from app.models.user import User
-        user_id_normalized = user_id_str.replace("-", "")
+        # Normalize UUID
+        user_id_normalized = normalize_uuid(user_id_str)
         user = session.get(User, user_id_normalized)
 
         # Return None for missing or deactivated users (no exception)
@@ -161,7 +162,10 @@ async def get_current_user_optional(
 
         return user
 
-    except Exception:
+    except Exception as e:
+        import traceback
+        logger.info(f"DEBUG SECURITY: Exception in get_current_user_optional: {e}")
+        logger.info(traceback.format_exc())
         return None
 
 

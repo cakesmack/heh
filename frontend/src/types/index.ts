@@ -365,6 +365,9 @@ export interface EventResponse extends Event {
   map_display_lng?: number;
   map_display_label?: string;
   venue_owner_id?: string;
+  is_attending?: boolean;
+  is_bookmarked?: boolean;
+  attending_count?: number;
 }
 
 export interface EventCreate {

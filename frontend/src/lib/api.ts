@@ -329,7 +329,7 @@ export const eventsAPI = {
     }
 
     const queryString = buildQueryString(params);
-    return apiFetch<EventListResponse>(`/api/events${queryString}`, {}, false);
+    return apiFetch<EventListResponse>(`/api/events${queryString}`);
   },
 
   /**
@@ -383,7 +383,7 @@ export const eventsAPI = {
    * Get single event by ID
    */
   get: async (eventId: string): Promise<EventResponse> => {
-    return apiFetch<EventResponse>(`/api/events/${eventId}`, {}, false);
+    return apiFetch<EventResponse>(`/api/events/${eventId}`);
   },
 
   /**
@@ -401,6 +401,15 @@ export const eventsAPI = {
    */
   stopRecurrence: async (eventId: string): Promise<{ message: string }> => {
     return apiFetch<{ message: string }>(`/api/events/${eventId}/stop-recurrence`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Toggle event attendance (RSVP)
+   */
+  attend: async (eventId: string): Promise<{ is_attending: boolean; attending_count: number; message: string }> => {
+    return apiFetch<{ is_attending: boolean; attending_count: number; message: string }>(`/api/events/${eventId}/attend`, {
       method: 'POST',
     });
   },
@@ -501,9 +510,7 @@ export const venuesAPI = {
    */
   search: async (q: string, limit = 10): Promise<VenueListResponse> => {
     return apiFetch<VenueListResponse>(
-      `/api/venues/search?q=${encodeURIComponent(q)}&limit=${limit}`,
-      {},
-      false
+      `/api/venues/search?q=${encodeURIComponent(q)}&limit=${limit}`
     );
   },
 
@@ -511,7 +518,7 @@ export const venuesAPI = {
    * Get single venue by ID
    */
   get: async (venueId: string): Promise<VenueResponse> => {
-    return apiFetch<VenueResponse>(`/api/venues/${venueId}`, {}, false);
+    return apiFetch<VenueResponse>(`/api/venues/${venueId}`);
   },
 
   /**
@@ -1763,8 +1770,8 @@ export const api = {
   preferences: preferencesAPI,
   featured: featuredAPI,
   bookmarks: {
-    toggle: async (eventId: string): Promise<{ bookmarked: boolean; message: string }> => {
-      return apiFetch<{ bookmarked: boolean; message: string }>(
+    toggle: async (eventId: string): Promise<{ bookmarked: boolean; count: number; message: string }> => {
+      return apiFetch<{ bookmarked: boolean; count: number; message: string }>(
         `/api/bookmarks/${eventId}`,
         { method: 'POST' }
       );

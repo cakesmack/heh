@@ -32,6 +32,7 @@ from .slot_pricing import SlotPricing, DEFAULT_PRICING
 from .showtime import EventShowtime
 from .campaign_log import CampaignLog
 from .location import Location
+from .event_attendee import EventAttendee
 
 __all__ = [
     # User
@@ -97,4 +98,6 @@ __all__ = [
     "EventClaim",
     # Campaign Logs
     "CampaignLog",
+    # Event Attendees
+    "EventAttendee",
 ]

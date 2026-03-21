@@ -254,6 +254,10 @@ class EventResponse(BaseModel):
     venue_owner_id: Optional[str] = None
     moderation_reason: Optional[str] = None
     popularity_score: float = 0.0
+    
+    # User-specific state
+    is_attending: bool = False
+    is_bookmarked: bool = False
 
     class Config:
         from_attributes = True

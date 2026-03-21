@@ -10,7 +10,7 @@ interface BookmarkButtonProps {
     className?: string;
     size?: 'sm' | 'md' | 'lg';
     showLabel?: boolean;
-    onToggle?: (isBookmarked: boolean) => void;
+    onToggle?: (isBookmarked: boolean, count?: number) => void;
 }
 
 export function BookmarkButton({
@@ -72,7 +72,12 @@ export function BookmarkButton({
                 // Revert if mismatch
                 setIsBookmarked(response.bookmarked);
                 if (onToggle) {
-                    onToggle(response.bookmarked);
+                    onToggle(response.bookmarked, response.count);
+                }
+            } else {
+                // Update parent with the actual count from server
+                if (onToggle) {
+                    onToggle(response.bookmarked, response.count);
                 }
             }
 
@@ -115,26 +120,25 @@ export function BookmarkButton({
             className={`
         relative flex items-center justify-center rounded-full transition-all duration-200
         ${isBookmarked
-                    ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md'
-                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'}
+                    ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 shadow-md'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'}
         ${showLabel ? 'px-6 py-2.5 w-auto gap-2 whitespace-nowrap shrink-0' : sizeClasses[size]}
         ${className}
       `}
-            title={isBookmarked ? 'Not attending' : 'Mark as attending'}
+            title={isBookmarked ? 'Remove bookmark' : 'Save event'}
         >
             <svg
-                className={`${iconSizes[size]} ${isBookmarked ? 'fill-none' : 'fill-none'} stroke-current transition-transform ${isBookmarked ? 'scale-110' : ''}`}
+                className={`${iconSizes[size]} transition-transform ${isBookmarked ? 'scale-110' : ''}`}
                 viewBox="0 0 24 24"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                fill={isBookmarked ? 'currentColor' : 'none'}
             >
-                {/* Check Icon */}
-                <polyline points="20 6 9 17 4 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
             {showLabel && (
-                <span className={`text-sm font-bold ${isBookmarked ? 'text-white' : 'text-gray-600'}`}>
-                    {isBookmarked ? "I'm Going" : "I'm Going"}
+                <span className={`text-sm font-bold ${isBookmarked ? 'text-blue-600' : 'text-gray-600'}`}>
+                    {isBookmarked ? "Saved" : "Save"}
                 </span>
             )}
         </button>

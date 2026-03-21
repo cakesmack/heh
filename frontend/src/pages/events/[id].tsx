@@ -22,6 +22,7 @@ import { optimizeImage } from '@/utils/imageOptimizer';
 
 import SocialShare from '@/components/common/SocialShare';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
+import { AttendingButton } from '@/components/events/AttendingButton';
 import ClaimEventModal from '@/components/events/ClaimEventModal';
 import ReportModal from '@/components/common/ReportModal';
 import SimilarEvents from '@/components/events/SimilarEvents';
@@ -57,7 +58,6 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [imageLightboxOpen, setImageLightboxOpen] = useState(false);
-  const [bookmarkCount, setBookmarkCount] = useState<number>(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
   // Fetch Event Data (Client-Side Fallback)
@@ -82,15 +82,6 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
     fetchEvent();
   }, [router.isReady, id, event]);
 
-  // Fetch bookmark count for social proof
-  useEffect(() => {
-    if (event?.id) {
-      api.bookmarks.getCount(event.id)
-        .then(res => setBookmarkCount(res.count))
-        .catch(() => setBookmarkCount(0));
-    }
-  }, [event?.id]);
-
   // Track event view
   useEffect(() => {
     if (event?.id) {
@@ -98,17 +89,34 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
     }
   }, [event?.id, trackEventView]);
 
-  // Handle client-side refetch (e.g. after check-in)
+  // Handle client-side refetch (e.g. after check-in or login)
   const refetch = async () => {
     if (!event?.id) return;
+    console.log('!!! [RSVP DEBUG] Fetching fresh event data from API...');
     try {
-      // Background update
       const updatedEvent = await api.events.get(event.id);
+      console.log('!!! [RSVP DEBUG] Received response from API. is_attending:', updatedEvent.is_attending);
       setEvent(updatedEvent);
     } catch (err) {
-      console.error('Failed to refresh event data', err);
+      console.error('!!! [RSVP DEBUG] Failed to refresh event data', err);
     }
   };
+
+  // Refetch when authentication state is confirmed to catch up with SSR-omitted auth data
+  useEffect(() => {
+    const hydrator = async () => {
+      if (isAuthenticated && event?.id) {
+        // Only refetch if the current state shows not attending (likely SSR default)
+        if (!event.is_attending) {
+          console.log('!!! [RSVP DEBUG] Hydrating attendance status for authenticated user:', event.id);
+          await refetch();
+        } else {
+          console.log('!!! [RSVP DEBUG] User is already marked as attending in current state.');
+        }
+      }
+    };
+    hydrator();
+  }, [isAuthenticated, event?.id, event?.is_attending]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -417,19 +425,27 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   </span>
                 </div>
 
-                {/* Views & Going Stats */}
-                <div className="flex items-center gap-2">
+                {/* Stats */}
+                <div className="flex items-center gap-2" title="Views">
                   <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                   <span className="text-stone-400">{event.view_count || 0}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                
+                <div className="flex items-center gap-2" title="Going">
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  <span className="text-stone-400">{event.save_count || 0}</span>
+                  <span className="font-bold text-stone-200">{event.attending_count || 0}</span>
+                </div>
+
+                <div className="flex items-center gap-2" title="Saves">
+                  <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  <span className="font-bold text-stone-200">{event.save_count || 0}</span>
                 </div>
               </div>
             </div>
@@ -488,21 +504,43 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   </a>
                 )}
 
-                <BookmarkButton
+                <AttendingButton
                   eventId={event.id}
+                  initialAttending={event.is_attending}
                   showLabel={true}
                   className="transform hover:scale-105 shadow-lg shrink-0 whitespace-nowrap"
-                  onToggle={(isBookmarked) => {
+                  onToggle={(isAttending) => {
                     setEvent(prev => {
                       if (!prev) return null;
                       return {
                         ...prev,
-                        save_count: isBookmarked
-                          ? (prev.save_count || 0) + 1
-                          : Math.max(0, (prev.save_count || 0) - 1)
+                        is_attending: isAttending,
+                        attending_count: isAttending
+                          ? (prev.attending_count || 0) + 1
+                          : Math.max(0, (prev.attending_count || 0) - 1)
                       };
                     });
-                    setBookmarkCount(prev => isBookmarked ? prev + 1 : Math.max(0, prev - 1));
+                  }}
+                />
+
+                <BookmarkButton
+                  eventId={event.id}
+                  initialBookmarked={event.is_bookmarked}
+                  showLabel={true}
+                  className="transform hover:scale-105 shadow-lg shrink-0 whitespace-nowrap"
+                  onToggle={(isBookmarked, count) => {
+                    setEvent(prev => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        is_bookmarked: isBookmarked,
+                        save_count: count !== undefined 
+                          ? count 
+                          : (isBookmarked 
+                              ? (prev.save_count || 0) + 1 
+                              : Math.max(0, (prev.save_count || 0) - 1))
+                      };
+                    });
                   }}
                 />
               </div>

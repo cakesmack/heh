@@ -29,8 +29,8 @@ def normalize_uuid(uuid_value) -> str:
         Unhyphenated UUID string (e.g., '529450ff523a4a6f8c97c48e68317b4d')
     """
     if isinstance(uuid_value, str):
-        return uuid_value.replace("-", "")
-    return str(uuid_value).replace("-", "")
+        return uuid_value.replace("-", "").lower()
+    return str(uuid_value).replace("-", "").lower()
 
 def generate_seo_slug(text: str, max_length: int = 80) -> str:
     """

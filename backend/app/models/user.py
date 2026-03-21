@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .user_preferences import UserPreferences
     from .featured_booking import FeaturedBooking
     from .notification import Notification
+    from .event_attendee import EventAttendee
 
 
 class User(SQLModel, table=True):
@@ -80,6 +81,10 @@ class User(SQLModel, table=True):
     )
     featured_bookings: list["FeaturedBooking"] = Relationship(back_populates="organizer")
     notifications: list["Notification"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    attended_events: list["EventAttendee"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )

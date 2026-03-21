@@ -1,8 +1,7 @@
-"""
-Events API routes.
-Handles event CRUD operations, filtering, and search.
-"""
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 from typing import Optional, List
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, Request
@@ -23,6 +22,8 @@ from app.models.tag import Tag, EventTag, normalize_tag_name
 from app.models.event_participating_venue import EventParticipatingVenue
 from app.models.featured_booking import FeaturedBooking, SlotType, BookingStatus
 from app.models.showtime import EventShowtime
+from app.models.bookmark import Bookmark
+from app.models.event_attendee import EventAttendee
 from app.schemas.event import (
     EventCreate,
     EventUpdate,
@@ -182,7 +183,13 @@ def get_or_create_tags(session: Session, tag_names: List[str]) -> List[Tag]:
     return tags
 
 
-def build_event_response(event: Event, session: Session, user_lat: float = None, user_lon: float = None) -> EventResponse:
+def build_event_response(
+    event: Event, 
+    session: Session, 
+    user_lat: float = None, 
+    user_lon: float = None,
+    current_user: Optional[User] = None
+) -> EventResponse:
     """Build EventResponse with computed fields."""
     # Get venue details and fallback coordinates
     venue_name = None
@@ -277,10 +284,9 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
     #         elif ae.event_type == "click_ticket":
     #             ticket_click_count += 1
 
-    # response.view_count = view_count
     response.view_count = event.view_count
     response.attending_count = event.attending_count
-    response.save_count = save_count
+    response.save_count = event.save_count
     response.ticket_click_count = event.ticket_click_count
     response.website_click_count = event.website_click_count
     
@@ -326,6 +332,31 @@ def build_event_response(event: Event, session: Session, user_lat: float = None,
         # but the frontend will just use standard date_start.
         response.next_occurrence = None
         response.is_upcoming_occurrence = False
+    # Check Attendance & Bookmark Status (Pure ORM Match)
+    if current_user:
+        try:
+            # Check Attendance (Strictly Normalized Match)
+            attendee_record = session.exec(
+                select(EventAttendee).where(
+                    EventAttendee.user_id == current_user.id,
+                    EventAttendee.event_id == normalize_uuid(event.id)
+                )
+            ).first()
+            response.is_attending = attendee_record is not None
+
+            # Clean Bookmark Check
+            bookmark_record = session.exec(
+                select(Bookmark).where(
+                    Bookmark.user_id == current_user.id,
+                    Bookmark.event_id == event.id
+                )
+            ).first()
+            response.is_bookmarked = bookmark_record is not None
+            
+        except Exception as e:
+            logger.error(f"ORM status check failed: {e}")
+            response.is_attending = False
+            response.is_bookmarked = False
 
     return response
 
@@ -738,7 +769,7 @@ def list_events(
         
         # Build responses
         event_responses = [
-            build_event_response(event, session, latitude, longitude)
+            build_event_response(event, session, latitude, longitude, current_user)
             for event in results
         ]
         
@@ -945,7 +976,7 @@ def list_events(
         events = filtered_events[skip : skip + limit]
 
     event_responses = [
-        build_event_response(event, session, latitude, longitude)
+        build_event_response(event, session, latitude, longitude, current_user)
         for event in events
     ]
 
@@ -1025,7 +1056,8 @@ def suggest_events(
 @router.post("/{event_id}/click", response_model=EventResponse)
 def track_ticket_click(
     event_id: str,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Track a "Get Tickets" click.
@@ -1044,13 +1076,14 @@ def track_ticket_click(
     session.commit()
     session.refresh(event)
     
-    return build_event_response(event, session)
+    return build_event_response(event, session, current_user=current_user)
 
 
 @router.post("/{event_id}/website-click", response_model=EventResponse)
 def track_website_click(
     event_id: str,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Track an "External Website" click.
@@ -1069,13 +1102,14 @@ def track_website_click(
     session.commit()
     session.refresh(event)
     
-    return build_event_response(event, session)
+    return build_event_response(event, session, current_user=current_user)
 
 
 @router.get("/top", response_model=EventListResponse)
 def get_top_events(
     limit: int = Query(default=10, ge=1, le=50),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Get top events ranked by Velocity Score.
@@ -1116,7 +1150,7 @@ def get_top_events(
     top_events = session.exec(query).all()
     
     # Build responses
-    event_responses = [build_event_response(event, session) for event in top_events]
+    event_responses = [build_event_response(event, session, current_user=current_user) for event in top_events]
     
     return EventListResponse(
         events=event_responses,
@@ -1528,13 +1562,14 @@ async def create_event(
             # Log error but don't fail the request - event creation succeeded
             logger.error(f"Failed to send notification email for event {new_event.id}: {e}")
 
-    return build_event_response(new_event, session)
+    return build_event_response(new_event, session, current_user=current_user)
 
 
 @router.get("/{event_id}", response_model=EventResponse)
 def get_event(
     event_id: str,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Get a specific event by ID or slug.
@@ -1561,7 +1596,64 @@ def get_event(
     session.commit()
     session.refresh(event)
 
-    return build_event_response(event, session)
+    response = build_event_response(event, session, current_user=current_user)
+    
+    # Explicit "Truth Injection" for RSVP status (Strictly Normalized Match)
+    if current_user:
+        attendee_record = session.exec(
+            select(EventAttendee).where(
+                EventAttendee.user_id == current_user.id,
+                EventAttendee.event_id == normalize_uuid(event.id)
+            )
+        ).first()
+        response.is_attending = attendee_record is not None
+
+    return response
+
+@router.post("/{event_id}/attend", status_code=status.HTTP_200_OK)
+def toggle_attendance(
+    event_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Toggle RSVP/Attendance for an event.
+    """
+    # Resolve event (slug or ID)
+    event = session.exec(
+        select(Event).where(Event.slug == event_id)
+    ).first()
+    
+    if not event:
+        normalized_event_id = normalize_uuid(event_id)
+        event = session.get(Event, normalized_event_id)
+        
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    norm_event_id = normalize_uuid(event.id)
+        
+    from app.models.event_attendee import EventAttendee
+    attendance = session.exec(
+        select(EventAttendee).where(
+            EventAttendee.user_id == current_user.id,
+            EventAttendee.event_id == norm_event_id
+        )
+    ).first()
+    
+    if attendance:
+        session.delete(attendance)
+        event.attending_count = max(0, (event.attending_count or 0) - 1)
+        session.add(event)
+        session.commit()
+        return {"is_attending": False, "attending_count": event.attending_count, "message": "You are no longer attending this event."}
+    else:
+        new_attendance = EventAttendee(user_id=current_user.id, event_id=norm_event_id)
+        session.add(new_attendance)
+        event.attending_count = (event.attending_count or 0) + 1
+        session.add(event)
+        session.commit()
+        return {"is_attending": True, "attending_count": event.attending_count, "message": "You are now attending this event!"}
 
 
 @router.post("/{event_id}/recurring", response_model=List[EventResponse])
@@ -1597,7 +1689,7 @@ def generate_recurring_events(
     new_instances = generate_recurring_instances(session, event, window_days)
     
     return [
-        build_event_response(instance, session)
+        build_event_response(instance, session, current_user=current_user)
         for instance in new_instances
     ]
 
@@ -2092,7 +2184,7 @@ async def update_event(
     except Exception as e:
         logger.error(f"Failed to send event status update emails: {e}")
 
-    return build_event_response(event, session)
+    return build_event_response(event, session, current_user=current_user)
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)

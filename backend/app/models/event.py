@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .bookmark import Bookmark
     from .organizer import Organizer
     from .showtime import EventShowtime
+    from .event_attendee import EventAttendee
 
 
 class Event(SQLModel, table=True):
@@ -115,6 +116,7 @@ class Event(SQLModel, table=True):
     # Analytics (Denormalized)
     view_count: int = Field(default=0)
     attending_count: int = Field(default=0)  # User marked as "Going"
+    save_count: int = Field(default=0)       # User bookmarked event
     ticket_click_count: int = Field(default=0) # User clicked "Tickets"
     website_click_count: int = Field(default=0) # User clicked "Website"
 
@@ -147,3 +149,4 @@ class Event(SQLModel, table=True):
     tags: List["Tag"] = Relationship(back_populates="events", link_model=EventTag)
     bookmarks: List["Bookmark"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     showtimes: List["EventShowtime"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    attendees: List["EventAttendee"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
