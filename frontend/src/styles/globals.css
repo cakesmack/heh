@@ -132,3 +132,17 @@ a {
 .hover-card {
   @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
 }
+
+/* Skeleton Pulse Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}

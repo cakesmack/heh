@@ -37,17 +37,21 @@ export function LocationHeroBanner({ city, eventCount, heroImageUrl, anchorText 
 
       {/* Content */}
       <div className="relative z-[2] flex flex-col justify-end h-full min-h-[280px] px-6 md:px-10 py-8 md:py-10">
-        <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-3 tracking-tight">
-          Events in {formattedCity}
-        </h1>
+        <div className="min-h-[3.5rem] md:min-h-[5rem] mb-3">
+          <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+            Events in {formattedCity}
+          </h1>
+        </div>
 
-        <p className="text-gray-200 text-sm md:text-base leading-relaxed w-full lg:w-5/6 max-w-5xl">
-          {anchorText
-            ? anchorText
-            : eventCount > 0
-              ? `Discover ${eventCount} upcoming event${eventCount !== 1 ? 's' : ''} in ${formattedCity}, Scottish Highlands.`
-              : `Explore what's happening in ${formattedCity}, Scottish Highlands.`}
-        </p>
+        <div className="min-h-[3rem] md:min-h-[4rem]">
+          <p className="text-gray-200 text-sm md:text-base leading-relaxed w-full lg:w-5/6 max-w-5xl">
+            {anchorText
+              ? anchorText
+              : eventCount > 0
+                ? `Discover ${eventCount} upcoming event${eventCount !== 1 ? 's' : ''} in ${formattedCity}, Scottish Highlands.`
+                : `Explore what's happening in ${formattedCity}, Scottish Highlands.`}
+          </p>
+        </div>
       </div>
     </section>
   );

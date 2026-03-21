@@ -76,9 +76,11 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-lg font-bold text-white mb-1 leading-tight text-shadow-sm line-clamp-2 group-hover:text-emerald-300 transition-colors">
-                        {event.title}
-                    </h3>
+                    <div className="min-h-[2.5rem] mb-1">
+                        <h3 className="text-lg font-bold text-white leading-tight text-shadow-sm line-clamp-2 group-hover:text-emerald-300 transition-colors">
+                            {event.title}
+                        </h3>
+                    </div>
 
                     {/* Venue */}
                     {event.venue_name && (

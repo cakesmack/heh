@@ -60,7 +60,7 @@ export function SpotlightCard({ event, label }: SpotlightCardProps) {
       <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg border border-gray-100 transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-0.5">
         <div className="flex flex-col md:flex-row">
           {/* Image */}
-          <div className="relative w-full md:w-1/2 h-56 md:h-80 bg-gray-200 flex-shrink-0">
+          <div className="relative w-full md:w-1/2 aspect-[16/9] md:aspect-auto md:h-80 bg-gray-200 flex-shrink-0 skeleton">
             {event.image_url ? (
               <OptimizedImage
                 src={event.image_url}
@@ -98,15 +98,19 @@ export function SpotlightCard({ event, label }: SpotlightCardProps) {
               </div>
             )}
 
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-emerald-700 transition-colors">
-              {event.title}
-            </h2>
+            <div className="min-h-[4rem] mb-3">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 line-clamp-2 group-hover:text-emerald-700 transition-colors">
+                {event.title}
+              </h2>
+            </div>
 
-            {event.description && (
-              <p className="text-gray-600 mb-4 line-clamp-2 text-sm md:text-base">
-                {stripHtml(event.description)}
-              </p>
-            )}
+            <div className="min-h-[3rem] mb-4">
+              {event.description && (
+                <p className="text-gray-600 line-clamp-2 text-sm md:text-base">
+                  {stripHtml(event.description)}
+                </p>
+              )}
+            </div>
 
             {/* Meta */}
             <div className="space-y-2 text-sm text-gray-500 mb-5">

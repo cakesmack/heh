@@ -1,28 +1,46 @@
-import Skeleton from '@/components/common/Skeleton';
+import React from 'react';
 
-export default function EventCardSkeleton() {
-    return (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100 h-full flex flex-col">
-            {/* Image Skeleton */}
-            <div className="relative h-48 w-full">
-                <Skeleton className="h-full w-full" />
-            </div>
-
-            {/* Content Skeleton */}
-            <div className="p-4 flex-1 flex flex-col">
-                <div className="flex justify-between items-start mb-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-12" />
-                </div>
-
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-full mb-4" />
-
-                <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-50">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                </div>
-            </div>
+export function EventCardSkeleton() {
+  return (
+    <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 h-full flex flex-col animate-pulse">
+      {/* Image Skeleton */}
+      <div className="relative aspect-[16/9] bg-gray-200" />
+      
+      {/* Content Skeleton */}
+      <div className="p-4 flex-1 flex flex-col">
+        {/* Category Badge Skeleton */}
+        <div className="w-16 h-5 bg-gray-200 rounded-full mb-3" />
+        
+        {/* Title Skeleton */}
+        <div className="space-y-2 mb-4">
+          <div className="w-full h-6 bg-gray-200 rounded" />
+          <div className="w-3/4 h-6 bg-gray-200 rounded" />
         </div>
-    );
+        
+        {/* Description Skeleton */}
+        <div className="space-y-2 mb-6">
+          <div className="w-full h-4 bg-gray-200 rounded" />
+          <div className="w-5/6 h-4 bg-gray-200 rounded" />
+        </div>
+        
+        {/* Meta info skeleton */}
+        <div className="mt-auto space-y-3">
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-gray-200 rounded mr-2" />
+            <div className="w-32 h-4 bg-gray-200 rounded" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-200 rounded" />
+            <div className="w-24 h-4 bg-gray-200 rounded" />
+          </div>
+        </div>
+        
+        {/* Footer Skeleton */}
+        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+          <div className="w-16 h-5 bg-gray-200 rounded" />
+          <div className="w-20 h-4 bg-gray-200 rounded" />
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -66,7 +66,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
 
       {/* Image */}
       {event.image_url && (
-        <div className="relative h-48 bg-gray-200">
+        <div className="relative aspect-[16/9] bg-gray-200 skeleton">
           <OptimizedImage
             src={event.image_url}
             variant="hero"
@@ -118,7 +118,6 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
         {/* Category */}
         {event.category && (
           <div className="mb-2 relative z-0">
-            {/* z-0 so it's under the link overlay? Actually link overlay is z-10 everywhere. */}
             <Badge variant="default" size="sm">
               {event.category.name}
             </Badge>
@@ -126,14 +125,18 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
         )}
 
         {/* Title */}
-        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 break-words">
-          {event.title}
-        </h3>
+        <div className="min-h-[3.5rem] mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 break-words">
+            {event.title}
+          </h3>
+        </div>
 
         {/* Description */}
-        {event.description && (
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{stripHtml(event.description)}</p>
-        )}
+        <div className="min-h-[2.5rem] mb-3">
+          {event.description && (
+            <p className="text-sm text-gray-600 line-clamp-2">{stripHtml(event.description)}</p>
+          )}
+        </div>
 
         {/* Meta Info */}
         <div className="space-y-1 text-sm text-gray-500 mt-auto">
