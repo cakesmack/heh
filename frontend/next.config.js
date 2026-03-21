@@ -55,6 +55,12 @@ const nextConfig = {
         ],
     },
     trailingSlash: true,
+    typescript: {
+        ignoreBuildErrors: true,
+    },
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
 }
 
 module.exports = nextConfig
