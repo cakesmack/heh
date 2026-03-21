@@ -1590,11 +1590,7 @@ def get_event(
             detail="Event not found"
         )
 
-    # Increment View Count
-    event.view_count += 1
-    session.add(event)
-    session.commit()
-    session.refresh(event)
+    
 
     response = build_event_response(event, session, current_user=current_user)
     
