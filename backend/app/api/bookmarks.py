@@ -88,6 +88,22 @@ def check_bookmark_status(
     return {"bookmarked": bookmark is not None}
 
 
+@router.get("/my/ids", response_model=List[str])
+def list_my_bookmark_ids(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get a flat list of event IDs bookmarked by the current user.
+    Used for bulk-checking bookmark status on the frontend to eliminate N+1 queries.
+    """
+    # Use scalar() to only return the event_id values as a flat list
+    result = session.exec(
+        select(Bookmark.event_id).where(Bookmark.user_id == current_user.id)
+    ).all()
+    return result
+
+
 @router.get("/my", response_model=EventListResponse)
 def list_my_bookmarks(
     skip: int = Query(default=0, ge=0),

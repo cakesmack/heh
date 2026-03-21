@@ -15,70 +15,47 @@ interface BookmarkButtonProps {
 
 export function BookmarkButton({
     eventId,
-    initialBookmarked = false,
     className = '',
     size = 'md',
     showLabel = false,
     onToggle,
 }: BookmarkButtonProps) {
     const router = useRouter();
-    const { isAuthenticated } = useAuth();
-    const [isBookmarked, setIsBookmarked] = useState(initialBookmarked);
+    const { isAuthenticated, bookmarkedIds, toggleBookmarkedId } = useAuth();
+    const isBookmarked = bookmarkedIds.includes(eventId);
     const [isLoading, setIsLoading] = useState(false);
-    const [hasChecked, setHasChecked] = useState(false);
-
-    // Check status on mount if authenticated
-    useEffect(() => {
-        if (isAuthenticated && !hasChecked && !initialBookmarked) {
-            checkStatus();
-        }
-    }, [isAuthenticated, eventId]);
-
-    const checkStatus = async () => {
-        try {
-            const { bookmarked } = await api.bookmarks.check(eventId);
-            setIsBookmarked(bookmarked);
-            setHasChecked(true);
-        } catch (error) {
-            console.error('Failed to check bookmark status:', error);
-        }
-    };
 
     const handleToggle = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
         if (!isAuthenticated) {
-            // Redirect to login with returnTo param
             router.push(`/login?returnTo=${encodeURIComponent(router.asPath)}`);
             return;
         }
 
         setIsLoading(true);
         try {
-            // Optimistic update
-            const newIsBookmarked = !isBookmarked;
-            setIsBookmarked(newIsBookmarked);
+            // Optimistic update in global state
+            const nextState = !isBookmarked;
+            toggleBookmarkedId(eventId, nextState);
 
-            // Call onToggle for optimistic update in parent
+            // Notify parent
             if (onToggle) {
-                onToggle(newIsBookmarked);
+                onToggle(nextState);
             }
 
             const response = await api.bookmarks.toggle(eventId);
 
-            // Verify state matches server
-            if (response.bookmarked !== newIsBookmarked) {
-                // Revert if mismatch
-                setIsBookmarked(response.bookmarked);
+            // Sync global state if server differs
+            if (response.bookmarked !== nextState) {
+                toggleBookmarkedId(eventId, response.bookmarked);
                 if (onToggle) {
                     onToggle(response.bookmarked, response.count);
                 }
-            } else {
-                // Update parent with the actual count from server
-                if (onToggle) {
-                    onToggle(response.bookmarked, response.count);
-                }
+            } else if (onToggle) {
+                // Update count from server
+                onToggle(response.bookmarked, response.count);
             }
 
             if (response.bookmarked) {
@@ -89,10 +66,10 @@ export function BookmarkButton({
 
             toast.success(response.message);
         } catch (error) {
-            // Revert on error
-            setIsBookmarked(!isBookmarked);
+            // Revert global state on error
+            toggleBookmarkedId(eventId, isBookmarked);
             if (onToggle) {
-                onToggle(!isBookmarked);
+                onToggle(isBookmarked);
             }
             toast.error('Failed to update bookmark');
             console.error(error);

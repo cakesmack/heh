@@ -1785,6 +1785,9 @@ export const api = {
     getCount: async (eventId: string): Promise<{ count: number }> => {
       return apiFetch<{ count: number }>(`/api/bookmarks/count/${eventId}`, {}, false);
     },
+    getMyIds: async (): Promise<string[]> => {
+      return apiFetch<string[]>('/api/bookmarks/my/ids');
+    },
   },
   organizers: {
     list: async (filters?: { user_id?: string; city?: string; group_type?: string; skip?: number; limit?: number }) => {

@@ -20,6 +20,8 @@ interface AuthContextType {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  bookmarkedIds: string[];
+  toggleBookmarkedId: (id: string, isBookmarked: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +37,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   /**
@@ -44,11 +47,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const userData = await api.auth.me();
       setUser(userData);
+      
+      // Fetch bookmarked event IDs in bulk
+      if (userData) {
+        try {
+          const ids = await api.bookmarks.getMyIds();
+          setBookmarkedIds(ids);
+        } catch (bookmarkError) {
+          console.error('Failed to fetch bookmark IDs:', bookmarkError);
+        }
+      } else {
+        setBookmarkedIds([]);
+      }
     } catch (error) {
       setUser(null);
+      setBookmarkedIds([]);
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  /**
+   * Optimistically toggle a bookmarked ID in local state
+   */
+  const toggleBookmarkedId = useCallback((id: string, isBookmarked: boolean) => {
+    setBookmarkedIds(prev => {
+      if (isBookmarked) {
+        if (!prev.includes(id)) return [...prev, id];
+      } else {
+        return prev.filter(item => item !== id);
+      }
+      return prev;
+    });
   }, []);
 
   /**
@@ -131,6 +161,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     logout,
     refreshUser,
+    bookmarkedIds,
+    toggleBookmarkedId,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -10,7 +10,7 @@ from sqlalchemy import or_
 from app.core.limiter import limiter
 from sqlalchemy import case
 
-from app.core.database import get_session
+from app.core.database import get_session, engine
 from app.core.security import get_current_user, get_current_user_optional
 from app.core.utils import normalize_uuid
 from app.models.user import User
@@ -1565,9 +1565,31 @@ async def create_event(
     return build_event_response(new_event, session, current_user=current_user)
 
 
+def async_increment_view_count(event_id: str):
+    """
+    Background worker to safely increment view counts.
+    Opens its own isolated database session to prevent detached instance errors
+    and row-level locking during high-traffic read operations.
+    """
+    try:
+        from sqlmodel import Session
+        with Session(engine) as db:
+            from app.models.event import Event
+            event = db.get(Event, event_id)
+            if event:
+                event.view_count += 1
+                db.add(event)
+                db.commit()
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"[ANALYTICS] Failed to increment view count for event {event_id}: {e}")
+
+
 @router.get("/{event_id}", response_model=EventResponse)
 def get_event(
     event_id: str,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
@@ -1590,7 +1612,8 @@ def get_event(
             detail="Event not found"
         )
 
-    
+    # Hand off the write operation to prevent database locks
+    background_tasks.add_task(async_increment_view_count, event.id)
 
     response = build_event_response(event, session, current_user=current_user)
     
