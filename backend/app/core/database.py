@@ -16,17 +16,19 @@ logger = logging.getLogger(__name__)
 # Ensure we use the correct URL from settings
 DATABASE_URL = settings.DATABASE_URL
 
-# 2. THE ENGINE (High Performance Mode)
-# - pool_pre_ping=True: Auto-heals broken connections (Prevents "Closed Connection" errors)
-# - pool_size=20: Increases concurrent connections from 5 to 20.
-# - max_overflow=10: Allows 10 extra temporary connections during traffic spikes.
-# - pool_recycle=1800: Refreshes connections every 30 mins to avoid stale timeouts.
+# 2. THE ENGINE (Performance Optimized)
+# - pool_pre_ping=True: Auto-heals broken connections
+# - pool_size=50: High-concurrency support
+# - max_overflow=50: Additional capacity for traffic spikes
+# - pool_timeout=30: Wait up to 30s for a session before erroring
+# - pool_recycle=1800: Refreshes connections every 30 mins
 engine = create_engine(
     DATABASE_URL,
     echo=False, 
     pool_pre_ping=True, 
-    pool_size=20, 
-    max_overflow=10, 
+    pool_size=50, 
+    max_overflow=50, 
+    pool_timeout=30,
     pool_recycle=1800
 )
 
