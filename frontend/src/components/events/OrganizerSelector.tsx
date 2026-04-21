@@ -73,8 +73,8 @@ export default function OrganizerSelector({
     if (!user) return null;
 
     return (
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6 scroll-mt-24" id="organizer-selector">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Who is hosting this event?</h2>
+        <div className="mb-6 scroll-mt-24" id="organizer-selector">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Who is hosting this event?</h2>
 
             {/* GRID LAYOUT (<= 6 Options) */}
             {!isLargeList && (

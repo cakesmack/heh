@@ -128,7 +128,7 @@ export default function DateTimePicker({
           min={minDate}
           disabled={disabled}
           required={required}
-          className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'}`}
+          className={`flex-1 px-3 py-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed ${error ? 'border-red-500' : 'border-gray-200'}`}
         />
 
         {/* Hour Select */}
@@ -139,7 +139,7 @@ export default function DateTimePicker({
           onChange={(e) => handleHourChange(e.target.value)}
           disabled={disabled || !dateValue}
           required={required}
-          className={`w-16 px-2 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-center ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'}`}
+          className={`w-16 px-2 py-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed text-center ${error ? 'border-red-500' : 'border-gray-200'}`}
         >
           {HOUR_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -158,7 +158,7 @@ export default function DateTimePicker({
           onChange={(e) => handleMinuteChange(e.target.value)}
           disabled={disabled || !dateValue}
           required={required}
-          className={`w-16 px-2 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-center ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'}`}
+          className={`w-16 px-2 py-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed text-center ${error ? 'border-red-500' : 'border-gray-200'}`}
         >
           {MINUTE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

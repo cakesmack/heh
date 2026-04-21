@@ -1,537 +1,574 @@
-
 /**
- * Submit Event Page
- * Form to submit new events using a section-based layout
+ * Submit Event Page — Multi-Step Wizard
+ *
+ * Replaces the old single-page form with a modern, step-by-step wizard.
+ * State managed by useEventWizard (react-hook-form + sessionStorage persistence).
+ * Smooth CSS transitions between steps. Mobile-first, large touch targets.
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, apiFetch } from '@/lib/api';
 import { AuthGuard } from '@/components/common/AuthGuard';
-import { VenueResponse, Category, Organizer, ShowtimeCreate, Tag, EventCreate } from '@/types';
+import { Category, Organizer, EventResponse } from '@/types';
 import { Button } from '@/components/common/Button';
-import { isHIERegion, isPointInHighlands } from '@/utils/validation/hie-check';
+import {
+  useEventWizard,
+  WIZARD_STEPS,
+  WizardStepId,
+  buildEventPayload,
+  clearDraft,
+} from '@/hooks/useEventWizard';
 
-// Sections
-import EventMediaSection from '@/components/events/form-sections/EventMediaSection';
-import EventBasicDetails from '@/components/events/form-sections/EventBasicDetails';
-import EventLocationSection from '@/components/events/form-sections/EventLocationSection';
-import EventScheduleSection from '@/components/events/form-sections/EventScheduleSection';
-import EventTicketingSection from '@/components/events/form-sections/EventTicketingSection';
-import OrganizerSelector from '@/components/events/OrganizerSelector';
+// ─── Step Components (Real implementations) ─────────────────
+import StepBasicsComponent from '@/components/events/wizard/StepBasics';
+import StepTimelineComponent from '@/components/events/wizard/StepTimeline';
+import StepMediaComponent from '@/components/events/wizard/StepMedia';
+import StepReviewComponent from '@/components/events/wizard/StepReview';
 
+// ─── Progress Bar Component ────────────────────────────────
+function WizardProgressBar({
+  currentStep,
+  completedSteps,
+  onStepClick,
+}: {
+  currentStep: WizardStepId;
+  completedSteps: Set<WizardStepId>;
+  onStepClick: (step: WizardStepId) => void;
+}) {
+  return (
+    <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/60">
+      <div className="max-w-3xl mx-auto px-4 py-3">
+        {/* Mobile: Compact bar with step count */}
+        <div className="sm:hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-900">
+              Step {currentStep} of {WIZARD_STEPS.length}
+            </span>
+            <span className="text-sm text-gray-500">
+              {WIZARD_STEPS[currentStep - 1].label}
+            </span>
+          </div>
+          {/* Progress track */}
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${(currentStep / WIZARD_STEPS.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Desktop: Full step indicator */}
+        <div className="hidden sm:flex items-center justify-between">
+          {WIZARD_STEPS.map((step, index) => {
+            const isActive = step.id === currentStep;
+            const isCompleted = completedSteps.has(step.id);
+            const isClickable = isCompleted || step.id <= currentStep;
+
+            return (
+              <div key={step.id} className="flex items-center flex-1 last:flex-initial">
+                {/* Step Circle + Label */}
+                <button
+                  type="button"
+                  onClick={() => isClickable && onStepClick(step.id)}
+                  disabled={!isClickable}
+                  className={`flex items-center gap-3 group transition-all duration-200 ${
+                    isClickable ? 'cursor-pointer' : 'cursor-default'
+                  }`}
+                >
+                  <div
+                    className={`relative flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold transition-all duration-300 ${
+                      isActive
+                        ? 'bg-emerald-600 text-white'
+                        : isCompleted
+                        ? 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200'
+                        : 'bg-gray-100 text-gray-400'
+                    }`}
+                  >
+                    {isCompleted && !isActive ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <span>{step.icon}</span>
+                    )}
+                  </div>
+                  <div className="hidden lg:block text-left">
+                    <p className={`text-sm font-semibold leading-tight ${
+                      isActive ? 'text-emerald-700' : isCompleted ? 'text-gray-700' : 'text-gray-400'
+                    }`}>
+                      {step.label}
+                    </p>
+                  </div>
+                </button>
+
+                {/* Connector line */}
+                {index < WIZARD_STEPS.length - 1 && (
+                  <div className="flex-1 mx-3">
+                    <div className="h-0.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ease-out ${
+                          isCompleted ? 'bg-emerald-400 w-full' : 'bg-transparent w-0'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Post-Submit Success Modal ─────────────────────────────
+function PostSubmitModal({
+  eventStatus,
+  newEventId,
+  newEventUrl,
+  onClose,
+}: {
+  eventStatus: 'published' | 'pending' | 'pending_moderation';
+  newEventId: string;
+  newEventUrl: string;
+  onClose: (navigateTo: string) => void;
+}) {
+  const [shareCopied, setShareCopied] = useState(false);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={() => onClose(eventStatus === 'published' ? `/events/${newEventId}` : '/account')}
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {eventStatus === 'published' ? (
+          <>
+            <div className="w-16 h-16 mx-auto mb-5 bg-emerald-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your event is live on the map.</h2>
+            <p className="text-gray-600 mb-8">Now, get it in front of your audience.</p>
+
+            <div className="mb-6">
+              <button
+                onClick={async () => {
+                  try {
+                    if (navigator.share) {
+                      await navigator.share({ title: 'Check out my event!', url: newEventUrl });
+                    } else {
+                      await navigator.clipboard.writeText(newEventUrl);
+                      setShareCopied(true);
+                      setTimeout(() => setShareCopied(false), 2500);
+                    }
+                  } catch (err: any) {
+                    if (err?.name !== 'AbortError') {
+                      await navigator.clipboard.writeText(newEventUrl);
+                      setShareCopied(true);
+                      setTimeout(() => setShareCopied(false), 2500);
+                    }
+                  }
+                }}
+                className={`w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-medium transition-all duration-200 min-h-[48px] ${
+                  shareCopied ? 'bg-emerald-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'
+                }`}
+              >
+                {shareCopied ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Link Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    Share Event
+                  </>
+                )}
+              </button>
+            </div>
+
+            <button
+              onClick={() => onClose(`/events/${newEventId}`)}
+              className="text-sm text-gray-500 hover:text-emerald-600 transition-colors"
+            >
+              Skip and view my event page &rarr;
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="w-16 h-16 mx-auto mb-5 bg-amber-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Event submitted for review.</h2>
+            <p className="text-gray-600 mb-8">
+              Your event is currently pending approval by our moderation team. You will receive an email the moment it goes live.
+            </p>
+            <button
+              onClick={() => onClose('/account')}
+              className="w-full px-5 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium min-h-[48px]"
+            >
+              Got it, take me to my dashboard
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN WIZARD PAGE
+// ═══════════════════════════════════════════════════════════
 export default function SubmitEventPage() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
+  const wizard = useEventWizard();
+
+  const { form, currentStep, direction, isAnimating, goNext, goBack, goToStep, stepErrors, clearWizard, isFirstStep, isLastStep, completedSteps } = wizard;
+
+  // Satellite state for data loading
   const [categories, setCategories] = useState<Category[]>([]);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
-  const [participatingVenues, setParticipatingVenues] = useState<VenueResponse[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const [locationTab, setLocationTab] = useState<'main' | 'multi'>('main');
-  const [locationMode, setLocationMode] = useState<'venue' | 'custom'>('venue');
-
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category_id: '',
-    venue_id: '',
-    location_name: '',
-    latitude: 57.4778, // Default to Inverness
-    longitude: -4.2247,
-    date_start: '',
-    date_end: '',
-    price: '0',
-    image_url: '',
-    ticket_url: '',
-    website_url: '',
-    age_restriction: '',
-    organizer_profile_id: '', // Will be synched with selectedOrganizer
-    is_recurring: false,
-    is_all_day: false,
-    frequency: 'WEEKLY',
-    recurrence_end_date: '',
-    ends_on: 'never',
-    weekdays: [] as number[],  // 0=Mon, 1=Tue, ... 6=Sun
-    postcode: '',
-    address: '',
-    // Map Display Override
-    map_display_lat: null as number | null,
-    map_display_lng: null as number | null,
-    map_display_label: '',
-    recurrence_rule: '',
-  });
-
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [showtimes, setShowtimes] = useState<ShowtimeCreate[]>([]);
-  const [isMultiSession, setIsMultiSession] = useState(false);
-  const [noEndTime, setNoEndTime] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [isLocationValid, setIsLocationValid] = useState(true);
 
   // Post-submit modal state
   const [showPostSubmitModal, setShowPostSubmitModal] = useState(false);
   const [newEventUrl, setNewEventUrl] = useState('');
-  const [eventStatus, setEventStatus] = useState<'published' | 'pending' | 'pending_moderation'>('pending');
   const [newEventId, setNewEventId] = useState('');
-  const [shareCopied, setShareCopied] = useState(false);
+  const [eventStatus, setEventStatus] = useState<'published' | 'pending' | 'pending_moderation'>('pending');
 
-  // Organizer Selection State
-  // null = not selected (validation error if submitting)
-  // '' = Myself
-  // 'id' = Group ID
-  const [selectedOrganizer, setSelectedOrganizer] = useState<string | null>(null);
-  const [organizerError, setOrganizerError] = useState<string | undefined>(undefined);
-
-  // Fetch categories on mount
+  // ─── Load categories and organizers on mount ──────────────
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const data = await api.categories.list();
-        setCategories(data.categories || []);
-        if (data.categories && data.categories.length > 0) {
-          setFormData(prev => ({ ...prev, category_id: data.categories[0].id }));
+        const catData = await api.categories.list();
+        const cats = catData.categories || [];
+        setCategories(cats);
+
+        // Default category to first if not set
+        const currentCatId = form.getValues('category_id');
+        if (!currentCatId && cats.length > 0) {
+          form.setValue('category_id', cats[0].id);
         }
       } catch (err) {
         console.error('Error fetching categories:', err);
-      } finally {
-        setIsLoadingCategories(false);
       }
-    };
 
-    const fetchOrganizers = async () => {
       if (user) {
         try {
           const response = await apiFetch<any>(`/api/organizers?user_id=${user.id}`);
           const orgs = response.organizers || [];
           setOrganizers(orgs);
 
-          // Logic: Default to 'Myself' ONLY if they have 0 groups.
-          // Otherwise force selection.
-          if (orgs.length === 0) {
-            setSelectedOrganizer('');
-          } else {
-            setSelectedOrganizer(null);
+          // Default organizer selection logic
+          const currentOrg = form.getValues('selectedOrganizer');
+          if (currentOrg === null) {
+            if (orgs.length === 0) {
+              form.setValue('selectedOrganizer', '');
+            }
+            // else: leave as null to force selection
           }
         } catch (err) {
           console.error('Error fetching organizers:', err);
         }
       }
+
+      setIsLoadingData(false);
     };
 
-    fetchCategories();
-    if (user) fetchOrganizers();
+    fetchData();
   }, [user]);
 
-  // Handle URL parameters
+  // ─── Handle URL parameters ────────────────────────────────
   useEffect(() => {
     if (router.isReady && router.query.organizer_profile_id) {
       const profileId = router.query.organizer_profile_id as string;
-      setFormData(prev => ({ ...prev, organizer_profile_id: profileId }));
+      form.setValue('organizer_profile_id', profileId);
+      form.setValue('selectedOrganizer', profileId);
     }
   }, [router.isReady, router.query]);
 
-  const handleVenueChange = (venueId: string, venue: VenueResponse | null) => {
-    setFormData(prev => ({ ...prev, venue_id: venueId }));
-  };
+  // ─── Final Submission ─────────────────────────────────────
+  const handleSubmit = useCallback(async () => {
+    // Run final validation on Step 4
+    const errors = wizard.validateCurrentStep();
+    if (errors) return;
 
-  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
-    if (place.geometry?.location) {
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-
-      let postcode = '';
-      if (place.address_components) {
-        const postcodeComponent = place.address_components.find(
-          comp => comp.types.includes('postal_code')
-        );
-        postcode = postcodeComponent?.long_name || '';
-      }
-
-      const isValid = postcode
-        ? isHIERegion(postcode)
-        : isPointInHighlands(lat, lng);
-      setIsLocationValid(isValid);
-
-      setFormData(prev => ({
-        ...prev,
-        location_name: place.name || place.formatted_address || '',
-        latitude: lat,
-        longitude: lng,
-        postcode: postcode,
-      }));
-    }
-  };
-
-  const handleLocationChange = (lat: number, lng: number) => {
-    setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
-  };
-
-  const handleMapDisplayChange = (updates: { map_display_lat?: number; map_display_lng?: number; map_display_label?: string }) => {
-    setFormData(prev => ({ ...prev, ...updates }));
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (error) setError(null);
-  };
-
-  const handleImageUpload = (urls: { url: string; thumbnail_url: string; medium_url: string }) => {
-    setFormData(prev => ({ ...prev, image_url: urls.url }));
-  };
-
-  const handleImageRemove = () => {
-    setFormData(prev => ({ ...prev, image_url: '' }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+    setIsSubmitting(true);
+    setSubmitError(null);
     setFieldErrors({});
-    setOrganizerError(undefined);
-    setIsLoading(true);
 
     try {
-      // Validation: Organizer
-      if (selectedOrganizer === null) {
-        setOrganizerError("Please select who is hosting this event.");
-        // Scroll to top
-        const element = document.getElementById('organizer-selector');
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        throw new Error("Please select an organizer.");
-      }
+      const payload = buildEventPayload(form.getValues());
+      const newEvent = await api.events.create(payload);
 
-      if (locationTab === 'main') {
-        if (locationMode === 'venue' && !formData.venue_id) throw new Error('Please select a venue');
-        if (locationMode === 'custom') {
-          if (!formData.location_name) throw new Error('Please enter a location name');
-          if (!isLocationValid) throw new Error('Events must be located within the Scottish Highlands.');
-        }
-      } else {
-        if (participatingVenues.length === 0) throw new Error('Please add at least one participating venue');
-      }
-      if (!formData.category_id) throw new Error('Please select a category');
-      if (new Date(formData.date_end) <= new Date(formData.date_start) && !noEndTime) throw new Error('End date must be after start date');
+      // Clear the draft from sessionStorage
+      clearDraft();
 
-      let calculatedDateStart = formData.date_start;
-      let calculatedDateEnd = formData.date_end;
-      let showtimesPayload: ShowtimeCreate[] | undefined = undefined;
-
-      if (isMultiSession && showtimes.length > 0) {
-        const startTimes = showtimes.map(st => new Date(st.start_time).getTime());
-        const endTimes = showtimes.map(st => st.end_time ? new Date(st.end_time).getTime() : new Date(st.start_time).getTime());
-        calculatedDateStart = new Date(Math.min(...startTimes)).toISOString();
-        calculatedDateEnd = new Date(Math.max(...endTimes)).toISOString();
-        showtimesPayload = showtimes;
-      } else if (isMultiSession && showtimes.length === 0) {
-        throw new Error('Please add at least one showtime');
-      } else {
-        showtimesPayload = undefined;
-        calculatedDateStart = new Date(formData.date_start).toISOString();
-        if (noEndTime) {
-          const startDate = new Date(formData.date_start);
-          calculatedDateEnd = new Date(startDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
-        } else {
-          calculatedDateEnd = new Date(formData.date_end).toISOString();
-        }
-      }
-
-      const eventData = {
-        title: formData.title,
-        description: formData.description || undefined,
-        category_id: formData.category_id,
-        venue_id: (locationTab === 'main' && locationMode === 'venue') ? (formData.venue_id || null) : null,
-        location_name: (locationTab === 'main' && locationMode === 'custom') ? formData.location_name : null,
-        latitude: (locationTab === 'main' && locationMode === 'custom') ? formData.latitude : null,
-        longitude: (locationTab === 'main' && locationMode === 'custom') ? formData.longitude : null,
-        date_start: calculatedDateStart,
-        date_end: calculatedDateEnd,
-        price: formData.price,
-        image_url: formData.image_url || undefined,
-        ticket_url: formData.ticket_url || undefined,
-        website_url: formData.website_url || undefined,
-        is_all_day: formData.is_all_day,
-        age_restriction: formData.age_restriction || undefined,
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
-        organizer_profile_id: selectedOrganizer || undefined, // Use explicit selection
-        is_recurring: formData.is_recurring,
-        recurrence_rule: (formData.is_recurring && formData.frequency === 'CUSTOM') ? formData.recurrence_rule : undefined,
-        frequency: formData.is_recurring ? formData.frequency : undefined,
-        recurrence_end_date: (formData.is_recurring && formData.ends_on === 'date') ? new Date(formData.recurrence_end_date).toISOString() : undefined,
-        weekdays: formData.is_recurring && formData.weekdays.length > 0 ? formData.weekdays : undefined,
-        participating_venue_ids: participatingVenues.length > 0 ? participatingVenues.map(v => v.id) : undefined,
-        showtimes: showtimesPayload,
-        // Map Display
-        map_display_lat: formData.map_display_lat,
-        map_display_lng: formData.map_display_lng,
-        map_display_label: formData.map_display_label || undefined,
-      };
-
-      const newEvent = await api.events.create(eventData);
-
-      // Build absolute public URL for sharing
+      // Build public URL
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const publicUrl = `${origin}/events/${newEvent.id}`;
 
       setNewEventId(newEvent.id);
       setNewEventUrl(publicUrl);
-      setEventStatus(newEvent.status === 'published' ? 'published' : newEvent.status === 'pending_moderation' ? 'pending_moderation' : 'pending');
+      setEventStatus(
+        newEvent.status === 'published' ? 'published' :
+        newEvent.status === 'pending_moderation' ? 'pending_moderation' : 'pending'
+      );
       setShowPostSubmitModal(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       if (err.status === 422 && err.detail) {
-        // Handle Pydantic validation errors
         const newFieldErrors: Record<string, string> = {};
-        let generalError = "Please correct the highlighted errors below.";
-
         err.detail.forEach((error: any) => {
           const field = error.loc[error.loc.length - 1];
           let msg = error.msg;
-
-          // Humanize common error messages
           if (error.type === 'string_too_long') {
-            const max = error.ctx?.limit_value || (field === 'description' ? 20000 : 255);
-            msg = `This ${field} is too long (Max ${max.toLocaleString()} characters).`;
+            const max = error.ctx?.limit_value || 255;
+            msg = `This field is too long (Max ${max.toLocaleString()} characters).`;
           } else if (error.type === 'value_error.missing' || error.type === 'missing') {
-            msg = "This field is required.";
+            msg = 'This field is required.';
           }
-
           newFieldErrors[field] = msg;
         });
-
         setFieldErrors(newFieldErrors);
-        setError(generalError);
+        setSubmitError('Please correct the highlighted errors below.');
       } else {
-        setError(err instanceof Error ? err.message : 'Failed to submit event.');
+        setSubmitError(err instanceof Error ? err.message : 'Failed to submit event.');
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
+  }, [form, wizard]);
+
+  // ─── Render Step Content ──────────────────────────────────
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <StepBasicsComponent
+            form={form}
+            categories={categories}
+            organizers={organizers}
+            user={user}
+            stepErrors={stepErrors}
+          />
+        );
+      case 2:
+        return (
+          <StepTimelineComponent
+            form={form}
+            stepErrors={stepErrors}
+          />
+        );
+      case 3:
+        return (
+          <StepMediaComponent
+            form={form}
+            stepErrors={stepErrors}
+          />
+        );
+      case 4:
+        return (
+          <StepReviewComponent
+            form={form}
+            categories={categories}
+            stepErrors={stepErrors}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  // ─── Slide Animation Classes ──────────────────────────────
+  const getSlideClass = () => {
+    if (isAnimating) {
+      return direction === 'forward'
+        ? 'translate-x-8 opacity-0'
+        : '-translate-x-8 opacity-0';
+    }
+    return 'translate-x-0 opacity-100';
   };
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Submit an Event</h1>
-            <p className="text-lg text-gray-600">Share your event with the Highland Events Hub community and reach thousands of locals and visitors.</p>
+      <Head>
+        <title>Submit an Event | Highland Events Hub</title>
+        <meta name="description" content="Share your event with the Highland Events Hub community." />
+      </Head>
+
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        {/* ─── Progress Bar (Sticky) ──────────────────────── */}
+        <WizardProgressBar
+          currentStep={currentStep}
+          completedSteps={completedSteps}
+          onStepClick={goToStep}
+        />
+
+        {/* ─── Page Header ────────────────────────────────── */}
+        <div className="max-w-3xl mx-auto px-4 pt-8 pb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
+            Submit an Event
+          </h1>
+          <p className="text-base sm:text-lg text-gray-500 mt-2">
+            {currentStep === 1 && "Let\u2019s start with the basics."}
+            {currentStep === 2 && 'When is it happening?'}
+            {currentStep === 3 && 'Make it stand out with a great image.'}
+            {currentStep === 4 && 'Final touches before publishing.'}
+          </p>
+        </div>
+
+        {/* ─── Error Banner ───────────────────────────────── */}
+        {(submitError || stepErrors) && (
+          <div className="max-w-3xl mx-auto px-4 mb-4">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm flex items-start gap-3">
+              <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                {submitError && <p className="font-medium">{submitError}</p>}
+                {stepErrors && (
+                  <ul className="mt-1 space-y-0.5">
+                    {Object.entries(stepErrors).map(([field, msg]) => (
+                      <li key={field} className="text-red-600">&bull; {msg}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Step Content (Animated) ────────────────────── */}
+        <div className="max-w-3xl mx-auto px-4 pb-8">
+          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+            <div className="p-5 sm:p-8">
+              <div
+                className={`transform transition-all duration-300 ease-out ${getSlideClass()}`}
+              >
+                {renderStep()}
+              </div>
+            </div>
+
+            {/* ─── Navigation Footer ──────────────────────── */}
+            <div className="px-5 sm:px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between gap-4">
+              {/* Back / Cancel */}
+              <div>
+                {isFirstStep ? (
+                  <Link
+                    href="/events"
+                    className="inline-flex items-center gap-2 px-5 py-3 text-gray-500 hover:text-gray-700 font-medium rounded-xl hover:bg-gray-100 transition-colors min-h-[48px]"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Cancel
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    disabled={isAnimating}
+                    className="inline-flex items-center gap-2 px-5 py-3 text-gray-600 hover:text-gray-800 font-medium rounded-xl hover:bg-gray-100 transition-colors min-h-[48px] disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back
+                  </button>
+                )}
+              </div>
+
+              {/* Step Counter (Mobile) */}
+              <div className="sm:hidden text-xs text-gray-400 font-medium">
+                {currentStep} / {WIZARD_STEPS.length}
+              </div>
+
+              {/* Next / Submit */}
+              <div>
+                {isLastStep ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    disabled={isSubmitting || isAnimating}
+                    isLoading={isSubmitting}
+                    onClick={handleSubmit}
+                    className="min-w-[160px] min-h-[48px] !rounded-xl shadow-lg shadow-emerald-200/50"
+                  >
+                    {isSubmitting ? 'Submitting...' : '\uD83C\uDF89 Publish Event'}
+                  </Button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => goNext()}
+                    disabled={isAnimating}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 active:bg-emerald-800 transition-all duration-150 shadow-lg shadow-emerald-200/50 min-h-[48px] min-w-[140px] justify-center disabled:opacity-50"
+                  >
+                    Continue
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            {/* Error Messages */}
-            <div className="max-w-3xl mb-8">
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm mb-6">
-                  {error}
-                </div>
-              )}
+          {/* ─── Draft Indicator ───────────────────────────── */}
+          <div className="mt-4 flex items-center justify-between text-xs text-gray-400">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Draft auto-saved</span>
             </div>
-
-            <div className="space-y-6">
-
-              < OrganizerSelector
-                user={user}
-                organizers={organizers}
-                selectedId={selectedOrganizer || ''} // Pass '' if null to avoid controlled/uncontrolled warning, though component handles it? actually component expects string.
-                onChange={(id) => {
-                  setSelectedOrganizer(id);
-                  setOrganizerError(undefined);
-                }}
-                error={organizerError}
-              />
-
-              <EventMediaSection
-                imageUrl={formData.image_url}
-                onUpload={handleImageUpload}
-                onRemove={handleImageRemove}
-              />
-
-              <EventBasicDetails
-                formData={formData}
-                handleChange={handleChange}
-                setFormData={setFormData}
-                categories={categories}
-                organizers={organizers}
-                userEmail={user?.email}
-                selectedTags={selectedTags}
-                setSelectedTags={setSelectedTags}
-                fieldErrors={fieldErrors}
-              />
-
-              <EventLocationSection
-                locationTab={locationTab}
-                setLocationTab={setLocationTab}
-                locationMode={locationMode}
-                setLocationMode={setLocationMode}
-                formData={formData}
-                handleVenueChange={handleVenueChange}
-                handlePlaceSelect={handlePlaceSelect}
-                handleLocationChange={handleLocationChange}
-                participatingVenues={participatingVenues}
-                setParticipatingVenues={setParticipatingVenues}
-                isLocationValid={isLocationValid}
-                onMapDisplayChange={handleMapDisplayChange}
-                fieldErrors={fieldErrors}
-              />
-
-              <EventScheduleSection
-                formData={formData}
-                setFormData={setFormData}
-                handleChange={handleChange}
-                isMultiSession={isMultiSession}
-                setIsMultiSession={setIsMultiSession}
-                showtimes={showtimes}
-                setShowtimes={setShowtimes}
-                noEndTime={noEndTime}
-                setNoEndTime={setNoEndTime}
-                isAllDay={formData.is_all_day}
-                setIsAllDay={(val) => setFormData(prev => ({ ...prev, is_all_day: val }))}
-                fieldErrors={fieldErrors}
-              />
-
-              <EventTicketingSection
-                formData={formData}
-                handleChange={handleChange}
-                setFormData={setFormData}
-                fieldErrors={fieldErrors}
-              />
-            </div>
-
-            <div className="flex justify-end pt-8 gap-4 border-t border-gray-200 mt-8">
-              <Link href="/events" className="px-6 py-3 text-gray-600 hover:text-emerald-600 font-medium">Cancel</Link>
-              <Button type="submit" variant="primary" size="lg" disabled={isLoading} className="min-w-[150px]">
-                {isLoading ? 'Submitting...' : 'Submit Event'}
-              </Button>
-            </div>
-          </form>
+            <button
+              type="button"
+              onClick={clearWizard}
+              className="hover:text-red-500 transition-colors px-2 py-1 -mr-2"
+            >
+              Clear draft
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Post-Submit Modal */}
+      {/* ─── Post-Submit Success Modal ──────────────────── */}
       {showPostSubmitModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => {
+        <PostSubmitModal
+          eventStatus={eventStatus}
+          newEventId={newEventId}
+          newEventUrl={newEventUrl}
+          onClose={(navigateTo) => {
             setShowPostSubmitModal(false);
-            router.push(eventStatus === 'published' ? `/events/${newEventId}` : '/account');
+            router.push(navigateTo);
           }}
-        >
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-          {/* Modal */}
-          <div
-            className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {eventStatus === 'published' ? (
-              /* ===== Branch A: Live / Approved ===== */
-              <>
-                <div className="w-16 h-16 mx-auto mb-5 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Your event is live on the map.</h2>
-                <p className="text-gray-600 mb-8">
-                  Now, get it in front of your audience.
-                </p>
-
-                {/* Share Action — Web Share API with clipboard fallback */}
-                <div className="mb-6">
-                  <button
-                    onClick={async () => {
-                      try {
-                        if (navigator.share) {
-                          await navigator.share({ title: 'Check out my event!', url: newEventUrl });
-                        } else {
-                          await navigator.clipboard.writeText(newEventUrl);
-                          setShareCopied(true);
-                          setTimeout(() => setShareCopied(false), 2500);
-                        }
-                      } catch (err: any) {
-                        // User cancelled share or API unavailable — fall back to clipboard
-                        if (err?.name !== 'AbortError') {
-                          await navigator.clipboard.writeText(newEventUrl);
-                          setShareCopied(true);
-                          setTimeout(() => setShareCopied(false), 2500);
-                        }
-                      }
-                    }}
-                    className={`w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-medium transition-all duration-200 ${shareCopied
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-900 text-white hover:bg-gray-800'
-                      }`}
-                  >
-                    {shareCopied ? (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Link Copied!
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                        </svg>
-                        Share Event
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setShowPostSubmitModal(false);
-                    router.push(`/events/${newEventId}`);
-                  }}
-                  className="text-sm text-gray-500 hover:text-emerald-600 transition-colors"
-                >
-                  Skip and view my event page &rarr;
-                </button>
-              </>
-            ) : (
-              /* ===== Branch B: Pending ===== */
-              <>
-                <div className="w-16 h-16 mx-auto mb-5 bg-amber-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Event submitted for review.</h2>
-                <p className="text-gray-600 mb-8">
-                  Your event is currently pending approval by our moderation team to ensure quality. You will receive an email the moment it goes live on the map.
-                </p>
-
-                <button
-                  onClick={() => {
-                    setShowPostSubmitModal(false);
-                    router.push('/account');
-                  }}
-                  className="w-full px-5 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium"
-                >
-                  Got it, take me to my dashboard
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        />
       )}
-
     </AuthGuard>
   );
 }
