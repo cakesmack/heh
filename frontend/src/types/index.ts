@@ -458,6 +458,7 @@ export interface EventFilter {
   featured_only?: boolean;
   organizer_id?: string;
   organizer_profile_id?: string;
+  max_duration_days?: number;
   include_past?: boolean;
   skip?: number;
   limit?: number;
@@ -646,71 +647,6 @@ export interface PostcodeLookupResult {
 export interface TagMergeRequest {
   source_tag_id: string;
   target_tag_id: string;
-}
-
-// ============================================================
-// HERO SYSTEM TYPES
-// ============================================================
-
-export interface HeroSlot {
-  id: number;
-  position: number;
-  type: 'welcome' | 'spotlight_event';
-  event_id?: string;
-  image_override?: string;
-  image_override_left?: string;
-  image_override_right?: string;
-  title_override?: string;
-  cta_override?: string;
-  // New Fields
-  link?: string;
-  badge_text?: string;
-  badge_color?: string; // Default 'emerald'
-
-  overlay_style: 'dark' | 'light' | 'gradient';
-  is_active: boolean;
-  start_date?: string;
-  end_date?: string;
-  event?: EventResponse;
-}
-
-export interface HeroSlotCreate {
-  position: number;
-  type?: string;
-  event_id?: string;
-  image_override?: string;
-  image_override_left?: string;
-  image_override_right?: string;
-  title_override?: string;
-  cta_override?: string;
-  // New Fields
-  link?: string;
-  badge_text?: string;
-  badge_color?: string;
-
-  overlay_style?: string;
-  is_active?: boolean;
-  start_date?: string;
-  end_date?: string;
-}
-
-export interface HeroSlotUpdate {
-  type?: string;
-  event_id?: string;
-  image_override?: string;
-  image_override_left?: string;
-  image_override_right?: string;
-  title_override?: string;
-  cta_override?: string;
-  // New Fields
-  link?: string;
-  badge_text?: string;
-  badge_color?: string;
-
-  overlay_style?: string;
-  is_active?: boolean;
-  start_date?: string;
-  end_date?: string;
 }
 
 export interface VenueClaim {

@@ -7,12 +7,40 @@ import Link from 'next/link';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import { EventResponse } from '@/types';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
+import { toast } from 'react-hot-toast';
 
 interface SmallEventCardProps {
     event: EventResponse;
 }
 
 export default function SmallEventCard({ event }: SmallEventCardProps) {
+    const handleShare = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const shareUrl = `${window.location.origin}/events/${event.slug || event.id}`;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: event.title,
+                    text: event.title,
+                    url: shareUrl,
+                });
+            } catch (err) {
+                if ((err as Error).name !== 'AbortError') {
+                    console.error('Error sharing:', err);
+                }
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                toast.success('Link copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                toast.error('Failed to copy link');
+            }
+        }
+    };
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-GB', {
@@ -40,8 +68,17 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
                     </div>
                 )}
 
-                <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col gap-2">
                     <BookmarkButton eventId={event.id} size="sm" className="bg-white/90 hover:bg-white shadow-sm" />
+                    <button
+                        onClick={handleShare}
+                        className="p-1.5 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center justify-center"
+                        title="Share Event"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                    </button>
                 </div>
 
                 {/* Gradient Overlay - Matches MagazineGrid */}
@@ -69,7 +106,17 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
                             )}
                         </span>
                         {event.category && (
-                            <span className="text-gray-300 text-[10px] font-bold uppercase tracking-wider opacity-80">
+                            <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
+                                style={{
+                                    backgroundColor: `${event.category.gradient_color || '#10b981'}20`,
+                                    color: event.category.gradient_color || '#10b981',
+                                }}
+                            >
+                                <span
+                                    className="w-1 h-1 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: event.category.gradient_color || '#10b981' }}
+                                />
                                 {event.category.name}
                             </span>
                         )}

@@ -236,11 +236,11 @@ export default function DiscoveryBar({
     // Dynamic classes based on mode
     const containerClasses = mode === 'floating'
         ? "hidden md:block bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40"
-        : "hidden md:block bg-white border-b border-gray-200 mb-8"; // Embedded mode: no sticky, no shadow, margin bottom
+        : "hidden md:block bg-white rounded-full border border-gray-200 mb-8"; // Embedded mode: rounded-full corners, border instead of border-b
 
     const innerClasses = mode === 'floating'
         ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4"
-        : "w-full py-4"; // Embedded: full width of parent
+        : "w-full py-4 px-8 md:px-10"; // Embedded: increased horizontal padding to give inputs breathing room
 
     return (
         <>

@@ -35,7 +35,7 @@ class BookingStatus(str, Enum):
 # Slot limits and pricing (pence)
 SLOT_CONFIG = {
     SlotType.CATEGORY_PINNED: {"max": 3, "price_per_day": 1000, "min_days": 3},
-    SlotType.MAGAZINE_CAROUSEL: {"max": 3, "price_per_day": 1500, "min_days": 1},
+    SlotType.MAGAZINE_CAROUSEL: {"max": 4, "price_per_day": 1500, "min_days": 1},
 }
 
 

@@ -1,14 +1,11 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select, desc
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
 from app.core.database import get_session
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.follow import Follow
-from app.models.event import Event
 from app.models.venue import Venue
 from app.models.organizer import Organizer
-from app.schemas.event import EventResponse
 
 router = APIRouter()
 
@@ -140,67 +137,6 @@ def unfollow_target(
     return {"ok": True}
 
 
-
-@router.get("/feed", response_model=List[EventResponse])
-def get_activity_feed(
-    limit: int = 20,
-    skip: int = 0,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    """
-    Get events from followed venues, organizers, and categories.
-    """
-    from app.api.events import build_event_response
-    from app.models.user_category_follow import UserCategoryFollow
-    
-    # Get all venue/group follows
-    follows = session.exec(
-        select(Follow).where(Follow.follower_id == current_user.id)
-    ).all()
-    
-    # Get all category follows
-    category_follows = session.exec(
-        select(UserCategoryFollow).where(UserCategoryFollow.user_id == current_user.id)
-    ).all()
-    
-    # If not following anything, return empty
-    if not follows and not category_follows:
-        return []
-
-    followed_venue_ids = [f.target_id for f in follows if f.target_type == "venue"]
-    followed_group_ids = [f.target_id for f in follows if f.target_type == "group"]
-    followed_category_ids = [f.category_id for f in category_follows]
-
-    # Build query conditions
-    conditions = []
-    if followed_venue_ids:
-        conditions.append(Event.venue_id.in_(followed_venue_ids))
-    if followed_group_ids:
-        conditions.append(Event.organizer_profile_id.in_(followed_group_ids))
-    if followed_category_ids:
-        conditions.append(Event.category_id.in_(followed_category_ids))
-    
-    if not conditions:
-        return []
-    
-    # Query events matching any followed interest
-    # Filter out child recurring events (show only parents)
-    # CRITICAL: Only show published events (not deleted/pending)
-    from sqlalchemy import or_
-    
-    query = select(Event).where(
-        or_(*conditions)
-    ).where(
-        Event.parent_event_id == None
-    ).where(
-        Event.status == "published"
-    ).order_by(desc(Event.created_at)).offset(skip).limit(limit)
-    
-    events = session.exec(query).all()
-    
-    # Build proper EventResponse objects with venue data
-    return [build_event_response(event, session) for event in events]
 
 
 @router.get("/following/venues")

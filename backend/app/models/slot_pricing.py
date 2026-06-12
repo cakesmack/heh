@@ -37,7 +37,7 @@ DEFAULT_PRICING = {
     SlotType.MAGAZINE_CAROUSEL.value: {
         "price_per_day": 1500,
         "min_days": 1,
-        "max_concurrent": 3,
+        "max_concurrent": 4,
         "description": "Featured in Magazine section"
     },
 }

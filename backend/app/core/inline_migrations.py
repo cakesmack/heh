@@ -48,41 +48,10 @@ def run_inline_migrations(session: Session) -> None:
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_group_id VARCHAR(50);"
     ))
 
-    # --- Triptych Hero columns ---
-    session.exec(text(
-        "ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_left VARCHAR(500);"
-    ))
-    session.exec(text(
-        "ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS image_override_right VARCHAR(500);"
-    ))
-
     # --- Venue columns ---
     session.exec(text(
         "ALTER TABLE venues ADD COLUMN IF NOT EXISTS is_dismissed BOOLEAN DEFAULT FALSE;"
     ))
-
-    # --- Hero 4-Slot Magazine columns ---
-    session.exec(text(
-        "ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS link VARCHAR(500);"
-    ))
-    session.exec(text(
-        "ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_text VARCHAR(50);"
-    ))
-    session.exec(text(
-        "ALTER TABLE hero_slots ADD COLUMN IF NOT EXISTS badge_color VARCHAR(50) DEFAULT 'emerald';"
-    ))
-
-    # --- Initialize 4 Fixed Hero Slots (positions 0-3) ---
-    for i in range(4):
-        result = session.exec(
-            text(f"SELECT id FROM hero_slots WHERE position = {i}")
-        ).first()
-        if not result:
-            session.exec(text(f"""
-                INSERT INTO hero_slots (position, type, is_active, badge_color, overlay_style)
-                VALUES ({i}, 'spotlight_event', false, 'emerald', 'dark')
-            """))
-            logger.info("Initialized Hero Slot position %d", i)
 
     # --- Analytics counter columns ---
     session.exec(text(

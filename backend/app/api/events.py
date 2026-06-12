@@ -493,6 +493,7 @@ def list_events(
     include_past: bool = Query(False, description="Include past events"),
     status: Optional[str] = Query(None, description="Filter by explicit status (e.g. 'pending')"),
     is_recurring: Optional[bool] = Query(None, description="Filter by recurrence status"),
+    max_duration_days: Optional[float] = Query(None, description="Maximum event duration in days"),
 
     time_range: Optional[str] = Query(None, description="'upcoming', 'past', or 'all'"),
     sort_by: str = Query("date", description="Sort by 'date' (default) or 'created'"),
@@ -888,6 +889,10 @@ def list_events(
     # Filter by recurrence status
     if is_recurring is not None:
         query = query.where(Event.is_recurring == is_recurring)
+
+    # Filter by maximum duration
+    if max_duration_days is not None:
+        query = query.where(Event.date_end - Event.date_start <= timedelta(days=max_duration_days))
 
     # Filter by price range
     if price_min is not None:

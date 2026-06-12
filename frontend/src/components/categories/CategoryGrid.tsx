@@ -24,33 +24,26 @@ export default function CategoryGrid() {
 
   if (loading) {
     return (
-      <section className="w-full bg-white">
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-[500px] bg-gray-200 animate-pulse" />
-          ))}
+      <section className="py-3 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-10 w-28 rounded-full bg-gray-100 animate-pulse flex-shrink-0" />
+            ))}
+          </div>
         </div>
       </section>
     );
   }
 
+  if (categories.length === 0) return null;
+
   return (
-    <section className="w-full bg-white">
-      {/* Desktop Grid / Mobile Carousel Container */}
-      <div className="w-full">
-        {/*
-                Mobile: 2-Row Horizontal Scroll (Grid of 6 items visible, swipe for more)
-                Desktop: Standard Grid with Hybrid Radius (Sharp corners)
-            */}
-        <div className="grid grid-cols-2 gap-0 md:grid-cols-2 lg:grid-cols-4 w-full">
-          {categories.map((category, index) => (
-            <div
-              key={category.id}
-              className={`h-40 sm:h-48 md:h-72 rounded-none overflow-hidden relative ${index >= 8 ? 'lg:col-span-2' : ''
-                }`}
-            >
-              <CategoryCard category={category} />
-            </div>
+    <section className="py-3 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
+          {categories.map((category) => (
+            <CategoryCard key={category.id} category={category} />
           ))}
         </div>
       </div>

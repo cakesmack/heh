@@ -11,7 +11,6 @@ from .tag import Tag, EventTag
 from .event import Event
 from .promotion import Promotion, DiscountType
 from .payment import Payment, PaymentStatus
-from .hero import HeroSlot
 from .venue_claim import VenueClaim
 from .collection import Collection
 from .organizer import Organizer
@@ -56,8 +55,6 @@ __all__ = [
     # Payment
     "Payment",
     "PaymentStatus",
-    # Hero
-    "HeroSlot",
     # Venue Claim
     "VenueClaim",
     # Collection

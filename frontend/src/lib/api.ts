@@ -43,9 +43,6 @@ import type {
   UserDashboardStats,
   PostcodeLookupResult,
   TagMergeRequest,
-  HeroSlot,
-  HeroSlotCreate,
-  HeroSlotUpdate,
   VenueClaim,
   AddressSuggestion,
   VenueAnalyticsSummary,
@@ -308,6 +305,7 @@ export const eventsAPI = {
       if (filters.featured_only) params.featured_only = 'true';
       if (filters.organizer_id) params.organizer_id = filters.organizer_id;
       if (filters.organizer_profile_id) params.organizer_profile_id = filters.organizer_profile_id;
+      if (filters.max_duration_days !== undefined) params.max_duration_days = filters.max_duration_days;
       if (filters.venue_id) params.venue_id = filters.venue_id;
       if (filters.include_past) params.include_past = 'true';
       if (filters.skip !== undefined) params.skip = filters.skip;
@@ -1431,48 +1429,6 @@ export const adminAPI = {
 };
 
 // ============================================================
-// HERO API
-// ============================================================
-
-export const heroAPI = {
-  /**
-   * List all hero slots
-   */
-  list: async (activeOnly = false): Promise<HeroSlot[]> => {
-    return apiFetch<HeroSlot[]>(`/api/hero?active_only=${activeOnly}`, {}, false);
-  },
-
-  /**
-   * Create new hero slot
-   */
-  create: async (data: HeroSlotCreate): Promise<HeroSlot> => {
-    return apiFetch<HeroSlot>('/api/hero', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  /**
-   * Update hero slot
-   */
-  update: async (id: number, data: HeroSlotUpdate): Promise<HeroSlot> => {
-    return apiFetch<HeroSlot>(`/api/hero/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  /**
-   * Delete hero slot
-   */
-  delete: async (id: number): Promise<void> => {
-    return apiFetch<void>(`/api/hero/${id}`, {
-      method: 'DELETE',
-    });
-  },
-};
-
-// ============================================================
 // VENUE CLAIMS API
 // ============================================================
 export const venueClaimsAPI = {
@@ -1734,7 +1690,6 @@ export const api = {
   geocode: geocodeAPI,
   users: usersAPI,
   admin: adminAPI,
-  hero: heroAPI,
   venueClaims: {
     create: async (venueId: string, reason: string) => {
       return apiFetch<VenueClaim>(`/api/venues/${venueId}/claim`, {

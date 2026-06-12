@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import { useRouter } from 'next/router';
@@ -9,6 +10,7 @@ import { Badge } from '@/components/common/Badge';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 import { stripHtml } from '@/lib/stringUtils';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'react-hot-toast';
 
 interface EventCardProps {
   event: EventResponse;
@@ -17,6 +19,7 @@ interface EventCardProps {
 
 export function EventCard({ event, canManage = false }: EventCardProps) {
   const { user } = useAuth();
+  const [imageLoading, setImageLoading] = useState(true);
 
   const hasEditRights = canManage || (user && (
     user.is_admin ||
@@ -24,6 +27,33 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
     (event.venue_owner_id && user.id === event.venue_owner_id) ||
     (event.organizer_profile_id && user.organizer_profiles?.some(p => p.id === event.organizer_profile_id))
   ));
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/events/${event.slug || event.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: event.description ? stripHtml(event.description).substring(0, 100) : event.title,
+          url: shareUrl,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied to clipboard!');
+      } catch (err) {
+        console.error('Failed to copy:', err);
+        toast.error('Failed to copy link');
+      }
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -66,7 +96,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
 
       {/* Image */}
       {event.image_url && (
-        <div className="relative aspect-[16/9] bg-gray-200 skeleton">
+        <div className={`relative aspect-[16/9] bg-gray-200 ${imageLoading ? 'skeleton' : ''}`}>
           <OptimizedImage
             src={event.image_url}
             variant="hero"
@@ -74,6 +104,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover"
+            onLoad={() => setImageLoading(false)}
           />
           {event.featured && (
             <div className="absolute top-2 left-2 z-20">
@@ -86,29 +117,15 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
           {/* Action Buttons (Z-20 to sit above link overlay) */}
           <div className="absolute top-2 right-2 z-20 flex flex-col gap-2">
             <BookmarkButton eventId={event.id} size="sm" className="shadow-sm bg-white hover:bg-gray-100 text-gray-700" />
-
-            {hasEditRights && (
-              <>
-                <Link
-                  href={`/events/${event.id}/edit`}
-                  className="p-1.5 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-sm transition-colors flex items-center justify-center"
-                  title="Edit Event"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </Link>
-                <Link
-                  href={`/social/${event.id}`}
-                  className="p-1.5 bg-indigo-600/90 hover:bg-indigo-700 text-white rounded-full shadow-sm transition-colors flex items-center justify-center"
-                  title="Create Poster"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                </Link>
-              </>
-            )}
+            <button
+              onClick={handleShare}
+              className="p-1.5 bg-white/95 hover:bg-white text-gray-700 rounded-full shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center justify-center"
+              title="Share Event"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
@@ -118,9 +135,20 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
         {/* Category */}
         {event.category && (
           <div className="mb-2 relative z-0">
-            <Badge variant="default" size="sm">
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+              style={{
+                backgroundColor: `${event.category.gradient_color || '#10b981'}10`,
+                color: event.category.gradient_color || '#10b981',
+                border: `1px solid ${event.category.gradient_color || '#10b981'}20`,
+              }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: event.category.gradient_color || '#10b981' }}
+              />
               {event.category.name}
-            </Badge>
+            </span>
           </div>
         )}
 

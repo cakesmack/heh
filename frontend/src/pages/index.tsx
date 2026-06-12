@@ -6,24 +6,21 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
-import { GetServerSideProps } from 'next';
-import { useGeolocation } from '@/hooks/useGeolocation';
 import { useEvents } from '@/hooks/useEvents';
 import { useAuth } from '@/hooks/useAuth';
 import HeroSection from '@/components/home/HeroSection';
-import Features from '@/components/home/Features';
-import MagazineGrid from '@/components/home/MagazineGrid';
 import CategoryGrid from '@/components/categories/CategoryGrid';
-import HomeFeedTabs from '@/components/home/HomeFeedTabs';
 import FeaturedVenues from '@/components/home/FeaturedVenues';
-
-
-import DiscoveryBar from '@/components/home/DiscoveryBar';
 import SearchResultsDrawer from '@/components/home/SearchResultsDrawer';
 import RecommendedEvents from '@/components/home/RecommendedEvents';
 import PopularEvents from '@/components/home/PopularEvents';
 import PopularLocations from '@/components/PopularLocations';
 import CuratedCollections from '@/components/home/CuratedCollections';
+import SpotlightEvents from '@/components/home/SpotlightEvents';
+import HappeningNextEvents from '@/components/home/HappeningNextEvents';
+import LocalPartners from '@/components/home/LocalPartners';
+import { eventsAPI } from '@/lib/api';
+import { EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
@@ -37,13 +34,42 @@ interface HomePageProps {
 
 // Client-side only - no getServerSideProps
 export default function HomePage() {
-  const { coordinates } = useGeolocation();
   const { user } = useAuth();
-  const [heroImage, setHeroImage] = useState<string>(DEFAULT_OG_IMAGE);
 
+  // Rows 1 & 2 State
+  const [spotlightEvents, setSpotlightEvents] = useState<EventResponse[]>([]);
+  const [happeningNextEvents, setHappeningNextEvents] = useState<EventResponse[]>([]);
+  const [loadingRows, setLoadingRows] = useState(true);
 
-  const [page, setPage] = useState(1);
-  const EVENTS_PER_PAGE = 9;
+  useEffect(() => {
+    const fetchHomeEvents = async () => {
+      try {
+        const [spotlightRes, upcomingRes] = await Promise.all([
+          eventsAPI.list({ featured_only: true, limit: 4 }),
+          eventsAPI.list({ limit: 14, include_past: false, sort_by: 'date', max_duration_days: 3 })
+        ]);
+
+        const spotlight = spotlightRes.events || [];
+        setSpotlightEvents(spotlight);
+
+        // Exclude spotlight events from happening next
+        const spotlightIds = new Set(spotlight.map(e => e.id));
+        const spotlightParentIds = new Set(spotlight.map(e => e.parent_event_id).filter(Boolean));
+
+        const filteredUpcoming = (upcomingRes.events || [])
+          .filter(e => !spotlightIds.has(e.id) && (!e.parent_event_id || !spotlightParentIds.has(e.parent_event_id)))
+          .slice(0, 10);
+
+        setHappeningNextEvents(filteredUpcoming);
+      } catch (err) {
+        console.error('Failed to fetch home page rows:', err);
+      } finally {
+        setLoadingRows(false);
+      }
+    };
+
+    fetchHomeEvents();
+  }, []);
 
   // Search State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -59,32 +85,7 @@ export default function HomePage() {
     category?: string;
   }>({});
 
-  // Fetch Hero Image for Open Graph (Client Side Palliatives - Real OG needs server)
-  // Since we are static, we can't dynamically change the HEAD meta tags per request based on DB
-  // BUT we can set a good default.
-  // Ideally, for proper social sharing, we'd use a separate OG service or Edge Functions.
-  // For now, we accept the static default.
-
-  // 1. Fetch Hero Events (Top 10 Featured)
-  const { events: heroEvents } = useEvents({
-    filters: { featured_only: true, limit: 10 },
-    autoFetch: true,
-  });
-
-  // 2. Fetch Magazine Grid Events (Static Teaser)
-  const {
-    events: magazineEvents,
-    isLoading: isMagazineLoading
-  } = useEvents({
-    filters: {
-      limit: 16, // Carousel (up to 3) + 12 grid items + buffer
-      skip: 0,
-      sort_by: 'created' // "Just Added" Logic
-    },
-    autoFetch: true, // Auto fetch on mount
-  });
-
-  // 3. Search Events
+  // Search Events
   const {
     events: searchResults,
     total: totalSearchResults,
@@ -246,14 +247,17 @@ export default function HomePage() {
         <meta property="og:type" content="website" />
       </Head>
 
-      {/* Hero Section */}
-      <HeroSection />
+      {/* Hero Section with Search */}
+      <HeroSection onSearch={handleSearch} isSearchLoading={isSearchLoading} />
 
-      {/* Discovery System */}
-      <DiscoveryBar onSearch={handleSearch} isLoading={isSearchLoading} />
+      {/* Categories Section */}
+      <div id="categories">
+        <CategoryGrid />
+      </div>
 
-      {/* Features Section - Only show when search is NOT active to reduce clutter */}
-      {!isSearchOpen && <Features />}
+      {/* Popular Locations Grid */}
+      <PopularLocations />
+
 
       <SearchResultsDrawer
         isOpen={isSearchOpen}
@@ -269,56 +273,26 @@ export default function HomePage() {
         onSortChange={handleSortChange}
       />
 
-      {/* Feed Switcher Section */}
-      <HomeFeedTabs latestEvents={magazineEvents} user={user} />
+
+      {/* Row 2 - Happening Next */}
+      <HappeningNextEvents events={happeningNextEvents} isLoading={loadingRows} />
+
+      {/* Row 1 - Spotlight */}
+      <SpotlightEvents events={spotlightEvents} isLoading={loadingRows} />
+
+      {/* Row 3 - Popular Events */}
+      <PopularEvents />
 
       <RecommendedEvents />
 
-      {/* Popular Events Section */}
-      <PopularEvents />
+      {/* Row 4 - Curated Collections */}
+      <CuratedCollections />
 
-      {/* Organizer CTA Banner */}
-      <section className="relative py-28 px-4 text-center overflow-hidden">
-        {/* Background Image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `url(${optimizeImage('dd6cb0f1-b4ca-403c-fb75-d31c4ae4e000', 'hero')})`,
-          }}
-        />
-        {/* Green Overlay */}
-        <div className="absolute inset-0 bg-emerald-700/90" />
-
-        {/* Content */}
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-            Fill Your Venue. Find Your Crowd.
-          </h2>
-          <p className="text-emerald-100 mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-            Stop hoping the Facebook algorithm works. List your event on the Highlands' dedicated discovery platform and get seen by people actively looking for things to do.
-          </p>
-          <a
-            href="/submit-event"
-            className="inline-block bg-white text-emerald-700 font-bold py-4 px-10 rounded-full hover:bg-emerald-50 transition-colors shadow-xl text-lg"
-          >
-            List an Event for Free
-          </a>
-        </div>
-      </section>
-
-      {/* Featured Venues Carousel */}
+      {/* Row 5 - Top Venues */}
       <FeaturedVenues />
 
-      {/* Categories Section */}
-      <div id="categories">
-        <CategoryGrid />
-      </div>
-
-      {/* Popular Locations Grid */}
-      <PopularLocations />
-
-      {/* Curated Collections */}
-      <CuratedCollections />
+      {/* Local Partners B2B Real Estate */}
+      {false && <LocalPartners />}
 
       {/* CTA Section - Guests Only */}
       {!user && (
@@ -351,6 +325,35 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Organizer CTA Banner */}
+      <section className="relative py-28 px-4 text-center overflow-hidden">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url(${optimizeImage('dd6cb0f1-b4ca-403c-fb75-d31c4ae4e000', 'hero')})`,
+          }}
+        />
+        {/* Green Overlay */}
+        <div className="absolute inset-0 bg-emerald-700/90" />
+
+        {/* Content */}
+        <div className="relative z-10 max-w-3xl mx-auto">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+            Fill Your Venue. Find Your Crowd.
+          </h2>
+          <p className="text-emerald-100 mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            Stop hoping the Facebook algorithm works. List your event on the Highlands' dedicated discovery platform and get seen by people actively looking for things to do.
+          </p>
+          <a
+            href="/submit-event"
+            className="inline-block bg-white text-emerald-700 font-bold py-4 px-10 rounded-full hover:bg-emerald-50 transition-colors shadow-xl text-lg"
+          >
+            List an Event for Free
+          </a>
+        </div>
+      </section>
     </div>
   );
 }

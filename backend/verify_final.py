@@ -1,10 +1,10 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 from app.main import app
-from app.db.session import engine
+from app.core.database import engine
 from app.models.user import User
 from app.models.event import Event
-from app.api.deps import get_current_user, get_current_user_optional
+from app.core.security import get_current_user, get_current_user_optional
 
 client = TestClient(app)
 

@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { eventsAPI, searchAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
-import EventCardSkeleton from '@/components/events/EventCardSkeleton';
+import { EventCardSkeleton } from '@/components/events/EventCardSkeleton';
 import Link from 'next/link';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 
