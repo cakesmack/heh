@@ -94,14 +94,14 @@ export default function SearchResultsDrawer({
 
                 {/* Content */}
                 {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+                    <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
                         {[...Array(4)].map((_, i) => (
                             <div key={i} className="aspect-[4/3] bg-gray-200 rounded-xl" />
                         ))}
                     </div>
                 ) : results.length > 0 ? (
                     <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {results.map((event) => (
                                 <SmallEventCard key={event.id} event={event} />
                             ))}

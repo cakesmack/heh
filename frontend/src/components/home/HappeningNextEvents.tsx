@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { EventResponse } from '@/types';
 import { EventCard } from '@/components/events/EventCard';
 import { EventCardSkeleton } from '@/components/events/EventCardSkeleton';
@@ -55,7 +55,7 @@ export default function HappeningNextEvents({ events, isLoading }: HappeningNext
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                        <span>📅</span> Happening Next
+                        <Calendar className="w-6 h-6 text-emerald-600" /> Happening Next
                     </h2>
                     <p className="text-sm text-gray-500 mt-1">
                         Upcoming events starting from now, ordered chronologically
