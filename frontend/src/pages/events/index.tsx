@@ -4,6 +4,8 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useSearch } from '@/context/SearchContext';
 import { EventList } from '@/components/events/EventList';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
+import CategoryGrid from '@/components/categories/CategoryGrid';
+import PopularLocations from '@/components/PopularLocations';
 import { EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { eventsAPI } from '@/lib/api';
@@ -197,6 +199,32 @@ export default function EventsPage() {
             isLoading={isLoading}
             initialFilters={initialFilters}
             mode="embedded"
+            hideCategory={true}
+          />
+        </div>
+
+        {/* Category & Location scrolling pills */}
+        <div className="space-y-4 mb-8">
+          <CategoryGrid
+            activeCategory={currentFilters.category}
+            onSelectCategory={(slug) => {
+              const newCategory = currentFilters.category === slug ? undefined : slug;
+              handleSearch({ ...currentFilters, category: newCategory });
+            }}
+          />
+          <PopularLocations
+            activeLocation={currentFilters.location}
+            onSelectLocation={(name) => {
+              const newLocation = currentFilters.location === name ? undefined : name;
+              // Reset GPS parameters when location pill is selected
+              handleSearch({
+                ...currentFilters,
+                location: newLocation,
+                latitude: undefined,
+                longitude: undefined,
+                radius: undefined
+              });
+            }}
           />
         </div>
 

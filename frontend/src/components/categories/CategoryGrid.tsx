@@ -3,7 +3,12 @@ import { Category } from '@/types';
 import { api } from '@/lib/api';
 import CategoryCard from './CategoryCard';
 
-export default function CategoryGrid() {
+interface CategoryGridProps {
+  activeCategory?: string;
+  onSelectCategory?: (slug: string) => void;
+}
+
+export default function CategoryGrid({ activeCategory, onSelectCategory }: CategoryGridProps = {}) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +48,12 @@ export default function CategoryGrid() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
           {categories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
+            <CategoryCard
+              key={category.id}
+              category={category}
+              isActive={activeCategory === category.slug}
+              onClick={onSelectCategory}
+            />
           ))}
         </div>
       </div>
