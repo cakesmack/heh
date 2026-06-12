@@ -30,7 +30,7 @@ export default function HeroSection({ onSearch, isSearchLoading = false }: HeroS
             {/* Background Image */}
             <div
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: "url('/images/hero-bg.png')" }}
+                style={{ backgroundImage: "url('/images/hero-bg.jpg')" }}
             />
 
             {/* Heavy dark overlay */}
