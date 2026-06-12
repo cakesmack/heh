@@ -87,7 +87,7 @@ export default function RisingLocationsWidget() {
 
     if (isLoading) {
         return (
-            <Card className="h-full">
+            <Card padding="sm" className="h-full">
                 <div className="animate-pulse space-y-4">
                     <div className="h-6 bg-gray-200 rounded w-1/3"></div>
                     <div className="space-y-3">
@@ -101,7 +101,7 @@ export default function RisingLocationsWidget() {
     }
 
     return (
-        <Card className="h-full">
+        <Card padding="sm" className="h-full">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">Rising Locations</h3>
                 <div className="flex items-center gap-3">

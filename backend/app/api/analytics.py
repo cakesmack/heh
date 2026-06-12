@@ -11,6 +11,7 @@ from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
 from app.models.category import Category
+from app.models.tag import Tag, EventTag
 
 router = APIRouter()
 
@@ -31,6 +32,7 @@ class AdminAnalyticsSummary(BaseModel):
     total_unique_visitors: int
     top_events: List[Dict[str, Any]]
     top_categories: List[Dict[str, Any]]
+    top_tags: List[Dict[str, Any]] = []
     content_gaps: List[Dict[str, Any]]
     conversion_rate: float
     total_event_views: int
@@ -160,7 +162,7 @@ def get_admin_summary(
     # Get all search events and filter by result_count == 0 in Python
     search_events = session.exec(
         select(AnalyticsEvent)
-        .where(AnalyticsEvent.event_type == "search")
+        .where(AnalyticsEvent.event_type == "search_query")
         .where(AnalyticsEvent.created_at >= start_date)
     ).all()
     
@@ -232,11 +234,24 @@ def get_admin_summary(
         for date, count in sorted(daily_counts.items())
     ]
 
+    # 9. Top Tags (from active inventory)
+    results_tags = session.exec(
+        select(Tag.name, func.count(Event.id))
+        .join(EventTag, EventTag.tag_id == Tag.id)
+        .join(Event, Event.id == EventTag.event_id)
+        .where(Event.date_end >= today)
+        .group_by(Tag.name)
+        .order_by(func.count(Event.id).desc())
+        .limit(15)
+    ).all()
+    top_tags = [{"tag_name": name, "count": count} for name, count in results_tags]
+
     return AdminAnalyticsSummary(
         total_views=total_views,
         total_unique_visitors=total_unique,
         top_events=top_events,
         top_categories=top_categories,
+        top_tags=top_tags,
         content_gaps=content_gaps,
         conversion_rate=round(conversion_rate, 2),
         total_event_views=event_views_total,

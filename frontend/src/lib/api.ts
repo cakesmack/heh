@@ -26,7 +26,6 @@ import type {
   VenueCategoryUpdate,
   VenueStaffCreate,
   VenueStaffResponse,
-  SupplyGap,
   QualityIssue,
   CategoryMixStats,
   OrganizerEventStats,
@@ -1086,9 +1085,7 @@ export const analyticsAPI = {
     return apiFetch<void>(`/api/analytics/search-insights/${encodeURIComponent(term)}`, { method: 'DELETE' });
   },
 
-  async getSupplyGaps(threshold: number = 3, days: number = 30): Promise<SupplyGap[]> {
-    return apiFetch<SupplyGap[]>(`/api/analytics/supply-gaps?threshold=${threshold}&days=${days}`);
-  },
+
 
   async getQualityIssues(): Promise<QualityIssue[]> {
     return apiFetch<QualityIssue[]>('/api/analytics/quality-issues');

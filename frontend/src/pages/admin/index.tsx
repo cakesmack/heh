@@ -11,7 +11,6 @@ import {
   AdminAnalyticsSummary,
   AdminDashboardStats,
   SearchInsightsResponse,
-  SupplyGap,
   QualityIssue,
   CategoryMixStats,
   OrganizerEventStats
@@ -20,7 +19,7 @@ import Link from 'next/link';
 import {
   ConversionFunnelWidget,
   SearchActivityWidget,
-  SupplyGapWidget,
+  TagAggregationWidget,
   QualityIssuesWidget,
   CategoryMixWidget,
   PerformanceLeaderboardWidget
@@ -40,7 +39,6 @@ function AdminDashboardContent() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [analytics, setAnalytics] = useState<AdminAnalyticsSummary | null>(null);
   const [searchInsights, setSearchInsights] = useState<SearchInsightsResponse | null>(null);
-  const [supplyGaps, setSupplyGaps] = useState<SupplyGap[]>([]);
   const [qualityIssues, setQualityIssues] = useState<QualityIssue[]>([]);
   const [categoryMix, setCategoryMix] = useState<CategoryMixStats[]>([]);
   const [topPerformers, setTopPerformers] = useState<OrganizerEventStats[]>([]);
@@ -55,7 +53,6 @@ function AdminDashboardContent() {
           statsData,
           analyticsData,
           insightsData,
-          gapsData,
           issuesData,
           mixData,
           performersData
@@ -63,7 +60,6 @@ function AdminDashboardContent() {
           adminAPI.getStats(),
           analyticsAPI.getAdminSummary(30),
           analyticsAPI.getSearchInsights(30),
-          analyticsAPI.getSupplyGaps(3, 30),
           analyticsAPI.getQualityIssues(),
           analyticsAPI.getCategoryMix(),
           analyticsAPI.getTopPerformers(5, 30)
@@ -72,7 +68,6 @@ function AdminDashboardContent() {
         setStats(statsData);
         setAnalytics(analyticsData);
         setSearchInsights(insightsData);
-        setSupplyGaps(gapsData);
         setQualityIssues(issuesData);
         setCategoryMix(mixData);
         setTopPerformers(performersData);
@@ -118,38 +113,38 @@ function AdminDashboardContent() {
         </div>
 
         {/* Actionable Insights Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {loading ? (
             // Skeleton Loading
-            Array.from({ length: 8 }).map((_, i) => (
+            Array.from({ length: 7 }).map((_, i) => (
               <div key={i} className="bg-white rounded-2xl h-48 animate-pulse border border-gray-100 shadow-sm" />
             ))
           ) : (
             <>
-              {/* Row 1: Immediate Supply Actions */}
-              <div className="lg:col-span-2">
+              {/* Row 1: Immediate Actions & Active Tags */}
+              <div className="md:col-span-2">
                 <RisingLocationsWidget />
               </div>
-              <div className="lg:col-span-2">
-                <SupplyGapWidget gaps={supplyGaps} />
+              <div className="md:col-span-1">
+                {analytics && <TagAggregationWidget tags={analytics.top_tags} />}
               </div>
 
               {/* Row 2: Quality & Mix Strategy */}
-              <div className="lg:col-span-1">
+              <div className="md:col-span-1">
                 <QualityIssuesWidget issues={qualityIssues} />
               </div>
-              <div className="lg:col-span-1">
+              <div className="md:col-span-1">
                 <CategoryMixWidget mix={categoryMix} />
               </div>
-              <div className="lg:col-span-2">
+              <div className="md:col-span-1">
                 {searchInsights && <SearchActivityWidget insights={searchInsights} />}
               </div>
 
               {/* Row 3: Performance & Growth */}
-              <div className="lg:col-span-2">
+              <div className="md:col-span-1">
                 <PerformanceLeaderboardWidget events={topPerformers} />
               </div>
-              <div className="lg:col-span-2">
+              <div className="md:col-span-2">
                 {analytics && <ConversionFunnelWidget analytics={analytics} />}
               </div>
             </>
@@ -157,7 +152,7 @@ function AdminDashboardContent() {
         </div>
 
         {/* Platform Health Strip */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
             <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />

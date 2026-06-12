@@ -140,10 +140,7 @@ export interface UnverifiedVenueStats {
   event_count: number;
 }
 
-export interface SupplyGap {
-  date: string; // ISO date YYYY-MM-DD
-  event_count: number;
-}
+
 
 export interface QualityIssue {
   issue_type: 'missing_image' | 'short_description' | 'missing_location';
@@ -694,6 +691,7 @@ export interface AdminAnalyticsSummary {
   total_unique_visitors: number;
   top_events: { id: string; title: string; views: number }[];
   top_categories: { name: string; clicks: number }[];
+  top_tags: { tag_name: string; count: number }[];
   content_gaps: { query: string; count: number }[];
   conversion_rate: number;
   total_event_views: number;

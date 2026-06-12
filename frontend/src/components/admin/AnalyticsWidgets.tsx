@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Modal from './Modal';
-import { AdminAnalyticsSummary, SupplyGap, QualityIssue, CategoryMixStats, OrganizerEventStats } from '@/types';
+import { AdminAnalyticsSummary, QualityIssue, CategoryMixStats, OrganizerEventStats } from '@/types';
 import { analyticsAPI } from '@/lib/api';
 
 interface StatCardProps {
@@ -18,7 +18,7 @@ interface StatCardProps {
 }
 
 export const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, trend, className = '', children }) => (
-    <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full ${className}`}>
+    <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col h-full ${className}`}>
         <div className="flex justify-between items-start mb-2">
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">{title}</h3>
             {trend && (
@@ -261,22 +261,23 @@ export const TopContentWidget: React.FC<{ analytics: AdminAnalyticsSummary }> = 
     </StatCard>
 );
 
-export const SupplyGapWidget: React.FC<{ gaps: SupplyGap[] }> = ({ gaps }) => {
+export const TagAggregationWidget: React.FC<{ tags: { tag_name: string; count: number }[] }> = ({ tags }) => {
     return (
-        <StatCard title="Ghost Town Alert" value={gaps.length} subtitle="Days with low supply" trend={{ value: gaps.length, isPositive: gaps.length === 0 }}>
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200">
-                {gaps.length === 0 ? (
-                    <div className="text-sm text-gray-500 italic">No gaps detected. Good job!</div>
-                ) : (
-                    gaps.map(gap => (
-                        <div key={gap.date} className="flex-shrink-0 bg-rose-50 border border-rose-100 rounded-lg p-2 w-24 flex flex-col items-center">
-                            <span className="text-[10px] uppercase font-bold text-rose-400">{new Date(gap.date).toLocaleDateString('en-GB', { weekday: 'short' })}</span>
-                            <span className="text-sm font-bold text-gray-900">{new Date(gap.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                            <span className="mt-1 text-[10px] font-bold text-rose-600 bg-white px-1.5 py-0.5 rounded-full shadow-sm border border-rose-100">
-                                {gap.event_count} active
-                            </span>
-                        </div>
-                    ))
+        <StatCard title="Active Tags" value={tags?.length || 0} subtitle="Top 15 Tags">
+            <div className="mt-4 flex flex-wrap gap-2 max-h-[140px] overflow-y-auto hide-scrollbar">
+                {tags && tags.map((tag) => (
+                    <span
+                        key={tag.tag_name}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 text-gray-700 rounded-full text-xs font-semibold border border-gray-100 shadow-sm"
+                    >
+                        #{tag.tag_name}
+                        <span className="bg-gray-200 text-gray-600 px-1 py-0.5 rounded-full text-[9px] font-bold">
+                            {tag.count}
+                        </span>
+                    </span>
+                ))}
+                {(!tags || tags.length === 0) && (
+                    <p className="text-xs text-gray-400 italic text-center py-4 w-full">No active tags</p>
                 )}
             </div>
         </StatCard>
