@@ -6,18 +6,20 @@ import { GeographicHub } from '@/types';
 interface PopularLocationsProps {
     activeLocation?: string;
     onSelectLocation?: (name: string) => void;
+    categorySlug?: string;
 }
 
-export default function PopularLocations({ activeLocation, onSelectLocation }: PopularLocationsProps = {}) {
+export default function PopularLocations({ activeLocation, onSelectLocation, categorySlug }: PopularLocationsProps = {}) {
     const [locations, setLocations] = useState<GeographicHub[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        locationsAPI.list()
+        setLoading(true);
+        locationsAPI.list({ category_slug: categorySlug })
             .then((data) => setLocations(data))
             .catch((err) => console.error('Failed to fetch locations:', err))
             .finally(() => setLoading(false));
-    }, []);
+    }, [categorySlug]);
 
     if (loading) {
         return (

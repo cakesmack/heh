@@ -1941,8 +1941,11 @@ export const locationsAPI = {
   /**
    * List all geographic hubs
    */
-  list: async (): Promise<any[]> => {
-    return apiFetch<any[]>('/api/locations');
+  list: async (filters?: { category_slug?: string }): Promise<any[]> => {
+    const params: Record<string, any> = {};
+    if (filters?.category_slug) params.category_slug = filters.category_slug;
+    const queryString = buildQueryString(params);
+    return apiFetch<any[]>(`/api/locations${queryString}`);
   },
 
   /**

@@ -225,6 +225,7 @@ export default function EventsPage() {
                 radius: undefined
               });
             }}
+            categorySlug={currentFilters.category}
           />
         </div>
 
