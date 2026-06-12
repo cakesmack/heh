@@ -235,6 +235,7 @@ def get_admin_summary(
     ]
 
     # 9. Top Tags (from active inventory)
+    today = datetime.utcnow()
     results_tags = session.exec(
         select(Tag.name, func.count(Event.id))
         .join(EventTag, EventTag.tag_id == Tag.id)
