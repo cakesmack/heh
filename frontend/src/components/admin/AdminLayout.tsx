@@ -9,6 +9,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 import { adminAPI } from '@/lib/api';
 import { AdminDashboardStats } from '@/types';
+import { Menu, X } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -39,6 +40,12 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [router.pathname]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -63,13 +70,35 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-gray-900">
-        <div className="flex items-center justify-center h-16 bg-gray-800">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        />
+      )}
+
+      {/* Sidebar Navigation */}
+      <div
+        className={`bg-gray-900 w-64 flex-shrink-0 flex flex-col z-50 transition-transform duration-300 ease-in-out
+          ${isSidebarOpen 
+            ? 'fixed inset-y-0 left-0 translate-x-0' 
+            : 'hidden md:flex md:translate-x-0'
+          }
+        `}
+      >
+        <div className="flex items-center justify-between h-16 px-6 bg-gray-800 flex-shrink-0">
           <span className="text-white text-xl font-bold">Admin Panel</span>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="text-gray-400 hover:text-white md:hidden"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <nav className="mt-8">
+        <nav className="mt-8 flex-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = router.pathname === item.href;
             const badgeCount = getBadgeCount(item.href);
@@ -96,8 +125,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             );
           })}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-          <div className="text-gray-400 text-sm mb-2">{user?.email}</div>
+        <div className="p-4 border-t border-gray-800 flex-shrink-0">
+          <div className="text-gray-400 text-sm mb-2 truncate" title={user?.email || ''}>
+            {user?.email}
+          </div>
           <button
             onClick={logout}
             className="text-gray-400 hover:text-white text-sm"
@@ -107,14 +138,32 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="ml-64">
-        <header className="bg-white shadow-sm">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-y-auto min-w-0">
+        {/* Mobile Header Bar */}
+        <header className="flex md:hidden items-center justify-between px-6 py-4 bg-gray-900 text-white border-b border-gray-800 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-1 hover:bg-gray-800 rounded-lg transition-colors text-gray-300 hover:text-white"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="font-bold text-lg">Admin Panel</span>
+          </div>
+          <span className="text-sm text-gray-400 font-semibold">{title}</span>
+        </header>
+
+        {/* Desktop Header */}
+        <header className="hidden md:block bg-white shadow-sm flex-shrink-0">
           <div className="px-8 py-4">
             <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
           </div>
         </header>
-        <main className="p-8">
+
+        {/* Main Content Pane */}
+        <main className="p-4 md:p-8 flex-1">
           {children}
         </main>
       </div>
