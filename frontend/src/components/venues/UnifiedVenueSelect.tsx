@@ -60,9 +60,9 @@ export function UnifiedVenueSelect({
         }
     }, [placesLib]);
 
-    // Fetch venue details if value is set but no selectedVenue (Initial Load)
+    // Fetch venue details if value is set but no selectedVenue or if value has changed (Initial Load / Updates)
     useEffect(() => {
-        if (value && !selectedVenue) {
+        if (value && (!selectedVenue || selectedVenue.id !== value)) {
             api.venues.get(value).then(venue => {
                 setSelectedVenue(venue);
                 setQuery(venue.name);
