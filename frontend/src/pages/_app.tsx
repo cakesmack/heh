@@ -31,7 +31,7 @@ const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
 
 // Default OG metadata for site-wide fallback
 const siteUrl = 'https://www.highlandeventshub.co.uk';
-const defaultOgImage = 'https://www.highlandeventshub.co.uk/images/og-preview.jpg?v=2';
+const defaultOgImage = 'https://www.highlandeventshub.co.uk/images/og-preview.jpg?v=3';
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();

@@ -26,7 +26,7 @@ import { optimizeImage } from '@/utils/imageOptimizer';
 
 // Site constants
 const SITE_URL = 'https://www.highlandeventshub.co.uk';
-const DEFAULT_OG_IMAGE = 'https://www.highlandeventshub.co.uk/images/og-preview.jpg?v=2';
+const DEFAULT_OG_IMAGE = 'https://www.highlandeventshub.co.uk/images/og-preview.jpg?v=3';
 
 interface HomePageProps {
   meta?: any; // Passed to _app.tsx
