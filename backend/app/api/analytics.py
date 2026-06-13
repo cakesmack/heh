@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
 from app.models.category import Category
-from app.models.tag import Tag, EventTag
+from app.models.tag import Tag
 
 router = APIRouter()
 
@@ -234,21 +234,11 @@ def get_admin_summary(
         for date, count in sorted(daily_counts.items())
     ]
 
-    # 9. Top Tags (from active inventory)
-    today = datetime.utcnow()
+    # 9. All Tags (full inventory, no date filter or limit)
     results_tags = session.exec(
-        select(Tag.name, func.count(Event.id))
-        .join(EventTag, EventTag.tag_id == Tag.id)
-        .join(Event, Event.id == EventTag.event_id)
-        .where(
-            or_(
-                Event.date_start >= today,
-                and_(Event.date_start <= today, Event.date_end >= today)
-            )
-        )
-        .group_by(Tag.name)
-        .order_by(func.count(Event.id).desc())
-        .limit(15)
+        select(Tag.name, Tag.usage_count)
+        .where(Tag.usage_count > 0)
+        .order_by(Tag.usage_count.desc(), Tag.name)
     ).all()
     top_tags = [{"tag_name": name, "count": count} for name, count in results_tags]
 

@@ -262,10 +262,23 @@ export const TopContentWidget: React.FC<{ analytics: AdminAnalyticsSummary }> = 
 );
 
 export const TagAggregationWidget: React.FC<{ tags: { tag_name: string; count: number }[] }> = ({ tags }) => {
+    const [filter, setFilter] = React.useState('');
+    const filtered = tags?.filter(t => t.tag_name.toLowerCase().includes(filter.toLowerCase())) || [];
     return (
-        <StatCard title="Active Tags" value={tags?.length || 0} subtitle="Top 15 Tags">
-            <div className="mt-4 flex flex-wrap gap-2 max-h-[140px] overflow-y-auto hide-scrollbar">
-                {tags && tags.map((tag) => (
+        <StatCard title="Active Tags" value={tags?.length || 0} subtitle="All Tags">
+            {tags && tags.length > 10 && (
+                <div className="mt-2">
+                    <input
+                        type="text"
+                        placeholder="Filter tags..."
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
+                        className="w-full px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-400 bg-white"
+                    />
+                </div>
+            )}
+            <div className="mt-2 flex flex-wrap gap-2 max-h-[240px] overflow-y-auto hide-scrollbar">
+                {filtered.map((tag) => (
                     <span
                         key={tag.tag_name}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 text-gray-700 rounded-full text-xs font-semibold border border-gray-100 shadow-sm"
@@ -276,8 +289,10 @@ export const TagAggregationWidget: React.FC<{ tags: { tag_name: string; count: n
                         </span>
                     </span>
                 ))}
-                {(!tags || tags.length === 0) && (
-                    <p className="text-xs text-gray-400 italic text-center py-4 w-full">No active tags</p>
+                {filtered.length === 0 && (
+                    <p className="text-xs text-gray-400 italic text-center py-4 w-full">
+                        {filter ? 'No matching tags' : 'No active tags'}
+                    </p>
                 )}
             </div>
         </StatCard>
