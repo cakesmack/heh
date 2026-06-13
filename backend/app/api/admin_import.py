@@ -4,7 +4,7 @@ Handles external image sideloading via Cloudflare Images and showtime parsing.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 from uuid import uuid4
@@ -43,6 +43,7 @@ class SingleEventImportRequest(BaseModel):
     address: Optional[str] = None  # Full address string
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    tags: Optional[List[str]] = Field(default_factory=list)
 
     class Config:
         json_schema_extra = {
@@ -240,6 +241,29 @@ async def import_single_event(
             session.add(showtime)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=f"Invalid showtime format '{showtime_str}': {str(e)}")
+
+    # Handle tags (imported events)
+    if req.tags:
+        from app.models.tag import Tag, EventTag
+        from app.api.events import get_or_create_tags
+        tags = get_or_create_tags(session, req.tags)
+        
+        # Clear existing event tags if updating
+        if not created:
+            existing_event_tags = session.exec(
+                select(EventTag).where(EventTag.event_id == event.id)
+            ).all()
+            for et in existing_event_tags:
+                old_tag = session.get(Tag, et.tag_id)
+                if old_tag and old_tag.usage_count > 0:
+                    old_tag.usage_count -= 1
+                session.delete(et)
+        
+        # Link new tags
+        for tag in tags:
+            event_tag = EventTag(event_id=event.id, tag_id=tag.id)
+            session.add(event_tag)
+            tag.usage_count += 1
 
     session.commit()
     session.refresh(event)

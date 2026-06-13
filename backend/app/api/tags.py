@@ -41,7 +41,8 @@ def list_tags(
     query = select(Tag)
 
     if search:
-        query = query.where(Tag.name.contains(search.lower()))
+        from app.models.tag import normalize_tag_name
+        query = query.where(Tag.name.contains(normalize_tag_name(search)))
 
     query = query.order_by(Tag.usage_count.desc(), Tag.name).limit(limit)
     tags = session.exec(query).all()

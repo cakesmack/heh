@@ -46,6 +46,7 @@ interface StagedEvent {
     address?: string; // Parsed from JSON
     latitude?: number;
     longitude?: number;
+    tags?: string[];
 }
 
 const STORAGE_KEY = 'import_wizard_session';
@@ -271,7 +272,8 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                 longitude: event.longitude || undefined,
                 category_id: event.selectedCategoryId || categories[0]?.id,
                 raw_showtimes: event.raw_showtimes || [],
-                organizer_profile_id: selectedOrganizerId || undefined
+                organizer_profile_id: selectedOrganizerId || undefined,
+                tags: event.tags || []
             };
 
             const token = localStorage.getItem('auth_token');

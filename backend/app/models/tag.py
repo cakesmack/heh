@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 def normalize_tag_name(name: str) -> str:
     """Normalize tag name: lowercase, hyphens for spaces, no special chars."""
-    normalized = name.lower().strip()
-    normalized = re.sub(r'[^\w\s-]', '', normalized)
+    cleaned = name.replace('#', '').strip().lower()
+    normalized = re.sub(r'[^\w\s-]', '', cleaned)
     normalized = re.sub(r'[\s_]+', '-', normalized)
     return normalized
 

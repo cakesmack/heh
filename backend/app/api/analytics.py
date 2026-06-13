@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, date
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
-from sqlmodel import Session, select, func, col
+from sqlmodel import Session, select, func, col, or_, and_
 from pydantic import BaseModel
 
 from app.core.database import get_session
@@ -240,7 +240,12 @@ def get_admin_summary(
         select(Tag.name, func.count(Event.id))
         .join(EventTag, EventTag.tag_id == Tag.id)
         .join(Event, Event.id == EventTag.event_id)
-        .where(Event.date_end >= today)
+        .where(
+            or_(
+                Event.date_start >= today,
+                and_(Event.date_start <= today, Event.date_end >= today)
+            )
+        )
         .group_by(Tag.name)
         .order_by(func.count(Event.id).desc())
         .limit(15)
