@@ -524,6 +524,8 @@ def list_events(
             date_from = now_utc
     elif time_range == "all":
         include_past = True
+    elif time_range in ["week", "month"]:
+        include_past = True  # We have explicit bounds
     elif not date_from and not date_to and time_range in ["today", "tomorrow", "weekend", "this_weekend"]:
         # Phase 3 Refactor: Elevated date parsing covers BOTH standard + SEO scenarios
         if time_range == "today":
@@ -736,6 +738,14 @@ def list_events(
 
         if time_range == "past":
             query = query.where(Event.date_end < sql_now)
+        elif time_range == "week":
+            from sqlalchemy import text
+            query = query.where(Event.date_start >= func.current_date())
+            query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '7 days'"))
+        elif time_range == "month":
+            from sqlalchemy import text
+            query = query.where(Event.date_start >= func.current_date())
+            query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '30 days'"))
         elif date_from or date_to:
              # Custom Range Logic (Overlap)
             query = query.outerjoin(EventShowtime, Event.id == EventShowtime.event_id)
@@ -882,6 +892,14 @@ def list_events(
     # Handle explicit Time Range filters
     if time_range == "past":
         query = query.where(Event.date_end < func.now())
+    elif time_range == "week":
+        from sqlalchemy import text
+        query = query.where(Event.date_start >= func.current_date())
+        query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '7 days'"))
+    elif time_range == "month":
+        from sqlalchemy import text
+        query = query.where(Event.date_start >= func.current_date())
+        query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '30 days'"))
     elif not include_past:
         # For "Upcoming", we must be very strict: the event or its occurrences must happen in the future
         query = query.where(Event.date_end >= func.now())
