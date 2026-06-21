@@ -370,10 +370,13 @@ def notify_interested_users(event: Event, session: Session):
         
         # Filter out users who have disabled notifications
         # Also exclude the event organizer (they already know about their event)
+        from app.models.user_preferences import UserPreferences
         users_to_notify = session.exec(
-            select(User).where(
+            select(User)
+            .join(UserPreferences, User.id == UserPreferences.user_id)
+            .where(
                 User.id.in_(interested_user_ids),
-                User.receive_interest_notifications == True,
+                UserPreferences.receive_interest_notifications == True,
                 User.id != event.organizer_id  # Don't notify the organizer
             )
         ).all()

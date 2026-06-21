@@ -33,6 +33,12 @@ class UserPreferences(SQLModel, table=True):
     # One-click unsubscribe token (no login required)
     unsubscribe_token: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
+    # Promotion reminder emails (e.g., "your featured slot expires in 3 days")
+    allow_promotion_reminders: bool = Field(default=True)
+
+    # Interest-based notifications (e.g., "new event in a category you follow")
+    receive_interest_notifications: bool = Field(default=True)
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
