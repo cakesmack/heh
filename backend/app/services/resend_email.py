@@ -404,6 +404,17 @@ class ResendEmailService:
                                 </tr>
                             </table>
 
+                            <!-- Promoted Event CTA Block -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #10b981; border-radius: 8px; background-color: #16162b; margin-bottom: 32px;">
+                                <tr>
+                                    <td style="padding: 24px; text-align: center;">
+                                        <h3 style="margin: 0 0 8px 0; color: #ffffff; font-size: 18px; font-weight: 700;">Your event is live. Make it unmissable.</h3>
+                                        <p style="margin: 0 0 16px 0; color: #cbd5e1; font-size: 14px; line-height: 1.5;">Feature your event on the homepage spotlight, top collections, and weekly digest. Boost views by up to 5x.</p>
+                                        <a href="{settings.FRONTEND_URL}/events/{event_id}/promote" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">Promote Your Event</a>
+                                    </td>
+                                </tr>
+                            </table>
+
                             <!-- Share Section -->
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #3b3b5c; border-radius: 8px;">
                                 <tr>
@@ -1189,6 +1200,87 @@ class ResendEmailService:
     # Alias for backward compatibility in some modules
     async def send_password_reset_email(self, to_email: str, reset_token: str) -> bool:
         return await self.send_password_reset(to_email, reset_token)
+
+    async def send_promotion_reminder(
+        self,
+        to_email: str,
+        event_title: str,
+        event_id: str,
+        username: str = None
+    ) -> bool:
+        """
+        Send notification reminding users to promote their event (Type: WELCOME -> SMTP).
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send promotion reminder email to {mask_email(to_email)}")
+            return True
+
+        name = username or "there"
+        promote_url = f"{settings.FRONTEND_URL}/events/{event_id}/promote"
+        subject = "Your event is 2 weeks away — boost visibility now"
+
+        html_content = f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1a2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #1a1a2e;">
+        <tr>
+            <td align="center" style="padding: 40px 16px;">
+                <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #2d2d44;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #0F3E35, #1e3a8a); padding: 36px 32px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.3;">Your event is 2 weeks away</h1>
+                            <p style="margin: 10px 0 0 0; font-size: 15px; color: rgba(255,255,255,0.85);">Push last-minute tickets and maximize your attendance</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style="background-color: #24243e; padding: 36px 32px;">
+                            <p style="margin: 0 0 16px 0; font-size: 16px; color: #e2e8f0; line-height: 1.6;">Hey {name},</p>
+                            <p style="margin: 0 0 16px 0; font-size: 15px; color: #cbd5e1; line-height: 1.6;">Your upcoming event, <strong>'{event_title}'</strong>, is exactly two weeks away! Now is the prime time to capture interest as people plan their schedules.</p>
+                            <p style="margin: 0 0 24px 0; font-size: 15px; color: #cbd5e1; line-height: 1.6;">To help you sell out tickets and make the event a massive success, you can feature it on the Highland Events Hub homepage spotlight row and in our weekly digest email blast.</p>
+
+                            <!-- Primary CTA -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding-bottom: 24px;">
+                                        <a href="{promote_url}" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 16px 36px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; letter-spacing: 0.02em;">Boost Visibility Now</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 0; font-size: 13px; color: #64748b; text-align: center; line-height: 1.5;">You received this reminder because you have promotion reminders enabled in your settings.</p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #16162b; padding: 24px 32px; text-align: center;">
+                            <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 1.6;">Highland Events Hub<br>Discover what's on across the Scottish Highlands</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        from app.services.email_service import EmailType
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.WELCOME,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
 
 # Create global instance
 resend_email_service = ResendEmailService()

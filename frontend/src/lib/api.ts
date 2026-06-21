@@ -330,6 +330,13 @@ export const eventsAPI = {
   },
 
   /**
+   * Get promoted (featured) events
+   */
+  listPromoted: async (): Promise<EventListResponse> => {
+    return apiFetch<EventListResponse>('/api/events/promoted');
+  },
+
+  /**
    * Lightweight list for Map View (optimized)
    */
   listMap: async (filters?: EventFilter): Promise<MapEventResponse[]> => {
@@ -1402,8 +1409,9 @@ export const adminAPI = {
   },
 
   // Campaign Management
-  getSubscriberCount: async (): Promise<{ subscriber_count: number }> => {
-    return apiFetch<{ subscriber_count: number }>('/api/admin/campaigns/subscribers');
+  getSubscriberCount: async (targetAudience?: string): Promise<{ subscriber_count: number }> => {
+    const query = targetAudience ? `?target_audience=${targetAudience}` : '';
+    return apiFetch<{ subscriber_count: number }>(`/api/admin/campaigns/subscribers${query}`);
   },
 
   sendTestCampaign: async (subject: string, body: string): Promise<{ message: string; success: boolean }> => {
@@ -1413,10 +1421,10 @@ export const adminAPI = {
     });
   },
 
-  sendCampaign: async (subject: string, body: string): Promise<{ message: string; campaign_id: string; recipient_count: number }> => {
+  sendCampaign: async (subject: string, body: string, targetAudience: string): Promise<{ message: string; campaign_id: string; recipient_count: number }> => {
     return apiFetch<{ message: string; campaign_id: string; recipient_count: number }>('/api/admin/campaigns/send', {
       method: 'POST',
-      body: JSON.stringify({ subject, body }),
+      body: JSON.stringify({ subject, body, target_audience: targetAudience }),
     });
   },
 

@@ -56,14 +56,13 @@ def run_migrations():
                     # Here we treat the whole file as one command because usually migrations are single DDLs.
                     # If it fails, it rolls back (transactional DDL in Postgres).
                     
-                    trans = connection.begin()
                     try:
                         connection.execute(text(sql_script))
                         connection.execute(text("INSERT INTO schema_migrations (filename) VALUES (:filename)"), {"filename": filename})
-                        trans.commit()
+                        connection.commit()
                         print(f"Successfully applied {filename}")
                     except Exception as e:
-                        trans.rollback()
+                        connection.rollback()
                         print(f"Failed to apply {filename}: {e}")
                         sys.exit(1)
                 else:

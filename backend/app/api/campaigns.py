@@ -7,7 +7,7 @@ import logging
 from uuid import uuid4
 from typing import Optional
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlmodel import Session, select, func
 
 from app.core.database import get_session, engine
@@ -33,6 +33,7 @@ class CampaignRequest(BaseModel):
     """Request body for sending a campaign."""
     subject: str = Field(..., min_length=1, max_length=500)
     body: str = Field(..., min_length=1, max_length=50000, description="HTML content for the email body")
+    target_audience: str = Field("all", description="Target audience segment ('all' or 'organizers')")
 
 
 class CampaignStatusResponse(BaseModel):
@@ -74,13 +75,21 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
 
 @router.get("/subscribers", response_model=SubscriberCountResponse)
 def get_subscriber_count(
+    target_audience: str = Query("all", description="Target audience segment"),
     admin: User = Depends(require_admin),
     session: Session = Depends(get_session),
 ):
     """Get the count of users subscribed to email updates."""
-    count = session.exec(
-        select(func.count()).where(UserPreferences.receives_email_updates == True)
-    ).one() or 0
+    query = select(func.count(func.distinct(User.id))).select_from(UserPreferences)
+    query = query.join(User, User.id == UserPreferences.user_id)
+    query = query.where(UserPreferences.receives_email_updates == True)
+    query = query.where(User.is_active == True)
+
+    if target_audience == "organizers":
+        from app.models.event import Event
+        query = query.join(Event, Event.organizer_id == User.id)
+
+    count = session.exec(query).one() or 0
 
     return SubscriberCountResponse(subscriber_count=count)
 
@@ -128,12 +137,17 @@ async def send_campaign(
     Runs as a BackgroundTask so the admin's browser doesn't time out.
     """
     # Fetch all subscribed users with their unsubscribe tokens
-    results = session.exec(
-        select(UserPreferences.user_id, User.email, UserPreferences.unsubscribe_token)
-        .join(User, User.id == UserPreferences.user_id)
-        .where(UserPreferences.receives_email_updates == True)
-        .where(User.is_active == True)
-    ).all()
+    query = select(
+        UserPreferences.user_id, User.email, UserPreferences.unsubscribe_token
+    ).select_from(UserPreferences).join(User, User.id == UserPreferences.user_id)
+    query = query.where(UserPreferences.receives_email_updates == True)
+    query = query.where(User.is_active == True)
+
+    if campaign.target_audience == "organizers":
+        from app.models.event import Event
+        query = query.join(Event, Event.organizer_id == User.id).distinct()
+
+    results = session.exec(query).all()
 
     if not results:
         raise HTTPException(

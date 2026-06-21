@@ -16,6 +16,7 @@ function CampaignsContent() {
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
+    const [targetAudience, setTargetAudience] = useState<'all' | 'organizers'>('all');
     const [loading, setLoading] = useState(false);
     const [testLoading, setTestLoading] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -25,14 +26,14 @@ function CampaignsContent() {
     useEffect(() => {
         const fetchCount = async () => {
             try {
-                const data = await adminAPI.getSubscriberCount();
+                const data = await adminAPI.getSubscriberCount(targetAudience);
                 setSubscriberCount(data.subscriber_count);
             } catch (err) {
                 console.error('Failed to fetch subscriber count:', err);
             }
         };
         fetchCount();
-    }, []);
+    }, [targetAudience]);
 
     const clearFeedback = () => {
         setTimeout(() => setFeedback(null), 8000);
@@ -63,7 +64,7 @@ function CampaignsContent() {
         setLoading(true);
         setFeedback(null);
         try {
-            const result = await adminAPI.sendCampaign(subject, body);
+            const result = await adminAPI.sendCampaign(subject, body, targetAudience);
             setLastCampaignId(result.campaign_id);
             setFeedback({
                 type: 'success',
@@ -114,6 +115,54 @@ function CampaignsContent() {
                         </svg>
                         Compose Campaign
                     </h2>
+
+                    {/* Target Audience */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Target Audience
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label className={`flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition-all ${targetAudience === 'all'
+                                ? 'border-emerald-500 bg-emerald-50/50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}>
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="radio"
+                                        name="targetAudience"
+                                        value="all"
+                                        checked={targetAudience === 'all'}
+                                        onChange={() => setTargetAudience('all')}
+                                        className="h-4 w-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                                    />
+                                    <div>
+                                        <p className="font-semibold text-sm text-gray-900">All Active Subscribers</p>
+                                        <p className="text-xs text-gray-500">General news & updates</p>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label className={`flex items-center justify-between p-3.5 rounded-xl border-2 cursor-pointer transition-all ${targetAudience === 'organizers'
+                                ? 'border-emerald-500 bg-emerald-50/50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}>
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="radio"
+                                        name="targetAudience"
+                                        value="organizers"
+                                        checked={targetAudience === 'organizers'}
+                                        onChange={() => setTargetAudience('organizers')}
+                                        className="h-4 w-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                                    />
+                                    <div>
+                                        <p className="font-semibold text-sm text-gray-900">Event Organizers Only</p>
+                                        <p className="text-xs text-gray-500">B2B updates & promotions</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
 
                     {/* Subject */}
                     <div>
@@ -242,7 +291,7 @@ function CampaignsContent() {
                         </div>
                         <p className="text-sm text-gray-600">
                             Are you sure you want to send this campaign to{' '}
-                            <strong className="text-gray-900">{subscriberCount ?? '?'} subscribers</strong>?
+                            <strong className="text-gray-900">{subscriberCount ?? '?'} {targetAudience === 'organizers' ? 'organizer' : ''} subscribers</strong>?
                         </p>
                         <p className="text-xs text-gray-500">
                             Subject: <strong>{subject}</strong>

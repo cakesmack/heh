@@ -488,7 +488,7 @@ def admin_create_featured(
         id=normalize_uuid(uuid4()),
         event_id=event_id,
         organizer_id=normalize_uuid(current_user.id),
-        slot_type=request.slot_type,
+        slot_type=SlotType.PREMIUM,
         start_date=start,
         end_date=end,
         status=BookingStatus.ACTIVE,

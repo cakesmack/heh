@@ -16,8 +16,8 @@ import RecommendedEvents from '@/components/home/RecommendedEvents';
 import PopularEvents from '@/components/home/PopularEvents';
 import PopularLocations from '@/components/PopularLocations';
 import CuratedCollections from '@/components/home/CuratedCollections';
-import SpotlightEvents from '@/components/home/SpotlightEvents';
 import HappeningNextEvents from '@/components/home/HappeningNextEvents';
+import PromotedEvents from '@/components/home/PromotedEvents';
 import LocalPartners from '@/components/home/LocalPartners';
 import { eventsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
@@ -36,28 +36,28 @@ interface HomePageProps {
 export default function HomePage() {
   const { user } = useAuth();
 
-  // Rows 1 & 2 State
-  const [spotlightEvents, setSpotlightEvents] = useState<EventResponse[]>([]);
+  // Rows State
   const [happeningNextEvents, setHappeningNextEvents] = useState<EventResponse[]>([]);
+  const [promotedEvents, setPromotedEvents] = useState<EventResponse[]>([]);
   const [loadingRows, setLoadingRows] = useState(true);
 
   useEffect(() => {
     const fetchHomeEvents = async () => {
       try {
-        const [spotlightRes, upcomingRes] = await Promise.all([
-          eventsAPI.list({ featured_only: true, limit: 4 }),
-          eventsAPI.list({ limit: 14, include_past: false, sort_by: 'date', max_duration_days: 3 })
+        const [upcomingRes, promotedRes] = await Promise.all([
+          eventsAPI.list({ limit: 14, include_past: false, sort_by: 'date', max_duration_days: 3 }),
+          eventsAPI.listPromoted()
         ]);
 
-        const spotlight = spotlightRes.events || [];
-        setSpotlightEvents(spotlight);
+        const promoted = promotedRes.events || [];
+        setPromotedEvents(promoted);
 
-        // Exclude spotlight events from happening next
-        const spotlightIds = new Set(spotlight.map(e => e.id));
-        const spotlightParentIds = new Set(spotlight.map(e => e.parent_event_id).filter(Boolean));
+        // Exclude promoted events from happening next
+        const promotedIds = new Set(promoted.map(e => e.id));
+        const promotedParentIds = new Set(promoted.map(e => e.parent_event_id).filter(Boolean));
 
         const filteredUpcoming = (upcomingRes.events || [])
-          .filter(e => !spotlightIds.has(e.id) && (!e.parent_event_id || !spotlightParentIds.has(e.parent_event_id)))
+          .filter(e => !promotedIds.has(e.id) && (!e.parent_event_id || !promotedParentIds.has(e.parent_event_id)))
           .slice(0, 10);
 
         setHappeningNextEvents(filteredUpcoming);
@@ -277,8 +277,8 @@ export default function HomePage() {
       {/* Row 2 - Happening Next */}
       <HappeningNextEvents events={happeningNextEvents} isLoading={loadingRows} />
 
-      {/* Row 1 - Spotlight */}
-      <SpotlightEvents events={spotlightEvents} isLoading={loadingRows} />
+      {/* Promoted Row */}
+      <PromotedEvents events={promotedEvents} isLoading={loadingRows} />
 
       {/* Row 3 - Popular Events */}
       <PopularEvents />

@@ -28,7 +28,7 @@ def deduplicate_recurring_events(
     Deduplicate recurring events, showing only one event per series.
     """
     from app.models.featured_booking import FeaturedBooking, SlotType, BookingStatus
-    from sqlalchemy import case, func as sa_func
+    from sqlalchemy import case, and_, func as sa_func
 
     is_postgres = get_dialect_name(session) == "postgresql"
     group_key = func.coalesce(Event.parent_event_id, Event.id)
@@ -40,9 +40,10 @@ def deduplicate_recurring_events(
     # Calculate pinned priority (promoted slots)
     # We want this to be available for both Postgres and SQLite sorting
     pinned_priority = sa_func.min(case(
-        (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 1),
-        (FeaturedBooking.slot_type == SlotType.MAGAZINE_CAROUSEL, 2),
-        else_=3
+        (FeaturedBooking.slot_type == SlotType.PREMIUM, 1),
+        (FeaturedBooking.slot_type == SlotType.CATEGORY_PINNED, 2),
+        (FeaturedBooking.slot_type == SlotType.MAGAZINE_CAROUSEL, 3),
+        else_=4
     ))
 
     if is_postgres:
@@ -96,7 +97,11 @@ def deduplicate_recurring_events(
         events_query = events_query.order_by(pinned_priority.asc())
 
         if order_by_featured:
-            events_query = events_query.order_by(Event.featured.desc())
+            active_featured_priority = case(
+                (and_(Event.featured == True, Event.featured_until > sa_func.now()), 1),
+                else_=0
+            ).desc()
+            events_query = events_query.order_by(active_featured_priority)
             
         if sort_field == "created":
             events_query = events_query.order_by(Event.created_at.desc())
@@ -128,7 +133,11 @@ def deduplicate_recurring_events(
         query = query.order_by(pinned_priority.asc())
         
         if order_by_featured:
-            query = query.order_by(Event.featured.desc())
+            active_featured_priority = case(
+                (and_(Event.featured == True, Event.featured_until > sa_func.now()), 1),
+                else_=0
+            ).desc()
+            query = query.order_by(active_featured_priority)
 
         if sort_field == "created":
             query = query.order_by(Event.created_at.desc())

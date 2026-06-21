@@ -28,6 +28,12 @@ class SlotPricing(SQLModel, table=True):
 
 # Default pricing configuration (used for seeding)
 DEFAULT_PRICING = {
+    SlotType.PREMIUM.value: {
+        "price_per_day": 1500,
+        "min_days": 1,
+        "max_concurrent": 4,
+        "description": "Premium Featured Placement"
+    },
     SlotType.CATEGORY_PINNED.value: {
         "price_per_day": 1000,
         "min_days": 3,

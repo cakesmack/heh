@@ -54,6 +54,9 @@ def check_availability(
     Check slot availability for a date range.
     STRICT MODE: Filters strictly by slot_type.
     """
+    # Coerce to PREMIUM for unified consolidation
+    slot_type = SlotType.PREMIUM
+
     # STRICT ENFORCEMENT: Block legacy types for new checks
     if slot_type in [SlotType.HERO_HOME, SlotType.GLOBAL_PINNED]:
         return {
@@ -191,6 +194,9 @@ def create_checkout_session(
     """
     Create a Stripe Checkout session and FeaturedBooking.
     """
+    # Coerce to PREMIUM for unified consolidation
+    slot_type = SlotType.PREMIUM
+
     # TRANSACTIONAL LOCK: Lock the pricing record to prevent concurrent availability races
     session.exec(
         select(SlotPricing).where(SlotPricing.slot_type == slot_type.value).with_for_update()

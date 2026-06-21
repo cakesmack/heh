@@ -6,7 +6,7 @@ from typing import Optional, List
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, Request
 from sqlmodel import Session, select, func, col, update, delete
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from app.core.limiter import limiter
 from sqlalchemy import case
 
@@ -772,8 +772,12 @@ def list_events(
         total = session.exec(count_query).one() or 0
 
         # 6. APPLY PAGINATION (The Fix)
-        # Sort by date, then slice the results
-        query = query.order_by(Event.date_start.asc()).offset(skip).limit(limit)
+        # Sort by active featured first, then date, then slice the results
+        active_featured_priority = case(
+            (and_(Event.featured == True, Event.featured_until > func.now()), 1),
+            else_=0
+        ).desc()
+        query = query.order_by(active_featured_priority, Event.date_start.asc()).offset(skip).limit(limit)
         
         results = session.exec(query.distinct()).all()
         print(f"DEBUG: Returned {len(results)} events for '{city_filter}' (Skip: {skip}, Limit: {limit})")
@@ -1126,6 +1130,36 @@ def track_website_click(
     session.refresh(event)
     
     return build_event_response(event, session, current_user=current_user)
+
+
+@router.get("/promoted", response_model=EventListResponse)
+def get_promoted_events(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """
+    Get promoted (featured) events.
+    Returns up to 3 events where featured == True and featured_until > now.
+    Ordered by soonest-expiring first.
+    """
+    now = datetime.now()
+    query = select(Event).where(
+        (Event.featured == True) &
+        (Event.featured_until > now) &
+        (Event.status == "published")
+    ).order_by(
+        Event.featured_until.asc()
+    ).limit(3)
+    
+    promoted_events = session.exec(query).all()
+    event_responses = [build_event_response(event, session, current_user=current_user) for event in promoted_events]
+    
+    return EventListResponse(
+        events=event_responses,
+        total=len(event_responses),
+        skip=0,
+        limit=3
+    )
 
 
 @router.get("/top", response_model=EventListResponse)

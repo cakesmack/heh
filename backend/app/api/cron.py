@@ -248,3 +248,58 @@ def run_system_cleanup(
         "bookings_completed": expired_count,
         "events_synced": sync_count
     }
+
+
+@router.post("/promotion-reminders")
+async def run_promotion_reminders(
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    authorized: bool = Depends(verify_cron_access)
+):
+    """
+    Cron job to send email reminders to event organizers 14 days before their event starts,
+    encouraging them to feature it.
+    """
+    logger.info("Starting Promotion Reminders Cron Job")
+    
+    # Calculate target range: exactly 14 days from today
+    today = datetime.utcnow().date()
+    target_date = today + timedelta(days=14)
+    start_of_day = datetime.combine(target_date, datetime.min.time())
+    end_of_day = datetime.combine(target_date, datetime.max.time())
+    
+    # Query events starting in this window whose organizers allow reminders and are not featured yet
+    query = (
+        select(Event, User)
+        .join(User, Event.organizer_id == User.id)
+        .join(UserPreferences, User.id == UserPreferences.user_id)
+        .where(Event.date_start >= start_of_day)
+        .where(Event.date_start <= end_of_day)
+        .where(Event.featured == False)
+        .where(Event.status == "published")
+        .where(UserPreferences.allow_promotion_reminders == True)
+        .where(User.is_active == True)
+    )
+    
+    results = session.exec(query).all()
+    
+    sent_count = 0
+    for event, user in results:
+        try:
+            background_tasks.add_task(
+                resend_email_service.send_promotion_reminder,
+                to_email=user.email,
+                event_title=event.title,
+                event_id=str(event.id),
+                username=user.username or "there"
+            )
+            sent_count += 1
+        except Exception as e:
+            logger.error(f"Failed to queue promotion reminder for {user.email} (Event: {event.title}): {str(e)}")
+            
+    return {
+        "status": "success",
+        "message": f"Queued {sent_count} promotion reminders.",
+        "processed_events": len(results)
+    }
+

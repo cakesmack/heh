@@ -134,13 +134,37 @@ function PostSubmitModal({
   newEventId,
   newEventUrl,
   onClose,
+  formData,
+  categories,
 }: {
   eventStatus: 'published' | 'pending' | 'pending_moderation';
   newEventId: string;
   newEventUrl: string;
   onClose: (navigateTo: string) => void;
+  formData?: any;
+  categories?: any[];
 }) {
   const [shareCopied, setShareCopied] = useState(false);
+
+  const localFormatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Upcoming Date';
+      return date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return 'Upcoming Date';
+    }
+  };
+
+  const category = categories?.find(c => c.id === formData?.category_id);
+  const imageUrl = formData?.image_url;
+  const title = formData?.title || 'Your Event';
+  const price = formData?.price;
+  const dateStart = formData?.date_start ? localFormatDate(formData.date_start) : 'Upcoming Date';
 
   return (
     <div
@@ -154,20 +178,70 @@ function PostSubmitModal({
       >
         {eventStatus === 'published' ? (
           <>
-            <div className="w-16 h-16 mx-auto mb-5 bg-emerald-100 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your event is live on the map.</h2>
-            <p className="text-gray-600 mb-8">Now, get it in front of your audience.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">Your event is live!</h2>
+            <p className="text-gray-600 mb-6 text-sm">Feature your event to get up to 5x more views.</p>
 
-            <div className="mb-6">
+            {/* 16:9 Mockup Card */}
+            <div className="mb-6 border border-stone-200 rounded-2xl overflow-hidden shadow-sm aspect-[16/9] relative bg-stone-100">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 to-teal-950" />
+              )}
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/30 to-transparent" />
+              
+              {/* Badge */}
+              <div className="absolute top-3 left-3 z-10">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-400 text-stone-950 uppercase tracking-wider shadow-sm animate-pulse">
+                  ⚡ Promoted Mockup
+                </span>
+              </div>
+
+              {/* Card Content */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-left text-white">
+                {category && (
+                  <span 
+                    className="text-[9px] font-bold uppercase tracking-wider mb-1 inline-block px-1.5 py-0.5 rounded bg-white/10 backdrop-blur-sm"
+                    style={{ color: category.gradient_color || '#10b981' }}
+                  >
+                    {category.name}
+                  </span>
+                )}
+                <h3 className="text-sm sm:text-base font-bold line-clamp-1 leading-snug">
+                  {title}
+                </h3>
+                <div className="flex items-center justify-between mt-1 text-[10px] text-stone-300">
+                  <div>📅 {dateStart}</div>
+                  <div className="font-bold text-amber-300">
+                    {price === '0' || !price ? 'Free' : `£${parseFloat(price).toFixed(2)}`}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <Link
+                href={`/events/${newEventId}/promote`}
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-600 text-stone-950 rounded-xl font-bold transition-colors min-h-[48px] shadow-sm"
+              >
+                🚀 Promote Your Event
+              </Link>
+
               <button
                 onClick={async () => {
                   try {
                     if (navigator.share) {
-                      await navigator.share({ title: 'Check out my event!', url: newEventUrl });
+                      await navigator.share({ title: title, url: newEventUrl });
                     } else {
                       await navigator.clipboard.writeText(newEventUrl);
                       setShareCopied(true);
@@ -181,8 +255,8 @@ function PostSubmitModal({
                     }
                   }
                 }}
-                className={`w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-medium transition-all duration-200 min-h-[48px] ${
-                  shareCopied ? 'bg-emerald-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'
+                className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-200 min-h-[48px] border border-stone-200 ${
+                  shareCopied ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 hover:bg-stone-50'
                 }`}
               >
                 {shareCopied ? (
@@ -197,7 +271,7 @@ function PostSubmitModal({
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
-                    Share Event
+                    Share Event Link
                   </>
                 )}
               </button>
@@ -325,17 +399,21 @@ export default function SubmitEventPage() {
       const payload = buildEventPayload(form.getValues());
       const newEvent = await api.events.create(payload);
 
-      // Clear the draft from sessionStorage
-      clearDraft();
-
       // Build public URL
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const publicUrl = `${origin}/events/${newEvent.id}`;
 
+      if (newEvent.status === 'published') {
+        // Redirect to promote preview page
+        router.push(`/events/${newEvent.id}/promote-preview`);
+        return;
+      }
+
+      // If pending moderation, clear draft and show the modal
+      clearDraft();
       setNewEventId(newEvent.id);
       setNewEventUrl(publicUrl);
       setEventStatus(
-        newEvent.status === 'published' ? 'published' :
         newEvent.status === 'pending_moderation' ? 'pending_moderation' : 'pending'
       );
       setShowPostSubmitModal(true);
@@ -563,6 +641,8 @@ export default function SubmitEventPage() {
           eventStatus={eventStatus}
           newEventId={newEventId}
           newEventUrl={newEventUrl}
+          formData={form.getValues()}
+          categories={categories}
           onClose={(navigateTo) => {
             setShowPostSubmitModal(false);
             router.push(navigateTo);

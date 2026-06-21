@@ -34,6 +34,16 @@ engine = create_engine(
 
 def run_migrations():
     """Run any pending database migrations."""
+    # 1. Run SQL migrations from migrations/ folder
+    try:
+        from scripts.run_migrations import run_migrations as run_sql_migrations
+        logger.info("Running SQL schema migrations...")
+        run_sql_migrations()
+        logger.info("✅ SQL schema migrations complete")
+    except Exception as e:
+        logger.error(f"Failed to run SQL migrations: {e}")
+
+    # 2. Run inline migrations
     with Session(engine) as session:
         if "sqlite" in settings.DATABASE_URL:
             logger.info("Skipping Postgres-only migrations for SQLite")
@@ -60,6 +70,15 @@ def run_migrations():
         except Exception as e:
             session.rollback()
             logger.warning(f"Migration note: {e}")
+
+    # 3. Seed slot pricing defaults
+    try:
+        from app.scripts.migrate_slot_pricing import run_migration as run_pricing_seeding
+        logger.info("Running slot pricing seeding...")
+        run_pricing_seeding()
+        logger.info("✅ Slot pricing seeding complete")
+    except Exception as e:
+        logger.error(f"Failed to seed slot pricing: {e}")
 
 def create_db_and_tables():
     """Create all database tables defined in SQLModel models."""

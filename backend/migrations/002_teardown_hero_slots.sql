@@ -3,4 +3,4 @@
 
 DROP TABLE IF EXISTS hero_slots CASCADE;
 
-UPDATE slot_pricing SET max_slots = 4 WHERE slot_type = 'MAGAZINE_CAROUSEL';
+UPDATE slot_pricing SET max_concurrent = 4 WHERE slot_type = 'MAGAZINE_CAROUSEL';

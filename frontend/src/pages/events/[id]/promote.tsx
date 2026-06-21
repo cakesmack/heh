@@ -13,6 +13,7 @@ import { Spinner } from '@/components/common/Spinner';
 import type { EventResponse, SlotConfig, SlotType, AvailabilityResponse, Category } from '@/types';
 
 const SLOT_DESCRIPTIONS: Record<string, { name: string; description: string }> = {
+  premium: { name: 'Premium Placement', description: 'Featured placement across homepage lists, category headers, and search results' },
   category_pinned: { name: 'Category Pinned', description: 'Top of category page' },
   magazine_carousel: { name: 'Magazine Feature', description: 'Featured in Magazine section' },
 };
@@ -29,7 +30,7 @@ export default function PromoteEventPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [selectedSlot, setSelectedSlot] = useState<SlotType | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<SlotType | null>('premium');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
@@ -183,56 +184,23 @@ export default function PromoteEventPage() {
             </div>
           )}
 
-          {/* Slot Selection */}
+          {/* Premium Placement Card */}
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-            <div className="space-y-3">
-              {(['category_pinned', 'magazine_carousel'] as SlotType[]).map(slotType => {
-                const config = getSlotConfig(slotType);
-                const info = SLOT_DESCRIPTIONS[slotType];
-                if (!config) return null;
-
-                return (
-                  <label
-                    key={slotType}
-                    className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedSlot === slotType
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                  >
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        name="slot"
-                        value={slotType}
-                        checked={selectedSlot === slotType}
-                        onChange={() => setSelectedSlot(slotType)}
-                        className="sr-only"
-                      />
-                      <div>
-                        <p className="font-medium text-gray-900">{info.name}</p>
-                        <p className="text-sm text-gray-500">{info.description}</p>
-                      </div>
-                    </div>
-                    <p className="font-semibold text-gray-900">
-                      {formatPrice(config.price_per_day)}/day
-                    </p>
-                  </label>
-                );
-              })}
-            </div>
-
-            {/* Category Info for Category Pinned */}
-            {selectedSlot === 'category_pinned' && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Category:</span>{' '}
-                  {event?.category?.name || 'Unknown'}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Your event will be pinned to the top of this category page.
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Selected Placement</h2>
+            <div className="flex items-center justify-between p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/50">
+              <div className="mr-4">
+                <p className="font-semibold text-gray-900 text-lg">Premium Promotion</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Features your event at the top of search results, homepage lists, and category feeds for maximum visibility.
                 </p>
               </div>
-            )}
+              <div className="text-right flex-shrink-0">
+                <p className="text-2xl font-bold text-gray-900">
+                  {getSlotConfig('premium') ? formatPrice(getSlotConfig('premium')!.price_per_day) : '£15.00'}
+                </p>
+                <p className="text-xs text-gray-500 font-medium">per day</p>
+              </div>
+            </div>
           </div>
 
           {/* Date Selection */}
@@ -294,8 +262,8 @@ export default function PromoteEventPage() {
           {/* Submit Button */}
           <button
             onClick={handleSubmit}
-            disabled={!availability?.available || isSubmitting || (selectedSlot === 'category_pinned' && !event?.category_id)}
-            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${availability?.available && !isSubmitting && !(selectedSlot === 'category_pinned' && !event?.category_id)
+            disabled={!availability?.available || isSubmitting}
+            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${availability?.available && !isSubmitting
               ? 'bg-emerald-600 text-white hover:bg-emerald-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}

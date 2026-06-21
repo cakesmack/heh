@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 class SlotType(str, Enum):
     """Types of featured placements available."""
+    PREMIUM = "premium"
     CATEGORY_PINNED = "category_pinned"
     MAGAZINE_CAROUSEL = "magazine_carousel"
     HERO_HOME = "hero_home"  # Legacy - Do not use for new bookings
@@ -34,6 +35,7 @@ class BookingStatus(str, Enum):
 
 # Slot limits and pricing (pence)
 SLOT_CONFIG = {
+    SlotType.PREMIUM: {"max": 4, "price_per_day": 1500, "min_days": 1},
     SlotType.CATEGORY_PINNED: {"max": 3, "price_per_day": 1000, "min_days": 3},
     SlotType.MAGAZINE_CAROUSEL: {"max": 4, "price_per_day": 1500, "min_days": 1},
 }

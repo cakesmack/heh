@@ -936,7 +936,7 @@ export interface UserPreferencesUpdate {
 // FEATURED BOOKING TYPES
 // ============================================================
 
-export type SlotType = 'category_pinned' | 'magazine_carousel';
+export type SlotType = 'category_pinned' | 'magazine_carousel' | 'premium';
 export type BookingStatus = 'pending_payment' | 'pending_approval' | 'active' | 'completed' | 'cancelled' | 'rejected';
 
 export interface SlotConfig {
