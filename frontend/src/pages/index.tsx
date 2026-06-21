@@ -274,11 +274,11 @@ export default function HomePage() {
       />
 
 
-      {/* Row 2 - Happening Next */}
-      <HappeningNextEvents events={happeningNextEvents} isLoading={loadingRows} />
-
       {/* Promoted Row */}
       <PromotedEvents events={promotedEvents} isLoading={loadingRows} />
+
+      {/* Row 2 - Happening Next */}
+      <HappeningNextEvents events={happeningNextEvents} isLoading={loadingRows} />
 
       {/* Row 3 - Popular Events */}
       <PopularEvents />
