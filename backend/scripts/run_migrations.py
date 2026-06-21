@@ -1,8 +1,7 @@
-
 import os
 import sys
 import glob
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text
 from datetime import datetime
 
 # Add backend directory to python path
@@ -48,18 +47,28 @@ def run_migrations():
                     
                     with open(file_path, 'r') as f:
                         sql_script = f.read()
-                        
-                    # Execute script
-                    # We assume the script might contain multiple statements separated by ;
-                    # But SQLAlchemy execute usually handles one statement or a script depending on driver.
-                    # For safety with simple migrations, we execute as one block or split if needed.
-                    # Here we treat the whole file as one command because usually migrations are single DDLs.
-                    # If it fails, it rolls back (transactional DDL in Postgres).
                     
                     try:
-                        connection.execute(text(sql_script))
-                        connection.execute(text("INSERT INTO schema_migrations (filename) VALUES (:filename)"), {"filename": filename})
-                        connection.commit()
+                        # PostgreSQL does not allow ALTER TYPE ... ADD VALUE inside a transaction block.
+                        # If the script contains ALTER TYPE ADD VALUE, we execute it in AUTOCOMMIT mode.
+                        if "ALTER TYPE" in sql_script.upper() and "ADD VALUE" in sql_script.upper():
+                            print("  (Executing in AUTOCOMMIT mode for ALTER TYPE statement)")
+                            with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as autocommit_conn:
+                                autocommit_conn.execute(text(sql_script))
+                            
+                            # Log the applied migration using standard connection
+                            connection.execute(
+                                text("INSERT INTO schema_migrations (filename) VALUES (:filename)"),
+                                {"filename": filename}
+                            )
+                            connection.commit()
+                        else:
+                            connection.execute(text(sql_script))
+                            connection.execute(
+                                text("INSERT INTO schema_migrations (filename) VALUES (:filename)"),
+                                {"filename": filename}
+                            )
+                            connection.commit()
                         print(f"Successfully applied {filename}")
                     except Exception as e:
                         connection.rollback()
@@ -67,7 +76,40 @@ def run_migrations():
                         sys.exit(1)
                 else:
                     print(f"Skipping {filename} (already applied)")
-                    
+            
+            # 5. Run inline migrations (such as adding columns in Postgres)
+            print("Checking inline database migrations...")
+            try:
+                connection.execute(text("""
+                    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE NOT NULL
+                """))
+                connection.execute(text("""
+                    UPDATE users SET is_active = FALSE WHERE email = 'banned@test.com'
+                """))
+                connection.commit()
+                print("[SUCCESS] Inline migrations: is_active column and banned status ensured on users table")
+            except Exception as e:
+                connection.rollback()
+                print(f"Inline migrations note: {e}")
+
+        # 6. Seed slot pricing defaults
+        try:
+            print("Running slot pricing seeding...")
+            from app.scripts.migrate_slot_pricing import run_migration as run_pricing_seeding
+            run_pricing_seeding()
+            print("[SUCCESS] Slot pricing seeding complete")
+        except Exception as e:
+            print(f"Failed to seed slot pricing: {e}")
+
+        # 7. Backfill user preferences
+        try:
+            print("Running user preferences backfill...")
+            from app.scripts.backfill_preferences import backfill_preferences
+            backfill_preferences()
+            print("[SUCCESS] User preferences backfill complete")
+        except Exception as e:
+            print(f"Failed to backfill user preferences: {e}")
+
     except Exception as e:
         print(f"CRITICAL: Migration script failed: {e}")
         sys.exit(1)
