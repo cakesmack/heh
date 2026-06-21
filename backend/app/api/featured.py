@@ -267,7 +267,7 @@ async def stripe_webhook(
         if event["type"] == "checkout.session.completed":
             print(f"[STRIPE WEBHOOK] Processing checkout.session.completed")
             session_data = event["data"]["object"]
-            booking_id = session_data.get("metadata", {}).get("booking_id")
+            booking_id = getattr(session_data.metadata, "booking_id", None) if getattr(session_data, "metadata", None) else None
             print(f"[STRIPE WEBHOOK] Booking ID from metadata: {booking_id}")
             handle_checkout_completed(session, session_data)
             print(f"[STRIPE WEBHOOK] Successfully processed checkout completion for booking: {booking_id}")
@@ -384,7 +384,7 @@ def verify_stripe_session(
             )
         
         # Get booking from metadata
-        metadata_booking_id = stripe_session.metadata.get("booking_id")
+        metadata_booking_id = getattr(stripe_session.metadata, "booking_id", None) if getattr(stripe_session, "metadata", None) else None
         if not metadata_booking_id:
             print("[VERIFY SESSION ERROR] No booking_id in Stripe metadata")
             return VerifySessionResponse(
