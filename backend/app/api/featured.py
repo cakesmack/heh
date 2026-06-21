@@ -411,11 +411,11 @@ def verify_stripe_session(
             if invoice_id:
                 try:
                     invoice = stripe.Invoice.retrieve(invoice_id)
-                    invoice_url = invoice.get("hosted_invoice_url")
+                    invoice_url = getattr(invoice, "hosted_invoice_url", None)
                 except Exception as e:
                     print(f"[VERIFY SESSION ERROR] Failed to retrieve invoice {invoice_id}: {e}")
 
-            activate_booking(session, booking, stripe_session.get("payment_intent"), invoice_url)
+            activate_booking(session, booking, getattr(stripe_session, "payment_intent", None), invoice_url)
         
         return VerifySessionResponse(
             success=True,

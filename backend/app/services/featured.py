@@ -369,15 +369,15 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
     if not booking:
         return
     
-    payment_intent_id = stripe_session.get("payment_intent")
+    payment_intent_id = getattr(stripe_session, "payment_intent", None)
     
     # Retrieve invoice URL if available
     invoice_url = None
-    invoice_id = stripe_session.get("invoice")
+    invoice_id = getattr(stripe_session, "invoice", None)
     if invoice_id:
         try:
             invoice = stripe.Invoice.retrieve(invoice_id)
-            invoice_url = invoice.get("hosted_invoice_url")
+            invoice_url = getattr(invoice, "hosted_invoice_url", None)
         except Exception as e:
             print(f"[FEATURED SERVICE ERROR] Failed to retrieve invoice {invoice_id}: {e}")
 
@@ -389,7 +389,7 @@ def handle_checkout_expired(session: Session, stripe_session: dict) -> None:
     Handle expired Stripe checkout.
     Cancels the booking to release the slot.
     """
-    booking_id = stripe_session.get("metadata", {}).get("booking_id")
+    booking_id = getattr(stripe_session.metadata, "booking_id", None) if getattr(stripe_session, "metadata", None) else None
     if not booking_id:
         return
 
