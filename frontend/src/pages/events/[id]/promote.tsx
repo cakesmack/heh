@@ -13,6 +13,7 @@ import { Spinner } from '@/components/common/Spinner';
 import type { EventResponse, SlotConfig, SlotType, AvailabilityResponse, Category } from '@/types';
 import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
+import { toast } from 'react-hot-toast';
 
 const SLOT_DESCRIPTIONS: Record<string, { name: string; description: string }> = {
   premium: { name: 'Premium Placement', description: 'Featured placement across homepage lists, category headers, and search results' },
@@ -104,6 +105,35 @@ export default function PromoteEventPage() {
       setDateValidationError(null);
     }
   }, [range, unavailableDates]);
+
+  const handleRangeSelect = (newRange: DateRange | undefined) => {
+    if (newRange?.from && newRange?.to) {
+      const start = new Date(newRange.from);
+      const end = new Date(newRange.to);
+      let current = new Date(start);
+      let foundUnavailable = false;
+
+      while (current <= end) {
+        const dateStr = current.toISOString().split('T')[0];
+        if (unavailableDates.includes(dateStr)) {
+          foundUnavailable = true;
+          break;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+
+      if (foundUnavailable) {
+        setRange(undefined);
+        setStartDate('');
+        setEndDate('');
+        setError("Selection cannot include unavailable dates.");
+        toast.error("Selection cannot include unavailable dates.");
+        return;
+      }
+    }
+    setError(null);
+    setRange(newRange);
+  };
 
   useEffect(() => {
     // Check availability when dates or slot changes and selection is valid
@@ -281,11 +311,12 @@ export default function PromoteEventPage() {
               Choose the start and end dates for your Premium Promotion. Fully booked dates are disabled.
             </p>
 
-            <div className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl bg-gray-50/50 mb-4">
+            <div className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl bg-gray-50/50 mb-4 overflow-x-auto w-full">
               <DayPicker
                 mode="range"
                 selected={range}
-                onSelect={setRange}
+                onSelect={handleRangeSelect}
+                numberOfMonths={2}
                 disabled={[
                   { before: new Date() },
                   ...unavailableDates.map(d => new Date(d))
@@ -298,9 +329,22 @@ export default function PromoteEventPage() {
                   today: 'text-emerald-600 font-bold',
                   range_middle: 'bg-emerald-50 text-emerald-900',
                   range_start: 'bg-emerald-600 text-white rounded-l-md',
-                  range_end: 'bg-emerald-600 text-white rounded-r-md'
+                  range_end: 'bg-emerald-600 text-white rounded-r-md',
+                  disabled: 'opacity-50 line-through text-gray-400 cursor-not-allowed'
                 }}
               />
+              <style>{`
+                .rdp-months {
+                  display: flex;
+                  flex-direction: column;
+                  gap: 1.5rem;
+                }
+                @media (min-width: 640px) {
+                  .rdp-months {
+                    flex-direction: row;
+                  }
+                }
+              `}</style>
             </div>
 
             {/* Range Text Display */}
