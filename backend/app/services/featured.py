@@ -361,7 +361,7 @@ def handle_checkout_completed(session: Session, stripe_session: dict) -> None:
     Handle successful Stripe checkout.
     Uses centralized activate_booking logic.
     """
-    booking_id = stripe_session.get("metadata", {}).get("booking_id")
+    booking_id = getattr(stripe_session.metadata, "booking_id", None) if getattr(stripe_session, "metadata", None) else None
     if not booking_id:
         return
 

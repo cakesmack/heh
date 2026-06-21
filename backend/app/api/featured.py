@@ -407,7 +407,7 @@ def verify_stripe_session(
             
             # Retrieve invoice URL if available
             invoice_url = None
-            invoice_id = stripe_session.get("invoice")
+            invoice_id = getattr(stripe_session, "invoice", None)
             if invoice_id:
                 try:
                     invoice = stripe.Invoice.retrieve(invoice_id)
