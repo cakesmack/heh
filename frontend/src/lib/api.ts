@@ -1232,6 +1232,17 @@ const preferencesAPI = {
 
 export const featuredAPI = {
   /**
+   * Get dates that have reached maximum concurrent booking capacity for PREMIUM slots
+   */
+  getUnavailableDates: async (startDate?: string, endDate?: string): Promise<string[]> => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const queryString = params.toString() ? `?${params}` : '';
+    return apiFetch<string[]>(`/api/featured/unavailable-dates${queryString}`, {}, false);
+  },
+
+  /**
    * Get pricing and limits for all slot types
    */
   getConfig: async (): Promise<SlotConfig[]> => {

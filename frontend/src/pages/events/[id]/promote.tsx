@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import { Spinner } from '@/components/common/Spinner';
 import type { EventResponse, SlotConfig, SlotType, AvailabilityResponse, Category } from '@/types';
+import { DayPicker, DateRange } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
 
 const SLOT_DESCRIPTIONS: Record<string, { name: string; description: string }> = {
   premium: { name: 'Premium Placement', description: 'Featured placement across homepage lists, category headers, and search results' },
@@ -37,17 +39,78 @@ export default function PromoteEventPage() {
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
+  const [dateValidationError, setDateValidationError] = useState<string | null>(null);
+  const [range, setRange] = useState<DateRange | undefined>(undefined);
+
   useEffect(() => {
     if (!id) return;
     loadData();
   }, [id]);
 
   useEffect(() => {
-    // Check availability when dates or slot changes
-    if (selectedSlot && startDate && endDate) {
+    const fetchUnavailable = async () => {
+      try {
+        const dates = await api.featured.getUnavailableDates();
+        setUnavailableDates(dates);
+      } catch (err) {
+        console.error('Failed to load unavailable dates:', err);
+      }
+    };
+    fetchUnavailable();
+  }, []);
+
+  useEffect(() => {
+    // Sync range selection changes to start/end date input strings
+    if (range?.from) {
+      const offsetDate = new Date(range.from.getTime() - range.from.getTimezoneOffset() * 60000);
+      setStartDate(offsetDate.toISOString().split('T')[0]);
+    } else {
+      setStartDate('');
+    }
+
+    if (range?.to) {
+      const offsetDate = new Date(range.to.getTime() - range.to.getTimezoneOffset() * 60000);
+      setEndDate(offsetDate.toISOString().split('T')[0]);
+    } else {
+      setEndDate('');
+    }
+  }, [range]);
+
+  useEffect(() => {
+    // Validate range selection does not bridge over unavailable dates
+    if (range?.from && range?.to) {
+      const start = new Date(range.from);
+      const end = new Date(range.to);
+      let current = new Date(start);
+      let foundUnavailable = false;
+
+      while (current <= end) {
+        const dateStr = current.toISOString().split('T')[0];
+        if (unavailableDates.includes(dateStr)) {
+          foundUnavailable = true;
+          break;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+
+      if (foundUnavailable) {
+        setDateValidationError("Your selected range includes unavailable dates.");
+        setAvailability(null);
+      } else {
+        setDateValidationError(null);
+      }
+    } else {
+      setDateValidationError(null);
+    }
+  }, [range, unavailableDates]);
+
+  useEffect(() => {
+    // Check availability when dates or slot changes and selection is valid
+    if (selectedSlot && startDate && endDate && !dateValidationError) {
       checkAvailability();
     }
-  }, [selectedSlot, event?.category_id, startDate, endDate]);
+  }, [selectedSlot, event?.category_id, startDate, endDate, dateValidationError]);
 
   const loadData = async () => {
     try {
@@ -65,8 +128,16 @@ export default function PromoteEventPage() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const threeDays = new Date();
       threeDays.setDate(threeDays.getDate() + 4);
-      setStartDate(tomorrow.toISOString().split('T')[0]);
-      setEndDate(threeDays.toISOString().split('T')[0]);
+      
+      const tomStr = tomorrow.toISOString().split('T')[0];
+      const thrStr = threeDays.toISOString().split('T')[0];
+      
+      setStartDate(tomStr);
+      setEndDate(thrStr);
+      setRange({
+        from: tomorrow,
+        to: threeDays
+      });
     } catch (err) {
       setError('Failed to load event');
     } finally {
@@ -94,7 +165,7 @@ export default function PromoteEventPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSlot || !startDate || !endDate || !availability?.available || !event) return;
+    if (!selectedSlot || !startDate || !endDate || !availability?.available || !event || dateValidationError) return;
 
     setIsSubmitting(true);
     try {
@@ -205,35 +276,55 @@ export default function PromoteEventPage() {
 
           {/* Date Selection */}
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Dates</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
-              </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Select Dates</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose the start and end dates for your Premium Promotion. Fully booked dates are disabled.
+            </p>
+
+            <div className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl bg-gray-50/50 mb-4">
+              <DayPicker
+                mode="range"
+                selected={range}
+                onSelect={setRange}
+                disabled={[
+                  { before: new Date() },
+                  ...unavailableDates.map(d => new Date(d))
+                ]}
+                styles={{
+                  caption: { color: '#047857' }
+                }}
+                modifiersClassNames={{
+                  selected: 'bg-emerald-600 text-white hover:bg-emerald-700',
+                  today: 'text-emerald-600 font-bold',
+                  range_middle: 'bg-emerald-50 text-emerald-900',
+                  range_start: 'bg-emerald-600 text-white rounded-l-md',
+                  range_end: 'bg-emerald-600 text-white rounded-r-md'
+                }}
+              />
             </div>
 
+            {/* Range Text Display */}
+            {range?.from && (
+              <div className="text-sm text-gray-700 font-medium mb-4 flex justify-between p-3 bg-gray-50 rounded-lg">
+                <span>Start Date: <strong className="text-gray-900">{startDate}</strong></span>
+                {range.to && (
+                  <span>End Date: <strong className="text-gray-900">{endDate}</strong></span>
+                )}
+              </div>
+            )}
+
+            {/* Date Validation Warning */}
+            {dateValidationError && (
+              <div className="mb-4 p-4 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 text-sm">
+                ⚠️ {dateValidationError}
+              </div>
+            )}
+
             {/* Availability Status */}
-            {isChecking && (
+            {isChecking && !dateValidationError && (
               <p className="mt-4 text-gray-500 text-sm">Checking availability...</p>
             )}
-            {availability && !isChecking && (
+            {availability && !isChecking && !dateValidationError && (
               <div className={`mt-4 p-4 rounded-lg ${availability.available ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                 }`}>
                 {availability.available ? (
@@ -262,8 +353,8 @@ export default function PromoteEventPage() {
           {/* Submit Button */}
           <button
             onClick={handleSubmit}
-            disabled={!availability?.available || isSubmitting}
-            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${availability?.available && !isSubmitting
+            disabled={!availability?.available || isSubmitting || !!dateValidationError}
+            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${availability?.available && !isSubmitting && !dateValidationError
               ? 'bg-emerald-600 text-white hover:bg-emerald-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}

@@ -133,6 +133,64 @@ def check_slot_availability(
     return AvailabilityResponse(**result)
 
 
+@router.get("/unavailable-dates", response_model=List[str])
+def get_unavailable_dates(
+    start_date: Optional[date] = Query(None, description="Start date (defaults to today)"),
+    end_date: Optional[date] = Query(None, description="End date (defaults to 60 days from today)"),
+    session: Session = Depends(get_session)
+):
+    """
+    Get dates that have reached maximum concurrent booking capacity for PREMIUM slots.
+    """
+    from datetime import timedelta
+    
+    # 1. Default date range: today to today + 60 days
+    today = date.today()
+    if not start_date:
+        start_date = today
+    if not end_date:
+        end_date = today + timedelta(days=60)
+        
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="start_date must be less than or equal to end_date"
+        )
+
+    # 2. Get PREMIUM slot config
+    config = get_slot_pricing(session, SlotType.PREMIUM)
+    max_slots = config["max"]
+
+    # 3. Query all active or pending bookings of PREMIUM type that overlap with the range
+    blocking_statuses = [
+        BookingStatus.PENDING_PAYMENT,
+        BookingStatus.ACTIVE
+    ]
+    
+    bookings = session.exec(
+        select(FeaturedBooking).where(
+            FeaturedBooking.slot_type == SlotType.PREMIUM,
+            FeaturedBooking.status.in_(blocking_statuses),
+            FeaturedBooking.start_date <= end_date,
+            FeaturedBooking.end_date >= start_date
+        )
+    ).all()
+
+    # 4. Count bookings for each specific date in the range
+    unavailable_dates = []
+    current = start_date
+    while current <= end_date:
+        count = sum(
+            1 for b in bookings
+            if b.start_date <= current <= b.end_date
+        )
+        if count >= max_slots:
+            unavailable_dates.append(current.isoformat())
+        current += timedelta(days=1)
+
+    return unavailable_dates
+
+
 @router.get("/active", response_model=List[ActiveFeaturedResponse])
 def get_active_slots(
     slot_type: SlotType,
