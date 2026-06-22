@@ -64,40 +64,8 @@ def list_locations(
     category_slug: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
-    """List all geographic hubs. Public endpoint with optional category filtering."""
-    from app.models.event import Event
-    from app.models.venue import Venue
-    from app.models.category import Category
-    from sqlalchemy import func, or_
-
-    query = select(Location).distinct()
-
-    # Join Event based on location name mapping
-    query = query.join(
-        Event,
-        or_(
-            Event.location_name.ilike(func.concat('%', Location.name, '%')),
-            Event.venue_id.in_(
-                select(Venue.id).where(
-                    or_(
-                        Venue.address.ilike(func.concat('%', Location.name, '%')),
-                        Venue.formatted_address.ilike(func.concat('%', Location.name, '%')),
-                        Venue.name.ilike(func.concat('%', Location.name, '%'))
-                    )
-                )
-            )
-        )
-    )
-
-    # Active, published events only (start_date >= now)
-    query = query.where(Event.status == "published")
-    query = query.where(Event.date_start >= func.now())
-
-    # Filter by category if category_slug is provided
-    if category_slug:
-        query = query.join(Category, Event.category_id == Category.id)
-        query = query.where(Category.slug == category_slug)
-
+    """List all geographic hubs. Public endpoint."""
+    query = select(Location)
     locations = session.exec(query.order_by(Location.name.asc())).all()
     return locations
 

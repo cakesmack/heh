@@ -1,13 +1,11 @@
 import Link from 'next/link';
-import React, { useEffect, useState } from 'react';
-import { locationsAPI } from '@/lib/api';
-import { GeographicHub } from '@/types';
+import React from 'react';
+import { LOCATIONS } from '@/constants/locations';
 
 interface PopularLocationsProps {
     activeLocation?: string;
     onSelectLocation?: (name: string) => void;
     categorySlug?: string;
-    initialLocations?: GeographicHub[];
 }
 
 export function LocationPillSkeleton() {
@@ -19,42 +17,14 @@ export function LocationPillSkeleton() {
     );
 }
 
-export default function PopularLocations({ activeLocation, onSelectLocation, categorySlug, initialLocations }: PopularLocationsProps = {}) {
-    const [locations, setLocations] = useState<GeographicHub[]>(initialLocations || []);
-    const [loading, setLoading] = useState(initialLocations ? false : true);
-
-    useEffect(() => {
-        if (initialLocations && !categorySlug) {
-            return;
-        }
-        setLoading(true);
-        locationsAPI.list({ category_slug: categorySlug })
-            .then((data) => setLocations(data))
-            .catch((err) => console.error('Failed to fetch locations:', err))
-            .finally(() => setLoading(false));
-    }, [categorySlug, initialLocations]);
-
-    if (loading) {
-        return (
-            <section className="py-3 bg-gray-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
-                        {Array.from({ length: 8 }).map((_, i) => (
-                            <LocationPillSkeleton key={i} />
-                        ))}
-                    </div>
-                </div>
-            </section>
-        );
-    }
-
-    if (locations.length === 0) return null;
+export default function PopularLocations({ activeLocation, onSelectLocation }: PopularLocationsProps = {}) {
+    if (LOCATIONS.length === 0) return null;
 
     return (
         <section className="py-3 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
-                    {locations.map((location) => {
+                    {LOCATIONS.map((location) => {
                         const isActive = activeLocation === location.name;
 
                         if (onSelectLocation) {
