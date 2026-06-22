@@ -10,6 +10,15 @@ interface PopularLocationsProps {
     initialLocations?: GeographicHub[];
 }
 
+export function LocationPillSkeleton() {
+    return (
+        <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gray-100 border border-gray-100 animate-pulse flex-shrink-0 h-10 w-32">
+            <div className="w-4 h-4 bg-gray-200 rounded-full" />
+            <div className="w-16 h-4 bg-gray-200 rounded" />
+        </div>
+    );
+}
+
 export default function PopularLocations({ activeLocation, onSelectLocation, categorySlug, initialLocations }: PopularLocationsProps = {}) {
     const [locations, setLocations] = useState<GeographicHub[]>(initialLocations || []);
     const [loading, setLoading] = useState(initialLocations ? false : true);
@@ -31,7 +40,7 @@ export default function PopularLocations({ activeLocation, onSelectLocation, cat
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
                         {Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="h-10 w-32 rounded-full bg-gray-200 animate-pulse flex-shrink-0" />
+                            <LocationPillSkeleton key={i} />
                         ))}
                     </div>
                 </div>

@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -16,8 +15,8 @@ import PopularLocations from '@/components/PopularLocations';
 import HappeningNextEvents from '@/components/home/HappeningNextEvents';
 import PromotedEvents from '@/components/home/PromotedEvents';
 import LocalPartners from '@/components/home/LocalPartners';
-import { eventsAPI, api, locationsAPI } from '@/lib/api';
-import { EventResponse, Category, GeographicHub } from '@/types';
+import { eventsAPI } from '@/lib/api';
+import { EventResponse } from '@/types';
 
 // Dynamic imports for below-the-fold or conditional components
 const SearchResultsDrawer = dynamic(() => import('@/components/home/SearchResultsDrawer'), { ssr: false });
@@ -33,25 +32,47 @@ const SITE_URL = 'https://www.highlandeventshub.co.uk';
 const DEFAULT_OG_IMAGE = 'https://www.highlandeventshub.co.uk/images/og-preview.jpg?v=3';
 
 interface HomePageProps {
-  initialPromotedEvents: EventResponse[];
-  initialHappeningNextEvents: EventResponse[];
-  initialCategories: Category[];
-  initialLocations: GeographicHub[];
   meta?: any; // Passed to _app.tsx
 }
 
-export default function HomePage({
-  initialPromotedEvents = [],
-  initialHappeningNextEvents = [],
-  initialCategories = [],
-  initialLocations = [],
-}: HomePageProps) {
+export default function HomePage() {
   const { user } = useAuth();
 
-  // Rows State initialized from SSR props
-  const [happeningNextEvents, setHappeningNextEvents] = useState<EventResponse[]>(initialHappeningNextEvents);
-  const [promotedEvents, setPromotedEvents] = useState<EventResponse[]>(initialPromotedEvents);
-  const [loadingRows, setLoadingRows] = useState(false);
+  // Rows State
+  const [happeningNextEvents, setHappeningNextEvents] = useState<EventResponse[]>([]);
+  const [promotedEvents, setPromotedEvents] = useState<EventResponse[]>([]);
+  const [loadingRows, setLoadingRows] = useState(true);
+
+  useEffect(() => {
+    const fetchHomeEvents = async () => {
+      try {
+        setLoadingRows(true);
+        const [upcomingRes, promotedRes] = await Promise.all([
+          eventsAPI.list({ limit: 14, include_past: false, sort_by: 'date', max_duration_days: 3 }),
+          eventsAPI.listPromoted()
+        ]);
+
+        const promoted = promotedRes.events || [];
+        setPromotedEvents(promoted);
+
+        // Exclude promoted events from happening next
+        const promotedIds = new Set(promoted.map(e => e.id));
+        const promotedParentIds = new Set(promoted.map(e => e.parent_event_id).filter(Boolean));
+
+        const filteredUpcoming = (upcomingRes.events || [])
+          .filter(e => !promotedIds.has(e.id) && (!e.parent_event_id || !promotedParentIds.has(e.parent_event_id)))
+          .slice(0, 10);
+
+        setHappeningNextEvents(filteredUpcoming);
+      } catch (err) {
+        console.error('Failed to fetch home page rows:', err);
+      } finally {
+        setLoadingRows(false);
+      }
+    };
+
+    fetchHomeEvents();
+  }, []);
 
   // Search State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -234,12 +255,12 @@ export default function HomePage({
 
       {/* Categories Section */}
       <div id="categories" className="min-h-[66px]">
-        <CategoryGrid initialCategories={initialCategories} />
+        <CategoryGrid />
       </div>
 
       {/* Popular Locations Grid */}
       <div className="min-h-[66px]">
-        <PopularLocations initialLocations={initialLocations} />
+        <PopularLocations />
       </div>
 
 
@@ -342,73 +363,3 @@ export default function HomePage({
   );
 }
 
-const fetchSSR = async <T,>(endpoint: string, params: Record<string, any> = {}): Promise<T> => {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  
-  const queryParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      queryParams.set(key, String(value));
-    }
-  });
-  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
-  const url = `${baseUrl}${endpoint}${queryString}`;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-    
-    return await res.json() as T;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-};
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  let promoted: EventResponse[] = [];
-  let filteredUpcoming: EventResponse[] = [];
-  let categories: Category[] = [];
-  let locations: GeographicHub[] = [];
-
-  try {
-    const [upcomingRes, promotedRes, categoriesRes, locationsRes] = await Promise.all([
-      fetchSSR<any>('/api/events', { limit: 14, sort_by: 'date', max_duration_days: 3 }),
-      fetchSSR<any>('/api/events/promoted'),
-      fetchSSR<any>('/api/categories'),
-      fetchSSR<any>('/api/locations')
-    ]);
-
-    promoted = promotedRes?.events || [];
-    const promotedIds = new Set(promoted.map(e => e.id));
-    const promotedParentIds = new Set(promoted.map(e => e.parent_event_id).filter(Boolean));
-
-    filteredUpcoming = (upcomingRes?.events || [])
-      .filter((e: any) => !promotedIds.has(e.id) && (!e.parent_event_id || !promotedParentIds.has(e.parent_event_id)))
-      .slice(0, 10);
-
-    categories = categoriesRes?.categories || [];
-    locations = locationsRes || [];
-  } catch (error) {
-    console.error("SSR Fetch Failed:", error);
-  }
-
-  return {
-    props: {
-      initialPromotedEvents: promoted,
-      initialHappeningNextEvents: filteredUpcoming,
-      initialCategories: categories,
-      initialLocations: locations,
-    }
-  };
-};
