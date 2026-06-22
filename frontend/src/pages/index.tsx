@@ -16,8 +16,8 @@ import PopularLocations from '@/components/PopularLocations';
 import HappeningNextEvents from '@/components/home/HappeningNextEvents';
 import PromotedEvents from '@/components/home/PromotedEvents';
 import LocalPartners from '@/components/home/LocalPartners';
-import { eventsAPI } from '@/lib/api';
-import { EventResponse } from '@/types';
+import { eventsAPI, api, locationsAPI } from '@/lib/api';
+import { EventResponse, Category, GeographicHub } from '@/types';
 
 // Dynamic imports for below-the-fold or conditional components
 const SearchResultsDrawer = dynamic(() => import('@/components/home/SearchResultsDrawer'), { ssr: false });
@@ -35,12 +35,16 @@ const DEFAULT_OG_IMAGE = 'https://www.highlandeventshub.co.uk/images/og-preview.
 interface HomePageProps {
   initialPromotedEvents: EventResponse[];
   initialHappeningNextEvents: EventResponse[];
+  initialCategories: Category[];
+  initialLocations: GeographicHub[];
   meta?: any; // Passed to _app.tsx
 }
 
 export default function HomePage({
   initialPromotedEvents = [],
   initialHappeningNextEvents = [],
+  initialCategories = [],
+  initialLocations = [],
 }: HomePageProps) {
   const { user } = useAuth();
 
@@ -229,12 +233,14 @@ export default function HomePage({
       <HeroSection onSearch={handleSearch} isSearchLoading={isSearchLoading} />
 
       {/* Categories Section */}
-      <div id="categories">
-        <CategoryGrid />
+      <div id="categories" className="min-h-[66px]">
+        <CategoryGrid initialCategories={initialCategories} />
       </div>
 
       {/* Popular Locations Grid */}
-      <PopularLocations />
+      <div className="min-h-[66px]">
+        <PopularLocations initialLocations={initialLocations} />
+      </div>
 
 
       <SearchResultsDrawer
@@ -338,9 +344,11 @@ export default function HomePage({
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    const [upcomingRes, promotedRes] = await Promise.all([
+    const [upcomingRes, promotedRes, categoriesRes, locationsRes] = await Promise.all([
       eventsAPI.list({ limit: 14, include_past: false, sort_by: 'date', max_duration_days: 3 }),
-      eventsAPI.listPromoted()
+      eventsAPI.listPromoted(),
+      api.categories.list(),
+      locationsAPI.list()
     ]);
 
     const promoted = promotedRes.events || [];
@@ -355,6 +363,8 @@ export const getServerSideProps: GetServerSideProps = async () => {
       props: {
         initialPromotedEvents: promoted,
         initialHappeningNextEvents: filteredUpcoming,
+        initialCategories: categoriesRes.categories || [],
+        initialLocations: locationsRes || [],
       }
     };
   } catch (err) {
@@ -363,6 +373,8 @@ export const getServerSideProps: GetServerSideProps = async () => {
       props: {
         initialPromotedEvents: [],
         initialHappeningNextEvents: [],
+        initialCategories: [],
+        initialLocations: [],
       }
     };
   }

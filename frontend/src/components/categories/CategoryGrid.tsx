@@ -6,13 +6,15 @@ import CategoryCard from './CategoryCard';
 interface CategoryGridProps {
   activeCategory?: string;
   onSelectCategory?: (slug: string) => void;
+  initialCategories?: Category[];
 }
 
-export default function CategoryGrid({ activeCategory, onSelectCategory }: CategoryGridProps = {}) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function CategoryGrid({ activeCategory, onSelectCategory, initialCategories }: CategoryGridProps = {}) {
+  const [categories, setCategories] = useState<Category[]>(initialCategories || []);
+  const [loading, setLoading] = useState(initialCategories ? false : true);
 
   useEffect(() => {
+    if (initialCategories) return;
     const fetchCategories = async () => {
       try {
         const response = await api.categories.list();
@@ -25,7 +27,7 @@ export default function CategoryGrid({ activeCategory, onSelectCategory }: Categ
     };
 
     fetchCategories();
-  }, []);
+  }, [initialCategories]);
 
   if (loading) {
     return (

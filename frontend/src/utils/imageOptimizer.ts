@@ -23,6 +23,9 @@ export function optimizeImage(
     if (options === 'thumb') {
         width = 400;
         variant = 'public'; // Using public for now as standard, but mapping exists
+    } else if (options === 'card') {
+        width = 800;
+        variant = 'public';
     } else if (options === 'hero') {
         width = 1600;
         variant = 'public';

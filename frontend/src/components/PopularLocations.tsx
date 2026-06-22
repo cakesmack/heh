@@ -7,19 +7,23 @@ interface PopularLocationsProps {
     activeLocation?: string;
     onSelectLocation?: (name: string) => void;
     categorySlug?: string;
+    initialLocations?: GeographicHub[];
 }
 
-export default function PopularLocations({ activeLocation, onSelectLocation, categorySlug }: PopularLocationsProps = {}) {
-    const [locations, setLocations] = useState<GeographicHub[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function PopularLocations({ activeLocation, onSelectLocation, categorySlug, initialLocations }: PopularLocationsProps = {}) {
+    const [locations, setLocations] = useState<GeographicHub[]>(initialLocations || []);
+    const [loading, setLoading] = useState(initialLocations ? false : true);
 
     useEffect(() => {
+        if (initialLocations && !categorySlug) {
+            return;
+        }
         setLoading(true);
         locationsAPI.list({ category_slug: categorySlug })
             .then((data) => setLocations(data))
             .catch((err) => console.error('Failed to fetch locations:', err))
             .finally(() => setLoading(false));
-    }, [categorySlug]);
+    }, [categorySlug, initialLocations]);
 
     if (loading) {
         return (

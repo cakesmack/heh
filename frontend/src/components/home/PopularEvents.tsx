@@ -154,7 +154,7 @@ export default function PopularEvents() {
                                         fill
                                         className="object-cover group-hover/card:scale-110 transition-transform duration-700 ease-out opacity-80 group-hover/card:opacity-100"
                                         sizes="500px"
-                                        variant="hero"
+                                        variant="card"
                                     />
                                 ) : (
                                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-emerald-900 opacity-60" />

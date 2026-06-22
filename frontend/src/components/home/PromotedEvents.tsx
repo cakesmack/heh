@@ -78,7 +78,7 @@ export default function PromotedEvents({ events, isLoading }: PromotedEventsProp
                                 {event.image_url ? (
                                     <OptimizedImage
                                         src={event.image_url}
-                                        variant="hero"
+                                        variant="card"
                                         alt={event.title}
                                         fill
                                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

@@ -4,7 +4,7 @@ import { optimizeImage } from '@/utils/imageOptimizer';
 
 interface OptimizedImageProps extends Omit<ImageProps, 'src'> {
     src: string | null | undefined;
-    variant?: 'thumb' | 'hero';
+    variant?: 'thumb' | 'hero' | 'card';
     fallback?: string;
 }
 
