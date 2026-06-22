@@ -73,6 +73,7 @@ htmlcov/
 
 # Data Dumps
 *.json
+!frontend/public/manifest.json
 *.csv
 
 # Local Maintenance Scripts

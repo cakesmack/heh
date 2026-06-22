@@ -6,3 +6,8 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# PWA Service Workers
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
