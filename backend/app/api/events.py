@@ -2220,9 +2220,34 @@ async def update_event(
                              session.add(tag)
 
     # Moderation Logic: 
-    # 1. If published event is edited by non-trusted user, revert to pending
-    # 2. If rejected event is edited, reset to pending for re-review
-    if (original_status == "published" and not (current_user.is_admin or current_user.is_trusted_organizer)) or (original_status == "rejected"):
+    # 1. If published event is edited by non-trusted user, revert to pending,
+    #    UNLESS the event has an active/pending promotion or is hosted at a verified venue.
+    # 2. If rejected event is edited, reset to pending for re-review.
+    
+    venue_verified = False
+    if event.venue_id:
+        venue = session.get(Venue, event.venue_id)
+        if venue and venue.status == "VERIFIED":
+            venue_verified = True
+
+    has_active_promotion = False
+    active_promo = session.exec(
+        select(FeaturedBooking)
+        .where(FeaturedBooking.event_id == event.id)
+        .where(FeaturedBooking.status.in_([BookingStatus.ACTIVE, BookingStatus.PENDING_PAYMENT]))
+    ).first()
+    if active_promo:
+        has_active_promotion = True
+
+    should_revert = False
+    if original_status == "rejected":
+        should_revert = True
+    elif original_status == "published":
+        is_trusted_user = current_user.is_admin or current_user.is_trusted_organizer
+        if not (is_trusted_user or venue_verified or has_active_promotion):
+            should_revert = True
+
+    if should_revert:
         event.status = "pending"
         event.moderation_reason = "Edited after rejection/publication"
         logger.info(f"[MODERATION] Event '{event.title}' reset to pending update by user {current_user.id}")
