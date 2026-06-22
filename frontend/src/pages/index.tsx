@@ -4,23 +4,27 @@
  */
 
 import { useState, useEffect } from 'react';
+import { GetServerSideProps } from 'next';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Head from 'next/head';
 import { useEvents } from '@/hooks/useEvents';
 import { useAuth } from '@/hooks/useAuth';
 import HeroSection from '@/components/home/HeroSection';
 import CategoryGrid from '@/components/categories/CategoryGrid';
-import FeaturedVenues from '@/components/home/FeaturedVenues';
-import SearchResultsDrawer from '@/components/home/SearchResultsDrawer';
-import RecommendedEvents from '@/components/home/RecommendedEvents';
-import PopularEvents from '@/components/home/PopularEvents';
 import PopularLocations from '@/components/PopularLocations';
-import CuratedCollections from '@/components/home/CuratedCollections';
 import HappeningNextEvents from '@/components/home/HappeningNextEvents';
 import PromotedEvents from '@/components/home/PromotedEvents';
 import LocalPartners from '@/components/home/LocalPartners';
 import { eventsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
+
+// Dynamic imports for below-the-fold or conditional components
+const SearchResultsDrawer = dynamic(() => import('@/components/home/SearchResultsDrawer'), { ssr: false });
+const RecommendedEvents = dynamic(() => import('@/components/home/RecommendedEvents'), { ssr: false });
+const PopularEvents = dynamic(() => import('@/components/home/PopularEvents'), { ssr: false });
+const CuratedCollections = dynamic(() => import('@/components/home/CuratedCollections'), { ssr: false });
+const FeaturedVenues = dynamic(() => import('@/components/home/FeaturedVenues'), { ssr: false });
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
@@ -29,47 +33,21 @@ const SITE_URL = 'https://www.highlandeventshub.co.uk';
 const DEFAULT_OG_IMAGE = 'https://www.highlandeventshub.co.uk/images/og-preview.jpg?v=3';
 
 interface HomePageProps {
+  initialPromotedEvents: EventResponse[];
+  initialHappeningNextEvents: EventResponse[];
   meta?: any; // Passed to _app.tsx
 }
 
-// Client-side only - no getServerSideProps
-export default function HomePage() {
+export default function HomePage({
+  initialPromotedEvents = [],
+  initialHappeningNextEvents = [],
+}: HomePageProps) {
   const { user } = useAuth();
 
-  // Rows State
-  const [happeningNextEvents, setHappeningNextEvents] = useState<EventResponse[]>([]);
-  const [promotedEvents, setPromotedEvents] = useState<EventResponse[]>([]);
-  const [loadingRows, setLoadingRows] = useState(true);
-
-  useEffect(() => {
-    const fetchHomeEvents = async () => {
-      try {
-        const [upcomingRes, promotedRes] = await Promise.all([
-          eventsAPI.list({ limit: 14, include_past: false, sort_by: 'date', max_duration_days: 3 }),
-          eventsAPI.listPromoted()
-        ]);
-
-        const promoted = promotedRes.events || [];
-        setPromotedEvents(promoted);
-
-        // Exclude promoted events from happening next
-        const promotedIds = new Set(promoted.map(e => e.id));
-        const promotedParentIds = new Set(promoted.map(e => e.parent_event_id).filter(Boolean));
-
-        const filteredUpcoming = (upcomingRes.events || [])
-          .filter(e => !promotedIds.has(e.id) && (!e.parent_event_id || !promotedParentIds.has(e.parent_event_id)))
-          .slice(0, 10);
-
-        setHappeningNextEvents(filteredUpcoming);
-      } catch (err) {
-        console.error('Failed to fetch home page rows:', err);
-      } finally {
-        setLoadingRows(false);
-      }
-    };
-
-    fetchHomeEvents();
-  }, []);
+  // Rows State initialized from SSR props
+  const [happeningNextEvents, setHappeningNextEvents] = useState<EventResponse[]>(initialHappeningNextEvents);
+  const [promotedEvents, setPromotedEvents] = useState<EventResponse[]>(initialPromotedEvents);
+  const [loadingRows, setLoadingRows] = useState(false);
 
   // Search State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -357,3 +335,35 @@ export default function HomePage() {
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  try {
+    const [upcomingRes, promotedRes] = await Promise.all([
+      eventsAPI.list({ limit: 14, include_past: false, sort_by: 'date', max_duration_days: 3 }),
+      eventsAPI.listPromoted()
+    ]);
+
+    const promoted = promotedRes.events || [];
+    const promotedIds = new Set(promoted.map(e => e.id));
+    const promotedParentIds = new Set(promoted.map(e => e.parent_event_id).filter(Boolean));
+
+    const filteredUpcoming = (upcomingRes.events || [])
+      .filter(e => !promotedIds.has(e.id) && (!e.parent_event_id || !promotedParentIds.has(e.parent_event_id)))
+      .slice(0, 10);
+
+    return {
+      props: {
+        initialPromotedEvents: promoted,
+        initialHappeningNextEvents: filteredUpcoming,
+      }
+    };
+  } catch (err) {
+    console.error('Failed to fetch SSR data for homepage:', err);
+    return {
+      props: {
+        initialPromotedEvents: [],
+        initialHappeningNextEvents: [],
+      }
+    };
+  }
+};

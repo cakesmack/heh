@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
 import { useSearch } from '@/context/SearchContext';
 
@@ -28,9 +29,13 @@ export default function HeroSection({ onSearch, isSearchLoading = false }: HeroS
     return (
         <section className="relative min-h-[60vh] md:min-h-[60vh] flex items-center justify-center overflow-hidden bg-gray-950">
             {/* Background Image */}
-            <div
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: "url('/images/hero-bg.jpg')" }}
+            <Image
+                src="/images/hero-bg.jpg"
+                alt="Highlands Background"
+                fill
+                priority
+                className="object-cover object-center"
+                sizes="100vw"
             />
 
             {/* Heavy dark overlay */}
