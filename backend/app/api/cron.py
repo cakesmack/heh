@@ -183,8 +183,8 @@ def run_system_cleanup(
     now = datetime.utcnow()
     today = now.date()
     
-    # 1. CLEANUP STALE LOCKS
-    stale_cutoff = now - timedelta(minutes=35)
+    # 1. CLEANUP STALE LOCKS (15-minute lock duration)
+    stale_cutoff = now - timedelta(minutes=15)
     stale_bookings = session.exec(
         select(FeaturedBooking)
         .where(FeaturedBooking.status == BookingStatus.PENDING_PAYMENT)

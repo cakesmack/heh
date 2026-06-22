@@ -5,7 +5,7 @@ Handles availability checks, pricing, and Stripe checkout creation.
 from datetime import date, datetime, timedelta
 from typing import Optional
 import stripe
-from sqlmodel import Session, select, and_
+from sqlmodel import Session, select, and_, or_
 
 from app.core.config import settings
 from app.models.featured_booking import (
@@ -84,20 +84,21 @@ def check_availability(
             "num_days": num_days
         }
 
-    # Query existing bookings that overlap
-    blocking_statuses = [
-        BookingStatus.PENDING_PAYMENT,
-        BookingStatus.ACTIVE
-    ]
-
+    # Query existing bookings that overlap (exclude pending payments older than 15 minutes)
+    fifteen_minutes_ago = datetime.utcnow() - timedelta(minutes=15)
+    
     # STRICT FILTER: Only count bookings for THIS EXACT slot_type
     print(f"[DEBUG CHECK_AVAILABILITY] Checking for slot_type: {slot_type}")
     query = select(FeaturedBooking).where(
-        and_(
-            FeaturedBooking.slot_type == slot_type,
-            FeaturedBooking.status.in_(blocking_statuses),
-            FeaturedBooking.start_date <= end_date,
-            FeaturedBooking.end_date >= start_date
+        FeaturedBooking.slot_type == slot_type,
+        FeaturedBooking.start_date <= end_date,
+        FeaturedBooking.end_date >= start_date,
+        or_(
+            FeaturedBooking.status == BookingStatus.ACTIVE,
+            and_(
+                FeaturedBooking.status == BookingStatus.PENDING_PAYMENT,
+                FeaturedBooking.created_at >= fifteen_minutes_ago
+            )
         )
     )
 

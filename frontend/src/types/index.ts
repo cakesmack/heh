@@ -679,6 +679,7 @@ export interface AdminDashboardStats {
   pending_reports: number;
   pending_events: number;
   pending_claims: number;
+  total_revenue: number;
 }
 
 export interface DailyStats {

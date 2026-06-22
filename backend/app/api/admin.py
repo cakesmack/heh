@@ -58,6 +58,7 @@ class AdminDashboardStats(BaseModel):
     pending_reports: int
     pending_events: int
     pending_claims: int
+    total_revenue: int
 
 
 class AdminUserResponse(BaseModel):
@@ -145,6 +146,12 @@ def get_admin_stats(
     # Total Pending Claims
     pending_claims = (pending_claims or 0) + (pending_event_claims or 0)
 
+    # Total Revenue from FeaturedBooking (sum of amount_paid where status is active or completed)
+    total_revenue = session.exec(
+        select(func.sum(FeaturedBooking.amount_paid))
+        .where(FeaturedBooking.status.in_([BookingStatus.ACTIVE, BookingStatus.COMPLETED]))
+    ).one() or 0
+
     return AdminDashboardStats(
         total_users=total_users or 0,
         total_events=total_events or 0,
@@ -156,6 +163,7 @@ def get_admin_stats(
         pending_reports=pending_reports or 0,
         pending_events=pending_events or 0,
         pending_claims=pending_claims,
+        total_revenue=total_revenue,
     )
 
 
@@ -1052,7 +1060,10 @@ def get_all_featured_bookings(
     query = select(FeaturedBooking).order_by(FeaturedBooking.created_at.desc())
 
     if status_filter:
-        query = query.where(FeaturedBooking.status == status_filter)
+        if status_filter == "active_pending":
+            query = query.where(FeaturedBooking.status.in_([BookingStatus.ACTIVE, BookingStatus.PENDING_PAYMENT]))
+        else:
+            query = query.where(FeaturedBooking.status == status_filter)
     if slot_type:
         query = query.where(FeaturedBooking.slot_type == slot_type)
 
@@ -1183,6 +1194,22 @@ def end_featured_booking(
         "booking_id": booking_id,
         "event_featured_reset": event_updated
     }
+
+
+@router.delete("/featured/{booking_id}")
+def delete_featured_booking(
+    booking_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Hard-delete a featured booking record (admin only)."""
+    booking = session.get(FeaturedBooking, booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Featured booking not found")
+    
+    session.delete(booking)
+    session.commit()
+    return {"status": "success", "message": "Booking deleted successfully"}
 
 
 

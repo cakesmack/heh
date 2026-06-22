@@ -2,11 +2,11 @@
 Featured Booking API routes.
 Handles availability checks, checkout, and booking management.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 import traceback
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Header, Query
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_, and_
 from pydantic import BaseModel
 import stripe
 
@@ -161,18 +161,21 @@ def get_unavailable_dates(
     config = get_slot_pricing(session, SlotType.PREMIUM)
     max_slots = config["max"]
 
-    # 3. Query all active or pending bookings of PREMIUM type that overlap with the range
-    blocking_statuses = [
-        BookingStatus.PENDING_PAYMENT,
-        BookingStatus.ACTIVE
-    ]
+    # 3. Query all active or pending bookings of PREMIUM type that overlap with the range (exclude expired pending payments)
+    fifteen_minutes_ago = datetime.utcnow() - timedelta(minutes=15)
     
     bookings = session.exec(
         select(FeaturedBooking).where(
             FeaturedBooking.slot_type == SlotType.PREMIUM,
-            FeaturedBooking.status.in_(blocking_statuses),
             FeaturedBooking.start_date <= end_date,
-            FeaturedBooking.end_date >= start_date
+            FeaturedBooking.end_date >= start_date,
+            or_(
+                FeaturedBooking.status == BookingStatus.ACTIVE,
+                and_(
+                    FeaturedBooking.status == BookingStatus.PENDING_PAYMENT,
+                    FeaturedBooking.created_at >= fifteen_minutes_ago
+                )
+            )
         )
     ).all()
 

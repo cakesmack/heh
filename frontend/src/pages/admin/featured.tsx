@@ -53,7 +53,7 @@ export default function AdminFeatured() {
   const [pricing, setPricing] = useState<SlotPricingAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('active_pending');
   const [slotFilter, setSlotFilter] = useState<string>('');
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<SlotPricingAdmin>>({});
@@ -156,6 +156,18 @@ export default function AdminFeatured() {
     }
   };
 
+  const handleDeleteRecord = async (bookingId: string) => {
+    if (!confirm('Permanently delete this booking record? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      await apiFetch(`/api/admin/featured/${bookingId}`, { method: 'DELETE' });
+      await fetchBookings();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete booking record');
+    }
+  };
+
   const handleSyncFeatured = async () => {
     try {
       const result = await apiFetch<{ synced: number; total_active_bookings: number }>(
@@ -246,7 +258,7 @@ export default function AdminFeatured() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="">All Statuses</option>
+                <option value="active_pending">Active & Pending (Default)</option>
                 <option value="">All Statuses</option>
                 <option value="pending_payment">Pending Payment</option>
                 <option value="active">Active</option>
@@ -355,6 +367,14 @@ export default function AdminFeatured() {
                               className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700"
                             >
                               End Promotion
+                            </button>
+                          )}
+                          {booking.status === 'cancelled' && (
+                            <button
+                              onClick={() => handleDeleteRecord(booking.id)}
+                              className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                            >
+                              Delete Record
                             </button>
                           )}
                         </td>
