@@ -772,14 +772,22 @@ def list_events(
         total = session.exec(count_query).one() or 0
 
         # 6. APPLY PAGINATION (The Fix)
-        # Sort by active featured first, then date, then slice the results
+        # Sort by active featured first, then date
         active_featured_priority = case(
             (and_(Event.featured == True, Event.featured_until > func.now()), 1),
             else_=0
         ).desc()
-        query = query.order_by(active_featured_priority, Event.date_start.asc()).offset(skip).limit(limit)
+        query = query.order_by(active_featured_priority, Event.date_start.asc())
         
-        results = session.exec(query.distinct()).all()
+        # Execute query without database-level distinct to avoid InvalidColumnReference crash.
+        # Deduplicate in Python memory using an item unique dictionary sequence to preserve sorting and structure,
+        # then apply skip and limit pagination.
+        raw_results = session.exec(query).all()
+        seen = {}
+        for event in raw_results:
+            if event.id not in seen:
+                seen[event.id] = event
+        results = list(seen.values())[skip : skip + limit]
         print(f"DEBUG: Returned {len(results)} events for '{city_filter}' (Skip: {skip}, Limit: {limit})")
         
         # Build responses
