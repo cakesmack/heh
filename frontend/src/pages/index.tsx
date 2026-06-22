@@ -342,40 +342,73 @@ export default function HomePage({
   );
 }
 
+const fetchSSR = async <T,>(endpoint: string, params: Record<string, any> = {}): Promise<T> => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      queryParams.set(key, String(value));
+    }
+  });
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  const url = `${baseUrl}${endpoint}${queryString}`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    return await res.json() as T;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 export const getServerSideProps: GetServerSideProps = async () => {
+  let promoted: EventResponse[] = [];
+  let filteredUpcoming: EventResponse[] = [];
+  let categories: Category[] = [];
+  let locations: GeographicHub[] = [];
+
   try {
     const [upcomingRes, promotedRes, categoriesRes, locationsRes] = await Promise.all([
-      eventsAPI.list({ limit: 14, include_past: false, sort_by: 'date', max_duration_days: 3 }),
-      eventsAPI.listPromoted(),
-      api.categories.list(),
-      locationsAPI.list()
+      fetchSSR<any>('/api/events', { limit: 14, sort_by: 'date', max_duration_days: 3 }),
+      fetchSSR<any>('/api/events/promoted'),
+      fetchSSR<any>('/api/categories'),
+      fetchSSR<any>('/api/locations')
     ]);
 
-    const promoted = promotedRes.events || [];
+    promoted = promotedRes?.events || [];
     const promotedIds = new Set(promoted.map(e => e.id));
     const promotedParentIds = new Set(promoted.map(e => e.parent_event_id).filter(Boolean));
 
-    const filteredUpcoming = (upcomingRes.events || [])
-      .filter(e => !promotedIds.has(e.id) && (!e.parent_event_id || !promotedParentIds.has(e.parent_event_id)))
+    filteredUpcoming = (upcomingRes?.events || [])
+      .filter((e: any) => !promotedIds.has(e.id) && (!e.parent_event_id || !promotedParentIds.has(e.parent_event_id)))
       .slice(0, 10);
 
-    return {
-      props: {
-        initialPromotedEvents: promoted,
-        initialHappeningNextEvents: filteredUpcoming,
-        initialCategories: categoriesRes.categories || [],
-        initialLocations: locationsRes || [],
-      }
-    };
-  } catch (err) {
-    console.error('Failed to fetch SSR data for homepage:', err);
-    return {
-      props: {
-        initialPromotedEvents: [],
-        initialHappeningNextEvents: [],
-        initialCategories: [],
-        initialLocations: [],
-      }
-    };
+    categories = categoriesRes?.categories || [];
+    locations = locationsRes || [];
+  } catch (error) {
+    console.error("SSR Fetch Failed:", error);
   }
+
+  return {
+    props: {
+      initialPromotedEvents: promoted,
+      initialHappeningNextEvents: filteredUpcoming,
+      initialCategories: categories,
+      initialLocations: locations,
+    }
+  };
 };
