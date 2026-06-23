@@ -59,8 +59,8 @@ export default function PromotePreviewPage() {
             description: data.description || '',
             category_id: data.category_id || '',
             category: cat || undefined,
-            price: parseFloat(data.price || '0'),
-            price_display: data.price === '0' || !data.price ? 'Free' : `£${parseFloat(data.price).toFixed(2)}`,
+            price: isNaN(parseFloat(data.price)) ? 0 : parseFloat(data.price),
+            price_display: (data.price === '0' || !data.price) ? 'Free' : (isNaN(parseFloat(data.price)) ? 'TBC' : `£${parseFloat(data.price).toFixed(2)}`),
             image_url: data.image_url || null,
             date_start: data.date_start || new Date().toISOString(),
             date_end: data.date_end || new Date().toISOString(),
@@ -105,7 +105,7 @@ export default function PromotePreviewPage() {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 4);
+      endDate.setDate(endDate.getDate() + 3);
 
       const result = await api.featured.createCheckout({
         event_id: id as string,
@@ -131,8 +131,8 @@ export default function PromotePreviewPage() {
   }
 
   const resolvedEvent = mockupEvent || eventData;
-  const config = slotConfigs.find(c => c.slot_type === 'magazine_carousel');
-  const priceQuote = config ? (config.price_per_day * 3) : 0;
+  const DAILY_RATE_PENCE = 300; // £3.00 per day
+  const priceQuote = DAILY_RATE_PENCE * 3;
 
   return (
     <>
@@ -202,7 +202,11 @@ export default function PromotePreviewPage() {
                         </span>
                       </div>
                       <div className="ml-auto font-bold text-amber-300 text-sm">
-                        {resolvedEvent.price_display || (resolvedEvent.price === 0 ? 'Free' : `£${resolvedEvent.price.toFixed(2)}`)}
+                        {resolvedEvent.price_display && !resolvedEvent.price_display.includes('NaN') ? resolvedEvent.price_display : (
+                          typeof resolvedEvent.price === 'number' && !isNaN(resolvedEvent.price)
+                            ? (resolvedEvent.price === 0 ? 'Free' : `£${resolvedEvent.price.toFixed(2)}`)
+                            : 'TBC'
+                        )}
                       </div>
                     </div>
                   </div>

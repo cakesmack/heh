@@ -2144,20 +2144,28 @@ async def update_event(
 
     # Handle tags update
     if event_data.tags is not None:
-        # Remove old tags and decrement counts
-        old_event_tags = session.exec(
+        # Get current associations
+        current_event_tags = session.exec(
             select(EventTag).where(EventTag.event_id == event.id)
         ).all()
-        for et in old_event_tags:
-            old_tag = session.get(Tag, et.tag_id)
-            if old_tag and old_tag.usage_count > 0:
-                old_tag.usage_count -= 1
-            session.delete(et)
-
-        # Add new tags
-        if event_data.tags:
-            new_tags = get_or_create_tags(session, event_data.tags)
-            for tag in new_tags:
+        
+        current_tags_map = {et.tag_id: et for et in current_event_tags}
+        
+        # Get target tags
+        new_tags = get_or_create_tags(session, event_data.tags) if event_data.tags else []
+        new_tag_ids = {tag.id for tag in new_tags}
+        
+        # Remove tags that are not in the new list
+        for tag_id, et in current_tags_map.items():
+            if tag_id not in new_tag_ids:
+                old_tag = session.get(Tag, tag_id)
+                if old_tag and old_tag.usage_count > 0:
+                    old_tag.usage_count -= 1
+                session.delete(et)
+                
+        # Add tags that are not in the current list
+        for tag in new_tags:
+            if tag.id not in current_tags_map:
                 event_tag = EventTag(event_id=event.id, tag_id=tag.id)
                 session.add(event_tag)
                 tag.usage_count += 1
