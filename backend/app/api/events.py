@@ -131,7 +131,15 @@ def apply_geographic_tagging(session: Session, event: Event):
                 )
             ).first()
             
-            if not existing:
+            is_deleted = existing in session.deleted if existing else False
+            
+            # Check in-memory pending additions in the session
+            pending = any(
+                isinstance(obj, EventTag) and obj.event_id == event.id and obj.tag_id == tag.id
+                for obj in session.new
+            )
+            
+            if (not existing or is_deleted) and not pending:
                 event_tag = EventTag(event_id=event.id, tag_id=tag.id)
                 session.add(event_tag)
                 tag.usage_count += 1
