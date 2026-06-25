@@ -785,7 +785,7 @@ def list_events(
         # Time Range presets (today, tomorrow, weekend) are now resolved universally at the top of the function.
 
         if time_range == "past":
-            query = query.where(Event.date_end < sql_now)
+            query = query.where(func.coalesce(Event.date_end, Event.date_start) < sql_now)
         elif time_range == "week":
             from sqlalchemy import text
             query = query.where(Event.date_start >= func.current_date())
@@ -799,10 +799,9 @@ def list_events(
             query = query.outerjoin(EventShowtime, Event.id == EventShowtime.event_id)
             overlap_conditions = []
             if date_from and date_to:
-                overlap_conditions.append((Event.date_start <= date_to) & (Event.date_end >= date_from))
-                # overlap_conditions.append((EventShowtime.start_time >= date_from) & (EventShowtime.start_time <= date_to))
+                overlap_conditions.append((Event.date_start <= date_to) & (func.coalesce(Event.date_end, Event.date_start) >= date_from))
             elif date_from:
-                overlap_conditions.append(Event.date_end >= date_from)
+                overlap_conditions.append(func.coalesce(Event.date_end, Event.date_start) >= date_from)
             elif date_to:
                 overlap_conditions.append(Event.date_start <= date_to)
             
@@ -811,7 +810,7 @@ def list_events(
         else:
             # Default "Upcoming" behavior if no specific range
             # (Matches standard feed behavior)
-            query = query.where(Event.date_end >= sql_now)
+            query = query.where(func.coalesce(Event.date_end, Event.date_start) >= sql_now)
             
         
         # 5. GET TOTAL COUNT (Before slicing)
@@ -820,6 +819,17 @@ def list_events(
         total = session.exec(count_query).one() or 0
 
         # Sort by active featured first (using the date-gated outerjoin), then date
+        # We must join FeaturedBooking here because we re-initialized the query for city_filter
+        from datetime import date as date_today
+        today = date_today.today()
+        query = query.outerjoin(
+            FeaturedBooking,
+            (FeaturedBooking.event_id == Event.id) &
+            (FeaturedBooking.status == BookingStatus.ACTIVE) &
+            (FeaturedBooking.start_date <= today) &
+            (FeaturedBooking.end_date >= today)
+        )
+        
         active_featured_priority = case(
             (FeaturedBooking.id.isnot(None), 1),
             else_=0
@@ -939,9 +949,9 @@ def list_events(
     if date_from or date_to:
         overlap_conditions = []
         if date_from and date_to:
-            overlap_conditions.append((Event.date_start <= date_to) & (Event.date_end >= date_from))
+            overlap_conditions.append((Event.date_start <= date_to) & (func.coalesce(Event.date_end, Event.date_start) >= date_from))
         elif date_from:
-            overlap_conditions.append(Event.date_end >= date_from)
+            overlap_conditions.append(func.coalesce(Event.date_end, Event.date_start) >= date_from)
         elif date_to:
             overlap_conditions.append(Event.date_start <= date_to)
         
@@ -950,7 +960,7 @@ def list_events(
     
     # Handle explicit Time Range filters
     if time_range == "past":
-        query = query.where(Event.date_end < func.now())
+        query = query.where(func.coalesce(Event.date_end, Event.date_start) < func.now())
     elif time_range == "week":
         from sqlalchemy import text
         query = query.where(Event.date_start >= func.current_date())
@@ -961,7 +971,7 @@ def list_events(
         query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '30 days'"))
     elif not include_past:
         # For "Upcoming", we must be very strict: the event or its occurrences must happen in the future
-        query = query.where(Event.date_end >= func.now())
+        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= func.now())
 
     # Filter by recurrence status
     if is_recurring is not None:
