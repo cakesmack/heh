@@ -199,6 +199,55 @@ def build_event_response(
     current_user: Optional[User] = None
 ) -> EventResponse:
     """Build EventResponse with computed fields."""
+    start_date = event.date_start
+    end_date = event.date_end
+    is_upcoming = False
+
+    # Resolve Next Occurrence for Display
+    if event.is_recurring and event.parent_event_id is None and event.recurrence_group_id:
+        from datetime import timezone
+        # Query all active/published instances of the recurrence group sorted by start date
+        query = select(Event.date_start, Event.date_end).where(
+            Event.recurrence_group_id == event.recurrence_group_id,
+            Event.status == "published"
+        ).order_by(Event.date_start.asc())
+        
+        instances = session.exec(query).all()
+        if instances:
+            now = datetime.utcnow()
+            # Handle timezone awareness safely
+            first_inst_start = instances[0][0]
+            if first_inst_start.tzinfo is not None:
+                now = datetime.now(timezone.utc)
+                
+            # 1. Look for the closest upcoming instance (start_date >= now)
+            upcoming_instances = [inst for inst in instances if inst[0] >= now]
+            if upcoming_instances:
+                start_date, end_date = upcoming_instances[0][0], upcoming_instances[0][1]
+                is_upcoming = True
+            else:
+                # 2. Check if there is an ongoing instance (start_date <= now <= end_date)
+                ongoing_instances = [inst for inst in instances if inst[0] <= now <= inst[1]]
+                if ongoing_instances:
+                    start_date, end_date = ongoing_instances[0][0], ongoing_instances[0][1]
+                    is_upcoming = True
+                else:
+                    # 3. Fallback: all instances are in the past. Use the last occurrence (most recent past date)
+                    start_date, end_date = instances[-1][0], instances[-1][1]
+                    is_upcoming = False
+        else:
+            now = datetime.utcnow()
+            if start_date.tzinfo is not None:
+                now = datetime.now(timezone.utc)
+            is_upcoming = start_date >= now
+    elif event.is_recurring:
+        # For a child instance, we just compare its own date_start to determine if it is upcoming
+        now = datetime.utcnow()
+        if start_date.tzinfo is not None:
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
+        is_upcoming = start_date >= now
+
     # Get venue details and fallback coordinates
     venue_name = None
     venue_lat = None
@@ -242,6 +291,10 @@ def build_event_response(
         ]
 
     response = EventResponse.model_validate(event)
+    
+    # Override start and end dates with resolved occurrence values
+    response.date_start = start_date
+    response.date_end = end_date
     
     # Override coordinates in response if we used fallback
     if event.latitude is None and venue_lat is not None:
@@ -321,23 +374,10 @@ def build_event_response(
         response.organizer_profile = OrganizerProfileResponse.model_validate(event.organizer_profile)
 
     # Resolve Next Occurrence for Display
-    # Because our query deduplication prioritizes upcoming rows, 
-    # the 'event' passed here is already the best candidate for 'Next'.
     if event.is_recurring:
-        # Check if the start date is in the future relative to server time
-        # We use naive comparison if DB is naive, or TZ-aware if event is aware.
-        # Most of our DB dates are naive UTC.
-        now = datetime.utcnow()
-        if event.date_start >= now:
-            response.next_occurrence = event.date_start
-            response.is_upcoming_occurrence = True
-        else:
-            # It's an old instance or a finished series representative
-            response.next_occurrence = None
-            response.is_upcoming_occurrence = False
+        response.next_occurrence = start_date
+        response.is_upcoming_occurrence = is_upcoming
     else:
-        # For non-recurring events (Exhibits), we don't label as "Upcoming Occurrence"
-        # but the frontend will just use standard date_start.
         response.next_occurrence = None
         response.is_upcoming_occurrence = False
     # Check Attendance & Bookmark Status (Pure ORM Match)
