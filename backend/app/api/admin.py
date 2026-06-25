@@ -1219,16 +1219,45 @@ def sync_featured_status(
     session: Session = Depends(get_session)
 ):
     """
-    Sync event.featured status for all ACTIVE bookings.
-    Use this to fix events that were featured before the featured flag update was implemented.
+    Sync event.featured status bidirectionally.
+    1. Un-features events that have no active-today bookings.
+    2. Features events with active-today bookings that aren't yet marked.
     """
     from sqlmodel import and_
     from datetime import date
     
     today = date.today()
     
-    # Get all currently active bookings (within date range)
-    active_bookings = session.exec(
+    # 1. UN-FEATURE: Events marked featured with no active-today booking
+    all_featured_events = session.exec(
+        select(Event).where(Event.featured == True)
+    ).all()
+    
+    unfeatured_events = []
+    for event in all_featured_events:
+        still_active = session.exec(
+            select(FeaturedBooking).where(
+                and_(
+                    FeaturedBooking.event_id == event.id,
+                    FeaturedBooking.status == BookingStatus.ACTIVE,
+                    FeaturedBooking.start_date <= today,
+                    FeaturedBooking.end_date >= today
+                )
+            )
+        ).first()
+        
+        if not still_active:
+            event.featured = False
+            event.featured_until = None
+            session.add(event)
+            unfeatured_events.append({
+                "event_id": event.id,
+                "event_title": event.title,
+                "action": "unfeatured"
+            })
+    
+    # 2. FEATURE: Active-today bookings where event is not yet featured
+    active_today_bookings = session.exec(
         select(FeaturedBooking).where(
             and_(
                 FeaturedBooking.status == BookingStatus.ACTIVE,
@@ -1238,25 +1267,27 @@ def sync_featured_status(
         )
     ).all()
     
-    updated_events = []
-    for booking in active_bookings:
+    featured_events = []
+    for booking in active_today_bookings:
         event = session.get(Event, booking.event_id)
         if event and not event.featured:
             event.featured = True
             event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
             session.add(event)
-            updated_events.append({
+            featured_events.append({
                 "event_id": event.id,
                 "event_title": event.title,
-                "featured_until": str(event.featured_until)
+                "featured_until": str(event.featured_until),
+                "action": "featured"
             })
     
     session.commit()
     
     return {
-        "synced": len(updated_events),
-        "total_active_bookings": len(active_bookings),
-        "events_updated": updated_events
+        "synced": len(unfeatured_events) + len(featured_events),
+        "total_active_today_bookings": len(active_today_bookings),
+        "events_unfeatured": unfeatured_events,
+        "events_featured": featured_events
     }
 
 # ============================================================

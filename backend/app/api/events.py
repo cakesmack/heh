@@ -819,10 +819,9 @@ def list_events(
         count_query = select(func.count()).select_from(query.distinct().subquery())
         total = session.exec(count_query).one() or 0
 
-        # 6. APPLY PAGINATION (The Fix)
-        # Sort by active featured first, then date
+        # Sort by active featured first (using the date-gated outerjoin), then date
         active_featured_priority = case(
-            (and_(Event.featured == True, Event.featured_until > func.now()), 1),
+            (FeaturedBooking.id.isnot(None), 1),
             else_=0
         ).desc()
         query = query.order_by(active_featured_priority, Event.date_start.asc())
@@ -978,10 +977,9 @@ def list_events(
     if price_max is not None:
         query = query.where(Event.price <= price_max)
 
-    # Filter by featured status
+    # Filter by featured status (uses date-gated FeaturedBooking outerjoin)
     if featured_only:
-        query = query.where(Event.featured == True)
-        query = query.where((Event.featured_until == None) | (Event.featured_until > sql_now))
+        query = query.where(FeaturedBooking.id.isnot(None))
 
     # Default radius to 20 miles when lat/lng provided but no radius specified
     if latitude is not None and longitude is not None and radius_miles is None:
@@ -1195,19 +1193,35 @@ def get_promoted_events(
 ):
     """
     Get promoted (featured) events.
-    Returns up to 3 events where featured == True and featured_until > now.
-    Ordered by soonest-expiring first.
+    Returns up to 3 events with an ACTIVE FeaturedBooking whose date range
+    includes today. Strictly filters by booking start_date <= today <= end_date.
     """
-    now = datetime.now()
-    query = select(Event).where(
-        (Event.featured == True) &
-        (Event.featured_until > now) &
-        (Event.status == "published")
-    ).order_by(
-        Event.featured_until.asc()
-    ).limit(3)
+    from datetime import date as date_type
+    today = date_type.today()
     
-    promoted_events = session.exec(query).all()
+    query = (
+        select(Event)
+        .join(
+            FeaturedBooking,
+            FeaturedBooking.event_id == Event.id
+        )
+        .where(
+            FeaturedBooking.status == BookingStatus.ACTIVE,
+            FeaturedBooking.start_date <= today,
+            FeaturedBooking.end_date >= today,
+            Event.status == "published"
+        )
+        .order_by(FeaturedBooking.end_date.asc())
+    )
+    
+    # Deduplicate in Python to avoid DISTINCT issues with ORDER BY
+    raw_results = session.exec(query).all()
+    seen = {}
+    for event in raw_results:
+        if event.id not in seen:
+            seen[event.id] = event
+    promoted_events = list(seen.values())[:3]
+    
     event_responses = [build_event_response(event, session, current_user=current_user) for event in promoted_events]
     
     return EventListResponse(

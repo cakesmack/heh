@@ -558,9 +558,10 @@ def admin_create_featured(
     )
     session.add(booking)
     
-    # Also set the event's featured flag and expiry
-    event.featured = True
-    event.featured_until = datetime.combine(end, datetime.max.time())
+    # Also set the event's featured flag and expiry (only if booking starts today or earlier)
+    if start <= date.today():
+        event.featured = True
+        event.featured_until = datetime.combine(end, datetime.max.time())
     session.add(event)
     
     session.commit()
@@ -604,6 +605,7 @@ def admin_stop_featured(
                 FeaturedBooking.event_id == booking.event_id,
                 FeaturedBooking.id != booking.id,
                 FeaturedBooking.status == BookingStatus.ACTIVE,
+                FeaturedBooking.start_date <= date.today(),
                 FeaturedBooking.end_date >= date.today()
             )
         ).first()
@@ -631,6 +633,7 @@ def get_event_active_bookings(
         select(FeaturedBooking).where(
             FeaturedBooking.event_id == normalize_uuid(event_id),
             FeaturedBooking.status == BookingStatus.ACTIVE,
+            FeaturedBooking.start_date <= date.today(),
             FeaturedBooking.end_date >= date.today()
         )
     ).all()

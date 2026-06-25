@@ -102,6 +102,63 @@ def complete_ended_bookings():
         print(f"Completed {len(ended_bookings)} bookings")
         return len(ended_bookings)
 
+def sync_event_featured_flags():
+    """Bidirectional sync of event.featured flags based on active-today bookings."""
+    from app.models.event import Event
+    
+    today = date.today()
+
+    with Session(engine) as session:
+        # 1. UN-FEATURE: Events marked featured with no active-today booking
+        featured_events = session.exec(
+            select(Event).where(Event.featured == True)
+        ).all()
+        
+        unfeatured = 0
+        for event in featured_events:
+            still_active = session.exec(
+                select(FeaturedBooking).where(
+                    and_(
+                        FeaturedBooking.event_id == event.id,
+                        FeaturedBooking.status == BookingStatus.ACTIVE,
+                        FeaturedBooking.start_date <= today,
+                        FeaturedBooking.end_date >= today
+                    )
+                )
+            ).first()
+            
+            if not still_active:
+                event.featured = False
+                event.featured_until = None
+                session.add(event)
+                unfeatured += 1
+                print(f"  Un-featured event {event.id}")
+        
+        # 2. FEATURE: Active-today bookings where event is not yet featured
+        active_bookings = session.exec(
+            select(FeaturedBooking).where(
+                and_(
+                    FeaturedBooking.status == BookingStatus.ACTIVE,
+                    FeaturedBooking.start_date <= today,
+                    FeaturedBooking.end_date >= today
+                )
+            )
+        ).all()
+        
+        activated = 0
+        for booking in active_bookings:
+            event = session.get(Event, booking.event_id)
+            if event and not event.featured:
+                event.featured = True
+                event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
+                session.add(event)
+                activated += 1
+                print(f"  Featured event {event.id} (until {booking.end_date})")
+        
+        session.commit()
+        print(f"Sync complete: {unfeatured} un-featured, {activated} activated")
+        return unfeatured, activated
+
 
 def run_all():
     """Run all expiry tasks."""
@@ -110,9 +167,10 @@ def run_all():
 
     expired = expire_pending_payments()
     completed = complete_ended_bookings()
+    unfeatured, activated = sync_event_featured_flags()
 
     print("-" * 40)
-    print(f"Summary: {expired} expired, {completed} completed")
+    print(f"Summary: {expired} expired, {completed} completed, {unfeatured} un-featured, {activated} activated")
 
 
 if __name__ == "__main__":

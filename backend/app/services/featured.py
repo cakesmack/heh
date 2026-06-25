@@ -301,16 +301,19 @@ def activate_booking(
     booking.updated_at = datetime.utcnow()
     session.add(booking)
 
-    # 2. Sync event.featured flag (Phase 2 Directive)
+    # 2. Sync event.featured flag (only if booking is currently active by date)
+    # Future bookings (start_date > today) will be activated by the cron sync job
+    from datetime import date as date_type
+    today = date_type.today()
     event = session.get(Event, booking.event_id)
-    if event:
+    if event and booking.start_date <= today <= booking.end_date:
         event.featured = True
         # Set featured_until to the end of the booking day
         event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
         session.add(event)
     
     session.commit()
-    print(f"[FEATURED SERVICE] Activated booking {booking.id} for event {booking.event_id}")
+    print(f"[FEATURED SERVICE] Activated booking {booking.id} for event {booking.event_id} (featured={'yes' if event and booking.start_date <= today else 'deferred to start_date'})")
 
     # 3. Send success email notification (Phase 6 Restoration)
     # We do this in a try/except to ensure activation doesn't fail if email fails

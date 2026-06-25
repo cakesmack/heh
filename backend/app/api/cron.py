@@ -214,16 +214,15 @@ def run_system_cleanup(
         
     session.commit()
     
-    # 3. SYNC EVENT FLAGS
-    # Reset event.featured if they have no active bookings
-    # This is safer than just relying on featured_until
+    # 3. BIDIRECTIONAL SYNC OF EVENT FLAGS
+    # 3a. UN-FEATURE: Reset event.featured if they have no active bookings today
     all_featured_events = session.exec(
         select(Event).where(Event.featured == True)
     ).all()
     
     sync_count = 0
     for event in all_featured_events:
-        # Check if any ACTIVE booking still exists for this event
+        # Check if any ACTIVE booking covers today for this event
         still_active = session.exec(
             select(FeaturedBooking)
             .where(FeaturedBooking.event_id == event.id)
@@ -237,16 +236,35 @@ def run_system_cleanup(
             event.featured_until = None
             session.add(event)
             sync_count += 1
+    
+    # 3b. FEATURE: Activate events with bookings that just started today
+    # Find all ACTIVE bookings covering today where the event is NOT yet featured
+    newly_active_bookings = session.exec(
+        select(FeaturedBooking)
+        .where(FeaturedBooking.status == BookingStatus.ACTIVE)
+        .where(FeaturedBooking.start_date <= today)
+        .where(FeaturedBooking.end_date >= today)
+    ).all()
+    
+    activated_count = 0
+    for booking in newly_active_bookings:
+        event = session.get(Event, booking.event_id)
+        if event and not event.featured:
+            event.featured = True
+            event.featured_until = datetime.combine(booking.end_date, datetime.max.time())
+            session.add(event)
+            activated_count += 1
             
     session.commit()
     
-    logger.info(f"[CRON] Cleanup complete: {stale_count} stale locks cancelled, {expired_count} bookings completed, {sync_count} events synced.")
+    logger.info(f"[CRON] Cleanup complete: {stale_count} stale locks cancelled, {expired_count} bookings completed, {sync_count} events un-featured, {activated_count} events activated.")
     
     return {
         "status": "success",
         "stale_cancelled": stale_count,
         "bookings_completed": expired_count,
-        "events_synced": sync_count
+        "events_unfeatured": sync_count,
+        "events_activated": activated_count
     }
 
 
