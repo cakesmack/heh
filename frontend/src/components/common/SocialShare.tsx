@@ -11,9 +11,20 @@ interface SocialShareProps {
   title: string;
   description?: string;
   variant?: 'default' | 'white';
+  showLabel?: boolean;
+  className?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export default function SocialShare({ url, title, description, variant = 'default' }: SocialShareProps) {
+export default function SocialShare({
+  url,
+  title,
+  description,
+  variant = 'default',
+  showLabel = true,
+  className = '',
+  size = 'md',
+}: SocialShareProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -61,19 +72,35 @@ export default function SocialShare({ url, title, description, variant = 'defaul
     window.open(shareLinks[platform], '_blank', 'width=600,height=400');
   };
 
+  const sizeClasses = {
+    sm: 'w-8 h-8',
+    md: 'w-10 h-10',
+    lg: 'w-12 h-12',
+  };
+
+  const iconSizes = {
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+    lg: 'w-6 h-6',
+  };
+
   return (
     <>
       <button
         onClick={handleShare}
-        className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all active:scale-95 border-2 whitespace-nowrap shrink-0 ${variant === 'white'
+        className={`
+          relative flex items-center justify-center rounded-full transition-all duration-200 active:scale-95 border-2 whitespace-nowrap shrink-0
+          ${variant === 'white'
             ? 'bg-stone-800/50 border-white/10 text-white hover:bg-stone-700 hover:border-white/20'
-            : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200 hover:border-stone-300'
-          }`}
+            : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200 hover:border-stone-300'}
+          ${showLabel ? 'px-6 py-2.5 w-auto gap-2 text-sm font-bold' : sizeClasses[size]}
+          ${className}
+        `}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${showLabel ? 'w-4 h-4' : iconSizes[size]} fill-none stroke-current`} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
         </svg>
-        Share
+        {showLabel && 'Share'}
       </button>
 
       <Modal

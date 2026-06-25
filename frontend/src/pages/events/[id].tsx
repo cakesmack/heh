@@ -398,9 +398,9 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
       </div>
 
       {/* Info Ribbon */}
-      <div className="sticky top-0 z-30 bg-stone-950/80 backdrop-blur-xl border-y border-white/5 text-white py-6 shadow-2xl">
+      <div className="sticky top-0 z-30 bg-stone-950/80 backdrop-blur-xl border-y border-white/5 text-white py-4 md:py-6 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-bold text-white break-words mb-2">{event.title}</h1>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-stone-400 text-sm">
@@ -410,12 +410,24 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   </svg>
                   <span className="font-medium text-stone-200">{formatDate(event.date_start)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                  <span className="text-stone-200">{event.venue_name || event.location_name}</span>
-                </div>
+                {event.venue_id ? (
+                  <Link
+                    href={`/venues/${event.venue_id}`}
+                    className="flex items-center gap-2 group text-stone-200 hover:text-emerald-400 transition-colors duration-200"
+                  >
+                    <svg className="w-4 h-4 text-emerald-500 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                    <span className="group-hover:underline">{event.venue_name || event.location_name}</span>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                    <span className="text-stone-200">{event.venue_name || event.location_name}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 9a2 2 0 10-4 0v5a2 2 0 01-2 2h6m-6-4h4m8 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -450,9 +462,9 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
               </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center md:justify-end gap-x-4 gap-y-3 flex-wrap">
-              {/* Action Group */}
-              <div className="flex items-center gap-3 flex-wrap justify-center">
+            <div className="flex-1 flex flex-col md:flex-row items-center justify-center md:justify-end w-full md:w-auto">
+              {/* Desktop Action Group */}
+              <div className="hidden md:flex items-center gap-3 flex-wrap justify-end">
                 <SocialShare
                   url={typeof window !== 'undefined' ? window.location.href : ''}
                   title={event.title}
@@ -543,6 +555,135 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                     });
                   }}
                 />
+              </div>
+
+              {/* Mobile Action Group */}
+              <div className="flex md:hidden flex-col w-full gap-3 mt-4">
+                {/* Primary CTA (Get Tickets or Visit Website) */}
+                {(() => {
+                  const hasTickets = !!(event.ticket_url || (event.showtimes && event.showtimes.length > 0));
+                  const hasWebsite = !!event.website_url;
+                  
+                  if (hasTickets) {
+                    if (event.ticket_url) {
+                      return (
+                        <a
+                          href={event.ticket_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => trackTicketClick(event.id)}
+                          className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
+                        >
+                          Get Tickets
+                        </a>
+                      );
+                    } else {
+                      return (
+                        <button
+                          onClick={() => {
+                            const mobileSidebar = document.getElementById('mobile-dates-sidebar');
+                            const desktopSidebar = document.getElementById('dates-sidebar');
+                            const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
+                            if (sidebar) {
+                              sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                              setTimeout(() => {
+                                sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                              }, 1000);
+                            }
+                          }}
+                          className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
+                        >
+                          Get Tickets
+                        </button>
+                      );
+                    }
+                  } else if (hasWebsite) {
+                    return (
+                      <a
+                        href={event.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackWebsiteClick(event.id)}
+                        className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
+                      >
+                        Visit Website
+                      </a>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Secondary Actions Row */}
+                <div className="flex items-center justify-center gap-3 w-full">
+                  <AttendingButton
+                    eventId={event.id}
+                    initialAttending={event.is_attending}
+                    showLabel={false}
+                    size="lg"
+                    className="transform active:scale-95 shadow-md"
+                    onToggle={(isAttending) => {
+                      setEvent(prev => {
+                        if (!prev) return null;
+                        return {
+                          ...prev,
+                          is_attending: isAttending,
+                          attending_count: isAttending
+                            ? (prev.attending_count || 0) + 1
+                            : Math.max(0, (prev.attending_count || 0) - 1)
+                        };
+                      });
+                    }}
+                  />
+
+                  <BookmarkButton
+                    eventId={event.id}
+                    initialBookmarked={event.is_bookmarked}
+                    showLabel={false}
+                    size="lg"
+                    className="transform active:scale-95 shadow-md"
+                    onToggle={(isBookmarked, count) => {
+                      setEvent(prev => {
+                        if (!prev) return null;
+                        return {
+                          ...prev,
+                          is_bookmarked: isBookmarked,
+                          save_count: count !== undefined 
+                            ? count 
+                            : (isBookmarked 
+                                ? (prev.save_count || 0) + 1 
+                                : Math.max(0, (prev.save_count || 0) - 1))
+                        };
+                      });
+                    }}
+                  />
+
+                  <SocialShare
+                    url={typeof window !== 'undefined' ? window.location.href : ''}
+                    title={event.title}
+                    description={event.description}
+                    variant="white"
+                    showLabel={false}
+                    size="lg"
+                    className="transform active:scale-95 shadow-md"
+                  />
+
+                  {/* Visit Website as secondary icon button only if Get Tickets is the primary CTA */}
+                  {!!(event.ticket_url || (event.showtimes && event.showtimes.length > 0)) && event.website_url && (
+                    <a
+                      href={event.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackWebsiteClick(event.id)}
+                      className="flex items-center justify-center w-12 h-12 bg-stone-800/50 border-2 border-white/10 hover:border-white/20 text-white rounded-full transition-all active:scale-95 shadow-md shrink-0"
+                      title="Visit Website"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
