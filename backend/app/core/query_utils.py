@@ -31,7 +31,7 @@ def deduplicate_recurring_events(
     from sqlalchemy import case, and_, func as sa_func
 
     is_postgres = get_dialect_name(session) == "postgresql"
-    group_key = func.coalesce(Event.parent_event_id, Event.id)
+    group_key = func.coalesce(Event.recurrence_group_id, Event.parent_event_id, Event.id)
 
     # Apply exclusion filter if provided
     if excluded_series_ids:
@@ -53,9 +53,9 @@ def deduplicate_recurring_events(
         # Step 2: Use DISTINCT ON to get one event per series
         distinct_ids_query = (
             select(base_subquery.c.id)
-            .distinct(func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id))
+            .distinct(func.coalesce(base_subquery.c.recurrence_group_id, base_subquery.c.parent_event_id, base_subquery.c.id))
             .order_by(
-                func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id),
+                func.coalesce(base_subquery.c.recurrence_group_id, base_subquery.c.parent_event_id, base_subquery.c.id),
                 base_subquery.c.date_start.desc() if sort_field == "date_desc" else base_subquery.c.date_start.asc()
             )
         )
@@ -63,7 +63,7 @@ def deduplicate_recurring_events(
         # Step 3: Get total count
         count_query = select(
             func.count(func.distinct(
-                func.coalesce(base_subquery.c.parent_event_id, base_subquery.c.id)
+                func.coalesce(base_subquery.c.recurrence_group_id, base_subquery.c.parent_event_id, base_subquery.c.id)
             ))
         )
         total = session.exec(count_query).one() or 0

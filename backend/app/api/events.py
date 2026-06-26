@@ -813,44 +813,21 @@ def list_events(
             query = query.where(func.coalesce(Event.date_end, Event.date_start) >= sql_now)
             
         
-        # 5. GET TOTAL COUNT (Before slicing)
-        # Efficiently count matches so the frontend knows when to stop "Load More"
-        count_query = select(func.count()).select_from(query.distinct().subquery())
-        total = session.exec(count_query).one() or 0
-
-        # Sort by active featured first (using the date-gated outerjoin), then date
-        # We must join FeaturedBooking here because we re-initialized the query for city_filter
-        from datetime import date as date_today
-        today = date_today.today()
-        query = query.outerjoin(
-            FeaturedBooking,
-            (FeaturedBooking.event_id == Event.id) &
-            (FeaturedBooking.status == BookingStatus.ACTIVE) &
-            (FeaturedBooking.start_date <= today) &
-            (FeaturedBooking.end_date >= today)
+        # 5. GET TOTAL COUNT AND EVENTS
+        events, total = deduplicate_recurring_events(
+            session=session,
+            base_query=query,
+            limit=limit,
+            offset=skip,
+            order_by_featured=True,
+            sort_field=sort_by
         )
-        
-        active_featured_priority = case(
-            (FeaturedBooking.id.isnot(None), 1),
-            else_=0
-        ).desc()
-        query = query.order_by(active_featured_priority, Event.date_start.asc())
-        
-        # Execute query without database-level distinct to avoid InvalidColumnReference crash.
-        # Deduplicate in Python memory using an item unique dictionary sequence to preserve sorting and structure,
-        # then apply skip and limit pagination.
-        raw_results = session.exec(query).all()
-        seen = {}
-        for event in raw_results:
-            if event.id not in seen:
-                seen[event.id] = event
-        results = list(seen.values())[skip : skip + limit]
-        print(f"DEBUG: Returned {len(results)} events for '{city_filter}' (Skip: {skip}, Limit: {limit})")
+        print(f"DEBUG: Returned {len(events)} events for '{city_filter}' (Skip: {skip}, Limit: {limit})")
         
         # Build responses
         event_responses = [
             build_event_response(event, session, latitude, longitude, current_user)
-            for event in results
+            for event in events
         ]
         
         return EventListResponse(

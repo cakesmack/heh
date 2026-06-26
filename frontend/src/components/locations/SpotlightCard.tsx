@@ -60,7 +60,7 @@ export function SpotlightCard({ event, label }: SpotlightCardProps) {
       <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg border border-gray-100 transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-0.5">
         <div className="flex flex-col md:flex-row">
           {/* Image */}
-          <div className="relative w-full md:w-1/2 aspect-[16/9] md:aspect-auto md:h-80 bg-gray-200 flex-shrink-0 skeleton">
+          <div className={`relative w-full md:w-1/2 aspect-[16/9] md:aspect-auto md:h-80 bg-gray-200 flex-shrink-0 ${event.image_url ? 'skeleton' : ''}`}>
             {event.image_url ? (
               <OptimizedImage
                 src={event.image_url}
