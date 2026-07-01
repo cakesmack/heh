@@ -83,6 +83,56 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
 
   const [selectedPattern, setSelectedPatternState] = useState<EventPattern | null>(derivePattern);
 
+  // Synchronize top-level date_start and date_end for Multiple Showings (multi-session)
+  React.useEffect(() => {
+    if (formData.isMultiSession) {
+      const showtimes = formData.showtimes || [];
+      if (showtimes.length === 0) {
+        setValue('date_start', '', { shouldValidate: true, shouldDirty: true });
+        setValue('date_end', '', { shouldValidate: true, shouldDirty: true });
+        return;
+      }
+
+      let earliestStart: Date | null = null;
+      let latestEnd: Date | null = null;
+      let earliestStartStr = '';
+      let latestEndStr = '';
+
+      showtimes.forEach((st) => {
+        if (st.start_time) {
+          const start = new Date(st.start_time);
+          if (!isNaN(start.getTime())) {
+            if (!earliestStart || start < earliestStart) {
+              earliestStart = start;
+              earliestStartStr = st.start_time;
+            }
+          }
+        }
+        if (st.end_time) {
+          const end = new Date(st.end_time);
+          if (!isNaN(end.getTime())) {
+            if (!latestEnd || end > latestEnd) {
+              latestEnd = end;
+              latestEndStr = st.end_time;
+            }
+          }
+        }
+      });
+
+      if (earliestStartStr) {
+        setValue('date_start', earliestStartStr, { shouldValidate: true, shouldDirty: true });
+      } else {
+        setValue('date_start', '', { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (latestEndStr) {
+        setValue('date_end', latestEndStr, { shouldValidate: true, shouldDirty: true });
+      } else {
+        setValue('date_end', '', { shouldValidate: true, shouldDirty: true });
+      }
+    }
+  }, [formData.showtimes, formData.isMultiSession, setValue]);
+
   const selectPattern = useCallback((pattern: EventPattern) => {
     setSelectedPatternState(pattern);
 
