@@ -33,6 +33,7 @@ import RichText from '@/components/ui/RichText';
 import { OrganizerBadge } from '@/components/events/OrganizerBadge';
 import { api, apiFetch, locationsAPI } from '@/lib/api';
 import type { EventResponse } from '@/types';
+import SidebarPerformances from '@/components/events/SidebarPerformances';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
@@ -63,6 +64,19 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const [resolvedLocationId, setResolvedLocationId] = useState<number | null>(null);
   const [locations, setLocations] = useState<any[]>([]);
   const venue = event?.venue;
+
+  // Filter out past performances and sort chronologically
+  const now = new Date();
+  const upcomingPerformances = (event?.showtimes || [])
+    .filter((st: any) => {
+      const timeToCompare = st.end_time ? new Date(st.end_time) : new Date(st.start_time);
+      return timeToCompare > now;
+    })
+    .sort((a: any, b: any) => {
+      const aTime = new Date(a.start_time).getTime();
+      const bTime = new Date(b.start_time).getTime();
+      return aTime - bTime;
+    });
 
   // Fetch locations once on mount
   useEffect(() => {
@@ -544,7 +558,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   >
                     Get Tickets
                   </a>
-                ) : (event.showtimes && event.showtimes.length > 0) ? (
+                ) : upcomingPerformances.length > 0 ? (
                   <button
                     onClick={() => {
                       const mobileSidebar = document.getElementById('mobile-dates-sidebar');
@@ -559,6 +573,13 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       }
                     }}
                     className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
+                  >
+                    Get Tickets
+                  </button>
+                ) : (event.showtimes && event.showtimes.length > 0) ? (
+                  <button
+                    disabled
+                    className="px-6 py-2.5 bg-gray-200 text-gray-400 text-sm font-bold rounded-full cursor-not-allowed text-center whitespace-nowrap shrink-0"
                   >
                     Get Tickets
                   </button>
@@ -638,7 +659,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                           Get Tickets
                         </a>
                       );
-                    } else {
+                    } else if (upcomingPerformances.length > 0) {
                       return (
                         <button
                           onClick={() => {
@@ -654,6 +675,15 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                             }
                           }}
                           className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
+                        >
+                          Get Tickets
+                        </button>
+                      );
+                    } else {
+                      return (
+                        <button
+                          disabled
+                          className="flex items-center justify-center w-full py-3 bg-gray-200 text-gray-400 text-sm font-bold rounded-full cursor-not-allowed text-center"
                         >
                           Get Tickets
                         </button>
@@ -770,50 +800,12 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
             <div className="space-y-4">
               {/* Show showtimes table if available */}
               {event.showtimes && event.showtimes.length > 0 ? (
-                <div className="divide-y divide-gray-100">
-                  {event.showtimes.map((st: any, index: number) => {
-                    const stDate = new Date(st.start_time);
-                    const stEndDate = st.end_time ? new Date(st.end_time) : null;
-                    return (
-                      <div key={st.id || index} className="flex items-center justify-between py-3 first:pt-0">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                            <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                              {stDate.toLocaleDateString('en-GB', { weekday: 'short' })}
-                            </span>
-                            <span className="text-lg font-bold text-emerald-900 leading-none">
-                              {stDate.getDate()}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {stDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {stDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                              {stEndDate && ` - ${stEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
-                            </p>
-                            {st.notes && (
-                              <p className="text-xs text-amber-600 font-medium mt-0.5">{st.notes}</p>
-                            )}
-                          </div>
-                        </div>
-                        <a
-                          href={st.ticket_url || event.ticket_url || '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => trackTicketClick(event.id)}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-full ${st.ticket_url || event.ticket_url
-                            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            }`}
-                        >
-                          Buy Tickets
-                        </a>
-                      </div>
-                    );
-                  })}
-                </div>
+                <SidebarPerformances
+                  showtimes={event.showtimes}
+                  eventTicketUrl={event.ticket_url}
+                  eventId={event.id}
+                  trackTicketClick={trackTicketClick}
+                />
               ) : (
                 /* Standard single date display */
                 <div>
@@ -1258,50 +1250,12 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   <div className="space-y-4">
                     {/* Show showtimes table if available */}
                     {event.showtimes && event.showtimes.length > 0 ? (
-                      <div className="divide-y divide-gray-100">
-                        {event.showtimes.map((st: any, index: number) => {
-                          const stDate = new Date(st.start_time);
-                          const stEndDate = st.end_time ? new Date(st.end_time) : null;
-                          return (
-                            <div key={st.id || index} className="flex items-center justify-between py-3 first:pt-0">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                                  <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                                    {stDate.toLocaleDateString('en-GB', { weekday: 'short' })}
-                                  </span>
-                                  <span className="text-lg font-bold text-emerald-900 leading-none">
-                                    {stDate.getDate()}
-                                  </span>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">
-                                    {stDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {stDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                    {stEndDate && ` - ${stEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
-                                  </p>
-                                  {st.notes && (
-                                    <p className="text-xs text-amber-600 font-medium mt-0.5">{st.notes}</p>
-                                  )}
-                                </div>
-                              </div>
-                              <a
-                                href={st.ticket_url || event.ticket_url || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => trackTicketClick(event.id)}
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-full ${st.ticket_url || event.ticket_url
-                                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                  }`}
-                              >
-                                Buy Tickets
-                              </a>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <SidebarPerformances
+                        showtimes={event.showtimes}
+                        eventTicketUrl={event.ticket_url}
+                        eventId={event.id}
+                        trackTicketClick={trackTicketClick}
+                      />
                     ) : (
                       /* Standard single date display */
                       <div className="flex items-start gap-3">

@@ -3,6 +3,8 @@ import DateTimePicker from '@/components/common/DateTimePicker';
 import { ShowtimeCreate } from '@/types';
 import { RRule, Frequency, Weekday, rrulestr } from 'rrule';
 import { useState, useEffect } from 'react';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
 
 // Day mapping for RRule
 const dayMap: { [key: string]: Weekday } = {
@@ -12,6 +14,20 @@ const dayMap: { [key: string]: Weekday } = {
 
 // Day labels for standard weekday selector (index 0=Mon..6=Sun)
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// Hour options (0-23)
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
+    value: i.toString().padStart(2, '0'),
+    label: i.toString().padStart(2, '0'),
+}));
+
+// Minute options (00, 15, 30, 45)
+const MINUTE_OPTIONS = [
+    { value: '00', label: '00' },
+    { value: '15', label: '15' },
+    { value: '30', label: '30' },
+    { value: '45', label: '45' },
+];
 
 interface EventScheduleSectionProps {
     formData: any;
@@ -51,6 +67,48 @@ export default function EventScheduleSection({
     const [customPosDay, setCustomPosDay] = useState(RRule.SU.weekday);
     const [ruleText, setRuleText] = useState('');
     const [isHydrated, setIsHydrated] = useState(false);
+
+    // Bulk Generate State
+    const [bulkStartHour, setBulkStartHour] = useState('12');
+    const [bulkStartMinute, setBulkStartMinute] = useState('00');
+    const [bulkEndHour, setBulkEndHour] = useState('14');
+    const [bulkEndMinute, setBulkEndMinute] = useState('00');
+    const [bulkDates, setBulkDates] = useState<Date[]>([]);
+
+    const handleBulkGenerate = () => {
+        if (!bulkDates || bulkDates.length === 0 || !bulkStartHour || !bulkStartMinute || !bulkEndHour || !bulkEndMinute) return;
+
+        const startTimeStr = `${bulkStartHour}:${bulkStartMinute}`;
+        const endTimeStr = `${bulkEndHour}:${bulkEndMinute}`;
+
+        // Helper: format Date object to YYYY-MM-DD
+        const formatDateStr = (d: Date) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const date = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${date}`;
+        };
+
+        const newShowtimes = bulkDates.map((date) => {
+            const dateStr = formatDateStr(date);
+            return {
+                start_time: `${dateStr}T${startTimeStr}`,
+                end_time: `${dateStr}T${endTimeStr}`,
+                ticket_url: '',
+                notes: '',
+            };
+        });
+
+        // Sort combined showtimes by start time to maintain cron timeline order
+        const combined = [...showtimes, ...newShowtimes].sort((a, b) => {
+            if (!a.start_time) return 1;
+            if (!b.start_time) return -1;
+            return a.start_time.localeCompare(b.start_time);
+        });
+
+        setShowtimes(combined);
+        setBulkDates([]);
+    };
 
     // Hydrate internal state from formData.recurrence_rule on mount/change
     useEffect(() => {
@@ -145,7 +203,7 @@ export default function EventScheduleSection({
 
     }, [customFreq, customInterval, customByWeekday, monthlyMode, customBySetPos, customPosDay, formData.frequency, formData.ends_on, formData.recurrence_end_date, isHydrated]);
 
-    // Format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input
+    // Format UTC ISO string to Local "YYYY-MM-DDTHH:mm" for input, rounding to nearest 15 minutes
     const formatDateForInput = (isoString: string | Date | undefined | null) => {
         if (!isoString) return '';
         let date: Date;
@@ -156,11 +214,16 @@ export default function EventScheduleSection({
             date = isoString;
         }
         if (isNaN(date.getTime())) return '';
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        // Round to nearest 15 minutes
+        const ms = 1000 * 60 * 15;
+        const roundedDate = new Date(Math.round(date.getTime() / ms) * ms);
+
+        const year = roundedDate.getFullYear();
+        const month = String(roundedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(roundedDate.getDate()).padStart(2, '0');
+        const hours = String(roundedDate.getHours()).padStart(2, '0');
+        const minutes = String(roundedDate.getMinutes()).padStart(2, '0');
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
@@ -664,9 +727,117 @@ export default function EventScheduleSection({
 
             {/* Multiple Showtimes Manager */}
             {isMultiSession && (
-                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">
-                        Add performance times. The event&apos;s main dates will be calculated automatically.
+                <div className="space-y-6 bg-gray-50 p-4 rounded-lg">
+                    {/* Bulk Add Performances */}
+                    <div className="bg-white p-5 rounded-xl border border-gray-150 space-y-4 shadow-sm">
+                        <h4 className="text-sm font-bold text-gray-800">Bulk Add Performances</h4>
+                        <p className="text-xs text-gray-500">
+                            Set a standard start/end time and select dates on the calendar to quickly generate multiple showings.
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs text-gray-600 font-medium mb-1 block">Standard Start Time</label>
+                                <div className="flex gap-2 items-center">
+                                    <select
+                                        value={bulkStartHour}
+                                        onChange={(e) => setBulkStartHour(e.target.value)}
+                                        className="flex-1 px-3 py-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors shadow-sm border-gray-200 text-center text-sm outline-none"
+                                    >
+                                        {HOUR_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <span className="text-gray-500 font-medium">:</span>
+                                    <select
+                                        value={bulkStartMinute}
+                                        onChange={(e) => setBulkStartMinute(e.target.value)}
+                                        className="flex-1 px-3 py-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors shadow-sm border-gray-200 text-center text-sm outline-none"
+                                    >
+                                        {MINUTE_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-600 font-medium mb-1 block">Standard End Time</label>
+                                <div className="flex gap-2 items-center">
+                                    <select
+                                        value={bulkEndHour}
+                                        onChange={(e) => setBulkEndHour(e.target.value)}
+                                        className="flex-1 px-3 py-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors shadow-sm border-gray-200 text-center text-sm outline-none"
+                                    >
+                                        {HOUR_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <span className="text-gray-500 font-medium">:</span>
+                                    <select
+                                        value={bulkEndMinute}
+                                        onChange={(e) => setBulkEndMinute(e.target.value)}
+                                        className="flex-1 px-3 py-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-600 focus:border-transparent transition-colors shadow-sm border-gray-200 text-center text-sm outline-none"
+                                    >
+                                        {MINUTE_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-4 items-start">
+                            <div className="border border-gray-150 rounded-xl p-2 bg-gray-50/50 max-w-full overflow-x-auto shrink-0 mx-auto md:mx-0">
+                                <DayPicker
+                                    mode="multiple"
+                                    selected={bulkDates}
+                                    onSelect={(dates) => setBulkDates(dates || [])}
+                                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                                    modifiersClassNames={{
+                                        selected: 'bg-emerald-600 text-white hover:bg-emerald-700',
+                                        today: 'text-emerald-600 font-bold',
+                                    }}
+                                />
+                            </div>
+                            <div className="flex-1 space-y-4 self-stretch flex flex-col justify-between">
+                                <div className="text-xs text-gray-500 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex-grow">
+                                    <span className="font-bold text-gray-700 block mb-2">Selected Dates ({bulkDates?.length || 0})</span>
+                                    {!bulkDates || bulkDates.length === 0 ? (
+                                        <span className="text-gray-400">Click one or more dates on the calendar to select.</span>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pt-1">
+                                            {bulkDates.map((date, idx) => (
+                                                <span key={idx} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold border border-emerald-100">
+                                                    {date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleBulkGenerate}
+                                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-semibold rounded-xl text-xs transition-colors shadow-sm disabled:cursor-not-allowed"
+                                    disabled={!bulkDates || bulkDates.length === 0 || !bulkStartHour || !bulkStartMinute || !bulkEndHour || !bulkEndMinute}
+                                >
+                                    Generate Performances
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-gray-200 my-4" />
+
+                    <p className="text-sm text-gray-500 font-medium">
+                        Performance List:
                     </p>
 
                     {showtimes.map((st, index) => {
