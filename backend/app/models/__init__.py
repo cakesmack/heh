@@ -32,6 +32,7 @@ from .showtime import EventShowtime
 from .campaign_log import CampaignLog
 from .location import Location
 from .event_attendee import EventAttendee
+from .accommodation_ad import AccommodationAd
 
 __all__ = [
     # User
@@ -97,4 +98,6 @@ __all__ = [
     "CampaignLog",
     # Event Attendees
     "EventAttendee",
+    # Accommodation Ads
+    "AccommodationAd",
 ]

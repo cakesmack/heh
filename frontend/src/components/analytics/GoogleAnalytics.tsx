@@ -11,12 +11,10 @@ export default function GoogleAnalytics() {
         return null;
     }
 
-    const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-
-    if (!GA_MEASUREMENT_ID) {
-        console.warn('Google Analytics: NEXT_PUBLIC_GA_MEASUREMENT_ID is missing');
+    if (!process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
         return null;
     }
+    const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
     return (
         <>

@@ -26,18 +26,18 @@ import { AttendingButton } from '@/components/events/AttendingButton';
 import ClaimEventModal from '@/components/events/ClaimEventModal';
 import ReportModal from '@/components/common/ReportModal';
 import SimilarEvents from '@/components/events/SimilarEvents';
+import AccommodationAds from '@/components/events/AccommodationAds';
 import AgeRestrictionBadge from '@/components/events/AgeRestrictionBadge';
 import AddToCalendar from '@/components/events/AddToCalendar';
 import RichText from '@/components/ui/RichText';
 import { OrganizerBadge } from '@/components/events/OrganizerBadge';
-import { api } from '@/lib/api';
+import { api, apiFetch, locationsAPI } from '@/lib/api';
 import type { EventResponse } from '@/types';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
-// Dynamic import for AccommodationMap (Stay22) - heavy iframe, lazy loaded
-const AccommodationMap = dynamic(() => import('@/components/events/AccommodationMap'), { ssr: false });
+
 
 interface EventDetailPageProps {
   initialEvent?: EventResponse | null;
@@ -59,6 +59,23 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [imageLightboxOpen, setImageLightboxOpen] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [accommodationAds, setAccommodationAds] = useState<any[]>([]);
+  const [resolvedLocationId, setResolvedLocationId] = useState<number | null>(null);
+  const [locations, setLocations] = useState<any[]>([]);
+  const venue = event?.venue;
+
+  // Fetch locations once on mount
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const data = await locationsAPI.list();
+        setLocations(data);
+      } catch (err) {
+        console.error("Failed to load locations list:", err);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   // Fetch Event Data (Client-Side Fallback)
   useEffect(() => {
@@ -82,23 +99,66 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
     fetchEvent();
   }, [router.isReady, id, event]);
 
-  // Track event view
+  // Match event venue to location_id
+  useEffect(() => {
+    if (!venue || !venue.address) {
+      return;
+    }
+    if (!locations || locations.length === 0) {
+      return;
+    }
+
+    try {
+      const safeAddress = venue?.address?.toLowerCase() || "";
+      const matchedLoc = locations.find((loc: any) => 
+        safeAddress.includes(loc.name?.toLowerCase() || "")
+      );
+
+      if (matchedLoc) {
+        setResolvedLocationId(matchedLoc.id);
+      }
+    } catch (error) {
+      console.error("Failed to resolve ad location:", error);
+    }
+  }, [venue, locations]);
+
+  // Load accommodation ads matching the resolved location_id
+  useEffect(() => {
+    if (resolvedLocationId === null) return;
+
+    const loadAds = async () => {
+      try {
+        const ads = await apiFetch<any[]>(`/api/ads/accommodation/location/${resolvedLocationId}`);
+        setAccommodationAds(ads);
+      } catch (err) {
+        console.error('Failed to load accommodation ads:', err);
+      }
+    };
+
+    loadAds();
+  }, [resolvedLocationId]);
+
+  // Track event view with session debouncing
   useEffect(() => {
     if (event?.id) {
-      trackEventView(event.id);
+      const storageKey = `viewed_event_${event.id}`;
+      // Check if this specific event has been viewed in this browser session
+      if (!sessionStorage.getItem(storageKey)) {
+        trackEventView(event.id);
+        // Mark as viewed for the remainder of the session
+        sessionStorage.setItem(storageKey, 'true');
+      }
     }
   }, [event?.id, trackEventView]);
 
   // Handle client-side refetch (e.g. after check-in or login)
   const refetch = async () => {
     if (!event?.id) return;
-    console.log('!!! [RSVP DEBUG] Fetching fresh event data from API...');
     try {
       const updatedEvent = await api.events.get(event.id);
-      console.log('!!! [RSVP DEBUG] Received response from API. is_attending:', updatedEvent.is_attending);
       setEvent(updatedEvent);
     } catch (err) {
-      console.error('!!! [RSVP DEBUG] Failed to refresh event data', err);
+      console.error('Failed to refresh event data:', err);
     }
   };
 
@@ -108,10 +168,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
       if (isAuthenticated && event?.id) {
         // Only refetch if the current state shows not attending (likely SSR default)
         if (!event.is_attending) {
-          console.log('!!! [RSVP DEBUG] Hydrating attendance status for authenticated user:', event.id);
           await refetch();
-        } else {
-          console.log('!!! [RSVP DEBUG] User is already marked as attending in current state.');
         }
       }
     };
@@ -438,27 +495,31 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-2" title="Views">
-                  <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  <span className="text-stone-400">{event.view_count || 0}</span>
-                </div>
-                
-                <div className="flex items-center gap-2" title="Going">
-                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="font-bold text-stone-200">{event.attending_count || 0}</span>
-                </div>
+                {hasEditRights && (
+                  <>
+                    <div className="flex items-center gap-2" title="Views">
+                      <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <span className="text-stone-400">{event.view_count || 0}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2" title="Going">
+                      <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span className="font-bold text-stone-200">{event.attending_count || 0}</span>
+                    </div>
 
-                <div className="flex items-center gap-2" title="Saves">
-                  <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  <span className="font-bold text-stone-200">{event.save_count || 0}</span>
-                </div>
+                    <div className="flex items-center gap-2" title="Saves">
+                      <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      <span className="font-bold text-stone-200">{event.save_count || 0}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -918,36 +979,36 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
           )}
 
           {/* Sponsor Card (Mobile) */}
-          <Card className="mt-4 border-amber-200 bg-amber-50/50">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900">
-                {hasEditRights ? "Promote Event" : "Sponsor Event"}
-              </h3>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
-                Featured
-              </span>
-            </div>
-            <p className="text-xs text-gray-600 mb-4">
-              {hasEditRights
-                ? "Boost visibility by featuring this event on the homepage."
-                : "Support this event by featuring it on the homepage."}
-            </p>
-            <button
-              onClick={() => {
-                if (!isAuthenticated) {
-                  router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
-                  return;
-                }
-                router.push(`/events/${event.id}/promote`);
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm text-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              {hasEditRights ? "Promote Now" : "Sponsor Event"}
-            </button>
-          </Card>
+          {hasEditRights && (
+            <Card className="mt-4 border-amber-200 bg-amber-50/50">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Promote Event
+                </h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
+                  Featured
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 mb-4">
+                Boost visibility by featuring this event on the homepage.
+              </p>
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+                    return;
+                  }
+                  router.push(`/events/${event.id}/promote`);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                Promote Now
+              </button>
+            </Card>
+          )}
         </div>
 
         {/* Desktop: 70/30 Grid */}
@@ -1012,14 +1073,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 </div>
               )}
 
-              {/* Share Buttons */}
-              <div className="pt-4 border-t border-gray-100 mt-4">
-                <SocialShare
-                  url={typeof window !== 'undefined' ? window.location.href : ''}
-                  title={event.title}
-                  description={event.description}
-                />
-              </div>
+
             </Card>
 
             {/* Event Location Card */}
@@ -1295,37 +1349,37 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 </Card>
               </div>
 
-              {/* Sponsor Card (Desktop) - Visible to everyone */}
-              <Card className="border-amber-200 bg-amber-50/50">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    {hasEditRights ? "Promote Event" : "Sponsor Event"}
-                  </h3>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
-                    Featured
-                  </span>
-                </div>
-                <p className="text-xs text-gray-600 mb-4">
-                  {hasEditRights
-                    ? "Boost visibility by featuring this event on the homepage."
-                    : "Support this event by featuring it on the homepage."}
-                </p>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      router.push(`/login?returnTo=${encodeURIComponent(router.asPath)}`);
-                      return;
-                    }
-                    router.push(`/events/${event.id}/promote`);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm text-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                  </svg>
-                  {hasEditRights ? "Promote Now" : "Sponsor Event"}
-                </button>
-              </Card>
+              {/* Sponsor Card (Desktop) - Visible to owners/admins */}
+              {hasEditRights && (
+                <Card className="border-amber-200 bg-amber-50/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      Promote Event
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
+                      Featured
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-4">
+                    Boost visibility by featuring this event on the homepage.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        router.push(`/login?returnTo=${encodeURIComponent(router.asPath)}`);
+                        return;
+                      }
+                      router.push(`/events/${event.id}/promote`);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                    Promote Now
+                  </button>
+                </Card>
+              )}
 
               {/* Claim Event Card - for users who don't have edit rights */}
               {isAuthenticated && user && !hasEditRights && (
@@ -1424,19 +1478,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
             </div>
           </div>
         </div>
-
-        {/* AccommodationMap - Full Width, Before SimilarEvents */}
-        {event.latitude && event.longitude && (
-          <div className="mt-12">
-            <AccommodationMap
-              latitude={event.latitude}
-              longitude={event.longitude}
-              eventName={event.title}
-              startDate={event.date_start}
-              endDate={event.date_end}
-            />
-          </div>
-        )}
+        <AccommodationAds ads={accommodationAds} />
 
         <SimilarEvents eventId={event.id} />
       </div>

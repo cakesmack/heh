@@ -8,6 +8,7 @@ import Link from 'next/link';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import { apiFetch } from '@/lib/api';
+import AccommodationAdsManager from '@/components/admin/AccommodationAdsManager';
 
 interface FeaturedBookingAdmin {
   id: string;
@@ -48,7 +49,7 @@ const SLOT_LABELS: Record<string, string> = {
 };
 
 export default function AdminFeatured() {
-  const [activeTab, setActiveTab] = useState<'bookings' | 'pricing'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'pricing' | 'accommodation'>('bookings');
   const [bookings, setBookings] = useState<FeaturedBookingAdmin[]>([]);
   const [pricing, setPricing] = useState<SlotPricingAdmin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +83,7 @@ export default function AdminFeatured() {
   useEffect(() => {
     if (activeTab === 'bookings') {
       fetchBookings();
-    } else {
+    } else if (activeTab === 'pricing') {
       fetchPricing();
     }
   }, [activeTab, fetchBookings]);
@@ -215,7 +216,16 @@ export default function AdminFeatured() {
               : 'text-gray-500 hover:text-gray-700'
               }`}
           >
-            Bookings
+            Promoted Events
+          </button>
+          <button
+            onClick={() => setActiveTab('accommodation')}
+            className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'accommodation'
+              ? 'text-emerald-600 border-b-2 border-emerald-600'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
+          >
+            Accommodation
           </button>
           <button
             onClick={() => setActiveTab('pricing')}
@@ -527,6 +537,9 @@ export default function AdminFeatured() {
               Prices are in pence (e.g., 4000 = £40.00). Changes take effect immediately for new bookings.
             </p>
           </>
+        )}
+        {activeTab === 'accommodation' && (
+          <AccommodationAdsManager />
         )}
       </AdminLayout>
     </AdminGuard>

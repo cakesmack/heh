@@ -57,6 +57,27 @@ class OrganizerEventStats(BaseModel):
 
 # --- Endpoints ---
 
+def async_increment_view_count(event_id: str):
+    """
+    Safely increment event view_count using an atomic database operation
+    to prevent race conditions.
+    """
+    try:
+        from sqlmodel import Session
+        from sqlalchemy import update
+        from app.core.database import engine
+        from app.models.event import Event
+        import logging
+        
+        with Session(engine) as db:
+            stmt = update(Event).where(Event.id == event_id).values(view_count=Event.view_count + 1)
+            db.exec(stmt)
+            db.commit()
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"[ANALYTICS] Failed to increment view count for event {event_id}: {e}")
+
 @router.post("/track", status_code=status.HTTP_202_ACCEPTED)
 async def track_event(
     request: AnalyticsTrackRequest,
@@ -80,6 +101,11 @@ async def track_event(
     session.add(event)
     session.commit()
     
+    # Safely increment the Event's denormalized view_count if it's an event_view
+    if request.event_type == "event_view" and request.metadata and "target_id" in request.metadata:
+        target_id = request.metadata["target_id"].replace("-", "")
+        background_tasks.add_task(async_increment_view_count, target_id)
+        
     return {"status": "queued"}
 
 @router.get("/summary", response_model=AdminAnalyticsSummary)

@@ -7,7 +7,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Map, Marker, useMap } from '@vis.gl/react-google-maps';
+import { Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
 
 export interface MapMarker {
   lat: number;
@@ -80,10 +80,11 @@ export default function GoogleMiniMap({
         gestureHandling={interactive ? 'auto' : 'none'}
         disableDefaultUI={!interactive}
         style={{ width: '100%', height: '100%' }}
+        mapId={process.env.NEXT_PUBLIC_MAP_ID || "DEMO_MAP_ID"}
       >
         {/* Render all markers */}
         {showMarker && allMarkers.map((marker, index) => (
-          <Marker
+          <AdvancedMarker
             key={`${marker.lat}-${marker.lng}-${index}`}
             position={{ lat: marker.lat, lng: marker.lng }}
             title={marker.title}

@@ -365,6 +365,7 @@ export interface EventResponse extends Event {
   is_attending?: boolean;
   is_bookmarked?: boolean;
   attending_count?: number;
+  venue?: VenueResponse;
 }
 
 export interface EventCreate {

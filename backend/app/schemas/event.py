@@ -230,6 +230,7 @@ class EventResponse(BaseModel):
     tags: Optional[List[TagResponse]] = None
     participating_venues: List[VenueResponse] = []
     showtimes: List[ShowtimeResponse] = []
+    venue: Optional[VenueResponse] = None
     
     # Organizer Profile (Group)
     organizer_profile: Optional[OrganizerProfileResponse] = None
