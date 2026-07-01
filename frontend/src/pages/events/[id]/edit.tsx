@@ -381,24 +381,29 @@ export default function EditEventPage() {
 
             if (isMultiSession && showtimes.length > 0) {
                 // Multi-session: calculate from showtimes (using Local Strings)
-                const startTimes = showtimes.map(st => new Date(st.start_time).getTime());
-                const endTimes = showtimes.map(st => st.end_time ? new Date(st.end_time).getTime() : new Date(st.start_time).getTime());
-                // calculatedDateStart/End are expected to be UTC strings for the Payload
-                // But wait, in the logic below, we ASSIGNE them to eventData.date_start/end directly.
-                // So they MUST be UTC strings.
-                // new Date(minString).toISOString() converts Local -> UTC. Correct.
-                calculatedDateStart = startTimes.length > 0 ? (new Date(Math.min(...startTimes)).toISOString().slice(0, 19)) : ''; // Fallback, careful. Ideally use strings.
-                // Actually, if showtimes are naive, Math.min works on timestamps? Yes.
-                // But we want Naive output.
-                // Simplest: use the strings.
-                // Sort strings.
-                const sortedStart = [...showtimes].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-                const sortedEnd = [...showtimes].sort((a, b) => (a.end_time || a.start_time || '').localeCompare(b.end_time || b.start_time || ''));
+                const startTimes = showtimes
+                    .map(st => st.start_time ? new Date(st.start_time).getTime() : NaN)
+                    .filter(t => !isNaN(t));
+                const endTimes = showtimes
+                    .map(st => {
+                        const val = st.end_time || st.start_time;
+                        return val ? new Date(val).getTime() : NaN;
+                    })
+                    .filter(t => !isNaN(t));
 
-                calculatedDateStart = sortedStart[0]?.start_time ? (sortedStart[0].start_time.length === 16 ? sortedStart[0].start_time + ':00' : sortedStart[0].start_time) : '';
-                const lastEnd = sortedEnd[sortedEnd.length - 1];
-                const lastEndStr = lastEnd?.end_time || lastEnd?.start_time || '';
-                calculatedDateEnd = lastEndStr.length === 16 ? lastEndStr + ':00' : lastEndStr;
+                const formatLocalISOString = (timestamp: number): string => {
+                    const d = new Date(timestamp);
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                    const seconds = String(d.getSeconds()).padStart(2, '0');
+                    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+                };
+
+                calculatedDateStart = startTimes.length > 0 ? formatLocalISOString(Math.min(...startTimes)) : '';
+                calculatedDateEnd = endTimes.length > 0 ? formatLocalISOString(Math.max(...endTimes)) : '';
 
                 // CRITICAL: Map showtimes back to UTC
                 showtimesPayload = showtimes.map(st => ({

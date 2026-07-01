@@ -90,10 +90,10 @@ export default function SmallEventCard({ event }: SmallEventCardProps) {
                     {/* Date & Category */}
                     <div className="flex justify-between items-start mb-1">
                         <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                            {/* Multi-day: show range (only if different), Single day: show date */}
                             {event.showtimes && event.showtimes.length > 1 ? (() => {
-                                const firstDate = formatDate(event.showtimes[0].start_time);
-                                const lastDate = formatDate(event.showtimes[event.showtimes.length - 1].start_time);
+                                const sorted = [...event.showtimes].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+                                const firstDate = formatDate(sorted[0].start_time);
+                                const lastDate = formatDate(sorted[sorted.length - 1].start_time);
                                 return firstDate === lastDate ? firstDate : `${firstDate} - ${lastDate}`;
                             })() : event.date_end &&
                                 new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() &&

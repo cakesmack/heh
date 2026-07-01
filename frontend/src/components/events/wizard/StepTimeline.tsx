@@ -61,9 +61,9 @@ const PATTERN_OPTIONS: {
           d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
     ),
-    title: 'Multiple Showings',
-    subtitle: 'Same event, multiple specific times',
-    example: 'e.g. theatre run, cinema screenings',
+    title: 'Various Dates & Times',
+    subtitle: 'Custom dates and times for individual sessions',
+    example: 'e.g. summer camps, multi-day workshops, irregular classes',
   },
 ];
 
@@ -90,45 +90,61 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
       if (showtimes.length === 0) {
         setValue('date_start', '', { shouldValidate: true, shouldDirty: true });
         setValue('date_end', '', { shouldValidate: true, shouldDirty: true });
+        try {
+          (setValue as any)('start_date', '', { shouldValidate: true });
+          (setValue as any)('end_date', '', { shouldValidate: true });
+        } catch {}
         return;
       }
 
-      let earliestStart: Date | null = null;
-      let latestEnd: Date | null = null;
-      let earliestStartStr = '';
-      let latestEndStr = '';
+      const startTimestamps = showtimes
+        .map((st: any) => {
+          const val = st.start_time || st.start;
+          return val ? new Date(val).getTime() : NaN;
+        })
+        .filter((t: number) => !isNaN(t));
 
-      showtimes.forEach((st) => {
-        if (st.start_time) {
-          const start = new Date(st.start_time);
-          if (!isNaN(start.getTime())) {
-            if (!earliestStart || start < earliestStart) {
-              earliestStart = start;
-              earliestStartStr = st.start_time;
-            }
-          }
-        }
-        if (st.end_time) {
-          const end = new Date(st.end_time);
-          if (!isNaN(end.getTime())) {
-            if (!latestEnd || end > latestEnd) {
-              latestEnd = end;
-              latestEndStr = st.end_time;
-            }
-          }
-        }
-      });
+      const endTimestamps = showtimes
+        .map((st: any) => {
+          const val = st.end_time || st.end || st.start_time || st.start;
+          return val ? new Date(val).getTime() : NaN;
+        })
+        .filter((t: number) => !isNaN(t));
 
-      if (earliestStartStr) {
-        setValue('date_start', earliestStartStr, { shouldValidate: true, shouldDirty: true });
+      const formatLocalISOString = (timestamp: number): string => {
+        const d = new Date(timestamp);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      };
+
+      if (startTimestamps.length > 0) {
+        const calculatedMinDate = formatLocalISOString(Math.min(...startTimestamps));
+        setValue('date_start', calculatedMinDate, { shouldValidate: true, shouldDirty: true });
+        try {
+          (setValue as any)('start_date', calculatedMinDate, { shouldValidate: true });
+        } catch {}
       } else {
         setValue('date_start', '', { shouldValidate: true, shouldDirty: true });
+        try {
+          (setValue as any)('start_date', '', { shouldValidate: true });
+        } catch {}
       }
 
-      if (latestEndStr) {
-        setValue('date_end', latestEndStr, { shouldValidate: true, shouldDirty: true });
+      if (endTimestamps.length > 0) {
+        const calculatedMaxDate = formatLocalISOString(Math.max(...endTimestamps));
+        setValue('date_end', calculatedMaxDate, { shouldValidate: true, shouldDirty: true });
+        try {
+          (setValue as any)('end_date', calculatedMaxDate, { shouldValidate: true });
+        } catch {}
       } else {
         setValue('date_end', '', { shouldValidate: true, shouldDirty: true });
+        try {
+          (setValue as any)('end_date', '', { shouldValidate: true });
+        } catch {}
       }
     }
   }, [formData.showtimes, formData.isMultiSession, setValue]);

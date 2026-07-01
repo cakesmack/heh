@@ -180,8 +180,9 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
             </svg>
             {/* Case 1: Multiple showtimes (theatre runs) */}
             {event.showtimes && event.showtimes.length > 1 ? (() => {
-              const firstDate = new Date(event.showtimes[0].start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-              const lastDate = new Date(event.showtimes[event.showtimes.length - 1].start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              const sorted = [...event.showtimes].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+              const firstDate = new Date(sorted[0].start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              const lastDate = new Date(sorted[sorted.length - 1].start_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
               return (
                 <>
                   <span>
@@ -195,8 +196,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
                   </span>
                 </>
               );
-            })() : /* Case 2: Multi-day event (date_start and date_end on different days) */
-              event.date_end &&
+            })() : event.date_end &&
                 new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() &&
                 !event.is_recurring ? (() => {
                   const startDate = new Date(event.date_start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
