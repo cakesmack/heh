@@ -50,6 +50,8 @@ export default function AdminCollections() {
         price: 'any', // 'any', 'free', 'paid'
         recurrence: 'any', // 'any', 'recurring', 'single'
         combine_operator: 'and' as 'and' | 'or',
+        exclude_age_restrictions: [] as string[],
+        exclude_event_ids: [] as string[],
     });
 
     const fetchCollections = async () => {
@@ -102,6 +104,8 @@ export default function AdminCollections() {
             price: 'any',
             recurrence: 'any',
             combine_operator: 'and',
+            exclude_age_restrictions: [],
+            exclude_event_ids: [],
         });
         setError(null);
         setModalOpen(true);
@@ -154,6 +158,8 @@ export default function AdminCollections() {
                 price: collection.filter_params.price === 'free' ? 'free' : (collection.filter_params.price === 'paid' ? 'paid' : 'any'),
                 recurrence: collection.filter_params.is_recurring === true ? 'recurring' : (collection.filter_params.is_recurring === false ? 'single' : 'any'),
                 combine_operator: collection.filter_params.combine_operator || 'and',
+                exclude_age_restrictions: collection.filter_params.exclude_age_restrictions || [],
+                exclude_event_ids: collection.filter_params.exclude_event_ids || [],
             });
         }
         // Fallback for legacy target_link parsing only if JSON doesn't exist
@@ -161,7 +167,7 @@ export default function AdminCollections() {
             parseLinkToBuilder(collection.target_link);
         } else {
             // Reset to default
-            setQbState({ category: [], q: '', age: '', price: 'any', recurrence: 'any', combine_operator: 'and' });
+            setQbState({ category: [], q: '', age: '', price: 'any', recurrence: 'any', combine_operator: 'and', exclude_age_restrictions: [], exclude_event_ids: [] });
         }
 
         setError(null);
@@ -213,6 +219,8 @@ export default function AdminCollections() {
                 price: searchParams.get('price') === 'free' ? 'free' : (searchParams.get('price') === 'paid' ? 'paid' : 'any'),
                 recurrence: searchParams.get('is_recurring') === 'true' ? 'recurring' : (searchParams.get('is_recurring') === 'false' ? 'single' : 'any'),
                 combine_operator: (searchParams.get('combine_operator') as any) || 'and',
+                exclude_age_restrictions: searchParams.get('exclude_age_restrictions')?.split(',').filter(Boolean) || [],
+                exclude_event_ids: searchParams.get('exclude_event_ids')?.split(',').filter(Boolean) || [],
             });
         } catch (e) {
             console.error("Failed to parse fallback URL:", e);
@@ -234,6 +242,13 @@ export default function AdminCollections() {
         
         if (qbState.combine_operator) {
             filterObj.combine_operator = qbState.combine_operator;
+        }
+
+        if (qbState.exclude_age_restrictions.length > 0) {
+            filterObj.exclude_age_restrictions = qbState.exclude_age_restrictions;
+        }
+        if (qbState.exclude_event_ids.length > 0) {
+            filterObj.exclude_event_ids = qbState.exclude_event_ids;
         }
 
 
@@ -629,6 +644,50 @@ export default function AdminCollections() {
                                             Single Only
                                         </label>
                                     </div>
+                                </div>
+
+                                {/* Exclude Age Restrictions */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Exclude Age Restrictions</label>
+                                    <div className="grid grid-cols-2 gap-1">
+                                        {[
+                                            { value: '18_plus', label: '18+' },
+                                            { value: '21_plus', label: '21+' },
+                                            { value: '15_plus', label: '15+' },
+                                            { value: '12_plus', label: '12+' },
+                                        ].map(opt => (
+                                            <label key={opt.value} className="flex items-center space-x-1.5 text-sm text-gray-600 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={qbState.exclude_age_restrictions.includes(opt.value)}
+                                                    onChange={(e) => {
+                                                        const newExcl = e.target.checked
+                                                            ? [...qbState.exclude_age_restrictions, opt.value]
+                                                            : qbState.exclude_age_restrictions.filter(v => v !== opt.value);
+                                                        setQbState({ ...qbState, exclude_age_restrictions: newExcl });
+                                                    }}
+                                                    className="rounded text-red-500 focus:ring-red-400"
+                                                />
+                                                <span>Exclude {opt.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Exclude Specific Events */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Exclude Specific Events (IDs)</label>
+                                    <input
+                                        type="text"
+                                        value={qbState.exclude_event_ids.join(', ')}
+                                        onChange={(e) => {
+                                            const ids = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                                            setQbState({ ...qbState, exclude_event_ids: ids });
+                                        }}
+                                        className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
+                                        placeholder="Comma-separated event UUIDs"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-0.5">Paste event IDs to manually exclude them from this collection</p>
                                 </div>
 
                                 {/* Custom Date Range */}

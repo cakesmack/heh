@@ -58,6 +58,18 @@ function buildEventFilter(params: Record<string, any>): EventFilter {
         if (range.date_to) filter.date_to = range.date_to;
     }
 
+    // Exclusion filters
+    if (params.exclude_age_restrictions) {
+        filter.exclude_age_restrictions = Array.isArray(params.exclude_age_restrictions)
+            ? params.exclude_age_restrictions
+            : params.exclude_age_restrictions.split(',');
+    }
+    if (params.exclude_event_ids) {
+        filter.exclude_event_ids = Array.isArray(params.exclude_event_ids)
+            ? params.exclude_event_ids
+            : params.exclude_event_ids.split(',');
+    }
+
     return filter;
 }
 

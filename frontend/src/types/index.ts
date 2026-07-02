@@ -467,6 +467,8 @@ export interface EventFilter {
   status?: string;
   is_recurring?: boolean;
   city_filter?: string;
+  exclude_age_restrictions?: string[];
+  exclude_event_ids?: string[];
 }
 
 export interface EventListResponse {

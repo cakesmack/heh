@@ -544,6 +544,8 @@ def list_events(
     is_recurring: Optional[bool] = Query(None, description="Filter by recurrence status"),
     max_duration_days: Optional[float] = Query(None, description="Maximum event duration in days"),
     combine_operator: str = Query("and", description="Combine mode: 'and' or 'or'"),
+    exclude_age_restrictions: Optional[str] = Query(None, description="Comma-separated age restrictions to exclude (e.g. '18_plus,21_plus')"),
+    exclude_event_ids: Optional[str] = Query(None, description="Comma-separated event IDs to exclude"),
 
     time_range: Optional[str] = Query(None, description="'upcoming', 'past', or 'all'"),
     sort_by: str = Query("date", description="Sort by 'date' (default) or 'created'"),
@@ -669,6 +671,18 @@ def list_events(
         (FeaturedBooking.start_date <= today) &
         (FeaturedBooking.end_date >= today)
     )
+
+    # Filter by venue ID (Host OR Participating)
+    if venue_id:
+        # Try dual-resolution to translate a potential slug into a UUID
+        venue_lookup = session.exec(select(Venue).where(Venue.slug == venue_id)).first()
+        v_id = venue_lookup.id if venue_lookup else normalize_uuid(venue_id)
+        
+        query = query.outerjoin(EventParticipatingVenue, Event.id == EventParticipatingVenue.event_id)
+        query = query.where(
+            (Event.venue_id == v_id) | 
+            (EventParticipatingVenue.venue_id == v_id)
+        )
 
     # Track category and tag joins
     event_tag_joined = False
@@ -963,6 +977,20 @@ def list_events(
     # Filter by age restriction
     if age_restriction:
         query = query.where(Event.age_restriction == age_restriction)
+
+    # Exclude specific age restrictions (e.g. exclude 18+, 21+ for family collections)
+    if exclude_age_restrictions:
+        excluded = [a.strip() for a in exclude_age_restrictions.split(",") if a.strip()]
+        if excluded:
+            query = query.where(
+                (Event.age_restriction.notin_(excluded)) | (Event.age_restriction == None)
+            )
+
+    # Exclude specific event IDs
+    if exclude_event_ids:
+        excluded_ids = [normalize_uuid(eid.strip()) for eid in exclude_event_ids.split(",") if eid.strip()]
+        if excluded_ids:
+            query = query.where(Event.id.notin_(excluded_ids))
 
     # Filter by date range using OVERLAP logic
     # We apply this directly to Event dates for simplicity and reliability in listings.

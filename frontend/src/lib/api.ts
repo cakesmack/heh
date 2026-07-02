@@ -324,6 +324,8 @@ export const eventsAPI = {
       if (filters.city_filter) params.city_filter = filters.city_filter;
       if (filters.status) params.status = filters.status;
       if (filters.is_recurring !== undefined) params.is_recurring = filters.is_recurring;
+      if (filters.exclude_age_restrictions?.length) params.exclude_age_restrictions = filters.exclude_age_restrictions.join(',');
+      if (filters.exclude_event_ids?.length) params.exclude_event_ids = filters.exclude_event_ids.join(',');
     }
 
     const queryString = buildQueryString(params);
