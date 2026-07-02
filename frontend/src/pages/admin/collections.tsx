@@ -10,9 +10,9 @@ import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
-import { collectionsAPI, categoriesAPI, tagsAPI } from '@/lib/api';
+import { collectionsAPI, categoriesAPI, tagsAPI, eventsAPI } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
-import type { Collection, Category } from '@/types';
+import type { Collection, Category, EventResponse } from '@/types';
 
 export default function AdminCollections() {
     const [collections, setCollections] = useState<Collection[]>([]);
@@ -40,6 +40,11 @@ export default function AdminCollections() {
     const slugManuallyEdited = useRef(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Event preview state for exclude management
+    const [previewEvents, setPreviewEvents] = useState<EventResponse[]>([]);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewLoaded, setPreviewLoaded] = useState(false);
 
     // Query Builder State
     const [categories, setCategories] = useState<Category[]>([]);
@@ -108,6 +113,8 @@ export default function AdminCollections() {
             exclude_event_ids: [],
         });
         setError(null);
+        setPreviewEvents([]);
+        setPreviewLoaded(false);
         setModalOpen(true);
     };
 
@@ -171,6 +178,8 @@ export default function AdminCollections() {
         }
 
         setError(null);
+        setPreviewEvents([]);
+        setPreviewLoaded(false);
         setModalOpen(true);
     };
 
@@ -674,20 +683,96 @@ export default function AdminCollections() {
                                     </div>
                                 </div>
 
-                                {/* Exclude Specific Events */}
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Exclude Specific Events (IDs)</label>
-                                    <input
-                                        type="text"
-                                        value={qbState.exclude_event_ids.join(', ')}
-                                        onChange={(e) => {
-                                            const ids = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                                            setQbState({ ...qbState, exclude_event_ids: ids });
-                                        }}
-                                        className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                        placeholder="Comma-separated event UUIDs"
-                                    />
-                                    <p className="text-[10px] text-gray-400 mt-0.5">Paste event IDs to manually exclude them from this collection</p>
+                                {/* Exclude Specific Events - Visual Preview */}
+                                <div className="pt-3 border-t border-gray-200">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-xs font-medium text-gray-500">Exclude Specific Events</label>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                setPreviewLoading(true);
+                                                try {
+                                                    // Build filters from current qbState (without excludes, so we see all matches)
+                                                    const filters: Record<string, any> = { limit: 100 };
+                                                    if (qbState.category.length > 0) filters.category_ids = qbState.category;
+                                                    if (qbState.q) filters.q = qbState.q;
+                                                    if (qbState.combine_operator) filters.combine_operator = qbState.combine_operator;
+                                                    if (qbState.age) filters.age_restriction = qbState.age;
+                                                    if (qbState.price === 'free') filters.price_max = 0;
+                                                    if (qbState.exclude_age_restrictions.length > 0) filters.exclude_age_restrictions = qbState.exclude_age_restrictions;
+                                                    const res = await eventsAPI.list(filters);
+                                                    setPreviewEvents(res.events);
+                                                    setPreviewLoaded(true);
+                                                } catch (err) {
+                                                    console.error('Failed to preview events:', err);
+                                                } finally {
+                                                    setPreviewLoading(false);
+                                                }
+                                            }}
+                                            className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors"
+                                        >
+                                            {previewLoading ? 'Loading...' : previewLoaded ? '↻ Refresh Preview' : '👁 Preview Events'}
+                                        </button>
+                                    </div>
+
+                                    {qbState.exclude_event_ids.length > 0 && (
+                                        <p className="text-xs text-amber-600 mb-2">
+                                            {qbState.exclude_event_ids.length} event{qbState.exclude_event_ids.length !== 1 ? 's' : ''} excluded
+                                        </p>
+                                    )}
+
+                                    {previewLoaded && (
+                                        <div className="max-h-60 overflow-y-auto border rounded bg-gray-50 divide-y divide-gray-200">
+                                            {previewEvents.length === 0 ? (
+                                                <p className="text-xs text-gray-400 p-3 text-center">No events match the current filters.</p>
+                                            ) : (
+                                                previewEvents.map(ev => {
+                                                    const isExcluded = qbState.exclude_event_ids.includes(ev.id);
+                                                    return (
+                                                        <div
+                                                            key={ev.id}
+                                                            className={`flex items-center justify-between px-3 py-2 text-sm ${
+                                                                isExcluded ? 'bg-red-50 opacity-60' : 'bg-white'
+                                                            }`}
+                                                        >
+                                                            <div className="flex-1 min-w-0 mr-2">
+                                                                <p className={`font-medium truncate ${isExcluded ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                                                    {ev.title}
+                                                                </p>
+                                                                <p className="text-[10px] text-gray-400 truncate">
+                                                                    {ev.category?.name || 'Uncategorised'}
+                                                                    {ev.age_restriction ? ` · ${ev.age_restriction.replace('_', ' ').replace('plus', '+')}` : ''}
+                                                                </p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (isExcluded) {
+                                                                        setQbState({
+                                                                            ...qbState,
+                                                                            exclude_event_ids: qbState.exclude_event_ids.filter(id => id !== ev.id)
+                                                                        });
+                                                                    } else {
+                                                                        setQbState({
+                                                                            ...qbState,
+                                                                            exclude_event_ids: [...qbState.exclude_event_ids, ev.id]
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                className={`shrink-0 text-xs px-2 py-1 rounded transition-colors ${
+                                                                    isExcluded
+                                                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                                        : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                                }`}
+                                                            >
+                                                                {isExcluded ? '✓ Include' : '✕ Exclude'}
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Custom Date Range */}
