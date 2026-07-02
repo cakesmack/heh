@@ -35,6 +35,7 @@ function buildEventFilter(params: Record<string, any>): EventFilter {
             : params.category_ids.split(',');
     }
     if (params.q) filter.q = params.q;
+    if (params.combine_operator) filter.combine_operator = params.combine_operator;
 
     if (params.age_restriction) filter.age_restriction = params.age_restriction;
 

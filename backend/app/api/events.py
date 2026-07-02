@@ -543,6 +543,7 @@ def list_events(
     status: Optional[str] = Query(None, description="Filter by explicit status (e.g. 'pending')"),
     is_recurring: Optional[bool] = Query(None, description="Filter by recurrence status"),
     max_duration_days: Optional[float] = Query(None, description="Maximum event duration in days"),
+    combine_operator: str = Query("and", description="Combine mode: 'and' or 'or'"),
 
     time_range: Optional[str] = Query(None, description="'upcoming', 'past', or 'all'"),
     sort_by: str = Query("date", description="Sort by 'date' (default) or 'created'"),
@@ -669,80 +670,120 @@ def list_events(
         (FeaturedBooking.end_date >= today)
     )
 
-    # Filter by category slug (resolves to ID first) - case-insensitive
-    # Supports comma-separated list of slugs (e.g. "music,food")
+    # Track category and tag joins
+    event_tag_joined = False
+    tag_joined = False
+    category_joined = False
+
+    # Initialize variables to hold conditions
+    category_cond = None
+    tag_cond = None
+    q_cond = None
+
+    # 1. Category filter condition
+    cat_ids = []
     if category:
         category_list = [c.strip().lower() for c in category.split(",")]
-        
-        # Find all matching categories
         cats = session.exec(
             select(Category).where(
                 (Category.slug.in_(category_list)) | 
                 (func.lower(Category.name).in_(category_list))
             )
         ).all()
-        
         if cats:
-            cat_ids = [c.id for c in cats]
-            query = query.where(Event.category_id.in_(cat_ids))
+            cat_ids.extend([c.id for c in cats])
         else:
-            # No matching categories found
-            return EventListResponse(events=[], total=0, skip=skip, limit=limit)
-
-    # Filter by single category ID (only if category slug not provided)
+            if combine_operator != "or":
+                return EventListResponse(events=[], total=0, skip=skip, limit=limit)
     if category_id and not category:
-        query = query.where(Event.category_id == normalize_uuid(category_id))
-
-    # Filter by multiple categories
+        cat_ids.append(normalize_uuid(category_id))
     if category_ids and not category and not category_id:
-        cat_id_list = [normalize_uuid(cid.strip()) for cid in category_ids.split(",") if cid.strip()]
-        if cat_id_list:
-            query = query.where(Event.category_id.in_(cat_id_list))
-    # Filter by venue ID (Host OR Participating)
-    if venue_id:
-        # Try dual-resolution to translate a potential slug into a UUID
-        venue_lookup = session.exec(select(Venue).where(Venue.slug == venue_id)).first()
-        v_id = venue_lookup.id if venue_lookup else normalize_uuid(venue_id)
+        cat_ids.extend([normalize_uuid(cid.strip()) for cid in category_ids.split(",") if cid.strip()])
         
-        query = query.outerjoin(EventParticipatingVenue, Event.id == EventParticipatingVenue.event_id)
-        query = query.where(
-            (Event.venue_id == v_id) | 
-            (EventParticipatingVenue.venue_id == v_id)
-        )
+    if cat_ids:
+        category_cond = Event.category_id.in_(cat_ids)
 
-    # Tag filtering logic with join tracking
-    event_tag_joined = False
-    tag_joined = False
-
-    # 1. Prioritize tag_ids (JSON-first, SEO-heavy architecture)
+    # 2. Tag filter condition
+    tag_ids_list = []
+    tag_names_list = []
     if tag_ids:
-        # Ensure it's a list even if a single string is passed
-        actual_ids = tag_ids if isinstance(tag_ids, list) else [tag_ids]
-        print(f"DATABASE_CHECK: Filtering for IDs: {actual_ids}", flush=True)
-        query = query.join(Event.tags).filter(Tag.id.in_(actual_ids))
+        tag_ids_list = tag_ids if isinstance(tag_ids, list) else [normalize_uuid(tid.strip()) for tid in tag_ids.split(",") if tid.strip()]
+    if tag_names:
+        tag_names_list = [normalize_tag_name(t.strip()) for t in tag_names.split(",") if t.strip()]
+    if tag:
+        tag_names_list.append(normalize_tag_name(tag))
+        
+    if tag_ids_list or tag_names_list:
+        if combine_operator == "or":
+            query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
+            query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
+        else:
+            query = query.join(EventTag, Event.id == EventTag.event_id)
+            query = query.join(Tag, EventTag.tag_id == Tag.id)
         event_tag_joined = True
         tag_joined = True
         
-    # 2. Filter by multiple tags (legacy/fallback)
-    elif tag_names:
-        tag_list = [normalize_tag_name(t.strip()) for t in tag_names.split(",")]
-        if not event_tag_joined:
-            query = query.join(EventTag, Event.id == EventTag.event_id)
-            event_tag_joined = True
-        query = query.join(Tag, EventTag.tag_id == Tag.id)
-        tag_joined = True
-        query = query.where(Tag.name.in_(tag_list))
+        tag_subconditions = []
+        if tag_ids_list:
+            tag_subconditions.append(Tag.id.in_(tag_ids_list))
+        if tag_names_list:
+            tag_subconditions.append(Tag.name.in_(tag_names_list))
+        if tag_subconditions:
+            tag_cond = or_(*tag_subconditions)
+
+    # 3. Search query (q) filter condition (Scenario A)
+    if q and not city_filter:
+        search_term = f"%{q}%"
+        search_slug = normalize_tag_name(q)
         
-    # 3. Filter by single tag (legacy/fallback)
-    elif tag:
-        normalized_tag = normalize_tag_name(tag)
-        if not event_tag_joined:
-            query = query.join(EventTag, Event.id == EventTag.event_id)
-            event_tag_joined = True
+        if not venue_joined:
+            query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+            venue_joined = True
+        if not category_joined:
+            query = query.outerjoin(Category, Event.category_id == Category.id)
+            category_joined = True
         if not tag_joined:
-            query = query.join(Tag, EventTag.tag_id == Tag.id)
+            query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
+            query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
+            event_tag_joined = True
             tag_joined = True
-        query = query.where(Tag.name == normalized_tag)
+            
+        search_conditions = [
+            Event.title.ilike(search_term),
+            Event.description.ilike(search_term),
+            Event.location_name.ilike(search_term),
+            Event.address_full.ilike(search_term),
+            Event.postcode.ilike(search_term),
+            Venue.name.ilike(search_term),
+            Venue.address.ilike(search_term),
+            Venue.formatted_address.ilike(search_term),
+            Venue.postcode.ilike(search_term)
+        ]
+        if tag_joined:
+            search_conditions.extend([
+                Tag.name == search_slug,
+                Tag.name.ilike(f"%{search_slug}%")
+            ])
+        if category_joined:
+            search_conditions.extend([
+                Category.name.ilike(search_term),
+                Category.slug.ilike(search_term)
+            ])
+        q_cond = or_(*search_conditions)
+
+    # Combine the filters based on combine_operator
+    if combine_operator == "or":
+        or_conds = [c for c in [category_cond, tag_cond, q_cond] if c is not None]
+        if or_conds:
+            query = query.where(or_(*or_conds))
+    else:
+        # Default 'and' operator
+        if category_cond is not None:
+            query = query.where(category_cond)
+        if tag_cond is not None:
+            query = query.where(tag_cond)
+        if q_cond is not None:
+            query = query.where(q_cond)
 
     # --- SCENARIO B: SEO Page (Strict City Filter) ---
     if city_filter:
@@ -841,7 +882,7 @@ def list_events(
         )
 
     # --- SCENARIO A: Standard Search (if no city_filter) ---
-    elif q:
+    elif q and False:
         search_term = f"%{q}%"
         # Generate slugified version for tag matching (e.g., "Live Music" -> "live-music")
         search_slug = normalize_tag_name(q)

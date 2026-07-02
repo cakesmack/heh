@@ -288,6 +288,7 @@ export const eventsAPI = {
       if (filters.category) params.category = filters.category;
       if (filters.category_id) params.category_id = filters.category_id;
       if (filters.category_ids) params.category_ids = filters.category_ids.join(',');
+      if (filters.combine_operator) params.combine_operator = filters.combine_operator;
       if (filters.tag) params.tag = filters.tag;
       if (filters.tag_names) params.tag_names = Array.isArray(filters.tag_names) ? filters.tag_names.join(',') : filters.tag_names;
       if (filters.tag_ids) params.tag_ids = Array.isArray(filters.tag_ids) ? filters.tag_ids.join(',') : filters.tag_ids;

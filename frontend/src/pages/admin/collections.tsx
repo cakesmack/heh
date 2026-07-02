@@ -49,6 +49,7 @@ export default function AdminCollections() {
         age: '',
         price: 'any', // 'any', 'free', 'paid'
         recurrence: 'any', // 'any', 'recurring', 'single'
+        combine_operator: 'and' as 'and' | 'or',
     });
 
     const fetchCollections = async () => {
@@ -100,6 +101,7 @@ export default function AdminCollections() {
             age: '',
             price: 'any',
             recurrence: 'any',
+            combine_operator: 'and',
         });
         setError(null);
         setModalOpen(true);
@@ -151,6 +153,7 @@ export default function AdminCollections() {
                 age: collection.filter_params.age_restriction || '',
                 price: collection.filter_params.price === 'free' ? 'free' : (collection.filter_params.price === 'paid' ? 'paid' : 'any'),
                 recurrence: collection.filter_params.is_recurring === true ? 'recurring' : (collection.filter_params.is_recurring === false ? 'single' : 'any'),
+                combine_operator: collection.filter_params.combine_operator || 'and',
             });
         }
         // Fallback for legacy target_link parsing only if JSON doesn't exist
@@ -158,7 +161,7 @@ export default function AdminCollections() {
             parseLinkToBuilder(collection.target_link);
         } else {
             // Reset to default
-            setQbState({ category: [], q: '', age: '', price: 'any', recurrence: 'any' });
+            setQbState({ category: [], q: '', age: '', price: 'any', recurrence: 'any', combine_operator: 'and' });
         }
 
         setError(null);
@@ -209,12 +212,12 @@ export default function AdminCollections() {
                 age: searchParams.get('age_restriction') || '',
                 price: searchParams.get('price') === 'free' ? 'free' : (searchParams.get('price') === 'paid' ? 'paid' : 'any'),
                 recurrence: searchParams.get('is_recurring') === 'true' ? 'recurring' : (searchParams.get('is_recurring') === 'false' ? 'single' : 'any'),
+                combine_operator: (searchParams.get('combine_operator') as any) || 'and',
             });
         } catch (e) {
             console.error("Failed to parse fallback URL:", e);
         }
     };
-
     // Single-write: Update filter_params when builder state changes
     useEffect(() => {
         if (!modalOpen) return;
@@ -228,6 +231,10 @@ export default function AdminCollections() {
         }
 
         if (qbState.q) filterObj.q = qbState.q;
+        
+        if (qbState.combine_operator) {
+            filterObj.combine_operator = qbState.combine_operator;
+        }
 
 
         if (qbState.age) filterObj.age_restriction = qbState.age;
@@ -500,6 +507,35 @@ export default function AdminCollections() {
                                                 <span className="truncate">{c.name}</span>
                                             </label>
                                         ))}
+                                    </div>
+                                </div>
+
+                                {/* Categories & Tags combine operator */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Filter Match Mode (Categories & Keywords/Tags)</label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center space-x-2 text-sm cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="combine_operator"
+                                                value="and"
+                                                checked={qbState.combine_operator === 'and'}
+                                                onChange={() => setQbState({ ...qbState, combine_operator: 'and' })}
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            <span>Match ALL (AND)</span>
+                                        </label>
+                                        <label className="flex items-center space-x-2 text-sm cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="combine_operator"
+                                                value="or"
+                                                checked={qbState.combine_operator === 'or'}
+                                                onChange={() => setQbState({ ...qbState, combine_operator: 'or' })}
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            <span>Match ANY (OR)</span>
+                                        </label>
                                     </div>
                                 </div>
 

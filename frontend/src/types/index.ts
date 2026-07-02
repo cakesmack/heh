@@ -439,6 +439,7 @@ export interface EventFilter {
   category?: EventCategory;
   category_id?: string;
   category_ids?: string[];
+  combine_operator?: 'and' | 'or';
   tag_names?: string[];
   tag?: string;
   q?: string;
