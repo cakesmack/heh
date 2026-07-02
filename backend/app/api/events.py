@@ -695,7 +695,9 @@ def list_events(
 
     # Filter by multiple categories
     if category_ids and not category and not category_id:
-        cat_id_list = [normalize_uuid(cid.strip()) for cid in category_ids.split(",")]
+        cat_id_list = [normalize_uuid(cid.strip()) for cid in category_ids.split(",") if cid.strip()]
+        if cat_id_list:
+            query = query.where(Event.category_id.in_(cat_id_list))
     # Filter by venue ID (Host OR Participating)
     if venue_id:
         # Try dual-resolution to translate a potential slug into a UUID

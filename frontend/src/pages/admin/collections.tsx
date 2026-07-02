@@ -105,6 +105,19 @@ export default function AdminCollections() {
         setModalOpen(true);
     };
 
+    const mapToCategoryIds = (items: any[]): string[] => {
+        if (!items || !Array.isArray(items)) return [];
+        return items.map(item => {
+            const strVal = String(item).trim().toLowerCase();
+            const found = categories.find(c => 
+                c.id === item || 
+                c.name.toLowerCase() === strVal || 
+                c.slug.toLowerCase() === strVal
+            );
+            return found ? found.id : item;
+        });
+    };
+
     const openEditModal = (collection: Collection) => {
         setEditingCollection(collection);
         slugManuallyEdited.current = !!collection.slug;
@@ -130,8 +143,10 @@ export default function AdminCollections() {
 
         // Initialize QB State from filter_params FIRST (JSON-first architecture)
         if (collection.filter_params) {
+            const rawCats = collection.filter_params.category_ids || collection.filter_params.category || [];
+            const mappedCats = mapToCategoryIds(Array.isArray(rawCats) ? rawCats : [rawCats]);
             setQbState({
-                category: collection.filter_params.category_ids || collection.filter_params.category || [], // Handle arrays // Handle arrays
+                category: mappedCats,
                 q: collection.filter_params.q || '',
                 age: collection.filter_params.age_restriction || '',
                 price: collection.filter_params.price === 'free' ? 'free' : (collection.filter_params.price === 'paid' ? 'paid' : 'any'),
@@ -185,9 +200,11 @@ export default function AdminCollections() {
     const parseLinkToBuilder = (url: string) => {
         try {
             const searchParams = new URLSearchParams(url.split('?')[1] || '');
+            const rawCats = searchParams.get('category')?.split(',') || [];
+            const mappedCats = mapToCategoryIds(rawCats);
 
             setQbState({
-                category: searchParams.get('category')?.split(',') || [],
+                category: mappedCats,
                 q: searchParams.get('q') || '',
                 age: searchParams.get('age_restriction') || '',
                 price: searchParams.get('price') === 'free' ? 'free' : (searchParams.get('price') === 'paid' ? 'paid' : 'any'),
@@ -207,16 +224,7 @@ export default function AdminCollections() {
 
         // Use category_ids logic to enforce ID usage
         if (qbState.category.length > 0) {
-            // Note: Currently qbState.category stores names due to legacy UI. 
-            // In a full refactor, the checkbox should store `c.id` instead of `c.name`. 
-            // We pass it to the backend which will either resolve names->slugs or we should pass IDs.
-            // For now, mapping name to ID if found in our local categories list.
-            const catIds = qbState.category.map(name => {
-                const found = categories.find(c => c.name === name);
-                return found ? found.id : name; // fallback to name if not found in list
-            }).filter(Boolean);
-
-            filterObj.category_ids = catIds;
+            filterObj.category_ids = qbState.category;
         }
 
         if (qbState.q) filterObj.q = qbState.q;
@@ -480,11 +488,11 @@ export default function AdminCollections() {
                                             <label key={c.id} className="flex items-center space-x-2 text-sm">
                                                 <input
                                                     type="checkbox"
-                                                    checked={qbState.category.includes(c.name)} // Assuming name handles slug matching for now as per previous logic
+                                                    checked={qbState.category.includes(c.id)}
                                                     onChange={(e) => {
                                                         const newCats = e.target.checked
-                                                            ? [...qbState.category, c.name]
-                                                            : qbState.category.filter(cat => cat !== c.name);
+                                                            ? [...qbState.category, c.id]
+                                                            : qbState.category.filter(catId => catId !== c.id);
                                                         setQbState({ ...qbState, category: newCats });
                                                     }}
                                                     className="rounded text-emerald-600 focus:ring-emerald-500"
