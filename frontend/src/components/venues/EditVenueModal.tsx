@@ -14,7 +14,7 @@ import dynamic from 'next/dynamic';
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
 interface EditVenueModalProps {
-    venueId: string;
+    venueId?: string;
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
@@ -42,14 +42,12 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
         email: '',
         opening_hours: '',
         image_url: '',
-        status: 'VERIFIED', // Default to verified when admin edits
-        // Amenities
+        status: 'VERIFIED',
         is_dog_friendly: false,
         has_wheelchair_access: false,
         has_parking: false,
         serves_food: false,
         amenities_notes: '',
-        // Social Media
         social_facebook: '',
         social_instagram: '',
         social_x: '',
@@ -61,7 +59,7 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
     const [isPostcodeValid, setIsPostcodeValid] = useState(true);
 
     useEffect(() => {
-        if (isOpen && venueId) {
+        if (isOpen) {
             loadData();
         }
     }, [isOpen, venueId]);
@@ -69,40 +67,70 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
     const loadData = async () => {
         setLoading(true);
         try {
-            const [venueData, cats] = await Promise.all([
-                venuesAPI.get(venueId),
-                venuesAPI.listCategories()
-            ]);
-            setVenue(venueData);
+            const cats = await venuesAPI.listCategories();
             setCategories(cats);
+            const defaultCat = cats.find(c => c.name.toLowerCase() === 'uncategorized' || c.slug === 'uncategorized') || cats[0];
 
-            setFormData({
-                name: venueData.name,
-                address: venueData.address,
-                postcode: venueData.postcode || '',
-                address_full: venueData.address_full || '',
-                latitude: venueData.latitude,
-                longitude: venueData.longitude,
-                category_id: venueData.category_id || (venueData.category?.id || (cats[0]?.id || '')),
-                description: venueData.description || '',
-                website: venueData.website || '',
-                phone: venueData.phone || '',
-                email: venueData.email || '',
-                opening_hours: venueData.opening_hours || '',
-                image_url: venueData.image_url || '',
-                status: venueData.status || 'VERIFIED',
-                is_dog_friendly: (venueData as any).is_dog_friendly || false,
-                has_wheelchair_access: (venueData as any).has_wheelchair_access || false,
-                has_parking: (venueData as any).has_parking || false,
-                serves_food: (venueData as any).serves_food || false,
-                amenities_notes: (venueData as any).amenities_notes || '',
-                social_facebook: venueData.social_facebook || '',
-                social_instagram: venueData.social_instagram || '',
-                social_x: venueData.social_x || '',
-                social_linkedin: venueData.social_linkedin || '',
-                social_tiktok: venueData.social_tiktok || '',
-                website_url: venueData.website_url || '',
-            });
+            if (venueId) {
+                const venueData = await venuesAPI.get(venueId);
+                setVenue(venueData);
+                setFormData({
+                    name: venueData.name,
+                    address: venueData.address,
+                    postcode: venueData.postcode || '',
+                    address_full: venueData.address_full || '',
+                    latitude: venueData.latitude,
+                    longitude: venueData.longitude,
+                    category_id: venueData.category_id || (venueData.category?.id || (defaultCat?.id || '')),
+                    description: venueData.description || '',
+                    website: venueData.website || '',
+                    phone: venueData.phone || '',
+                    email: venueData.email || '',
+                    opening_hours: venueData.opening_hours || '',
+                    image_url: venueData.image_url || '',
+                    status: venueData.status || 'VERIFIED',
+                    is_dog_friendly: (venueData as any).is_dog_friendly || false,
+                    has_wheelchair_access: (venueData as any).has_wheelchair_access || false,
+                    has_parking: (venueData as any).has_parking || false,
+                    serves_food: (venueData as any).serves_food || false,
+                    amenities_notes: (venueData as any).amenities_notes || '',
+                    social_facebook: venueData.social_facebook || '',
+                    social_instagram: venueData.social_instagram || '',
+                    social_x: venueData.social_x || '',
+                    social_linkedin: venueData.social_linkedin || '',
+                    social_tiktok: venueData.social_tiktok || '',
+                    website_url: venueData.website_url || '',
+                });
+            } else {
+                setVenue(null);
+                setFormData({
+                    name: '',
+                    address: '',
+                    postcode: '',
+                    address_full: '',
+                    latitude: 57.48,
+                    longitude: -4.22,
+                    category_id: defaultCat?.id || '',
+                    description: '',
+                    website: '',
+                    phone: '',
+                    email: '',
+                    opening_hours: '',
+                    image_url: '',
+                    status: 'VERIFIED',
+                    is_dog_friendly: false,
+                    has_wheelchair_access: false,
+                    has_parking: false,
+                    serves_food: false,
+                    amenities_notes: '',
+                    social_facebook: '',
+                    social_instagram: '',
+                    social_x: '',
+                    social_linkedin: '',
+                    social_tiktok: '',
+                    website_url: '',
+                });
+            }
         } catch (err) {
             console.error(err);
             setError("Failed to load venue details");
@@ -133,16 +161,19 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
         try {
             const payload: any = { ...formData };
             if (!payload.category_id && categories.length > 0) {
-                payload.category_id = categories[0].id;
+                const uncategorized = categories.find(c => c.name.toLowerCase() === 'uncategorized' || c.slug === 'uncategorized');
+                payload.category_id = uncategorized?.id || categories[0].id;
             }
-            // Ensure status is sent
-            // If status is 'unverified' and we want to verify, user should have changed dropdown.
 
-            await venuesAPI.update(venueId, payload);
+            if (venueId) {
+                await venuesAPI.update(venueId, payload);
+            } else {
+                await venuesAPI.create(payload);
+            }
             onSuccess();
             onClose();
         } catch (err: any) {
-            setError(err.message || "Failed to update venue");
+            setError(err.message || "Failed to save venue");
         } finally {
             setSaving(false);
         }
@@ -151,7 +182,7 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
     if (!isOpen) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Edit Venue" size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={venueId ? "Edit Venue" : "Add Venue"} size="lg">
             {loading ? (
                 <div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div></div>
             ) : (
@@ -226,9 +257,60 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                             />
                         </div>
 
-                        {/* Map Preview */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Postcode</label>
+                            <input
+                                type="text"
+                                value={formData.postcode}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormData({ ...formData, postcode: val });
+                                    setIsPostcodeValid(val ? isHIERegion(val) : true);
+                                }}
+                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${!isPostcodeValid ? 'border-red-500 focus:ring-red-500' : 'focus:ring-emerald-500'
+                                    }`}
+                                placeholder="e.g., IV1 1AA"
+                            />
+                            {!isPostcodeValid && (
+                                <p className="text-xs text-red-600 mt-1">
+                                    Venue must be located in the Highlands & Islands region
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                            <input
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                            <input
+                                type="url"
+                                value={formData.website}
+                                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
                         {formData.latitude && formData.longitude && (
                             <div className="col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Location Preview</label>
                                 <GoogleMiniMap
                                     latitude={formData.latitude}
                                     longitude={formData.longitude}
@@ -237,6 +319,16 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                                 />
                             </div>
                         )}
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Opening Hours</label>
+                            <textarea
+                                value={formData.opening_hours}
+                                onChange={(e) => setFormData({ ...formData, opening_hours: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                rows={2}
+                            />
+                        </div>
 
                         <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -251,8 +343,8 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
 
                     <div className="flex justify-end gap-3 pt-4 border-t">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg">Cancel</button>
-                        <button type="submit" disabled={saving} className="px-4 py-2 bg-emerald-600 text-white rounded-lg">
-                            {saving ? 'Saving...' : 'Update Venue'}
+                        <button type="submit" disabled={saving || !isPostcodeValid} className="px-4 py-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50">
+                            {saving ? 'Saving...' : venueId ? 'Update Venue' : 'Create Venue'}
                         </button>
                     </div>
                 </form>

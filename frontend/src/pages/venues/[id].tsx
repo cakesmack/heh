@@ -26,7 +26,7 @@ import { EventCard } from '@/components/events/EventCard';
 
 import { FollowButton } from '@/components/common/FollowButton';
 import RichText from '@/components/ui/RichText';
-import VenueEditModal from '@/components/venues/VenueEditModal';
+import { EditVenueModal } from '@/components/venues/EditVenueModal';
 import SocialShare from '@/components/common/SocialShare';
 
 // Icons
@@ -224,17 +224,16 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
     ? (venue.address.split(',').slice(-2, -1)[0]?.trim() || venue.address.split(',').pop()?.trim() || 'Highlands')
     : 'Highlands';
 
-  const currentYear = new Date().getFullYear();
-  const venueLocation = venue.city || city || 'the Highlands';
+  const townOrCity = venue.city || city || 'the Highlands';
 
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
 
-  // SEO: Priority → manual override → exact requirement template
+  // SEO: Priority → manual override → directory intent template
   const pageTitle = venue.seo_title
-    || `${venue.name} Events, Tickets & What's On ${currentYear}`;
+    || `${venue.name} Contact Details, Location & Venue Hire | ${townOrCity}`;
 
   const pageDescription = venue.seo_description
-    || `Find upcoming events, gig dates, and schedule information for ${venue.name} in ${venueLocation}. View the complete event calendar on the Highland Events Hub.`;
+    || `Find contact details, address, photographs, and booking information for ${venue.name} in ${townOrCity}. View the complete Highland venue directory.`;
 
   const canonicalUrl = `${siteUrl}/venues/${venue.slug || venue.id}`;
   const venueImageUrl = venue.image_url ? optimizeImage(venue.image_url, 1200) : null;
@@ -728,20 +727,20 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
           </div>
         )}
 
-        {/* Upcoming Events Section - FULL WIDTH BELOW THE GRID */}
-        <div className="mt-16 pt-12 border-t border-gray-100">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-12 gap-6">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">Upcoming Events</h2>
-              <p className="text-gray-500 font-medium">Discover what's happening soon at {venue.name}</p>
+        {/* Upcoming Events Section - FULL WIDTH BELOW THE GRID (Rendered ONLY if events exist) */}
+        {events.length > 0 && (
+          <div className="mt-16 pt-12 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-12 gap-6">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">Upcoming Events</h2>
+                <p className="text-gray-500 font-medium">Discover what's happening soon at {venue.name}</p>
+              </div>
+              <div className="flex items-center gap-3 self-start sm:self-auto">
+                <span className="text-gray-400 font-bold uppercase text-xs tracking-widest">Total Events</span>
+                <span className="bg-gray-900 text-white text-xs font-black px-3 py-1.5 rounded-full">{eventsTotal} Results</span>
+              </div>
             </div>
-            <div className="flex items-center gap-3 self-start sm:self-auto">
-              <span className="text-gray-400 font-bold uppercase text-xs tracking-widest">Total Events</span>
-              <span className="bg-gray-900 text-white text-xs font-black px-3 py-1.5 rounded-full">{eventsTotal} Results</span>
-            </div>
-          </div>
 
-          {events.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
               {events.map((event) => (
                 <div key={event.id} className="group">
@@ -749,39 +748,22 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="py-24 text-center bg-white rounded-[2.5rem] border-2 border-dashed border-gray-100">
-              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">No upcoming events scheduled</h3>
-              <p className="text-gray-500 max-w-xs mx-auto mb-8">Check back later for new event announcements at this venue.</p>
-              {isOwner && (
-                <Link href="/account/events/create">
-                  <button className="px-8 py-4 rounded-full shadow-xl shadow-emerald-100/20 bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all active:scale-95">
-                    Create First Event
-                  </button>
-                </Link>
-              )}
-            </div>
-          )}
 
-          {/* Load More Button */}
-          {events.length < eventsTotal && (
-            <div className="mt-16 flex justify-center">
-              <button
-                onClick={handleLoadMoreEvents}
-                disabled={isLoadingMoreEvents}
-                className="px-10 py-4 border-2 border-gray-200 text-gray-700 font-black rounded-full hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
-              >
-                {isLoadingMoreEvents && <Spinner size="sm" />}
-                Load More Results
-              </button>
-            </div>
-          )}
-        </div>
+            {/* Load More Button */}
+            {events.length < eventsTotal && (
+              <div className="mt-16 flex justify-center">
+                <button
+                  onClick={handleLoadMoreEvents}
+                  disabled={isLoadingMoreEvents}
+                  className="px-10 py-4 border-2 border-gray-200 text-gray-700 font-black rounded-full hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                >
+                  {isLoadingMoreEvents && <Spinner size="sm" />}
+                  Load More Results
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Report Modal */}
@@ -797,11 +779,11 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
 
       {/* Edit Modal */}
       {venue && isOwner && (
-        <VenueEditModal
+        <EditVenueModal
+          venueId={venue.id}
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
-          venue={venue}
-          onUpdate={handleUpdateVenue}
+          onSuccess={handleUpdateVenue}
         />
       )}
     </div>

@@ -17,6 +17,8 @@ import { isHIERegion } from '@/utils/validation/hie-check';
 import { VenueCategory, VenueAnalyticsSummary } from '@/types';
 import type { VenueResponse } from '@/types';
 
+import { EditVenueModal } from '@/components/venues/EditVenueModal';
+
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
 
@@ -31,38 +33,6 @@ export default function AdminVenues() {
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<VenueResponse | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    postcode: '',
-    address_full: '',
-    latitude: 57.48,
-    longitude: -4.22,
-    category_id: '',
-    description: '',
-    website: '',
-    phone: '',
-    email: '',
-    opening_hours: '',
-    image_url: '',
-    // Amenities
-    is_dog_friendly: false,
-    has_wheelchair_access: false,
-    has_parking: false,
-    serves_food: false,
-    amenities_notes: '',
-    // Social Media
-    social_facebook: '',
-    social_instagram: '',
-    social_x: '',
-    social_linkedin: '',
-    social_tiktok: '',
-    website_url: '',
-    status: 'VERIFIED',
-  });
-  const [isPostcodeValid, setIsPostcodeValid] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Filters & Sorting state
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -203,10 +173,6 @@ export default function AdminVenues() {
     try {
       const cats = await venuesAPI.listCategories();
       setCategories(cats);
-      // Set default category if creating new
-      if (cats.length > 0 && !formData.category_id) {
-        setFormData(prev => ({ ...prev, category_id: cats[0].id }));
-      }
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
@@ -230,137 +196,9 @@ export default function AdminVenues() {
     setSkip(0);
   }, [filterStatus, filterCategory, sortBy, sortDir]);
 
-  const openCreateModal = () => {
-    setEditingVenue(null);
-    setFormData({
-      name: '',
-      address: '',
-      postcode: '',
-      address_full: '',
-      latitude: 57.48,
-      longitude: -4.22,
-      category_id: categories.length > 0 ? categories[0].id : '',
-      description: '',
-      website: '',
-      phone: '',
-      email: '',
-      opening_hours: '',
-      image_url: '',
-      is_dog_friendly: false,
-      has_wheelchair_access: false,
-      has_parking: false,
-      serves_food: false,
-      amenities_notes: '',
-      social_facebook: '',
-      social_instagram: '',
-      social_x: '',
-      social_linkedin: '',
-      social_tiktok: '',
-      website_url: '',
-      status: 'VERIFIED',
-    });
-    setError(null);
-    setIsPostcodeValid(true);
-    setModalOpen(true);
-  };
-
   const openEditModal = (venue: VenueResponse) => {
     setEditingVenue(venue);
-    setFormData({
-      name: venue.name,
-      address: venue.address,
-      postcode: venue.postcode || '',
-      address_full: venue.address_full || '',
-      latitude: venue.latitude,
-      longitude: venue.longitude,
-      category_id: venue.category_id || (venue.category?.id || ''),
-      description: venue.description || '',
-      website: venue.website || '',
-      phone: venue.phone || '',
-      email: venue.email || '',
-      opening_hours: venue.opening_hours || '',
-      image_url: venue.image_url || '',
-      is_dog_friendly: (venue as any).is_dog_friendly || false,
-      has_wheelchair_access: (venue as any).has_wheelchair_access || false,
-      has_parking: (venue as any).has_parking || false,
-      serves_food: (venue as any).serves_food || false,
-      amenities_notes: (venue as any).amenities_notes || '',
-      social_facebook: venue.social_facebook || '',
-      social_instagram: venue.social_instagram || '',
-      social_x: venue.social_x || '',
-      social_linkedin: venue.social_linkedin || '',
-      social_tiktok: venue.social_tiktok || '',
-      website_url: venue.website_url || '',
-      status: venue.status || 'VERIFIED',
-    });
-    setError(null);
-    setIsPostcodeValid(venue.postcode ? isHIERegion(venue.postcode) : true);
     setModalOpen(true);
-  };
-
-  const handleImageUpload = (urls: { url: string }) => {
-    setFormData(prev => ({ ...prev, image_url: urls.url }));
-  };
-
-  const handleImageRemove = () => {
-    setFormData(prev => ({ ...prev, image_url: '' }));
-  };
-
-  const handlePlaceSelect = (place: {
-    postcode: string;
-    address: string;
-    latitude: number;
-    longitude: number;
-    placeId: string;
-  }) => {
-    setFormData(prev => ({
-      ...prev,
-      postcode: place.postcode,
-      address: place.address,
-      address_full: place.address,
-      latitude: place.latitude,
-      longitude: place.longitude,
-    }));
-    // Validate HIE region using postcode if available
-    if (place.postcode) {
-      setIsPostcodeValid(isHIERegion(place.postcode));
-    } else {
-      setIsPostcodeValid(true);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (formData.postcode && !isHIERegion(formData.postcode)) {
-      setError('Venue must be located in the Highlands & Islands region');
-      setIsPostcodeValid(false);
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const payload = {
-        ...formData,
-        postcode: formData.postcode || '',
-        address_full: formData.address_full || '',
-        image_url: formData.image_url || undefined,
-      };
-
-      if (editingVenue) {
-        await venuesAPI.update(editingVenue.id, payload);
-      } else {
-        await venuesAPI.create(payload);
-      }
-      setModalOpen(false);
-      fetchVenues();
-    } catch (err: any) {
-      setError(err.message || 'Failed to save venue');
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleDelete = async (venue: VenueResponse) => {
@@ -435,7 +273,10 @@ export default function AdminVenues() {
             <div className="flex items-center justify-between">
               <p className="text-gray-600">Manage venues ({total} total)</p>
               <button
-                onClick={openCreateModal}
+                onClick={() => {
+                  setEditingVenue(null);
+                  setModalOpen(true);
+                }}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
               >
                 Add Venue
@@ -670,319 +511,17 @@ export default function AdminVenues() {
           </div>
         )}
 
-        <Modal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={editingVenue ? 'Edit Venue' : 'Add Venue'}
-          size="lg"
-        >
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* Venue Image */}
-            <ImageUpload
-              folder="venues"
-              currentImageUrl={formData.image_url}
-              onUpload={handleImageUpload}
-              onRemove={handleImageRemove}
-              aspectRatio="16/9"
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
-                >
-                  <option value="UNVERIFIED">Unverified (Draft)</option>
-                  <option value="VERIFIED">Verified (Live)</option>
-                  <option value="ARCHIVED">Archived</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
-              </div>
-
-              {/* Google Places Autocomplete */}
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Find Address</label>
-                <PlacesAutocomplete onSelect={handlePlaceSelect} placeholder="Search for venue address..." />
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Postcode</label>
-                <input
-                  type="text"
-                  value={formData.postcode}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({ ...formData, postcode: val });
-                    setIsPostcodeValid(val ? isHIERegion(val) : true);
-                  }}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${!isPostcodeValid ? 'border-red-500 focus:ring-red-500' : 'focus:ring-emerald-500'
-                    }`}
-                  placeholder="e.g., IV1 1AA"
-                />
-                {!isPostcodeValid && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Venue must be located in the Highlands & Islands region
-                  </p>
-                )}
-              </div>
-
-
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Latitude *</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={formData.latitude}
-                  onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Longitude *</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={formData.longitude}
-                  onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
-              </div>
-
-              {/* Map Preview */}
-              {formData.latitude && formData.longitude && (
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location Preview</label>
-                  <GoogleMiniMap
-                    latitude={formData.latitude}
-                    longitude={formData.longitude}
-                    height="150px"
-                    zoom={13}
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                <select
-                  value={formData.category_id}
-                  onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  placeholder="contact@venue.com"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                <input
-                  type="url"
-                  value={formData.website}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  placeholder="https://"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Opening Hours</label>
-                <textarea
-                  value={formData.opening_hours}
-                  onChange={(e) => setFormData({ ...formData, opening_hours: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  rows={3}
-                  placeholder="Mon-Fri: 9am-5pm&#10;Sat: 10am-4pm&#10;Sun: Closed"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  rows={3}
-                />
-                <p className="mt-1 text-xs text-gray-500">URLs pasted here will automatically become clickable links on the site.</p>
-              </div>
-
-              {/* Social Media */}
-              <div className="col-span-2 pt-4 border-t">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Social Media Links</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="url"
-                    value={formData.social_facebook}
-                    onChange={(e) => setFormData({ ...formData, social_facebook: e.target.value })}
-                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="Facebook URL"
-                  />
-                  <input
-                    type="url"
-                    value={formData.social_instagram}
-                    onChange={(e) => setFormData({ ...formData, social_instagram: e.target.value })}
-                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="Instagram URL"
-                  />
-                  <input
-                    type="url"
-                    value={formData.social_x}
-                    onChange={(e) => setFormData({ ...formData, social_x: e.target.value })}
-                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="X (Twitter) URL"
-                  />
-                  <input
-                    type="url"
-                    value={formData.social_linkedin}
-                    onChange={(e) => setFormData({ ...formData, social_linkedin: e.target.value })}
-                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="LinkedIn URL"
-                  />
-                  <input
-                    type="url"
-                    value={formData.social_tiktok}
-                    onChange={(e) => setFormData({ ...formData, social_tiktok: e.target.value })}
-                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="TikTok URL"
-                  />
-                  <input
-                    type="url"
-                    value={formData.website_url}
-                    onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="Additional Website URL"
-                  />
-                </div>
-              </div>
-
-              {/* Amenities */}
-              <div className="col-span-2 pt-4 border-t">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Amenities</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_dog_friendly}
-                      onChange={(e) => setFormData({ ...formData, is_dog_friendly: e.target.checked })}
-                      className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Dog Friendly</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_wheelchair_access}
-                      onChange={(e) => setFormData({ ...formData, has_wheelchair_access: e.target.checked })}
-                      className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Wheelchair Access</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_parking}
-                      onChange={(e) => setFormData({ ...formData, has_parking: e.target.checked })}
-                      className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Parking Available</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.serves_food}
-                      onChange={(e) => setFormData({ ...formData, serves_food: e.target.checked })}
-                      className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Serves Food</span>
-                  </label>
-                </div>
-                <div className="mt-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amenities Notes</label>
-                  <textarea
-                    value={formData.amenities_notes}
-                    onChange={(e) => setFormData({ ...formData, amenities_notes: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    rows={2}
-                    placeholder="Additional details about accessibility, parking, etc."
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving || !isPostcodeValid}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : editingVenue ? 'Update' : 'Create'}
-              </button>
-            </div>
-          </form>
-        </Modal>
+        {modalOpen && (
+          <EditVenueModal
+            venueId={editingVenue?.id}
+            isOpen={modalOpen}
+            onClose={() => {
+              setModalOpen(false);
+              setEditingVenue(null);
+            }}
+            onSuccess={fetchVenues}
+          />
+        )}
 
 
         {/* Merge Modal */}
