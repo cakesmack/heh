@@ -236,6 +236,10 @@
    - **Dynamic Meta Title**: `[Venue Name] Contact Details, Location & Venue Hire | [Town/City]`
    - **Dynamic Meta Description**: `Find contact details, address, photographs, and booking information for [Venue Name] in [Town/City]. View the complete Highland venue directory.`
 
+5. **Event Detail Page (`/events/[id]` or `/events/[slug]`)**:
+   - **Dynamic Meta Title**: `[Event Name] Tickets, Dates & Info | [Venue Name]` (Fallback if venue missing/unverified pin: `[Event Name] Tickets, Dates & Info | [City/Town]`). Strictly truncated to **<= 60 characters**.
+   - **Dynamic Meta Description**: `Get dates, times, and event information for [Event Name] at [Venue Name] in [City]. Check the full schedule and plan your visit.` (Fallback if venue missing: `Get dates, times, and event information for [Event Name] in [City]. Check the full schedule and plan your visit.`). Strictly truncated to **<= 160 characters**.
+
 ### Programmatic Location Timeframe Sub-Routes (`/locations/{slug}/{timeframe?}`)
 
 Nested sub-routes for all core locations (Inverness, Aviemore, Fort William, Oban, Elgin, Nairn, Thurso, Portree):
