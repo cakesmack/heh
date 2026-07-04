@@ -46,6 +46,143 @@ interface EventDetailPageProps {
   baseUrl?: string;
 }
 
+export function generateEventJsonLd(event: EventResponse | null, canonicalUrl: string, ogImageUrl: string) {
+  if (!event) return null;
+
+  const name = event.title?.trim();
+  const rawStartDate = event.date_start;
+  const venueLocationName = (
+    event.venue?.name ||
+    event.venue_name ||
+    event.location_name ||
+    ''
+  ).trim();
+
+  // Guardrail: suppress if missing mandatory name, startDate, or location name
+  if (!name || !rawStartDate || !venueLocationName) {
+    return null;
+  }
+
+  // Parse startDate safely
+  let startDateIso: string;
+  try {
+    const startDateObj = new Date(rawStartDate);
+    if (isNaN(startDateObj.getTime())) return null;
+    startDateIso = startDateObj.toISOString();
+  } catch {
+    return null;
+  }
+
+  // Calculate endDate or default to startDate + 2 hours
+  let endDateIso: string;
+  if (event.date_end) {
+    try {
+      const endDateObj = new Date(event.date_end);
+      if (!isNaN(endDateObj.getTime())) {
+        endDateIso = endDateObj.toISOString();
+      } else {
+        const fallbackEnd = new Date(new Date(rawStartDate).getTime() + 2 * 60 * 60 * 1000);
+        endDateIso = fallbackEnd.toISOString();
+      }
+    } catch {
+      const fallbackEnd = new Date(new Date(rawStartDate).getTime() + 2 * 60 * 60 * 1000);
+      endDateIso = fallbackEnd.toISOString();
+    }
+  } else {
+    const fallbackEnd = new Date(new Date(rawStartDate).getTime() + 2 * 60 * 60 * 1000);
+    endDateIso = fallbackEnd.toISOString();
+  }
+
+  // Description handling
+  const cleanDescription = event.description
+    ? event.description.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim()
+    : `${name} at ${venueLocationName}`;
+
+  // Image handling
+  const imageList: string[] = [];
+  if (event.image_url) {
+    imageList.push(event.image_url);
+  }
+  if (ogImageUrl && !imageList.includes(ogImageUrl)) {
+    imageList.push(ogImageUrl);
+  }
+
+  // Location & PostalAddress handling
+  const cityLocality = (
+    event.venue?.city ||
+    (event.address_full ? event.address_full.split(',').slice(-2, -1)[0]?.trim() : '') ||
+    event.location_name ||
+    'Highlands'
+  );
+
+  const postalCode = event.venue?.postcode || event.postcode || '';
+  const streetAddress = event.venue?.address || event.address_full || event.location_name || venueLocationName;
+
+  const lat = event.venue?.latitude ?? event.latitude;
+  const lng = event.venue?.longitude ?? event.longitude;
+
+  // Price & Offer handling
+  const priceVal = event.min_price !== undefined && event.min_price !== null
+    ? Number(event.min_price)
+    : Number(event.price || 0);
+
+  const offerUrl = event.ticket_url || event.website_url || canonicalUrl;
+
+  const jsonLdObject: Record<string, any> = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": name,
+    "startDate": startDateIso,
+    "endDate": endDateIso,
+    "eventStatus": "https://schema.org/EventScheduled",
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "description": cleanDescription,
+    "image": imageList.length > 0 ? imageList : [ogImageUrl],
+    "location": {
+      "@type": "Place",
+      "name": venueLocationName,
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": streetAddress,
+        "addressLocality": cityLocality,
+        "addressRegion": "Highlands",
+        ...(postalCode ? { "postalCode": postalCode } : {}),
+        "addressCountry": "GB"
+      },
+      ...((lat !== undefined && lat !== null && lng !== undefined && lng !== null) ? {
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": lat,
+          "longitude": lng
+        }
+      } : {})
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": offerUrl,
+      "price": priceVal,
+      "priceCurrency": "GBP",
+      "availability": "https://schema.org/InStock",
+      ...(event.created_at ? { "validFrom": new Date(event.created_at).toISOString() } : {})
+    }
+  };
+
+  const organizerName = event.organizer_profile?.name || (event as any).organizer_name;
+  if (organizerName) {
+    jsonLdObject.organizer = {
+      "@type": "Organization",
+      "name": organizerName,
+      "url": canonicalUrl
+    };
+    jsonLdObject.performer = {
+      "@type": "PerformingGroup",
+      "name": organizerName
+    };
+  }
+
+  return jsonLdObject;
+}
+
 export default function EventDetailPage({ initialEvent, serverError, baseUrl }: EventDetailPageProps) {
   const router = useRouter();
   const { id } = router.query;
@@ -335,60 +472,18 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
         <meta name="twitter:image" content={ogImageUrl} key="twitter-image" />
 
         {/* JSON-LD Structured Data for Google Events Pack */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Event",
-              "name": event.title,
-              "startDate": new Date(event.date_start).toISOString(),
-              "endDate": new Date(event.date_end).toISOString(),
-              "eventStatus": "https://schema.org/EventScheduled",
-              "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
-              "location": {
-                "@type": "Place",
-                "name": venueName,
-                "address": {
-                  "@type": "PostalAddress",
-                  "streetAddress": event.address_full || event.location_name || venueName,
-                  "addressLocality": city,
-                  "addressRegion": "Highland",
-                  "postalCode": event.postcode || "",
-                  "addressCountry": "GB"
-                },
-                ...((event.latitude && event.longitude) ? {
-                  "geo": {
-                    "@type": "GeoCoordinates",
-                    "latitude": event.latitude,
-                    "longitude": event.longitude
-                  }
-                } : {})
-              },
-              "image": [ogImageUrl],
-              "description": event.description ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 300) : pageDescription,
-              "offers": {
-                "@type": "Offer",
-                "url": event.ticket_url || canonicalUrl,
-                "price": String(event.price || 0),
-                "priceCurrency": "GBP",
-                "availability": "https://schema.org/InStock",
-                "validFrom": new Date(event.created_at).toISOString()
-              },
-              "organizer": {
-                "@type": "Organization",
-                "name": event.organizer_profile?.name || "Highland Events Hub",
-                "url": siteUrl
-              },
-              ...(event.organizer_profile?.name ? {
-                "performer": {
-                  "@type": "PerformingGroup",
-                  "name": event.organizer_profile.name
-                }
-              } : {})
-            })
-          }}
-        />
+        {(() => {
+          const eventJsonLd = generateEventJsonLd(event, canonicalUrl, ogImageUrl);
+          if (!eventJsonLd) return null;
+          return (
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify(eventJsonLd)
+              }}
+            />
+          );
+        })()}
       </Head>
 
       {/* Cinematic Hero */}
