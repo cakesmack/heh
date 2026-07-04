@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey, Text
 
 class VenueStatus(str, Enum):
     VERIFIED = "VERIFIED"
@@ -59,7 +59,8 @@ class Venue(SQLModel, table=True):
     category_id: Optional[str] = Field(default=None, foreign_key="venue_categories.id")
 
     # Additional info
-    description: Optional[str] = Field(default=None, max_length=2000)
+    description: Optional[str] = Field(default=None, sa_column=Column(Text))
+    city: Optional[str] = Field(default=None, max_length=100, index=True)
 
     # SEO Overrides
     seo_title: Optional[str] = Field(default=None, max_length=120)

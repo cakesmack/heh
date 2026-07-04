@@ -158,6 +158,7 @@ export interface Venue {
   id: string;
   name: string;
   address: string;
+  city?: string;
   latitude: number;
   longitude: number;
   category_id?: string;
@@ -206,6 +207,7 @@ export interface VenueResponse extends Venue {
 export interface VenueCreate {
   name: string;
   address: string;
+  city?: string;
   postcode: string;
   latitude: number;
   longitude: number;
@@ -226,6 +228,7 @@ export interface VenueCreate {
 export interface VenueUpdate {
   name?: string;
   address?: string;
+  city?: string;
   postcode?: string;
   latitude?: number;
   longitude?: number;

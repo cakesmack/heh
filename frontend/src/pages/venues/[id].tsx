@@ -224,16 +224,17 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
     ? (venue.address.split(',').slice(-2, -1)[0]?.trim() || venue.address.split(',').pop()?.trim() || 'Highlands')
     : 'Highlands';
 
+  const currentYear = new Date().getFullYear();
+  const venueLocation = venue.city || city || 'the Highlands';
+
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
 
-  // SEO: Priority → manual override → high-CTR template
+  // SEO: Priority → manual override → exact requirement template
   const pageTitle = venue.seo_title
-    || `${venue.name} Events, Tickets & Venue Guide | ${city} | Highland Events Hub`;
+    || `${venue.name} Events, Tickets & What's On ${currentYear}`;
 
   const pageDescription = venue.seo_description
-    || (venue.description
-      ? (venue.description.length > 160 ? `${venue.description.substring(0, 157)}...` : venue.description)
-      : `Discover upcoming events, tickets and venue info for ${venue.name} in ${city}. Opening hours, directions & accessibility info.`);
+    || `Find upcoming events, gig dates, and schedule information for ${venue.name} in ${venueLocation}. View the complete event calendar on the Highland Events Hub.`;
 
   const canonicalUrl = `${siteUrl}/venues/${venue.slug || venue.id}`;
   const venueImageUrl = venue.image_url ? optimizeImage(venue.image_url, 1200) : null;
@@ -694,6 +695,38 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
             )}
           </div>
         </div>
+
+        {/* On-Page SEO Venue Overview & Structured Location (above Event Calendar UI) */}
+        {(venue.description || venue.address) && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm mt-12 mb-4">
+            <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <span>About {venue.name}</span>
+            </h2>
+            {venue.description && (
+              <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-base mb-6">
+                {venue.description.replace(/<[^>]*>?/gm, '')}
+              </p>
+            )}
+            <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-6 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-900">Address:</span>
+                <span>{venue.address_full || venue.formatted_address || venue.address}</span>
+              </div>
+              {venue.city && (
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-900">Location:</span>
+                  <span>{venue.city}</span>
+                </div>
+              )}
+              {venue.postcode && (
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-900">Postcode:</span>
+                  <span>{venue.postcode}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Upcoming Events Section - FULL WIDTH BELOW THE GRID */}
         <div className="mt-16 pt-12 border-t border-gray-100">

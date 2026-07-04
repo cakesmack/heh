@@ -68,6 +68,7 @@ class VenueCreate(BaseModel):
     opening_hours: Optional[str] = Field(None, max_length=500)
     image_url: Optional[str] = Field(None, max_length=500)
     formatted_address: Optional[str] = Field(None, max_length=500)
+    city: Optional[str] = Field(None, max_length=100)
     # Phase 2.10 additions
     postcode: Optional[str] = Field(None, max_length=10)
     address_full: Optional[str] = Field(None, max_length=500)
@@ -107,7 +108,8 @@ class VenueUpdate(BaseModel):
     latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
     longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
     category_id: Optional[str] = None
-    description: Optional[str] = Field(None, max_length=2000)
+    description: Optional[str] = Field(None, max_length=4000)
+    city: Optional[str] = Field(None, max_length=100)
     website: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=255)
@@ -157,13 +159,13 @@ class VenueResponse(BaseModel):
     category_id: Optional[str] = None
     category: Optional[VenueCategoryResponse] = Field(None, alias="category_rel")
     description: Optional[str]
+    city: Optional[str] = None
     website: Optional[str]
     phone: Optional[str]
     email: Optional[str] = None
     opening_hours: Optional[str] = None
     image_url: Optional[str]
     formatted_address: Optional[str]
-    owner_id: Optional[UUID]
     owner_id: Optional[UUID]
     created_at: datetime
     status: str
