@@ -259,11 +259,15 @@ Nested sub-routes for all core locations (Inverness, Aviemore, Fort William, Oba
 - Explicit HTML `<a>` links directly above event listing grid linking to base, `/today`, and `/this-weekend`.
 - Dynamic Sitemap Generator (`sitemap.xml.ts`) automatically generates all 3 URLs for each core location.
 
-### Zero-Event State Rule for Venue Profiles
+### Schema.org/Event JSON-LD Structured Data
 
-- If a venue has **0 upcoming events**, completely hide the "Upcoming Events" UI section, calendar grid, and "0 Results" counter.
-- Do **NOT** render a "No upcoming events scheduled" empty state box.
-- Render the page purely as a static directory listing using header image, description, map, amenities, and contact details.
+Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
+- **`@type`**: `"Event"`
+- **`startDate`**: ISO 8601 string (`event.date_start`).
+- **`endDate`**: ISO 8601 string (`event.date_end`). If `date_end` is missing or invalid, programmatically defaults to **`startDate + 2 hours`**.
+- **`location`**: `@type`: `"Place"` with nested `@type`: `"PostalAddress"` (`streetAddress`, `addressLocality`, `addressRegion`: `"Highlands"`, `postalCode`, `addressCountry`: `"GB"`) and optional `geo` coordinates.
+- **`offers`**: `@type`: `"Offer"`, `url` (ticket/website URL or canonical URL), numerical `price` (0 for free), `priceCurrency`: `"GBP"`, `availability`: `"https://schema.org/InStock"`.
+- **Validation Guardrail**: `generateEventJsonLd(...)` verifies mandatory fields (`name`, `startDate`, `location.name`). If any mandatory field is missing/null, script generation is **gracefully suppressed** (`null`) to prevent Google Search Console validation warnings.
 
 ---
 
