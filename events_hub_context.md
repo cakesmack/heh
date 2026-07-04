@@ -236,6 +236,29 @@
    - **Dynamic Meta Title**: `[Venue Name] Contact Details, Location & Venue Hire | [Town/City]`
    - **Dynamic Meta Description**: `Find contact details, address, photographs, and booking information for [Venue Name] in [Town/City]. View the complete Highland venue directory.`
 
+### Programmatic Location Timeframe Sub-Routes (`/locations/{slug}/{timeframe?}`)
+
+Nested sub-routes for all core locations (Inverness, Aviemore, Fort William, Oban, Elgin, Nairn, Thurso, Portree):
+- **Base Route (`/locations/{slug}`)**: All upcoming events from current server time forward.
+  - *Title*: `Events & Things to Do in [Location] | Highland Events Hub`
+  - *Description*: `Find out what's on in [Location], Scottish Highlands. Live music, festivals, community events, and things to do.`
+  - *H1 Heading*: `Events & Things to Do in [Location]`
+- **Today Route (`/locations/{slug}/today`)**: Filtered strictly to current calendar day window (00:00:00 to 23:59:59 UTC/server time).
+  - *Title*: `What's On in [Location] Today | Gigs & Events Guide`
+  - *Description*: `Discover live music, theater, and things to do in [Location] today. View today's full schedule of local events.`
+  - *H1 Heading*: `What's On in [Location] Today`
+- **This Weekend Route (`/locations/{slug}/this-weekend`)**: Filtered strictly to Friday 16:00:00 through Sunday 23:59:59 window.
+  - *Title*: `What's On in [Location] This Weekend | Local Events & Gigs`
+  - *Description*: `Looking for things to do in [Location] this weekend? View the full calendar of weekend gigs, family activities, and local events.`
+  - *H1 Heading*: `What's On in [Location] This Weekend`
+
+**Thin Content / Empty State Fallback Protection**:
+- If a time-specific query (`today` or `this-weekend`) yields 0 events, backend intercepts before returning, sets `is_fallback = true`, returns the next 5 upcoming chronologically available events for that location, and includes `fallback_notice` string for frontend notice banner rendering.
+
+**Crawlable Navigation Tabs & Sitemap**:
+- Explicit HTML `<a>` links directly above event listing grid linking to base, `/today`, and `/this-weekend`.
+- Dynamic Sitemap Generator (`sitemap.xml.ts`) automatically generates all 3 URLs for each core location.
+
 ### Zero-Event State Rule for Venue Profiles
 
 - If a venue has **0 upcoming events**, completely hide the "Upcoming Events" UI section, calendar grid, and "0 Results" counter.
