@@ -183,6 +183,85 @@ export function generateEventJsonLd(event: EventResponse | null, canonicalUrl: s
   return jsonLdObject;
 }
 
+export function buildSeoTitle(event: EventResponse, city: string): string {
+  if (event.seo_title?.trim()) {
+    const customTitle = event.seo_title.trim();
+    return customTitle.length <= 60 ? customTitle : customTitle.substring(0, 57) + '...';
+  }
+
+  const eventName = (event.title || 'Event').trim();
+  const rawVenueName = event.venue?.name || event.venue_name;
+  
+  // Suffix: "| [Venue Name]" or fallback "| [City/Town]"
+  const suffixLocation = rawVenueName?.trim() || city?.trim() || 'Highlands';
+  const suffix = ` | ${suffixLocation}`;
+  const templateMiddle = " Tickets, Dates & Info";
+  
+  const fullTitle = `${eventName}${templateMiddle}${suffix}`;
+  if (fullTitle.length <= 60) {
+    return fullTitle;
+  }
+
+  // Account for templateMiddle, suffix, and '...' (3 chars)
+  const availableLengthForName = 60 - templateMiddle.length - suffix.length - 3;
+  let result: string;
+  if (availableLengthForName >= 5) {
+    let truncatedName = eventName.substring(0, availableLengthForName);
+    const lastSpace = truncatedName.lastIndexOf(' ');
+    if (lastSpace > 0) {
+      truncatedName = truncatedName.substring(0, lastSpace);
+    }
+    result = `${truncatedName}...${templateMiddle}${suffix}`;
+  } else {
+    result = fullTitle;
+  }
+
+  return result.length <= 60 ? result : result.substring(0, 57) + '...';
+}
+
+export function buildSeoDescription(event: EventResponse, city: string): string {
+  if (event.seo_description?.trim()) {
+    const customDesc = event.seo_description.trim();
+    return customDesc.length <= 160 ? customDesc : customDesc.substring(0, 157) + '...';
+  }
+
+  const eventName = (event.title || 'this event').trim();
+  const rawVenueName = event.venue?.name || event.venue_name;
+  const targetCity = event.venue?.city || city || 'the Highlands';
+
+  let prefix: string;
+  let suffix: string;
+
+  if (rawVenueName?.trim()) {
+    prefix = "Get dates, times, and event information for ";
+    suffix = ` at ${rawVenueName.trim()} in ${targetCity}. Check the full schedule and plan your visit.`;
+  } else {
+    prefix = "Get dates, times, and event information for ";
+    suffix = ` in ${targetCity}. Check the full schedule and plan your visit.`;
+  }
+
+  const rawDesc = `${prefix}${eventName}${suffix}`;
+  if (rawDesc.length <= 160) {
+    return rawDesc;
+  }
+
+  // Account for prefix, suffix, and '...' (3 chars)
+  const availableLengthForName = 160 - prefix.length - suffix.length - 3;
+  let result: string;
+  if (availableLengthForName >= 5) {
+    let truncatedName = eventName.substring(0, availableLengthForName);
+    const lastSpace = truncatedName.lastIndexOf(' ');
+    if (lastSpace > 0) {
+      truncatedName = truncatedName.substring(0, lastSpace);
+    }
+    result = `${prefix}${truncatedName}...${suffix}`;
+  } else {
+    result = rawDesc;
+  }
+
+  return result.length <= 160 ? result : result.substring(0, 157) + '...';
+}
+
 export default function EventDetailPage({ initialEvent, serverError, baseUrl }: EventDetailPageProps) {
   const router = useRouter();
   const { id } = router.query;
@@ -423,18 +502,9 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
     ? (event.address_full.split(',').slice(-2, -1)[0]?.trim() || 'Highlands')
     : (event.location_name || 'Highlands');
 
-  // SEO: Priority → manual override → high-CTR template
-  const pageTitle = event.seo_title
-    || `${event.title} at ${venueName}, ${city} | Tickets, Dates & Info | Highland Events Hub`;
-
-  // Sanitize the event description if no SEO override exists
-  const sanitizedDescription = stripHtml(event.description || '');
-  const truncatedDescription = truncate(sanitizedDescription, 155);
-
-  const pageDescription = event.seo_description
-    || (truncatedDescription 
-        ? `${truncatedDescription} | Highland Events Hub`
-        : `${event.title} at ${venueName} on ${formattedOgDate}. Get tickets, dates, venue info & directions. Your guide to events in the Scottish Highlands.`);
+  // SEO Title & Description Generator according to specific character limits & format rules
+  const pageTitle = buildSeoTitle(event, city);
+  const pageDescription = buildSeoDescription(event, city);
 
   const siteUrl = baseUrl || 'https://www.highlandeventshub.co.uk';
 
