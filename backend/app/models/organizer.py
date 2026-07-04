@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, Text
 
 if TYPE_CHECKING:
     from .user import User
@@ -21,6 +21,7 @@ class Organizer(SQLModel, table=True):
     name: str = Field(index=True, max_length=255)
     slug: str = Field(unique=True, index=True)
     bio: Optional[str] = Field(default=None, max_length=2000)
+    description: Optional[str] = Field(default=None, sa_column=Column(Text))
     logo_url: Optional[str] = Field(default=None, max_length=500)
     hero_image_url: Optional[str] = Field(default=None, max_length=500)
     

@@ -66,6 +66,7 @@ export default function EditOrganizerPage() {
                 setFormData({
                     name: org.name || '',
                     bio: org.bio || '',
+                    description: org.description || '',
                     website_url: org.website_url || '',
                     logo_url: org.logo_url || '',
                     social_links: org.social_links || {},
@@ -125,6 +126,7 @@ export default function EditOrganizerPage() {
             const updateData = {
                 name: data.name,
                 bio: data.bio || undefined,
+                description: data.description || undefined,
                 website_url: data.website_url || undefined,
                 logo_url: data.logo_url || undefined,
                 social_links: Object.keys(data.social_links).length > 0 ? data.social_links : undefined,

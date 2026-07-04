@@ -3,6 +3,7 @@
  * Lists all organizer profiles with links to their pages
  */
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
@@ -65,8 +66,22 @@ export default function GroupsPage() {
         );
     });
 
+    const pageTitle = "Local Event Organizers, Clubs & Promoters in the Highlands";
+    const pageDescription = "Browse the complete directory of event organizers, community groups, and local promoters across Inverness and the Scottish Highlands. Find out who is hosting what.";
+
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
+        <>
+            <Head>
+                <title>{pageTitle}</title>
+                <meta name="description" content={pageDescription} />
+                <meta property="og:title" content={pageTitle} />
+                <meta property="og:description" content={pageDescription} />
+                <meta property="og:type" content="website" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={pageTitle} />
+                <meta name="twitter:description" content={pageDescription} />
+            </Head>
+            <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <MobileDirectoryNav />
                 {/* Header */}
@@ -286,5 +301,6 @@ export default function GroupsPage() {
                 )}
             </div>
         </div>
+        </>
     );
 }

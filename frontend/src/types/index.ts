@@ -817,6 +817,7 @@ export interface Organizer {
   name: string;
   slug: string;
   bio?: string;
+  description?: string;
   logo_url?: string;
   hero_image_url?: string;
   website_url?: string;
@@ -841,6 +842,7 @@ export interface Organizer {
 export interface OrganizerCreate {
   name: string;
   bio?: string;
+  description?: string;
   logo_url?: string;
   hero_image_url?: string;
   website_url?: string;
@@ -853,6 +855,7 @@ export interface OrganizerCreate {
 export interface OrganizerUpdate {
   name?: string;
   bio?: string;
+  description?: string;
   logo_url?: string;
   hero_image_url?: string;
   website_url?: string;

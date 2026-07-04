@@ -33,6 +33,7 @@ function CreateOrganizerContent() {
             const data = {
                 name: formData.name,
                 bio: formData.bio || undefined,
+                description: formData.description || undefined,
                 website_url: formData.website_url || undefined,
                 logo_url: formData.logo_url || undefined,
                 // New fields

@@ -8,6 +8,7 @@ import ImageUpload from '@/components/common/ImageUpload';
 export interface GroupFormData {
     name: string;
     bio: string;
+    description: string;
     website_url: string;
     logo_url: string;
     cover_image_url: string;
@@ -47,6 +48,7 @@ export default function GroupForm({
     const [formData, setFormData] = useState<GroupFormData>({
         name: '',
         bio: '',
+        description: '',
         website_url: '',
         logo_url: '',
         cover_image_url: '',
@@ -218,12 +220,12 @@ export default function GroupForm({
 
                 <div>
                     <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                        Bio / Description
+                        Bio / Short Summary
                     </label>
                     <textarea
                         id="bio"
                         name="bio"
-                        rows={4}
+                        rows={3}
                         value={formData.bio}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${fieldErrors.bio ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
@@ -231,6 +233,24 @@ export default function GroupForm({
                         disabled={isLoading}
                     />
                     {fieldErrors.bio && <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.bio}</p>}
+                </div>
+
+                <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                        SEO Summary Description (~50 words)
+                    </label>
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows={4}
+                        value={formData.description}
+                        onChange={handleChange}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${fieldErrors.description ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                        placeholder="A dedicated 50-word overview for search engines and your group page header..."
+                        disabled={isLoading}
+                    />
+                    {fieldErrors.description && <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.description}</p>}
+                    <p className="mt-1 text-xs text-gray-500">This description appears on your group profile above the event schedule.</p>
                 </div>
 
                 <div>

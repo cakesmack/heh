@@ -1,4 +1,5 @@
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { GroupTeamList } from '@/components/groups/GroupTeamList';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -270,8 +271,24 @@ export default function OrganizerProfilePage() {
 
     const hasSocials = organizer.social_facebook || organizer.social_instagram || organizer.social_website || organizer.website_url;
 
+    const currentYear = new Date().getFullYear();
+    const pageTitle = organizer ? `${organizer.name} Events, Dates & ${currentYear} Schedule` : 'Group Profile | Highland Events Hub';
+    const pageDescription = organizer ? `Find upcoming events, dates, and local information for ${organizer.name}. View their complete, up-to-date schedule on the Highland Events Hub.` : '';
+
     return (
-        <div className="min-h-screen bg-gray-50">
+        <>
+            <Head>
+                <title>{pageTitle}</title>
+                <meta name="description" content={pageDescription} />
+                <meta property="og:title" content={pageTitle} />
+                <meta property="og:description" content={pageDescription} />
+                <meta property="og:type" content="profile" />
+                {organizer?.logo_url && <meta property="og:image" content={organizer.logo_url} />}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={pageTitle} />
+                <meta name="twitter:description" content={pageDescription} />
+            </Head>
+            <div className="min-h-screen bg-gray-50">
             {/* Cover Image (3:1 aspect ratio) - No overflow-hidden to allow logo overlap */}
             <div className="relative h-48 md:h-64 lg:h-80">
                 {organizer.cover_image_url || organizer.hero_image_url ? (
@@ -509,6 +526,18 @@ export default function OrganizerProfilePage() {
                     </div>
                 </div>
 
+                {/* On-Page SEO Summary Description */}
+                {(organizer.description || organizer.bio) && (
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm mb-10">
+                        <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <span>Overview</span>
+                        </h2>
+                        <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-base">
+                            {organizer.description || organizer.bio}
+                        </p>
+                    </div>
+                )}
+
                 {/* Tabs & Events Feed */}
                 <div className="mb-20">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 mb-10 gap-6">
@@ -641,6 +670,7 @@ export default function OrganizerProfilePage() {
                     </div>
                 )
             }
-        </div >
+        </div>
+        </>
     );
 }

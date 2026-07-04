@@ -25,6 +25,7 @@ def _sanitize_url(value: Union[str, None]) -> Union[str, None]:
 class OrganizerBase(BaseModel):
     name: str
     bio: Optional[str] = None
+    description: Optional[str] = None
     logo_url: Optional[str] = None
     hero_image_url: Optional[str] = None
     website_url: Optional[str] = None
@@ -54,6 +55,7 @@ class OrganizerCreate(OrganizerBase):
 class OrganizerUpdate(BaseModel):
     name: Optional[str] = None
     bio: Optional[str] = None
+    description: Optional[str] = None
     logo_url: Optional[str] = None
     hero_image_url: Optional[str] = None
     website_url: Optional[str] = None
