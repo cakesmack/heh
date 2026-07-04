@@ -1,10 +1,11 @@
 # Highland Events Hub — Master Context File
 
-> **Purpose:** Inviolable reference for all AI agents working on this codebase. Scan before writing any code.
-> **Stack:** Next.js (Pages Router) + FastAPI + PostgreSQL (SQLModel/SQLAlchemy) + Google Maps API
+> **Purpose:** Inviolable reference for all AI agents working on this codebase. Scan before writing any code.  
+> **Stack:** Next.js (Pages Router) + FastAPI + PostgreSQL (SQLModel/SQLAlchemy) + Alembic + Google Maps API  
 > **Domain:** `https://www.highlandeventshub.co.uk`
 
 ---
+
 ## 1. Tech Stack & Infrastructure
 
 **Frontend:**
@@ -15,11 +16,14 @@
 **Backend:**
 * Framework: FastAPI (Python)
 * Data Validation/Schemas: Pydantic
-* ORM: SQLAlchemy / SQLModel
+* ORM & Database: SQLModel / SQLAlchemy
+* Database Migrations: Alembic (`backend/alembic/`)
 
 **Database & Environment:**
 * Primary Database: PostgreSQL (Strictly NO SQLite syntax)
-* Production Hosting: Render
+* Production Hosting: Render (Automated pre-deploy migrations via `alembic upgrade head`)
+
+---
 
 ## 2. Database Architecture (Source of Truth)
 
@@ -97,6 +101,7 @@
 | Aspect | Detail |
 |---|---|
 | **PK** | `id` · `str` (UUID, hex, no dashes) |
+| **Default Category** | `Uncategorized` (`uncategorized`) |
 
 **Foreign Keys**
 
@@ -111,13 +116,14 @@
 |---|---|---|
 | `name` | `str(255)` | indexed |
 | `address` | `str(500)` | required |
-| `status` | `VenueStatus` enum | `VERIFIED` · `UNVERIFIED` · `ARCHIVED` |
+| `city` | `str(100)` | indexed (`ix_venues_city`), town/city location |
+| `status` | `VenueStatus` enum | `VERIFIED` · `UNVERIFIED` · `ARCHIVED` (indexed `ix_venues_status`) |
 | `latitude` / `longitude` | `float` | indexed, required |
 | `geohash` | `str(12)` | indexed |
 | `slug` | `str(300)` | indexed, for SEO URLs |
 | `seo_title` | `str(120)` | optional override |
 | `seo_description` | `str(500)` | optional override |
-| `description` | `str(2000)` | |
+| `description` | `Text` | long-form overview for SEO & public profile |
 | `website` / `website_url` | `str(255)` | |
 | `phone` / `email` | `str` | |
 | `opening_hours` | `str(500)` | |
@@ -142,14 +148,32 @@
 
 ---
 
+### `organizers` (Groups)
+
+| Aspect | Detail |
+|---|---|
+| **PK** | `id` · `str` (UUID, hex, no dashes) |
+
+**Core Columns**
+
+| Column | Type | Notes |
+|---|---|---|
+| `name` | `str(255)` | required, indexed |
+| `slug` | `str(255)` | unique, indexed |
+| `description` | `Text` | long-form overview rendered above event feeds |
+| `group_type` | `str(50)` | e.g. Community, Commercial, Charity |
+| `category_focus` | `str(50)` | main event type |
+| `city` / `postcode` | `str` | location |
+| `logo_url` / `banner_url` | `str` | media |
+| `is_verified` | `bool` | verification badge |
+
+---
+
 ### `collections`
 
 | Aspect | Detail |
 |---|---|
 | **PK** | `id` · `int` (auto-increment) |
-
-> [!IMPORTANT]
-> `display_mode` column does **not** exist yet. It was mentioned in early planning but has not been added to the model.
 
 **Core Columns**
 
@@ -164,113 +188,70 @@
 | `fixed_start_date` / `fixed_end_date` | `date` | overrides dynamic date filters |
 | `slug` | `str` | unique |
 | `description` | `Text` | long-form |
-| `filter_params` | `JSONB` | structured filter definition |
-
-**ORM Relationships** — None (standalone entity, no FK to other core tables).
+| `filter_params` | `JSONB` | structured filter definition: category, tags, `filter_mode` (`AND` / `OR`), `exclude_age_restrictions` (`bool`), `exclude_event_ids` (`str[]`) |
 
 ---
 
-### `event_participating_venues` (Link Table)
+### Database Migration Protocol (Alembic)
 
-| Column | Type | Notes |
-|---|---|---|
-| `event_id` | `str` FK → `events.id` | **composite PK** |
-| `venue_id` | `str` FK → `venues.id` | **composite PK** |
+> [!IMPORTANT]
+> **Inviolable Rule**: Never alter a database model without explicitly generating the corresponding Alembic migration command (`alembic revision --autogenerate -m "..."`).
 
-Enables many-to-many between Events and Venues for multi-venue events (festivals, crawls).
-
----
-
-### `event_showtimes` (Child Table)
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | `int` | auto-increment PK |
-| `event_id` | `str` FK → `events.id` | CASCADE delete, indexed |
-| `start_time` | `datetime` | indexed |
-| `end_time` | `datetime` | optional |
-| `ticket_url` | `str(500)` | per-showtime tickets |
-| `notes` | `str(255)` | e.g. "Matinee", "Evening" |
-
----
-
-### Entity Relationship Summary
-
-```
-Collection (standalone — no FK joins)
-
-Event ──┬── belongs to ──→ Venue         (via venue_id, SET NULL)
-        ├── belongs to ──→ Category      (via category_id, SET NULL)
-        ├── submitted by → User          (via organizer_id, SET NULL)
-        ├── profiled by ─→ Organizer     (via organizer_profile_id, SET NULL)
-        ├── M:M ─────────→ Venue[]       (via event_participating_venues)
-        ├── M:M ─────────→ Tag[]         (via event_tags)
-        └── has many ────→ EventShowtime (cascade delete)
-
-Venue ──┬── owned by ────→ User          (via owner_id, SET NULL)
-        └── belongs to ──→ VenueCategory (via category_id)
-```
+- **Migration Scripts**: Located in `backend/alembic/versions/`.
+- **Deployment Automation**: Pre-deployment scripts (`start.sh` and `release.sh`) run `alembic upgrade head` automatically prior to application server boot.
 
 ---
 
 ## 3. Routing & SEO Rules
 
-### Dual-Resolution URL Pattern (Event + Venue)
+### Dual-Resolution URL Pattern (Event + Venue + Group)
 
-Both `GET /api/events/{id}` and `GET /api/venues/{id}` accept **either a slug or a UUID** in the same path parameter. The backend resolves in this order:
+`GET /api/events/{id}`, `GET /api/venues/{id}`, and `GET /api/organizers/{id}` accept **either a slug or a UUID** in the same path parameter. The backend resolves in this order:
 
 1. **Try slug lookup** → `WHERE slug = :param`
 2. **Fall back to UUID** → `WHERE id = :param`
 3. **404** if neither matches.
 
-This means `/events/highland-ceilidh-jun-2026` and `/events/a1b2c3d4e5f6...` both resolve to the same resource.
-
 ### SSR 301 Redirect Enforcement
 
 > [!CAUTION]
-> **Both** `events/[id].tsx` and `venues/[id].tsx` implement `getServerSideProps` with identical redirect logic. Any new detail page **must** replicate this pattern.
+> **Detail Pages** (`events/[id].tsx`, `venues/[id].tsx`, `groups/[slug].tsx`) implement `getServerSideProps` with canonical redirect logic. Any new detail page **must** replicate this pattern.
 
 **Rule:** If the entity has a canonical `slug` and the URL param `id ≠ slug`, issue an **HTTP 301 Permanent Redirect** to the slug URL. Query parameters (UTM, ticket refs, etc.) are preserved through the redirect.
 
-```
-Request:  /events/a1b2c3d4e5f6
-API:      returns event with slug = "highland-ceilidh-jun-2026"
-Response: 301 → /events/highland-ceilidh-jun-2026
-```
+### Static & Dynamic Metadata Architecture
 
-If no slug exists on the entity, the UUID URL is served directly — **no redirect**.
+1. **Main Groups Index (`/groups/`)**:
+   - **Title**: `Local Event Organizers, Clubs & Promoters in the Highlands`
+   - **Description**: `Browse the complete directory of event organizers, community groups, and local promoters across Inverness and the Scottish Highlands. Find out who is hosting what.`
 
-### Canonical URL Construction
+2. **Group Profile (`/groups/[slug]`)**:
+   - **Dynamic Meta Title**: `[Group Name] Events, Dates & [Current Year] Schedule`
 
-```
-canonical = {siteUrl}/{entityType}/{entity.slug || entity.id}
-```
+3. **Main Venues Index (`/venues/`)**:
+   - **Title**: `Event Venues, Halls & Theatres in the Highlands`
+   - **Description**: `Browse the complete directory of event venues, community halls, pubs, and theatres across Inverness and the Scottish Highlands. See what is happening near you.`
 
-- Always emitted via `<link rel="canonical">` in `<Head>`.
-- Always used as `og:url`.
-- Query parameters are **stripped** from the canonical (the redirect preserves them for the browser, but the canonical is always clean).
-- `siteUrl` = `NEXT_PUBLIC_BASE_URL` or `https://www.highlandeventshub.co.uk`.
+4. **Venue Profile (`/venues/[slug]`)**:
+   - **Dynamic Meta Title**: `[Venue Name] Contact Details, Location & Venue Hire | [Town/City]`
+   - **Dynamic Meta Description**: `Find contact details, address, photographs, and booking information for [Venue Name] in [Town/City]. View the complete Highland venue directory.`
 
-### JSON-LD Structured Data
+### Zero-Event State Rule for Venue Profiles
 
-| Page | Schema Type | Required Fields |
-|---|---|---|
-| Event Detail | `schema.org/Event` | `name`, `startDate`, `endDate`, `eventStatus`, `location` (Place → PostalAddress + GeoCoordinates), `image`, `offers` (price, currency, availability), `organizer` |
-| Venue Detail | `schema.org/Place` | `name`, `description`, `address` (PostalAddress), `geo` (GeoCoordinates), `telephone`, `url` |
-
-> [!IMPORTANT]
-> Every new public-facing page **must** include: `<link rel="canonical">`, `og:*` meta tags, `twitter:*` meta tags, and a relevant JSON-LD `<script type="application/ld+json">` block.
-
-### SEO Title/Description Priority
-
-Both Event and Venue pages follow the same cascade:
-
-1. **Manual override** → `seo_title` / `seo_description` (from DB)
-2. **Template fallback** → high-CTR template interpolating title, venue/city, date
+- If a venue has **0 upcoming events**, completely hide the "Upcoming Events" UI section, calendar grid, and "0 Results" counter.
+- Do **NOT** render a "No upcoming events scheduled" empty state box.
+- Render the page purely as a static directory listing using header image, description, map, amenities, and contact details.
 
 ---
 
-## 4. Core Component Constraints
+## 4. Admin UI & Form Unification (DRY Principle)
+
+- **Single Shared Form Component**: All venue edit/verify actions across the admin panel (Admin Venues Table, Rising Locations Widget, Geographic Hubs, Venue Detail Page) must use the single shared `EditVenueModal` component (`frontend/src/components/venues/EditVenueModal.tsx`).
+- Simplified ad-hoc edit modals are deprecated to prevent form parameter divergence.
+
+---
+
+## 5. Core Component Constraints
 
 ### The Map (`pages/map.tsx`)
 
