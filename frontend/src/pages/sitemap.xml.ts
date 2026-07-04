@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next';
 import { collectionsAPI, eventsAPI } from '@/lib/api';
+import { CORE_LOCATIONS } from '@/constants/locations';
 
 /**
  * Dynamic XML Sitemap Generator for Next.js (Pages Router)
@@ -22,6 +23,29 @@ function generateSiteMap(collections: any[], events: any[]) {
        <changefreq>daily</changefreq>
        <priority>0.9</priority>
      </url>
+
+     <!-- Location Hub URLs (Base, /today, /this-weekend for 8 Core Locations) -->
+     ${CORE_LOCATIONS
+            .map((loc) => {
+                return `
+       <url>
+           <loc>${`${EXTERNAL_URL}/locations/${loc.slug}`}</loc>
+           <changefreq>daily</changefreq>
+           <priority>0.9</priority>
+       </url>
+       <url>
+           <loc>${`${EXTERNAL_URL}/locations/${loc.slug}/today`}</loc>
+           <changefreq>daily</changefreq>
+           <priority>0.8</priority>
+       </url>
+       <url>
+           <loc>${`${EXTERNAL_URL}/locations/${loc.slug}/this-weekend`}</loc>
+           <changefreq>daily</changefreq>
+           <priority>0.8</priority>
+       </url>
+     `;
+            })
+            .join('')}
 
      <!-- Dynamic Collection URLs -->
      ${collections
@@ -59,22 +83,18 @@ function SiteMap() {
 
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
     try {
-        // 1. Fetch data for dynamic routes
-        // Bypass pagination for sitemap generation to get a full list.
-        // Based on src/lib/api.ts, eventsAPI.list accepts { limit: 1000 }
-        // collectionsAPI.list returns all active collections by default.
+        // Fetch data for dynamic routes
         const [collections, eventsResponse] = await Promise.all([
-            collectionsAPI.list(),
-            eventsAPI.list({ limit: 1000, include_past: false }),
+            collectionsAPI.list().catch(() => []),
+            eventsAPI.list({ limit: 1000, include_past: false }).catch(() => ({ events: [] })),
         ]);
 
-        const events = eventsResponse.events;
+        const events = eventsResponse.events || [];
 
-        // 2. We generate the XML sitemap with the data
+        // Generate the XML sitemap with the data
         const sitemap = generateSiteMap(collections, events);
 
         res.setHeader('Content-Type', 'text/xml');
-        // We send the XML to the browser
         res.write(sitemap);
         res.end();
     } catch (error) {

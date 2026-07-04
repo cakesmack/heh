@@ -11,8 +11,15 @@ import { CategorySwimlane } from '@/components/locations/CategorySwimlane';
 import { LeadGenBlock } from '@/components/locations/LeadGenBlock';
 import { EventCard } from '@/components/events/EventCard';
 
-interface LocationPageProps {
+export interface LocationPageProps {
     city: string;
+    citySlug: string;
+    timeframe: string;
+    metaTitle: string;
+    metaDescription: string;
+    h1Heading: string;
+    isFallback: boolean;
+    fallbackNotice?: string;
     events: EventResponse[];
     heroImageUrl?: string;
     anchorText?: string;
@@ -23,83 +30,86 @@ const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandevents
 
 // Dynamic SEO & Data Fetching (Server Side)
 export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (context) => {
-    const { city } = context.params as { city: string };
-
-    // Convert "fort-william" -> "fort william"
-    const slug = String(city);
-    const cityFilter = decodeURIComponent(slug).replace(/-/g, ' ');
-
-    let events: EventResponse[] = [];
-    let heroImageUrl: string | null = null;
-    let anchorText: string | null = null;
+    const { city, timeframe } = context.params as { city: string; timeframe?: string };
+    const slug = String(city).toLowerCase().trim();
 
     try {
-        // Fetch events and location data in parallel
-        const [eventsRes, allLocations] = await Promise.all([
-            eventsAPI.list({
-                // @ts-ignore - city_filter is now supported in API client
-                city_filter: cityFilter,
-                limit: 200,
-                sort_by: 'date',
-                time_range: 'upcoming'
-            }),
-            locationsAPI.list().catch(() => []),
-        ]);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
+        const timeframeParam = timeframe ? `/${timeframe}` : '';
+        const res = await fetch(`${apiUrl}/api/locations/feed/${slug}${timeframeParam}`);
 
-        // Match location by slug
-        const locationRecord = allLocations.find(
-            (loc: any) => loc.slug === slug
-        );
-        if (locationRecord) {
-            heroImageUrl = locationRecord.hero_image_url || null;
-            anchorText = locationRecord.seo_anchor_text || null;
+        if (res.ok) {
+            const feed = await res.json();
+            return {
+                props: {
+                    city: feed.location_name,
+                    citySlug: feed.location_slug,
+                    timeframe: feed.timeframe || 'all',
+                    metaTitle: feed.meta_title,
+                    metaDescription: feed.meta_description,
+                    h1Heading: feed.h1_heading,
+                    isFallback: feed.is_fallback || false,
+                    fallbackNotice: feed.fallback_notice || undefined,
+                    events: feed.events || [],
+                    heroImageUrl: feed.hero_image_url || undefined,
+                    anchorText: feed.seo_anchor_text || undefined,
+                }
+            };
         }
-
-        // Flatten and reduce payload size
-        events = JSON.parse(JSON.stringify(
-            eventsRes.events.map(event => ({
-                ...event,
-                description: event.description ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 200) : '',
-                participating_venues: [],
-                organizer_profile: undefined,
-                showtimes: event.showtimes ? event.showtimes.slice(0, 3) : []
-            }))
-        ));
-
     } catch (error) {
-        console.error('Error fetching location events:', error);
+        console.error('Error fetching location feed:', error);
     }
+
+    // Fallback if API request failed
+    const cityFilter = decodeURIComponent(slug).replace(/-/g, ' ');
+    const formattedCity = cityFilter.replace(/\b\w/g, c => c.toUpperCase());
 
     return {
         props: {
-            city: cityFilter,
-            events,
-            ...(heroImageUrl ? { heroImageUrl } : {}),
-            ...(anchorText ? { anchorText } : {}),
+            city: formattedCity,
+            citySlug: slug,
+            timeframe: timeframe || 'all',
+            metaTitle: `Events in ${formattedCity} | Highland Events Hub`,
+            metaDescription: `Discover upcoming events in ${formattedCity}, Scottish Highlands.`,
+            h1Heading: `Events in ${formattedCity}`,
+            isFallback: false,
+            fallbackNotice: undefined,
+            events: [],
         }
     };
 };
 
-export default function LocationPage({ city, events, heroImageUrl, anchorText }: LocationPageProps) {
-    const formattedCity = city.replace(/\b\w/g, c => c.toUpperCase());
+export default function LocationPage({
+    city,
+    citySlug,
+    timeframe,
+    metaTitle,
+    metaDescription,
+    h1Heading,
+    isFallback,
+    fallbackNotice,
+    events,
+    heroImageUrl,
+    anchorText
+}: LocationPageProps) {
+    const formattedCity = city || citySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const hasEvents = events.length > 0;
     const isHighDensity = events.length >= DENSITY_THRESHOLD;
 
-    // Slug for canonical URL
-    const citySlug = city.replace(/\s+/g, '-').toLowerCase();
-    const canonicalUrl = `${SITE_URL}/locations/${citySlug}`;
+    // Canonical URL with sub-route support
+    const canonicalUrl = timeframe && timeframe !== 'all'
+        ? `${SITE_URL}/locations/${citySlug}/${timeframe}`
+        : `${SITE_URL}/locations/${citySlug}`;
 
     // Compute spotlight event
     const spotlightEvent = useMemo(() => {
         if (events.length === 0) return null;
 
         if (isHighDensity) {
-            // Condition A: Highest velocity score
             return [...events].sort((a, b) =>
                 (b.popularity_score ?? 0) - (a.popularity_score ?? 0)
             )[0];
         } else {
-            // Condition B: Next chronological event (already sorted date ASC from backend)
             return events[0];
         }
     }, [events, isHighDensity]);
@@ -110,7 +120,7 @@ export default function LocationPage({ city, events, heroImageUrl, anchorText }:
         return events.filter(e => e.id !== spotlightEvent.id);
     }, [events, spotlightEvent]);
 
-    // Category swimlanes (Condition A only)
+    // Category swimlanes
     const swimlanes = useMemo(() => {
         if (!isHighDensity) return [];
 
@@ -126,22 +136,16 @@ export default function LocationPage({ city, events, heroImageUrl, anchorText }:
             categoryMap.get(slug)!.events.push(event);
         }
 
-        // Only return categories with >= 2 events, sorted by count desc
         return Array.from(categoryMap.values())
             .filter(cat => cat.events.length >= 2)
             .sort((a, b) => b.events.length - a.events.length);
     }, [remainingEvents, isHighDensity]);
 
-    // SEO meta description
-    const metaDescription = hasEvents
-        ? `Discover ${events.length} upcoming event${events.length !== 1 ? 's' : ''} in ${formattedCity}, Scottish Highlands. Live music, festivals, food, outdoors and more.`
-        : `Find local events, gigs, and festivals in ${formattedCity}, Scottish Highlands.`;
-
     // JSON-LD ItemList
     const jsonLd = hasEvents ? {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": `Events in ${formattedCity}`,
+        "name": h1Heading,
         "description": metaDescription,
         "url": canonicalUrl,
         "numberOfItems": events.length,
@@ -156,18 +160,18 @@ export default function LocationPage({ city, events, heroImageUrl, anchorText }:
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <Head>
-                <title>{`Events in ${formattedCity} | Highland Events Hub`}</title>
+                <title>{metaTitle}</title>
                 <meta name="description" content={metaDescription} />
                 <link rel="canonical" href={canonicalUrl} />
                 {/* Open Graph */}
-                <meta property="og:title" content={`Events in ${formattedCity} | Highland Events Hub`} />
+                <meta property="og:title" content={metaTitle} />
                 <meta property="og:description" content={metaDescription} />
                 <meta property="og:url" content={canonicalUrl} />
                 <meta property="og:type" content="website" />
                 <meta property="og:site_name" content="Highland Events Hub" />
                 {/* Twitter */}
                 <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={`Events in ${formattedCity} | Highland Events Hub`} />
+                <meta name="twitter:title" content={metaTitle} />
                 <meta name="twitter:description" content={metaDescription} />
                 {/* JSON-LD */}
                 {jsonLd && (
@@ -179,8 +183,58 @@ export default function LocationPage({ city, events, heroImageUrl, anchorText }:
             </Head>
 
             <div className="container mx-auto px-4 py-8">
-                {/* Zone 1: Dynamic SEO Hero Banner (Both Conditions) */}
-                <LocationHeroBanner city={city} eventCount={events.length} heroImageUrl={heroImageUrl} anchorText={anchorText} />
+                {/* Zone 1: Dynamic SEO Hero Banner */}
+                <LocationHeroBanner
+                    city={formattedCity}
+                    eventCount={events.length}
+                    heroImageUrl={heroImageUrl}
+                    anchorText={anchorText}
+                    h1Heading={h1Heading}
+                />
+
+                {/* Crawlable Timeframe Navigation Tabs */}
+                <div className="mb-8 flex items-center gap-2 border-b border-gray-200 pb-4">
+                    <Link
+                        href={`/locations/${citySlug}`}
+                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                            !timeframe || timeframe === 'all'
+                                ? 'bg-emerald-600 text-white shadow-md'
+                                : 'bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200'
+                        }`}
+                    >
+                        All Upcoming
+                    </Link>
+                    <Link
+                        href={`/locations/${citySlug}/today`}
+                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                            timeframe === 'today'
+                                ? 'bg-emerald-600 text-white shadow-md'
+                                : 'bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200'
+                        }`}
+                    >
+                        Today
+                    </Link>
+                    <Link
+                        href={`/locations/${citySlug}/this-weekend`}
+                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                            timeframe === 'this-weekend'
+                                ? 'bg-emerald-600 text-white shadow-md'
+                                : 'bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200'
+                        }`}
+                    >
+                        This Weekend
+                    </Link>
+                </div>
+
+                {/* Thin Content / Empty State Fallback Notice */}
+                {isFallback && fallbackNotice && (
+                    <div className="mb-8 p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 rounded-r-xl font-medium text-sm shadow-sm flex items-center gap-2">
+                        <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>{fallbackNotice}</span>
+                    </div>
+                )}
 
                 {hasEvents ? (
                     <>
@@ -216,7 +270,7 @@ export default function LocationPage({ city, events, heroImageUrl, anchorText }:
                                     <h2 className="text-2xl font-bold text-gray-900 mb-6">
                                         All Events
                                     </h2>
-                                    <LocationFeed initialEvents={remainingEvents} city={city} />
+                                    <LocationFeed initialEvents={remainingEvents} city={formattedCity} />
                                 </div>
                             </>
                         ) : (
@@ -237,7 +291,7 @@ export default function LocationPage({ city, events, heroImageUrl, anchorText }:
                                 )}
 
                                 {/* Zone 4: Lead Generation Block */}
-                                <LeadGenBlock city={city} />
+                                <LeadGenBlock city={formattedCity} />
                             </>
                         )}
                     </>
@@ -261,7 +315,7 @@ export default function LocationPage({ city, events, heroImageUrl, anchorText }:
                             </Link>
                         </div>
 
-                        <LeadGenBlock city={city} />
+                        <LeadGenBlock city={formattedCity} />
                     </>
                 )}
             </div>

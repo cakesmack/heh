@@ -6,13 +6,15 @@ interface LocationHeroBannerProps {
   eventCount: number;
   heroImageUrl?: string;
   anchorText?: string;
+  h1Heading?: string;
 }
 
 const FALLBACK_IMAGE = '/images/defaults/category_festivals.jpg';
 
-export function LocationHeroBanner({ city, eventCount, heroImageUrl, anchorText }: LocationHeroBannerProps) {
+export function LocationHeroBanner({ city, eventCount, heroImageUrl, anchorText, h1Heading }: LocationHeroBannerProps) {
   const formattedCity = city.replace(/\b\w/g, (c) => c.toUpperCase());
   const bgImage = heroImageUrl || FALLBACK_IMAGE;
+  const headingText = h1Heading || `Events in ${formattedCity}`;
 
   return (
     <section
@@ -23,7 +25,7 @@ export function LocationHeroBanner({ city, eventCount, heroImageUrl, anchorText 
       <div className="absolute inset-0">
         <OptimizedImage
           src={bgImage}
-          alt={`Events in ${formattedCity}`}
+          alt={headingText}
           fill
           className="object-cover"
           sizes="100vw"
@@ -39,7 +41,7 @@ export function LocationHeroBanner({ city, eventCount, heroImageUrl, anchorText 
       <div className="relative z-[2] flex flex-col justify-end h-full min-h-[280px] px-6 md:px-10 py-8 md:py-10">
         <div className="min-h-[3.5rem] md:min-h-[5rem] mb-3">
           <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
-            Events in {formattedCity}
+            {headingText}
           </h1>
         </div>
 

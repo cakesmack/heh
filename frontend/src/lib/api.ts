@@ -1975,6 +1975,26 @@ export const locationsAPI = {
   },
 
   /**
+   * Get location feed with optional timeframe (today, this-weekend)
+   */
+  getFeed: async (slug: string, timeframe?: string): Promise<{
+    location_name: string;
+    location_slug: string;
+    timeframe: string;
+    meta_title: string;
+    meta_description: string;
+    h1_heading: string;
+    hero_image_url?: string;
+    seo_anchor_text?: string;
+    is_fallback: boolean;
+    fallback_notice?: string;
+    events: EventResponse[];
+  }> => {
+    const path = timeframe ? `/api/locations/feed/${slug}/${timeframe}` : `/api/locations/feed/${slug}`;
+    return apiFetch<any>(path);
+  },
+
+  /**
    * Update a geographic hub (admin-only)
    */
   update: async (id: number, data: Record<string, any>): Promise<any> => {
