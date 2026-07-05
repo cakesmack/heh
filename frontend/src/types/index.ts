@@ -306,6 +306,7 @@ export interface Event {
   price: number;
   price_display?: string;  // User-friendly text like "Free", "£5-£10"
   min_price?: number;      // Numeric for filtering
+  is_free?: boolean;
   image_url?: string;
   thumbnail_url?: string;
   featured: boolean;

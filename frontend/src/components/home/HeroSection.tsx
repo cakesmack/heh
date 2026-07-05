@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
-import { useSearch } from '@/context/SearchContext';
 
 interface HeroSectionProps {
     onSearch: (filters: {
@@ -18,13 +17,7 @@ interface HeroSectionProps {
     isSearchLoading?: boolean;
 }
 
-/**
- * Full-width hero with centered search bar.
- * Desktop: DiscoveryBar rendered inline via embedded mode.
- * Mobile: Ghost search trigger opens the existing fullscreen modal (SearchContext).
- */
 export default function HeroSection({ onSearch, isSearchLoading = false }: HeroSectionProps) {
-    const { openMobileSearch } = useSearch();
 
     return (
         <section className="relative min-h-[60vh] md:min-h-[60vh] flex items-center justify-center overflow-hidden bg-gray-950">
@@ -56,26 +49,13 @@ export default function HeroSection({ onSearch, isSearchLoading = false }: HeroS
                     </p>
                 </div>
 
-                {/* Search Bar — Desktop (DiscoveryBar embedded mode, hidden on mobile) */}
-                <div className="rounded-2xl overflow-hidden shadow-2xl shadow-black/30">
+                {/* Hero Search Bar */}
+                <div className="w-full max-w-3xl mx-auto relative z-20 mt-6">
                     <DiscoveryBar
                         onSearch={onSearch}
                         isLoading={isSearchLoading}
                         mode="embedded"
                     />
-                </div>
-
-                {/* Search Trigger — Mobile (opens fullscreen modal via SearchContext) */}
-                <div className="md:hidden">
-                    <button
-                        onClick={openMobileSearch}
-                        className="w-full flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white/60 text-left transition-all hover:bg-white/20 active:scale-[0.98]"
-                    >
-                        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <span className="text-sm">Search events, venues, or towns...</span>
-                    </button>
                 </div>
 
                 {/* B2B CTA Link */}

@@ -196,6 +196,7 @@ app.include_router(campaigns.router, prefix="/api/admin/campaigns", tags=["Campa
 app.include_router(locations.router, prefix="/api/locations", tags=["Locations"])
 app.include_router(accommodation_ads.router, prefix="/api/admin/ads", tags=["Accommodation Ads"])
 app.include_router(public_ads.router, prefix="/api/ads", tags=["Accommodation Ads"])
+app.include_router(search.router, prefix="/api/search", tags=["Search"])
 
 
 

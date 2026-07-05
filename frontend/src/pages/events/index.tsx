@@ -4,6 +4,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useSearch } from '@/context/SearchContext';
 import { EventList } from '@/components/events/EventList';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
+import { FilterBar } from '@/components/search/FilterBar';
 import CategoryGrid from '@/components/categories/CategoryGrid';
 import PopularLocations from '@/components/PopularLocations';
 import { EventFilter, EventResponse } from '@/types';
@@ -156,7 +157,7 @@ export default function EventsPage() {
     if (filters.longitude) query.longitude = filters.longitude.toFixed(6);
     if (filters.radius) query.radius = filters.radius;
 
-    router.push({ pathname: '/events', query }, undefined, { shallow: true });
+    router.push({ pathname: router.pathname, query }, undefined, { shallow: true, scroll: false });
   };
 
   const hasMore = displayedEvents.length < total;
@@ -203,31 +204,48 @@ export default function EventsPage() {
           />
         </div>
 
-        {/* Category & Location scrolling pills */}
-        <div className="space-y-4 mb-8">
-          <CategoryGrid
-            activeCategory={currentFilters.category}
-            onSelectCategory={(slug) => {
-              const newCategory = currentFilters.category === slug ? undefined : slug;
-              handleSearch({ ...currentFilters, category: newCategory });
-            }}
-          />
-          <PopularLocations
-            activeLocation={currentFilters.location}
-            onSelectLocation={(name) => {
-              const newLocation = currentFilters.location === name ? undefined : name;
-              // Reset GPS parameters when location pill is selected
-              handleSearch({
-                ...currentFilters,
-                location: newLocation,
-                latitude: undefined,
-                longitude: undefined,
-                radius: undefined
-              });
-            }}
-            categorySlug={currentFilters.category}
-          />
-        </div>
+        {/* Category & Location scrolling pills (Only rendered on base state when no search/filters are active) */}
+        {!Boolean(currentFilters.q || currentFilters.category || currentFilters.location || currentFilters.date || currentFilters.date_from || currentFilters.radius_km) && (
+          <div className="space-y-4 mb-8">
+            <CategoryGrid
+              activeCategory={currentFilters.category}
+              onSelectCategory={(slug) => {
+                const newCategory = currentFilters.category === slug ? undefined : slug;
+                handleSearch({ ...currentFilters, category: newCategory });
+              }}
+            />
+            <PopularLocations
+              activeLocation={currentFilters.location}
+              onSelectLocation={(name) => {
+                const newLocation = currentFilters.location === name ? undefined : name;
+                // Reset GPS parameters when location pill is selected
+                handleSearch({
+                  ...currentFilters,
+                  location: newLocation,
+                  latitude: undefined,
+                  longitude: undefined,
+                  radius: undefined
+                });
+              }}
+              categorySlug={currentFilters.category}
+            />
+          </div>
+        )}
+
+        {/* Sticky Filter Bar */}
+        <FilterBar
+          activeDate={currentFilters.date}
+          activeRadius={currentFilters.radius_km ? String(currentFilters.radius_km) : undefined}
+          activeCategory={currentFilters.category}
+          onFilterChange={(newFilters) => {
+            handleSearch({
+              ...currentFilters,
+              date: newFilters.date,
+              radius: newFilters.radius,
+              category: newFilters.category,
+            });
+          }}
+        />
 
         {/* Events List */}
         <div>

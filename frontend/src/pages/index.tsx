@@ -253,15 +253,17 @@ export default function HomePage() {
       {/* Hero Section with Search */}
       <HeroSection onSearch={handleSearch} isSearchLoading={isSearchLoading} />
 
-      {/* Categories Section */}
-      <div id="categories" className="min-h-[66px]">
-        <CategoryGrid />
-      </div>
-
-      {/* Popular Locations Grid */}
-      <div className="min-h-[66px]">
-        <PopularLocations />
-      </div>
+      {/* Categories & Locations Section (Only render when search is NOT active) */}
+      {!isSearchOpen && (
+        <>
+          <div id="categories" className="min-h-[66px]">
+            <CategoryGrid />
+          </div>
+          <div className="min-h-[66px]">
+            <PopularLocations />
+          </div>
+        </>
+      )}
 
 
       <SearchResultsDrawer
@@ -276,6 +278,7 @@ export default function HomePage() {
         searchParams={activeFilters}
         sort={searchSort}
         onSortChange={handleSortChange}
+        onFilterChange={(newFilters) => handleSearch({ ...activeFilters, ...newFilters })}
       />
 
 

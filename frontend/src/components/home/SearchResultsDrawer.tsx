@@ -3,10 +3,10 @@
  * A collapsible drawer displaying search results in a grid.
  */
 import Link from 'next/link';
-
 import { useEffect, useRef } from 'react';
 import { EventResponse } from '@/types';
 import SmallEventCard from '@/components/events/SmallEventCard';
+import FilterBar from '@/components/search/FilterBar';
 
 interface SearchResultsDrawerProps {
     isOpen: boolean;
@@ -20,6 +20,7 @@ interface SearchResultsDrawerProps {
     sort?: string;
     onSortChange?: (sort: string) => void;
     itemsPerPage?: number;
+    onFilterChange?: (filters: { date?: string; radius?: string; category?: string }) => void;
 }
 
 export default function SearchResultsDrawer({
@@ -33,7 +34,8 @@ export default function SearchResultsDrawer({
     searchParams,
     sort = 'date_asc',
     onSortChange,
-    itemsPerPage = 8
+    itemsPerPage = 8,
+    onFilterChange
 }: SearchResultsDrawerProps) {
     const drawerRef = useRef<HTMLDivElement>(null);
     const totalPages = Math.ceil(total / itemsPerPage);
@@ -58,13 +60,13 @@ export default function SearchResultsDrawer({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
                 {/* Header */}
-                <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+                <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
                     <div className="flex items-center gap-6">
                         <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                             {isLoading ? 'SEARCHING...' : `FOUND ${total} EVENT${total !== 1 ? 'S' : ''}`}
                         </h2>
                         {!isLoading && total > 0 && onSortChange && (
-                            <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-gray-400">
+                            <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
                                 <span>Sort by:</span>
                                 <select
                                     value={sort}
@@ -78,19 +80,15 @@ export default function SearchResultsDrawer({
                             </div>
                         )}
                     </div>
-
-                    <button
-                        onClick={onClose}
-                        className="group flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-100"
-                    >
-                        <span className="text-xs font-bold uppercase tracking-wider">Close</span>
-                        <div className="bg-gray-200 rounded-full p-1 group-hover:bg-gray-300 transition-colors">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </div>
-                    </button>
                 </div>
+
+                {/* Sticky Filter Bar */}
+                <FilterBar
+                    activeDate={searchParams?.date}
+                    activeRadius={searchParams?.radius}
+                    activeCategory={searchParams?.category}
+                    onFilterChange={(newFilters) => onFilterChange?.(newFilters)}
+                />
 
                 {/* Content */}
                 {isLoading ? (

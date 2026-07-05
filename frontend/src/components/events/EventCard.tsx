@@ -260,26 +260,23 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
         </div>
 
         {/* Footer */}
-        <div className="mt-4 pt-3 border-t border-gray-200 flex items-center justify-between">
-          {/* Price */}
-          <div className="text-sm font-medium text-gray-900">
-            {event.price_display || (event.price === 0 ? 'Free' : `£${event.price.toFixed(2)}`)}
+        {(event.checkin_count !== undefined || (user && !hasEditRights && !event.organizer_id)) && (
+          <div className="mt-4 pt-3 border-t border-gray-200 flex items-center justify-between">
+            {/* Check-ins */}
+            {event.checkin_count !== undefined && (
+              <div className="text-sm text-gray-500">
+                {event.checkin_count} check-in{event.checkin_count !== 1 ? 's' : ''}
+              </div>
+            )}
+
+            {/* Claim Event Button (Only for non-owners) */}
+            {user && !hasEditRights && !event.organizer_id && (
+              <Link href={`/events/${event.id}/claim`} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                Claim Event
+              </Link>
+            )}
           </div>
-
-          {/* Check-ins */}
-          {event.checkin_count !== undefined && (
-            <div className="text-sm text-gray-500">
-              {event.checkin_count} check-in{event.checkin_count !== 1 ? 's' : ''}
-            </div>
-          )}
-
-          {/* Claim Event Button (Only for non-owners) */}
-          {user && !hasEditRights && !event.organizer_id && (
-            <Link href={`/events/${event.id}/claim`} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
-              Claim Event
-            </Link>
-          )}
-        </div>
+        )}
       </div>
     </Card>
   );
