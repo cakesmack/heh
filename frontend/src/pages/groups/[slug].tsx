@@ -467,6 +467,18 @@ export default function OrganizerProfilePage() {
                                     </div>
                                 )}
 
+                                {organizer.contact_number && (
+                                    <div className="pb-4 border-b border-gray-100">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Phone</p>
+                                        <a
+                                            href={`tel:${organizer.contact_number}`}
+                                            className="text-emerald-600 hover:text-emerald-700 font-bold transition-all truncate block"
+                                        >
+                                            {organizer.contact_number}
+                                        </a>
+                                    </div>
+                                )}
+
                                 <div>
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Socials & Website</p>
                                     <div className="flex items-center gap-2">
@@ -514,13 +526,6 @@ export default function OrganizerProfilePage() {
                                         )}
                                     </div>
                                 </div>
-
-                                <button
-                                    onClick={() => {/* Contact Logic */ }}
-                                    className="w-full py-3 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all text-sm mt-4"
-                                >
-                                    Contact Organizer
-                                </button>
                             </div>
                         </Card>
                     </div>
