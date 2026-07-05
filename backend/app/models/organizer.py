@@ -41,6 +41,7 @@ class Organizer(SQLModel, table=True):
     social_instagram: Optional[str] = Field(default=None, max_length=500)
     social_website: Optional[str] = Field(default=None, max_length=500)
     public_email: Optional[str] = Field(default=None, max_length=255)
+    contact_number: Optional[str] = Field(default=None, max_length=50)
     
     # Owner of this profile
     user_id: str = Field(foreign_key="users.id", index=True)

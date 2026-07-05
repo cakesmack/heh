@@ -231,6 +231,7 @@ def update_organizer(
     for key, value in update_data.items():
         setattr(organizer, key, value)
         
+    organizer.updated_at = datetime.utcnow()
     session.add(organizer)
     session.commit()
     session.refresh(organizer)
