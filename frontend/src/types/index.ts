@@ -164,6 +164,7 @@ export interface Venue {
   category_id?: string;
   category?: VenueCategory;
   description?: string;
+  about_history?: string;
   website?: string;
   phone?: string;
   image_url?: string;
@@ -213,6 +214,7 @@ export interface VenueCreate {
   longitude: number;
   category_id: string;
   description?: string;
+  about_history?: string;
   website?: string;
   phone?: string;
   image_url?: string;
@@ -234,6 +236,7 @@ export interface VenueUpdate {
   longitude?: number;
   category_id?: string;
   description?: string;
+  about_history?: string;
   website?: string;
   phone?: string;
   // Amenities

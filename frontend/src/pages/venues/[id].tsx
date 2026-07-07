@@ -696,16 +696,14 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
         </div>
 
         {/* On-Page SEO Venue Overview & Structured Location (above Event Calendar UI) */}
-        {(venue.description || venue.address) && (
+        {venue.about_history && venue.about_history.trim() !== '' && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm mt-12 mb-4">
             <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
               <span>About {venue.name}</span>
             </h2>
-            {venue.description && (
-              <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-base mb-6">
-                {venue.description.replace(/<[^>]*>?/gm, '')}
-              </p>
-            )}
+            <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-base mb-6">
+              {venue.about_history.replace(/<[^>]*>?/gm, '')}
+            </p>
             <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-6 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-gray-900">Address:</span>

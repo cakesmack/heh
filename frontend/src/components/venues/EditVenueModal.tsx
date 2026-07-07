@@ -37,6 +37,7 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
         longitude: -4.22,
         category_id: '',
         description: '',
+        about_history: '',
         website: '',
         phone: '',
         email: '',
@@ -83,6 +84,7 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                     longitude: venueData.longitude,
                     category_id: venueData.category_id || (venueData.category?.id || (defaultCat?.id || '')),
                     description: venueData.description || '',
+                    about_history: venueData.about_history || '',
                     website: venueData.website || '',
                     phone: venueData.phone || '',
                     email: venueData.email || '',
@@ -112,6 +114,7 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                     longitude: -4.22,
                     category_id: defaultCat?.id || '',
                     description: '',
+                    about_history: '',
                     website: '',
                     phone: '',
                     email: '',
@@ -337,6 +340,17 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                                 rows={3}
+                            />
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">About / History</label>
+                            <textarea
+                                value={formData.about_history}
+                                onChange={(e) => setFormData({ ...formData, about_history: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                rows={4}
+                                placeholder="Describe the venue's history, background, or special facts..."
                             />
                         </div>
                     </div>

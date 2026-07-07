@@ -62,6 +62,7 @@ class VenueCreate(BaseModel):
     longitude: float = Field(ge=-180.0, le=180.0)
     category_id: Optional[str] = Field(None, description="Venue category")
     description: Optional[str] = Field(None, max_length=2000)
+    about_history: Optional[str] = Field(None, max_length=5000)
     website: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=255)
@@ -109,6 +110,7 @@ class VenueUpdate(BaseModel):
     longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
     category_id: Optional[str] = None
     description: Optional[str] = Field(None, max_length=4000)
+    about_history: Optional[str] = Field(None, max_length=10000)
     city: Optional[str] = Field(None, max_length=100)
     website: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
@@ -159,6 +161,7 @@ class VenueResponse(BaseModel):
     category_id: Optional[str] = None
     category: Optional[VenueCategoryResponse] = Field(None, alias="category_rel")
     description: Optional[str]
+    about_history: Optional[str] = None
     city: Optional[str] = None
     website: Optional[str]
     phone: Optional[str]

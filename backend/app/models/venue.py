@@ -60,6 +60,7 @@ class Venue(SQLModel, table=True):
 
     # Additional info
     description: Optional[str] = Field(default=None, sa_column=Column(Text))
+    about_history: Optional[str] = Field(default=None, sa_column=Column(Text))
     city: Optional[str] = Field(default=None, max_length=100, index=True)
 
     # SEO Overrides
