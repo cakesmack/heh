@@ -97,7 +97,7 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
 
       // Fetch initial events
       const eventsData = await api.events.list({
-        venue_id: id as string,
+        venue_id: data.id,
         limit: 12,
         sort_by: 'date_start',
 
@@ -127,15 +127,16 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
 
   // Fetch staff only if owner
   useEffect(() => {
-    if (isOwner && id) {
+    if (isOwner && venue?.id) {
       fetchStaff();
     }
-  }, [isOwner, id]);
+  }, [isOwner, venue?.id]);
 
   const fetchStaff = async () => {
+    if (!venue?.id) return;
     setIsStaffLoading(true);
     try {
-      const staffData = await api.venues.listStaff(id as string);
+      const staffData = await api.venues.listStaff(venue.id);
       setStaff(staffData);
     } catch (err) {
       console.error('Error fetching staff:', err);
@@ -151,10 +152,10 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStaffEmail) return;
+    if (!newStaffEmail || !venue?.id) return;
     setIsAddingStaff(true);
     try {
-      await api.venues.addStaff(id as string, { user_email: newStaffEmail, role: 'staff' });
+      await api.venues.addStaff(venue.id, { user_email: newStaffEmail, role: 'staff' });
       setNewStaffEmail('');
       fetchStaff();
     } catch (err) {
@@ -165,9 +166,9 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
   };
 
   const handleRemoveStaff = async (userId: string) => {
-    if (!confirm('Are you sure you want to remove this staff member?')) return;
+    if (!confirm('Are you sure you want to remove this staff member?') || !venue?.id) return;
     try {
-      await api.venues.removeStaff(id as string, userId);
+      await api.venues.removeStaff(venue.id, userId);
       fetchStaff();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to remove staff');
@@ -181,11 +182,11 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
   }, [venue?.id, trackVenueView]);
 
   const handleLoadMoreEvents = async () => {
-    if (!id || isLoadingMoreEvents) return;
+    if (!venue?.id || isLoadingMoreEvents) return;
     setIsLoadingMoreEvents(true);
     try {
       const skip = events.length;
-      const res = await api.events.list({ venue_id: id as string, skip, limit: 12 });
+      const res = await api.events.list({ venue_id: venue.id, skip, limit: 12 });
 
       if (res.events?.length > 0) {
         setEvents(prev => [...prev, ...res.events]);
