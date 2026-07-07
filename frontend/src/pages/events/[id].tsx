@@ -34,6 +34,7 @@ import { OrganizerBadge } from '@/components/events/OrganizerBadge';
 import { api, apiFetch, locationsAPI } from '@/lib/api';
 import type { EventResponse } from '@/types';
 import SidebarPerformances from '@/components/events/SidebarPerformances';
+import SmallEventCard from '@/components/events/SmallEventCard';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
@@ -280,6 +281,36 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const [resolvedLocationId, setResolvedLocationId] = useState<number | null>(null);
   const [locations, setLocations] = useState<any[]>([]);
   const venue = event?.venue;
+
+  const isPastEvent = event
+    ? new Date(event.date_end || event.date_start) < new Date()
+    : false;
+
+  const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(false);
+
+  useEffect(() => {
+    if (!event || !isPastEvent) return;
+
+    const fetchUpcoming = async () => {
+      setLoadingUpcoming(true);
+      try {
+        const response = await api.events.list({
+          limit: 4,
+          date_from: new Date().toISOString(),
+          sort_by: 'date_asc',
+          exclude_event_ids: [event.id]
+        });
+        setUpcomingEvents(response.events || []);
+      } catch (err) {
+        console.error('Failed to fetch upcoming events:', err);
+      } finally {
+        setLoadingUpcoming(false);
+      }
+    };
+
+    fetchUpcoming();
+  }, [event, isPastEvent]);
 
   // Filter out past performances and sort chronologically
   const now = new Date();
@@ -633,6 +664,38 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
 
       </div>
 
+      {isPastEvent && (
+        <div className="bg-red-50/50 border-b border-red-100 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-red-50 border border-red-200/60 rounded-2xl p-6 mb-8 text-center shadow-sm">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 mb-3">
+                ⚠️ Event Ended
+              </span>
+              <h2 className="text-xl md:text-2xl font-bold text-red-950">
+                This event ended on {formatDate(event.date_end || event.date_start)}.
+              </h2>
+            </div>
+            
+            {loadingUpcoming ? (
+              <div className="animate-pulse flex space-x-4 h-48 items-center justify-center">
+                <Spinner size="md" />
+              </div>
+            ) : upcomingEvents.length > 0 ? (
+              <div>
+                <h3 className="text-lg font-bold text-stone-900 mb-6 uppercase tracking-wider text-center md:text-left">
+                  Missed this? Check out these upcoming events
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                  {upcomingEvents.map((evt) => (
+                    <SmallEventCard key={evt.id} event={evt} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
       {/* Info Ribbon */}
       <div className="sticky top-0 z-30 bg-stone-950/80 backdrop-blur-xl border-y border-white/5 text-white py-4 md:py-6 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -712,75 +775,80 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   variant="white"
                 />
 
-                {/* Get Tickets Button Logic */}
-                {event.ticket_url ? (
-                  <a
-                    href={event.ticket_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackTicketClick(event.id)}
-                    className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
-                  >
-                    Get Tickets
-                  </a>
-                ) : upcomingPerformances.length > 0 ? (
-                  <button
-                    onClick={() => {
-                      const mobileSidebar = document.getElementById('mobile-dates-sidebar');
-                      const desktopSidebar = document.getElementById('dates-sidebar');
-                      const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
-                      if (sidebar) {
-                        sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                        setTimeout(() => {
-                          sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                        }, 1000);
-                      }
-                    }}
-                    className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
-                  >
-                    Get Tickets
-                  </button>
-                ) : (event.showtimes && event.showtimes.length > 0) ? (
-                  <button
-                    disabled
-                    className="px-6 py-2.5 bg-gray-200 text-gray-400 text-sm font-bold rounded-full cursor-not-allowed text-center whitespace-nowrap shrink-0"
-                  >
-                    Get Tickets
-                  </button>
-                ) : null}
+                {/* Get Tickets, Visit Website, and RSVP (AttendingButton) suppressed if past event */}
+                {!isPastEvent && (
+                  <>
+                    {/* Get Tickets Button Logic */}
+                    {event.ticket_url ? (
+                      <a
+                        href={event.ticket_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackTicketClick(event.id)}
+                        className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
+                      >
+                        Get Tickets
+                      </a>
+                    ) : upcomingPerformances.length > 0 ? (
+                      <button
+                        onClick={() => {
+                          const mobileSidebar = document.getElementById('mobile-dates-sidebar');
+                          const desktopSidebar = document.getElementById('dates-sidebar');
+                          const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
+                          if (sidebar) {
+                            sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                            setTimeout(() => {
+                              sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                            }, 1000);
+                          }
+                        }}
+                        className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
+                      >
+                        Get Tickets
+                      </button>
+                    ) : (event.showtimes && event.showtimes.length > 0) ? (
+                      <button
+                        disabled
+                        className="px-6 py-2.5 bg-gray-200 text-gray-400 text-sm font-bold rounded-full cursor-not-allowed text-center whitespace-nowrap shrink-0"
+                      >
+                        Get Tickets
+                      </button>
+                    ) : null}
 
-                {/* Visit Website Button */}
-                {event.website_url && (
-                  <a
-                    href={event.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackWebsiteClick(event.id)}
-                    className="px-6 py-2.5 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:white text-sm font-bold rounded-full transition-all transform hover:scale-105 text-center whitespace-nowrap shrink-0"
-                  >
-                    Visit Website
-                  </a>
+                    {/* Visit Website Button */}
+                    {event.website_url && (
+                      <a
+                        href={event.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackWebsiteClick(event.id)}
+                        className="px-6 py-2.5 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:white text-sm font-bold rounded-full transition-all transform hover:scale-105 text-center whitespace-nowrap shrink-0"
+                      >
+                        Visit Website
+                      </a>
+                    )}
+
+                    <AttendingButton
+                      eventId={event.id}
+                      initialAttending={event.is_attending}
+                      showLabel={true}
+                      className="transform hover:scale-105 shadow-lg shrink-0 whitespace-nowrap"
+                      onToggle={(isAttending) => {
+                        setEvent(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            is_attending: isAttending,
+                            attending_count: isAttending
+                              ? (prev.attending_count || 0) + 1
+                              : Math.max(0, (prev.attending_count || 0) - 1)
+                          };
+                        });
+                      }}
+                    />
+                  </>
                 )}
-
-                <AttendingButton
-                  eventId={event.id}
-                  initialAttending={event.is_attending}
-                  showLabel={true}
-                  className="transform hover:scale-105 shadow-lg shrink-0 whitespace-nowrap"
-                  onToggle={(isAttending) => {
-                    setEvent(prev => {
-                      if (!prev) return null;
-                      return {
-                        ...prev,
-                        is_attending: isAttending,
-                        attending_count: isAttending
-                          ? (prev.attending_count || 0) + 1
-                          : Math.max(0, (prev.attending_count || 0) - 1)
-                      };
-                    });
-                  }}
-                />
 
                 <BookmarkButton
                   eventId={event.id}
@@ -807,7 +875,8 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
               {/* Mobile Action Group */}
               <div className="flex md:hidden flex-col w-full gap-3 mt-4">
                 {/* Primary CTA (Get Tickets or Visit Website) */}
-                {(() => {
+                {/* Primary CTA (Get Tickets or Visit Website) suppressed if past event */}
+                {!isPastEvent && (() => {
                   const hasTickets = !!(event.ticket_url || (event.showtimes && event.showtimes.length > 0));
                   const hasWebsite = !!event.website_url;
                   
@@ -872,25 +941,27 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
 
                 {/* Secondary Actions Row */}
                 <div className="flex items-center justify-center gap-3 w-full">
-                  <AttendingButton
-                    eventId={event.id}
-                    initialAttending={event.is_attending}
-                    showLabel={false}
-                    size="lg"
-                    className="transform active:scale-95 shadow-md"
-                    onToggle={(isAttending) => {
-                      setEvent(prev => {
-                        if (!prev) return null;
-                        return {
-                          ...prev,
-                          is_attending: isAttending,
-                          attending_count: isAttending
-                            ? (prev.attending_count || 0) + 1
-                            : Math.max(0, (prev.attending_count || 0) - 1)
-                        };
-                      });
-                    }}
-                  />
+                  {!isPastEvent && (
+                    <AttendingButton
+                      eventId={event.id}
+                      initialAttending={event.is_attending}
+                      showLabel={false}
+                      size="lg"
+                      className="transform active:scale-95 shadow-md"
+                      onToggle={(isAttending) => {
+                        setEvent(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            is_attending: isAttending,
+                            attending_count: isAttending
+                              ? (prev.attending_count || 0) + 1
+                              : Math.max(0, (prev.attending_count || 0) - 1)
+                          };
+                        });
+                      }}
+                    />
+                  )}
 
                   <BookmarkButton
                     eventId={event.id}
@@ -925,7 +996,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   />
 
                   {/* Visit Website as secondary icon button only if Get Tickets is the primary CTA */}
-                  {!!(event.ticket_url || (event.showtimes && event.showtimes.length > 0)) && event.website_url && (
+                  {!isPastEvent && !!(event.ticket_url || (event.showtimes && event.showtimes.length > 0)) && event.website_url && (
                     <a
                       href={event.website_url}
                       target="_blank"
@@ -990,7 +1061,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       </p>
                     </div>
                   </div>
-                  {event.ticket_url && (
+                  {!isPastEvent && event.ticket_url && (
                     <div className="mt-4">
                       <a
                         href={event.ticket_url}
@@ -1599,7 +1670,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
         </div>
         <AccommodationAds ads={accommodationAds} />
 
-        <SimilarEvents eventId={event.id} />
+        {!isPastEvent && <SimilarEvents eventId={event.id} />}
       </div>
 
       {
