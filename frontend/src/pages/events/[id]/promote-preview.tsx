@@ -108,7 +108,7 @@ export default function PromotePreviewPage() {
       endDate.setDate(endDate.getDate() + 3);
 
       const result = await api.featured.createCheckout({
-        event_id: id as string,
+        event_id: eventData?.id || (id as string),
         slot_type: 'magazine_carousel',
         start_date: tomorrow.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],

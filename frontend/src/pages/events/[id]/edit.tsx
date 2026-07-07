@@ -89,6 +89,7 @@ export default function EditEventPage() {
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [eventUuid, setEventUuid] = useState<string | null>(null);
 
     // New State for Advanced Form Features
     const [locationTab, setLocationTab] = useState<'main' | 'multi'>('main');
@@ -123,6 +124,7 @@ export default function EditEventPage() {
                 ]);
 
                 setCategories(categoriesData.categories);
+                setEventUuid(eventData.id);
 
                 // Fetch user's organizer profiles
                 if (user?.id) {
@@ -471,7 +473,7 @@ export default function EditEventPage() {
 
 
 
-            await api.events.update(id as string, eventData);
+            await api.events.update(eventUuid || (id as string), eventData);
 
             // Redirect to the event page
             router.push(`/events/${id}`);
