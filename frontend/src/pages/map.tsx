@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import { format, isSameDay, startOfDay, endOfDay, addDays, nextSaturday, nextSunday } from 'date-fns';
 import { eventsAPI, categoriesAPI, collectionsAPI, venuesAPI } from '@/lib/api';
 import type { EventResponse, Category, Collection } from '@/types';
+import { optimizeImage } from '@/utils/imageOptimizer';
 import type { MapMarker } from '@/components/events/GoogleMapView';
 import MapDateFilter, { DateRange } from '@/components/map/MapDateFilter';
 import MapSidebar from '@/components/map/MapSidebar';
@@ -474,7 +475,7 @@ export function MapPage() {
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center relative">
                         {venue.image_url ? (
                           <img
-                            src={getAbsoluteImageUrl(venue.image_url) || undefined}
+                            src={optimizeImage(venue.image_url, 'thumb')}
                             alt=""
                             className="w-full h-full object-cover"
                           />
@@ -596,13 +597,7 @@ export function MapPage() {
   );
 }
 
-function getAbsoluteImageUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) {
-    return url;
-  }
-  return `/${url}`;
-}
+// getAbsoluteImageUrl removed in favor of optimizeImage from utils
 
 function getInitials(name: string): string {
   if (!name) return 'V';

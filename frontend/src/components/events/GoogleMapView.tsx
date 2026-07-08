@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import type { EventResponse, VenueResponse } from '@/types';
 import ClusteredEventMarkers from './ClusteredEventMarkers';
 import ClusteredVenueMarkers from './ClusteredVenueMarkers';
+import { optimizeImage } from '@/utils/imageOptimizer';
 
 // GPS/Location icon component
 function LocationIcon({ className = 'w-5 h-5' }: { className?: string }) {
@@ -358,13 +359,7 @@ export function GoogleMapView({
   );
 }
 
-function getAbsoluteImageUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) {
-    return url;
-  }
-  return `/${url}`;
-}
+// getAbsoluteImageUrl removed in favor of optimizeImage from utils
 
 function getInitials(name: string): string {
   if (!name) return 'V';
@@ -386,8 +381,8 @@ export function VenueMapPopup({
 }) {
   const [imageError, setImageError] = useState(false);
   const initials = getInitials(venue.title);
-  const absoluteImageUrl = getAbsoluteImageUrl(venue.image_url);
-  const showImage = absoluteImageUrl && !imageError;
+  const optimizedUrl = venue.image_url ? optimizeImage(venue.image_url, 'thumb') : null;
+  const showImage = optimizedUrl && !imageError;
 
   return (
     <div className="p-1 max-w-[200px] overflow-hidden">
@@ -395,7 +390,7 @@ export function VenueMapPopup({
       {showImage ? (
         <div className="relative w-full h-24 rounded-lg overflow-hidden bg-gray-100 mb-3 -mt-1 -mx-1 w-[calc(100%+8px)]">
           <img
-            src={absoluteImageUrl}
+            src={optimizedUrl}
             alt={venue.title}
             className="w-full h-full object-cover"
             onError={() => setImageError(true)}
