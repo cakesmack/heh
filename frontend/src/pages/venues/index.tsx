@@ -22,7 +22,7 @@ export default function VenuesPage() {
   // Debounced value that actually triggers the API call
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const { venues, total, isLoading, error, fetchVenues } = useVenues({
+  const { venues, total, isLoading, isLoadingMore, error, fetchVenues, fetchMore } = useVenues({
     filters: { exclude_status: 'UNVERIFIED' },
     autoFetch: false,
   });
@@ -61,6 +61,8 @@ export default function VenuesPage() {
     fetchVenues(filters);
     hasFetchedRef.current = true;
   }, [debouncedSearch, lat, lng, fetchVenues]);
+
+  const hasMore = venues.length < total;
 
   const pageTitle = "Event Venues, Halls & Theatres in the Highlands";
   const pageDescription = "Browse the complete directory of event venues, community halls, pubs, and theatres across Inverness and the Scottish Highlands. See what is happening near you.";
@@ -122,13 +124,13 @@ export default function VenuesPage() {
         {!isLoading && !error && (
           <div className="mb-6">
             <p className="text-sm text-gray-600">
-              {venues.length} venue{venues.length !== 1 ? 's' : ''} found
+              Showing {venues.length} of {total} venue{total !== 1 ? 's' : ''}
             </p>
           </div>
         )}
 
-        {/* Loading State */}
-        {isLoading && (
+        {/* Loading State (initial load only) */}
+        {isLoading && venues.length === 0 && (
           <div className="py-12">
             <Spinner size="lg" />
             <p className="text-center text-gray-600 mt-4">Loading venues...</p>
@@ -182,12 +184,28 @@ export default function VenuesPage() {
         )}
 
         {/* Venues Grid */}
-        {!isLoading && !error && venues.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {venues.map((venue) => (
-              <VenueDiscoveryCard key={venue.id} venue={venue} />
-            ))}
-          </div>
+        {!error && venues.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {venues.map((venue) => (
+                <VenueDiscoveryCard key={venue.id} venue={venue} />
+              ))}
+            </div>
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="mt-12 flex justify-center">
+                <button
+                  onClick={fetchMore}
+                  disabled={isLoadingMore}
+                  className="px-8 py-3.5 border-2 border-gray-200 text-gray-700 font-bold rounded-full hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {isLoadingMore && <Spinner size="sm" />}
+                  {isLoadingMore ? 'Loading...' : `Load More Venues (${total - venues.length} remaining)`}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

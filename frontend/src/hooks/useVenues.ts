@@ -18,8 +18,10 @@ interface UseVenuesReturn {
   venues: VenueResponse[];
   total: number;
   isLoading: boolean;
+  isLoadingMore: boolean;
   error: string | null;
   fetchVenues: (newFilters?: VenueFilter) => Promise<void>;
+  fetchMore: () => Promise<void>;
   refetch: () => Promise<void>;
 }
 
@@ -33,14 +35,17 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
   const [venues, setVenues] = useState<VenueResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Use a ref to track current filters so fetchVenues never needs
   // currentFilters in its dependency array (which caused the infinite loop).
   const filtersRef = useRef<VenueFilter | undefined>(initialFilters);
+  // Track the current venue count for offset calculation in fetchMore
+  const venuesRef = useRef<VenueResponse[]>([]);
 
   /**
-   * Fetch venues from API.
+   * Fetch venues from API (replaces current list — used for initial load & search changes).
    * Stable function identity — dependencies are empty so it never
    * gets recreated between renders and never re-triggers useEffect.
    */
@@ -51,17 +56,46 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
     const filtersToUse = newFilters !== undefined ? newFilters : filtersRef.current;
 
     try {
-      const response: VenueListResponse = await api.venues.list(filtersToUse);
+      const response: VenueListResponse = await api.venues.list({
+        ...filtersToUse,
+        skip: 0,
+      });
       setVenues(response.venues);
+      venuesRef.current = response.venues;
       setTotal(response.total);
       filtersRef.current = filtersToUse;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch venues';
       setError(errorMessage);
       setVenues([]);
+      venuesRef.current = [];
       setTotal(0);
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Fetch the next page of venues and append to the existing list.
+   */
+  const fetchMore = useCallback(async () => {
+    setIsLoadingMore(true);
+    setError(null);
+
+    try {
+      const response: VenueListResponse = await api.venues.list({
+        ...filtersRef.current,
+        skip: venuesRef.current.length,
+      });
+      const merged = [...venuesRef.current, ...response.venues];
+      setVenues(merged);
+      venuesRef.current = merged;
+      setTotal(response.total);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load more venues';
+      setError(errorMessage);
+    } finally {
+      setIsLoadingMore(false);
     }
   }, []);
 
@@ -85,8 +119,10 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
     venues,
     total,
     isLoading,
+    isLoadingMore,
     error,
     fetchVenues,
+    fetchMore,
     refetch,
   };
 }
