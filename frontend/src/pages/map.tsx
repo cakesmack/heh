@@ -434,6 +434,87 @@ export function MapPage() {
           />
         )}
 
+        {/* Left Panel - Venue List Sidebar */}
+        {mapMode === 'venues' && (
+          <aside className="hidden lg:flex lg:flex-col lg:w-[380px] xl:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200">
+            {/* Header */}
+            <div className="sticky top-0 z-10 bg-gray-100/95 backdrop-blur-sm px-4 py-3 border-b border-gray-200 shadow-sm flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900">
+                Verified Venues Directory
+              </h3>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                {venues.length} Total
+              </span>
+            </div>
+
+            {/* List */}
+            {venues.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 flex-1">
+                <p className="text-lg font-medium mb-2">No venues found</p>
+                <p className="text-sm">Please check back later.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 p-2 space-y-2">
+                {venues.map((venue) => {
+                  const isSelected = selectedMarkerId === venue.id;
+                  return (
+                    <div
+                      key={venue.id}
+                      onClick={() => {
+                        setSelectedMarkerId(venue.id);
+                        setFocusEventId(venue.id); // Reuses map centering trigger
+                      }}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer flex gap-4 ${
+                        isSelected
+                          ? 'bg-emerald-50/50 border-emerald-200 shadow-sm'
+                          : 'bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm'
+                      }`}
+                    >
+                      {/* Image Thumbnail / Initials */}
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center relative">
+                        {venue.image_url ? (
+                          <img
+                            src={getAbsoluteImageUrl(venue.image_url) || undefined}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg">
+                            {getInitials(venue.name)}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <h4 className="font-bold text-gray-900 text-sm leading-snug line-clamp-1">
+                            {venue.name}
+                          </h4>
+                          <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-100 text-gray-700 capitalize border border-gray-200">
+                            {venue.venue_type || 'Venue'}
+                          </span>
+                        </div>
+
+                        {/* Link to detail page */}
+                        <div className="mt-2 flex items-center justify-between">
+                          <a
+                            href={`/venues/${venue.slug || venue.id}`}
+                            className="text-xs text-emerald-600 font-bold hover:text-emerald-700 transition-colors flex items-center gap-0.5"
+                            onClick={(e) => e.stopPropagation()} // Prevent card click event bubbling
+                          >
+                            View Venue &rarr;
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </aside>
+        )}
+
         {/* Right Panel - Map */}
         <div className="flex-1 relative">
           <ErrorBoundary>
@@ -513,6 +594,21 @@ export function MapPage() {
 
     </div>
   );
+}
+
+function getAbsoluteImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) {
+    return url;
+  }
+  return `/${url}`;
+}
+
+function getInitials(name: string): string {
+  if (!name) return 'V';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 export default MapPage;

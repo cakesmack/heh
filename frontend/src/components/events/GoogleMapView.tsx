@@ -10,6 +10,7 @@ import { Map, Marker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { format } from 'date-fns';
 import type { EventResponse, VenueResponse } from '@/types';
 import ClusteredEventMarkers from './ClusteredEventMarkers';
+import ClusteredVenueMarkers from './ClusteredVenueMarkers';
 
 // GPS/Location icon component
 function LocationIcon({ className = 'w-5 h-5' }: { className?: string }) {
@@ -216,14 +217,17 @@ export function GoogleMapView({
     );
   }, [map]);
 
-  // Handle focus on specific event (pan to and open InfoWindow)
-  const focusEvent = validEvents.find((e) => e.id === focusEventId);
-  if (focusEvent && map && focusEventId) {
+  // Handle focus on specific event or venue (pan to and open InfoWindow)
+  const focusTarget =
+    validEvents.find((e) => e.id === focusEventId) ||
+    venueMarkers.find((m) => m.id === focusEventId);
+
+  if (focusTarget && map && focusEventId) {
     // Use setTimeout to avoid state update during render
     setTimeout(() => {
-      map.panTo({ lat: focusEvent.latitude, lng: focusEvent.longitude });
+      map.panTo({ lat: focusTarget.latitude, lng: focusTarget.longitude });
       map.setZoom(16);
-      setInfoWindowMarkerId(focusEvent.id);
+      setInfoWindowMarkerId(focusTarget.id);
       onFocusComplete?.();
     }, 0);
   }
@@ -266,15 +270,18 @@ export function GoogleMapView({
           />
         )}
 
-        {/* Venue Markers - Keep default Google marker */}
-        {venueMarkers.map((marker) => (
-          <Marker
-            key={marker.id}
-            position={{ lat: marker.latitude, lng: marker.longitude }}
-            onClick={() => handleMarkerClick(marker)}
-            title={marker.title}
+        {/* Venue Markers - Using ClusteredVenueMarkers for clustering */}
+        {mapReady && showVenues && (
+          <ClusteredVenueMarkers
+            venues={venueMarkers}
+            selectedMarkerId={selectedMarkerId}
+            onMarkerClick={(marker) => {
+              setInfoWindowMarkerId(marker.id);
+              onMarkerClick?.(marker);
+            }}
+            isMobile={isMobile}
           />
-        ))}
+        )}
 
         {/* User Location Marker (passed from parent) */}
         {userLocation && (
@@ -292,15 +299,7 @@ export function GoogleMapView({
           />
         )}
 
-        {/* Info Window for Venues - Desktop Only */}
-        {selectedVenue && !isMobile && (
-          <InfoWindow
-            position={{ lat: selectedVenue.latitude, lng: selectedVenue.longitude }}
-            onCloseClick={handleInfoWindowClose}
-          >
-            <VenueMapPopup venue={selectedVenue} />
-          </InfoWindow>
-        )}
+        {/* Venues InfoWindow is now rendered internally in ClusteredVenueMarkers */}
       </Map>
 
       {/* Locate Me Button - Floating control */}
@@ -359,6 +358,21 @@ export function GoogleMapView({
   );
 }
 
+function getAbsoluteImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) {
+    return url;
+  }
+  return `/${url}`;
+}
+
+function getInitials(name: string): string {
+  if (!name) return 'V';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 export function VenueMapPopup({
   venue,
 }: {
@@ -370,16 +384,29 @@ export function VenueMapPopup({
     image_url?: string | null;
   };
 }) {
+  const [imageError, setImageError] = useState(false);
+  const initials = getInitials(venue.title);
+  const absoluteImageUrl = getAbsoluteImageUrl(venue.image_url);
+  const showImage = absoluteImageUrl && !imageError;
+
   return (
     <div className="p-1 max-w-[200px] overflow-hidden">
       {/* Top: image_url */}
-      {venue.image_url && (
+      {showImage ? (
         <div className="relative w-full h-24 rounded-lg overflow-hidden bg-gray-100 mb-3 -mt-1 -mx-1 w-[calc(100%+8px)]">
           <img
-            src={venue.image_url}
+            src={absoluteImageUrl}
             alt={venue.title}
             className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
           />
+        </div>
+      ) : (
+        /* Fallback placeholder */
+        <div className="w-full h-24 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-3 -mt-1 -mx-1 w-[calc(100%+8px)] shadow-inner">
+          <span className="text-white font-black text-2xl tracking-wider">
+            {initials}
+          </span>
         </div>
       )}
 
