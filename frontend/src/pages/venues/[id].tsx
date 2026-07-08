@@ -617,39 +617,7 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
 
           {/* Sidebar - 30% (Sticky) */}
           <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-24 self-start">
-            {/* Map Card */}
-            <Card className="overflow-hidden p-0">
-              <div className="p-6 border-b border-gray-100">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 uppercase">Location</p>
-                <h3 className="text-sm font-bold text-gray-900 leading-snug">{venue.address}</h3>
-              </div>
-              {venue.latitude && venue.longitude && (
-                <div className="h-[300px] w-full bg-gray-100">
-                  <GoogleMiniMap
-                    latitude={venue.latitude}
-                    longitude={venue.longitude}
-                    height="300px"
-                    zoom={15}
-                    interactive={true}
-                  />
-                </div>
-              )}
-              <div className="p-4 bg-gray-50">
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${venue.latitude},${venue.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-                >
-                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.3} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                  Get Directions
-                </a>
-              </div>
-            </Card>
-
-            {/* Contact Card */}
+            {/* Contact Card (first for immediate visibility) */}
             <Card>
               <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6">Connect</h3>
               <div className="space-y-5 text-sm">
@@ -723,6 +691,38 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                     )}
                   </div>
                 </div>
+              </div>
+            </Card>
+
+            {/* Map Card */}
+            <Card className="overflow-hidden p-0">
+              <div className="p-6 border-b border-gray-100">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 uppercase">Location</p>
+                <h3 className="text-sm font-bold text-gray-900 leading-snug">{venue.address}</h3>
+              </div>
+              {venue.latitude && venue.longitude && (
+                <div className="h-[300px] w-full bg-gray-100">
+                  <GoogleMiniMap
+                    latitude={venue.latitude}
+                    longitude={venue.longitude}
+                    height="300px"
+                    zoom={15}
+                    interactive={true}
+                  />
+                </div>
+              )}
+              <div className="p-4 bg-gray-50">
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${venue.latitude},${venue.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+                >
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.3} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                  Get Directions
+                </a>
               </div>
             </Card>
 
