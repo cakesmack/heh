@@ -277,6 +277,8 @@ export interface VenueFilter {
 export interface VenueListResponse {
   venues: VenueResponse[];
   total: number;
+  data: VenueResponse[];
+  total_count: number;
   skip: number;
   limit: number;
 }

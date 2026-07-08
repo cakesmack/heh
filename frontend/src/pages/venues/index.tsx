@@ -22,7 +22,7 @@ export default function VenuesPage() {
   // Debounced value that actually triggers the API call
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const { venues, total, isLoading, isLoadingMore, error, fetchVenues, fetchMore } = useVenues({
+  const { venues, totalCount, isLoading, isLoadingMore, error, fetchVenues, fetchMore } = useVenues({
     filters: { exclude_status: 'UNVERIFIED' },
     autoFetch: false,
   });
@@ -62,7 +62,7 @@ export default function VenuesPage() {
     hasFetchedRef.current = true;
   }, [debouncedSearch, lat, lng, fetchVenues]);
 
-  const hasMore = venues.length < total;
+  const hasMore = venues.length < totalCount;
 
   const pageTitle = "Event Venues, Halls & Theatres in the Highlands";
   const pageDescription = "Browse the complete directory of event venues, community halls, pubs, and theatres across Inverness and the Scottish Highlands. See what is happening near you.";
@@ -124,7 +124,7 @@ export default function VenuesPage() {
         {!isLoading && !error && (
           <div className="mb-6">
             <p className="text-sm text-gray-600">
-              Showing {venues.length} of {total} venue{total !== 1 ? 's' : ''}
+              Showing {venues.length} of {totalCount} venue{totalCount !== 1 ? 's' : ''}
             </p>
           </div>
         )}
@@ -201,7 +201,7 @@ export default function VenuesPage() {
                   className="px-8 py-3.5 border-2 border-gray-200 text-gray-700 font-bold rounded-full hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   {isLoadingMore && <Spinner size="sm" />}
-                  {isLoadingMore ? 'Loading...' : `Load More Venues (${total - venues.length} remaining)`}
+                  {isLoadingMore ? 'Loading...' : `Load More Venues (${totalCount - venues.length} remaining)`}
                 </button>
               </div>
             )}

@@ -228,6 +228,8 @@ class VenueListResponse(BaseModel):
     """Schema for paginated venue list response."""
     venues: list[VenueResponse]
     total: int
+    data: list[VenueResponse]
+    total_count: int
     skip: int
     limit: int
 

@@ -17,6 +17,7 @@ interface UseVenuesOptions {
 interface UseVenuesReturn {
   venues: VenueResponse[];
   total: number;
+  totalCount: number;
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
@@ -33,7 +34,7 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
   const { filters: initialFilters, autoFetch = true } = options;
 
   const [venues, setVenues] = useState<VenueResponse[]>([]);
-  const [total, setTotal] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,16 +61,16 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
         ...filtersToUse,
         skip: 0,
       });
-      setVenues(response.venues);
-      venuesRef.current = response.venues;
-      setTotal(response.total);
+      setVenues(response.data);
+      venuesRef.current = response.data;
+      setTotalCount(response.total_count);
       filtersRef.current = filtersToUse;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch venues';
       setError(errorMessage);
       setVenues([]);
       venuesRef.current = [];
-      setTotal(0);
+      setTotalCount(0);
     } finally {
       setIsLoading(false);
     }
@@ -87,10 +88,10 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
         ...filtersRef.current,
         skip: venuesRef.current.length,
       });
-      const merged = [...venuesRef.current, ...response.venues];
+      const merged = [...venuesRef.current, ...response.data];
       setVenues(merged);
       venuesRef.current = merged;
-      setTotal(response.total);
+      setTotalCount(response.total_count);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load more venues';
       setError(errorMessage);
@@ -117,7 +118,8 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
 
   return {
     venues,
-    total,
+    total: totalCount,
+    totalCount,
     isLoading,
     isLoadingMore,
     error,

@@ -383,6 +383,8 @@ def list_venues(
     return VenueListResponse(
         venues=venue_responses,
         total=total,
+        data=venue_responses,
+        total_count=total,
         skip=0 if all else skip,
         limit=10000 if all else limit
     )
