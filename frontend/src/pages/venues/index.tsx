@@ -3,7 +3,7 @@
  * Browse venues across the Highlands
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useVenues } from '@/hooks/useVenues';
@@ -16,49 +16,51 @@ import { MobileDirectoryNav } from '@/components/common/MobileDirectoryNav';
 export default function VenuesPage() {
   const { coordinates } = useGeolocation();
   const { isAuthenticated } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Local search term (updates on every keystroke for responsive UI)
+  const [searchTerm, setSearchTerm] = useState('');
+  // Debounced value that actually triggers the API call
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const { venues, total, isLoading, error, fetchVenues } = useVenues({
-    filters: coordinates
-      ? {
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        radius_km: 100,
-        exclude_status: 'UNVERIFIED',
-      }
-      : {
-        exclude_status: 'UNVERIFIED',
-      },
+    filters: { exclude_status: 'UNVERIFIED' },
     autoFetch: false,
   });
 
-  // Debounce search query
+  // Track whether we've done the initial load
+  const hasFetchedRef = useRef(false);
+
+  // --- Debounce: propagate searchTerm → debouncedSearch after 400ms idle ---
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
+      setDebouncedSearch(searchTerm);
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchTerm]);
 
-  // Fetch venues when search query or coordinates change
+  // --- Stabilize coordinates to primitive values ---
+  const lat = coordinates?.latitude ?? null;
+  const lng = coordinates?.longitude ?? null;
+
+  // --- Single fetch effect: fires on debounced search or coordinate changes ---
   useEffect(() => {
-    const baseFilters = coordinates
-      ? {
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        radius_km: 100,
-        exclude_status: 'UNVERIFIED',
-      }
-      : {
-        exclude_status: 'UNVERIFIED',
-      };
-    
-    fetchVenues({
-      ...baseFilters,
-      search: debouncedSearchQuery || undefined,
-    });
-  }, [debouncedSearchQuery, coordinates, fetchVenues]);
+    const filters: Record<string, any> = {
+      exclude_status: 'UNVERIFIED',
+    };
+
+    if (lat !== null && lng !== null) {
+      filters.latitude = lat;
+      filters.longitude = lng;
+      filters.radius_km = 100;
+    }
+
+    if (debouncedSearch.trim()) {
+      filters.search = debouncedSearch.trim();
+    }
+
+    fetchVenues(filters);
+    hasFetchedRef.current = true;
+  }, [debouncedSearch, lat, lng, fetchVenues]);
 
   const pageTitle = "Event Venues, Halls & Theatres in the Highlands";
   const pageDescription = "Browse the complete directory of event venues, community halls, pubs, and theatres across Inverness and the Scottish Highlands. See what is happening near you.";
@@ -111,8 +113,8 @@ export default function VenuesPage() {
               type="text"
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
               placeholder="Search venues by name or town..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
@@ -174,7 +176,7 @@ export default function VenuesPage() {
             </svg>
             <p className="text-lg font-medium text-gray-900">No venues found</p>
             <p className="text-sm text-gray-600 mt-2">
-              {searchQuery ? 'Try adjusting your search terms.' : 'Check back later for new venues in your area.'}
+              {searchTerm ? 'Try adjusting your search terms.' : 'Check back later for new venues in your area.'}
             </p>
           </div>
         )}

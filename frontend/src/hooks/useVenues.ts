@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import type { VenueResponse, VenueFilter, VenueListResponse } from '@/types';
 
@@ -34,22 +34,27 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentFilters, setCurrentFilters] = useState<VenueFilter | undefined>(initialFilters);
+
+  // Use a ref to track current filters so fetchVenues never needs
+  // currentFilters in its dependency array (which caused the infinite loop).
+  const filtersRef = useRef<VenueFilter | undefined>(initialFilters);
 
   /**
-   * Fetch venues from API
+   * Fetch venues from API.
+   * Stable function identity — dependencies are empty so it never
+   * gets recreated between renders and never re-triggers useEffect.
    */
   const fetchVenues = useCallback(async (newFilters?: VenueFilter) => {
     setIsLoading(true);
     setError(null);
 
-    const filtersToUse = newFilters !== undefined ? newFilters : currentFilters;
+    const filtersToUse = newFilters !== undefined ? newFilters : filtersRef.current;
 
     try {
       const response: VenueListResponse = await api.venues.list(filtersToUse);
       setVenues(response.venues);
       setTotal(response.total);
-      setCurrentFilters(filtersToUse);
+      filtersRef.current = filtersToUse;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch venues';
       setError(errorMessage);
@@ -58,14 +63,14 @@ export function useVenues(options: UseVenuesOptions = {}): UseVenuesReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [currentFilters]);
+  }, []);
 
   /**
    * Refetch with current filters
    */
   const refetch = useCallback(async () => {
-    return fetchVenues(currentFilters);
-  }, [fetchVenues, currentFilters]);
+    return fetchVenues(filtersRef.current);
+  }, [fetchVenues]);
 
   /**
    * Auto-fetch on mount if enabled
