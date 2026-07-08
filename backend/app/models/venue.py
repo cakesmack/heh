@@ -4,7 +4,7 @@ Includes geolocation coordinates and categorization.
 """
 from datetime import datetime
 from enum import Enum
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, ClassVar
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column, String, ForeignKey, Text
@@ -119,6 +119,8 @@ class Venue(SQLModel, table=True):
     )
     promotions: list["Promotion"] = Relationship(back_populates="venue")
     staff: list["VenueStaff"] = Relationship(back_populates="venue")
+
+    is_verified: ClassVar[bool]
 
     @hybrid_property
     def is_verified(self) -> bool:
