@@ -186,6 +186,8 @@ export interface Venue {
   seo_title?: string;
   seo_description?: string;
   slug?: string;
+  facebook_url?: string;
+  instagram_url?: string;
 }
 
 export interface VenueResponse extends Venue {
@@ -203,6 +205,8 @@ export interface VenueResponse extends Venue {
   website_url?: string;
   status?: 'VERIFIED' | 'UNVERIFIED' | 'ARCHIVED';
   google_place_id?: string;
+  facebook_url?: string;
+  instagram_url?: string;
 }
 
 export interface VenueCreate {
@@ -225,6 +229,8 @@ export interface VenueCreate {
   serves_food?: boolean;
   amenities_notes?: string;
   google_place_id?: string;
+  facebook_url?: string;
+  instagram_url?: string;
 }
 
 export interface VenueUpdate {
@@ -246,6 +252,8 @@ export interface VenueUpdate {
   serves_food?: boolean;
   amenities_notes?: string;
   google_place_id?: string;
+  facebook_url?: string;
+  instagram_url?: string;
 }
 
 export interface VenueFilter {
@@ -263,6 +271,7 @@ export interface VenueFilter {
   has_image?: boolean;
   min_events?: number;
   all?: boolean;
+  search?: string;
 }
 
 export interface VenueListResponse {

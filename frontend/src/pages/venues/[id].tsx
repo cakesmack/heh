@@ -414,60 +414,131 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
         <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
           {/* Content Area - 70% */}
           <div className="lg:col-span-7 space-y-8">
-            {/* About Section */}
-            <Card>
-              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6 flex items-center">
-                Venue Info
-              </h2>
+            {/* Title & Description Block */}
+            <div className="space-y-4">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">{venue.name}</h1>
               {venue.description ? (
-                <RichText content={venue.description} className="text-gray-600 text-lg leading-relaxed relative z-10" />
+                <Card>
+                  <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6 flex items-center">
+                    Venue Info
+                  </h2>
+                  <RichText content={venue.description} className="text-gray-600 text-lg leading-relaxed relative z-10" />
+                </Card>
               ) : (
-                <p className="text-gray-400 italic bg-gray-50 rounded-lg p-6 border border-dashed border-gray-200">No description available for this venue.</p>
+                <Card>
+                  <p className="text-gray-400 italic bg-gray-50 rounded-lg p-6 border border-dashed border-gray-200">No description available for this venue.</p>
+                </Card>
               )}
+            </div>
 
-              {/* Amenities */}
-              <div className="mt-12">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Amenities & Features</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {venue.is_dog_friendly && (
-                    <AmenityItem
-                      icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c1.5-1 3.5-.5 4.5 1s.5 3.5-1 4.5c-1.5 1-2 3-2 5 0 1-.5 2.5-1.5 3.5m0-14c-1.5-1-3.5-.5-4.5 1s-.5 3.5 1 4.5c1.5 1 2 3 2 5 0 1 .5 2.5 1.5 3.5m0-14v1m0 13v-1" /></svg>}
-                      label="Dog Friendly"
-                      active={true}
-                    />
+            {/* About / History Section */}
+            {venue.about_history && venue.about_history.trim() !== '' && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span>About {venue.name}</span>
+                </h2>
+                <RichText content={venue.about_history} className="text-gray-600 leading-relaxed text-base" />
+                <div className="pt-4 border-t border-gray-100 mt-6 flex flex-wrap items-center gap-6 text-sm text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900">Address:</span>
+                    <span>{venue.address_full || venue.formatted_address || venue.address}</span>
+                  </div>
+                  {venue.city && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900">Location:</span>
+                      <span>{venue.city}</span>
+                    </div>
                   )}
-                  {venue.has_wheelchair_access && (
-                    <AmenityItem
-                      icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-4 8m4-8h4l2 8m-6-8h-4" /></svg>}
-                      label="Wheelchair Access"
-                      active={true}
-                    />
-                  )}
-                  {venue.has_parking && (
-                    <AmenityItem
-                      icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h3a2 2 0 010 4H9V9z" /></svg>}
-                      label="Parking Available"
-                      active={true}
-                    />
-                  )}
-                  {venue.serves_food && (
-                    <AmenityItem
-                      icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
-                      label="Serves Food"
-                      active={true}
-                    />
+                  {venue.postcode && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900">Postcode:</span>
+                      <span>{venue.postcode}</span>
+                    </div>
                   )}
                 </div>
-                {!venue.is_dog_friendly && !venue.has_wheelchair_access && !venue.has_parking && !venue.serves_food && (
-                  <p className="text-gray-500 italic text-sm">No amenities listed for this venue.</p>
+              </div>
+            )}
+
+            {/* Amenities Section */}
+            <Card>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Amenities & Features</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {venue.is_dog_friendly && (
+                  <AmenityItem
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c1.5-1 3.5-.5 4.5 1s.5 3.5-1 4.5c-1.5 1-2 3-2 5 0 1-.5 2.5-1.5 3.5m0-14c-1.5-1-3.5-.5-4.5 1s-.5 3.5 1 4.5c1.5 1 2 3 2 5 0 1 .5 2.5 1.5 3.5m0-14v1m0 13v-1" /></svg>}
+                    label="Dog Friendly"
+                    active={true}
+                  />
                 )}
-                {venue.amenities_notes && (
-                  <div className="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-600 italic">
-                    &ldquo;{venue.amenities_notes}&rdquo;
+                {venue.has_wheelchair_access && (
+                  <AmenityItem
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-4 8m4-8h4l2 8m-6-8h-4" /></svg>}
+                    label="Wheelchair Access"
+                    active={true}
+                  />
+                )}
+                {venue.has_parking && (
+                  <AmenityItem
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h3a2 2 0 010 4H9V9z" /></svg>}
+                    label="Parking Available"
+                    active={true}
+                  />
+                )}
+                {venue.serves_food && (
+                  <AmenityItem
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
+                    label="Serves Food"
+                    active={true}
+                  />
+                )}
+              </div>
+              {!venue.is_dog_friendly && !venue.has_wheelchair_access && !venue.has_parking && !venue.serves_food && (
+                <p className="text-gray-500 italic text-sm">No amenities listed for this venue.</p>
+              )}
+              {venue.amenities_notes && (
+                <div className="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-600 italic">
+                  &ldquo;{venue.amenities_notes}&rdquo;
+                </div>
+              )}
+            </Card>
+
+            {/* Upcoming Events Section */}
+            {events.length > 0 && (
+              <div className="pt-8 border-t border-gray-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                  <div>
+                    <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Upcoming Events</h2>
+                    <p className="text-gray-500 text-sm font-medium">Discover what's happening soon at {venue.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 self-start sm:self-auto text-xs">
+                    <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Total Events</span>
+                    <span className="bg-gray-900 text-white font-black px-3 py-1.5 rounded-full">{eventsTotal} Results</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {events.map((event) => (
+                    <div key={event.id} className="group">
+                      <EventCard event={event} canManage={!!isOwner} />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Load More Button */}
+                {events.length < eventsTotal && (
+                  <div className="mt-12 flex justify-center">
+                    <button
+                      onClick={handleLoadMoreEvents}
+                      disabled={isLoadingMoreEvents}
+                      className="px-8 py-3.5 border-2 border-gray-200 text-gray-700 font-black rounded-full hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 text-sm"
+                    >
+                      {isLoadingMoreEvents && <Spinner size="sm" />}
+                      Load More Results
+                    </button>
                   </div>
                 )}
               </div>
-            </Card>
+            )}
 
             {/* Staff Section (if owner) */}
             {isOwner && (
@@ -544,8 +615,8 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
             )}
           </div>
 
-          {/* Sidebar - 30% */}
-          <div className="lg:col-span-3 space-y-6">
+          {/* Sidebar - 30% (Sticky) */}
+          <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-24 self-start">
             {/* Map Card */}
             <Card className="overflow-hidden p-0">
               <div className="p-6 border-b border-gray-100">
@@ -617,9 +688,9 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                         <GlobeIcon className="w-5 h-5" />
                       </a>
                     )}
-                    {venue.social_facebook && (
+                    {(venue.facebook_url || venue.social_facebook) && (
                       <a
-                        href={venue.social_facebook}
+                        href={venue.facebook_url || venue.social_facebook}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-blue-600 hover:border-blue-200"
@@ -628,9 +699,9 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                         <FacebookIcon className="w-5 h-5" />
                       </a>
                     )}
-                    {venue.social_instagram && (
+                    {(venue.instagram_url || venue.social_instagram) && (
                       <a
-                        href={venue.social_instagram}
+                        href={venue.instagram_url || venue.social_instagram}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-pink-600 hover:border-pink-200"
@@ -695,74 +766,6 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
             )}
           </div>
         </div>
-
-        {/* On-Page SEO Venue Overview & Structured Location (above Event Calendar UI) */}
-        {venue.about_history && venue.about_history.trim() !== '' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm mt-12 mb-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <span>About {venue.name}</span>
-            </h2>
-            <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-base mb-6">
-              {venue.about_history.replace(/<[^>]*>?/gm, '')}
-            </p>
-            <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-6 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-gray-900">Address:</span>
-                <span>{venue.address_full || venue.formatted_address || venue.address}</span>
-              </div>
-              {venue.city && (
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-900">Location:</span>
-                  <span>{venue.city}</span>
-                </div>
-              )}
-              {venue.postcode && (
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-900">Postcode:</span>
-                  <span>{venue.postcode}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Upcoming Events Section - FULL WIDTH BELOW THE GRID (Rendered ONLY if events exist) */}
-        {events.length > 0 && (
-          <div className="mt-16 pt-12 border-t border-gray-100">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-12 gap-6">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">Upcoming Events</h2>
-                <p className="text-gray-500 font-medium">Discover what's happening soon at {venue.name}</p>
-              </div>
-              <div className="flex items-center gap-3 self-start sm:self-auto">
-                <span className="text-gray-400 font-bold uppercase text-xs tracking-widest">Total Events</span>
-                <span className="bg-gray-900 text-white text-xs font-black px-3 py-1.5 rounded-full">{eventsTotal} Results</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
-              {events.map((event) => (
-                <div key={event.id} className="group">
-                  <EventCard event={event} canManage={!!isOwner} />
-                </div>
-              ))}
-            </div>
-
-            {/* Load More Button */}
-            {events.length < eventsTotal && (
-              <div className="mt-16 flex justify-center">
-                <button
-                  onClick={handleLoadMoreEvents}
-                  disabled={isLoadingMoreEvents}
-                  className="px-10 py-4 border-2 border-gray-200 text-gray-700 font-black rounded-full hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
-                >
-                  {isLoadingMoreEvents && <Spinner size="sm" />}
-                  Load More Results
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Report Modal */}

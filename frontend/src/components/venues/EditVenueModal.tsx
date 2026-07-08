@@ -55,6 +55,8 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
         social_linkedin: '',
         social_tiktok: '',
         website_url: '',
+        facebook_url: '',
+        instagram_url: '',
     });
 
     const [isPostcodeValid, setIsPostcodeValid] = useState(true);
@@ -102,6 +104,8 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                     social_linkedin: venueData.social_linkedin || '',
                     social_tiktok: venueData.social_tiktok || '',
                     website_url: venueData.website_url || '',
+                    facebook_url: venueData.facebook_url || '',
+                    instagram_url: venueData.instagram_url || '',
                 });
             } else {
                 setVenue(null);
@@ -132,6 +136,8 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                     social_linkedin: '',
                     social_tiktok: '',
                     website_url: '',
+                    facebook_url: '',
+                    instagram_url: '',
                 });
             }
         } catch (err) {
@@ -308,6 +314,28 @@ export function EditVenueModal({ venueId, isOpen, onClose, onSuccess }: EditVenu
                                 value={formData.website}
                                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        <div className="col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Facebook Link</label>
+                            <input
+                                type="url"
+                                value={formData.facebook_url || ''}
+                                onChange={(e) => setFormData({ ...formData, facebook_url: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                placeholder="https://facebook.com/..."
+                            />
+                        </div>
+
+                        <div className="col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Instagram Link</label>
+                            <input
+                                type="url"
+                                value={formData.instagram_url || ''}
+                                onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                placeholder="https://instagram.com/..."
                             />
                         </div>
 

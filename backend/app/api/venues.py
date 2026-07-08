@@ -266,6 +266,7 @@ def list_venues(
     has_image: Optional[bool] = Query(None, description="Filter by presence of image_url"),
     min_events: Optional[int] = Query(None, description="Minimum number of upcoming events"),
     all: bool = Query(False, description="Return all venues (bypass pagination)"),
+    search: Optional[str] = Query(None, description="Search term for venue name"),
     session: Session = Depends(get_session)
 ):
     """
@@ -317,6 +318,10 @@ def list_venues(
     if min_events is not None and min_events > 0:
         query = query.where(future_events_count >= min_events)
 
+    # Filter by search term
+    if search:
+        query = query.filter(Venue.name.ilike(f"%{search}%"))
+
     # Filter by geographic proximity
     if latitude is not None and longitude is not None and radius_km is not None:
         min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius_km)
@@ -348,6 +353,8 @@ def list_venues(
              count_query = count_query.where(Venue.status == status)
         if exclude_status:
              count_query = count_query.where(Venue.status != exclude_status)
+        if search:
+             count_query = count_query.where(Venue.name.ilike(f"%{search}%"))
              
         total = session.exec(count_query).one()
     else:
@@ -490,6 +497,8 @@ def create_venue(
         social_linkedin=venue_data.social_linkedin,
         social_tiktok=venue_data.social_tiktok,
         website_url=venue_data.website_url,
+        facebook_url=venue_data.facebook_url,
+        instagram_url=venue_data.instagram_url,
         # Ownership
         owner_id=current_user.id
     )

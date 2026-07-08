@@ -3,7 +3,7 @@
  * Browse venues across the Highlands
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useVenues } from '@/hooks/useVenues';
@@ -17,8 +17,9 @@ export default function VenuesPage() {
   const { coordinates } = useGeolocation();
   const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-  const { venues, total, isLoading, error } = useVenues({
+  const { venues, total, isLoading, error, fetchVenues } = useVenues({
     filters: coordinates
       ? {
         latitude: coordinates.latitude,
@@ -29,20 +30,35 @@ export default function VenuesPage() {
       : {
         exclude_status: 'UNVERIFIED',
       },
-    autoFetch: true,
+    autoFetch: false,
   });
 
-  // Client-side filtering for now (until backend supports text search on venues endpoint if not already)
-  // Note: Backend has /api/venues/search but useVenues uses /api/venues list.
-  // For Sprint 2, client-side filtering of the fetched list is acceptable as per plan.
-  const filteredVenues = venues.filter(venue => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      venue.name.toLowerCase().includes(q) ||
-      (venue.address && venue.address.toLowerCase().includes(q))
-    );
-  });
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch venues when search query or coordinates change
+  useEffect(() => {
+    const baseFilters = coordinates
+      ? {
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        radius_km: 100,
+        exclude_status: 'UNVERIFIED',
+      }
+      : {
+        exclude_status: 'UNVERIFIED',
+      };
+    
+    fetchVenues({
+      ...baseFilters,
+      search: debouncedSearchQuery || undefined,
+    });
+  }, [debouncedSearchQuery, coordinates, fetchVenues]);
 
   const pageTitle = "Event Venues, Halls & Theatres in the Highlands";
   const pageDescription = "Browse the complete directory of event venues, community halls, pubs, and theatres across Inverness and the Scottish Highlands. See what is happening near you.";
@@ -101,11 +117,10 @@ export default function VenuesPage() {
           </div>
         </div>
 
-        {/* Results Count */}
         {!isLoading && !error && (
           <div className="mb-6">
             <p className="text-sm text-gray-600">
-              {filteredVenues.length} venue{filteredVenues.length !== 1 ? 's' : ''} found
+              {venues.length} venue{venues.length !== 1 ? 's' : ''} found
             </p>
           </div>
         )}
@@ -142,7 +157,7 @@ export default function VenuesPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && filteredVenues.length === 0 && (
+        {!isLoading && !error && venues.length === 0 && (
           <div className="py-12 text-center">
             <svg
               className="w-16 h-16 mx-auto text-gray-400 mb-4"
@@ -165,9 +180,9 @@ export default function VenuesPage() {
         )}
 
         {/* Venues Grid */}
-        {!isLoading && !error && filteredVenues.length > 0 && (
+        {!isLoading && !error && venues.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredVenues.map((venue) => (
+            {venues.map((venue) => (
               <VenueDiscoveryCard key={venue.id} venue={venue} />
             ))}
           </div>

@@ -87,6 +87,8 @@ class VenueCreate(BaseModel):
     social_linkedin: Optional[str] = Field(None, max_length=255)
     social_tiktok: Optional[str] = Field(None, max_length=255)
     website_url: Optional[str] = Field(None, max_length=255)
+    facebook_url: Optional[str] = Field(None, max_length=500)
+    instagram_url: Optional[str] = Field(None, max_length=500)
     status: str = "UNVERIFIED"
     # SEO Overrides
     seo_title: Optional[str] = Field(None, max_length=120)
@@ -96,7 +98,7 @@ class VenueCreate(BaseModel):
     @classmethod
     def sanitize_urls(cls, data):
         if isinstance(data, dict):
-            for field in ('website', 'image_url', 'website_url'):
+            for field in ('website', 'image_url', 'website_url', 'facebook_url', 'instagram_url'):
                 if field in data:
                     data[field] = _sanitize_url(data.get(field))
         return data
@@ -135,6 +137,8 @@ class VenueUpdate(BaseModel):
     social_linkedin: Optional[str] = Field(None, max_length=255)
     social_tiktok: Optional[str] = Field(None, max_length=255)
     website_url: Optional[str] = Field(None, max_length=255)
+    facebook_url: Optional[str] = Field(None, max_length=500)
+    instagram_url: Optional[str] = Field(None, max_length=500)
     status: Optional[str] = None
     # SEO Overrides
     seo_title: Optional[str] = Field(None, max_length=120)
@@ -144,7 +148,7 @@ class VenueUpdate(BaseModel):
     @classmethod
     def sanitize_urls(cls, data):
         if isinstance(data, dict):
-            for field in ('website', 'image_url', 'website_url'):
+            for field in ('website', 'image_url', 'website_url', 'facebook_url', 'instagram_url'):
                 if field in data:
                     data[field] = _sanitize_url(data.get(field))
         return data
@@ -196,6 +200,8 @@ class VenueResponse(BaseModel):
     social_linkedin: Optional[str] = None
     social_tiktok: Optional[str] = None
     website_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    instagram_url: Optional[str] = None
     owner_email: Optional[str] = None
     staff: list["VenueStaffResponse"] = []
 
@@ -215,6 +221,7 @@ class VenueFilter(BaseModel):
     radius_km: Optional[float] = Field(None, ge=0.0)
     skip: int = Field(default=0, ge=0)
     limit: int = Field(default=50, ge=1, le=100)
+    search: Optional[str] = None
 
 
 class VenueListResponse(BaseModel):

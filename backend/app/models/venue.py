@@ -96,6 +96,8 @@ class Venue(SQLModel, table=True):
     social_linkedin: Optional[str] = Field(default=None, max_length=255)
     social_tiktok: Optional[str] = Field(default=None, max_length=255)
     website_url: Optional[str] = Field(default=None, max_length=255)
+    facebook_url: Optional[str] = Field(default=None, max_length=500)
+    instagram_url: Optional[str] = Field(default=None, max_length=500)
 
     # Ownership — SET NULL so venues survive if owner is deleted
     owner_id: Optional[str] = Field(
