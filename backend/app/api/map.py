@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select
 from typing import List, Dict, Any
-from app.db import get_session
+from app.core.database import get_session
 from app.models.venue import Venue
 from app.models.venue_category import VenueCategory
 
