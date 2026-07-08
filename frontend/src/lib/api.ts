@@ -513,6 +513,13 @@ export const venuesAPI = {
   },
 
   /**
+   * List verified venues for the map
+   */
+  listMap: async (): Promise<any[]> => {
+    return apiFetch<any[]>('/api/map/venues', {}, false);
+  },
+
+  /**
    * Search venues for typeahead
    */
   search: async (q: string, limit = 10): Promise<VenueListResponse> => {

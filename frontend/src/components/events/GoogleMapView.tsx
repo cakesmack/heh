@@ -76,11 +76,14 @@ export interface MapMarker {
   description?: string;
   category?: string;
   categorySlug?: string;
+  slug?: string;
+  venue_type?: string;
+  image_url?: string | null;
 }
 
 interface GoogleMapViewProps {
   events?: EventResponse[];
-  venues?: VenueResponse[];
+  venues?: any[];
   onMarkerClick?: (marker: MapMarker) => void;
   onEventClick?: (event: EventResponse) => void;
   onMapClick?: () => void;
@@ -151,7 +154,10 @@ export function GoogleMapView({
         latitude: venue.latitude,
         title: venue.name,
         description: venue.description,
-        category: typeof venue.category === 'string' ? venue.category : undefined,
+        category: typeof venue.category === 'string' ? venue.category : (venue.category?.name || undefined),
+        slug: venue.slug,
+        venue_type: venue.venue_type || (venue.category?.name || 'Venue'),
+        image_url: venue.image_url || null,
       }));
   }, [venues, showVenues]);
 
@@ -292,12 +298,7 @@ export function GoogleMapView({
             position={{ lat: selectedVenue.latitude, lng: selectedVenue.longitude }}
             onCloseClick={handleInfoWindowClose}
           >
-            <div className="p-2 max-w-xs">
-              <h3 className="font-semibold text-gray-900 text-sm">{selectedVenue.title}</h3>
-              {selectedVenue.category && (
-                <p className="text-xs text-gray-500 capitalize">Venue: {selectedVenue.category}</p>
-              )}
-            </div>
+            <VenueMapPopup venue={selectedVenue} />
           </InfoWindow>
         )}
       </Map>
@@ -354,6 +355,53 @@ export function GoogleMapView({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+export function VenueMapPopup({
+  venue,
+}: {
+  venue: {
+    id: string;
+    slug?: string;
+    title: string;
+    venue_type?: string;
+    image_url?: string | null;
+  };
+}) {
+  return (
+    <div className="p-1 max-w-[200px] overflow-hidden">
+      {/* Top: image_url */}
+      {venue.image_url && (
+        <div className="relative w-full h-24 rounded-lg overflow-hidden bg-gray-100 mb-3 -mt-1 -mx-1 w-[calc(100%+8px)]">
+          <img
+            src={venue.image_url}
+            alt={venue.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
+      {/* Middle: venue_type inside category pill CSS class */}
+      {venue.venue_type && (
+        <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-100 text-emerald-800 mb-2">
+          {venue.venue_type}
+        </span>
+      )}
+
+      {/* Middle: Venue name in bold heading */}
+      <h3 className="font-bold text-gray-900 text-sm leading-snug mb-3">
+        {venue.title}
+      </h3>
+
+      {/* Bottom: full-width green "View Details >" button */}
+      <a
+        href={`/venues/${venue.slug || venue.id}`}
+        className="w-full inline-flex items-center justify-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors"
+      >
+        View Details &gt;
+      </a>
     </div>
   );
 }

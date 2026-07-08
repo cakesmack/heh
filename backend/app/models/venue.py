@@ -8,6 +8,7 @@ from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column, String, ForeignKey, Text
+from sqlalchemy.ext.hybrid import hybrid_property
 
 class VenueStatus(str, Enum):
     VERIFIED = "VERIFIED"
@@ -118,3 +119,7 @@ class Venue(SQLModel, table=True):
     )
     promotions: list["Promotion"] = Relationship(back_populates="venue")
     staff: list["VenueStaff"] = Relationship(back_populates="venue")
+
+    @hybrid_property
+    def is_verified(self) -> bool:
+        return self.status == VenueStatus.VERIFIED or self.status == "VERIFIED"

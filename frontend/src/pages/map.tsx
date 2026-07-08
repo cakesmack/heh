@@ -10,7 +10,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { format, isSameDay, startOfDay, endOfDay, addDays, nextSaturday, nextSunday } from 'date-fns';
-import { eventsAPI, categoriesAPI, collectionsAPI } from '@/lib/api';
+import { eventsAPI, categoriesAPI, collectionsAPI, venuesAPI } from '@/lib/api';
 import type { EventResponse, Category, Collection } from '@/types';
 import type { MapMarker } from '@/components/events/GoogleMapView';
 import MapDateFilter, { DateRange } from '@/components/map/MapDateFilter';
@@ -74,6 +74,8 @@ export function MapPage() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollectionSlug, setSelectedCollectionSlug] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [mapMode, setMapMode] = useState<'events' | 'venues'>('events');
+  const [venues, setVenues] = useState<any[]>([]);
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export function MapPage() {
     }
   };
 
-  // Fetch events, categories, and collections
+  // Fetch events, categories, collections, or venues
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -145,70 +147,77 @@ export function MapPage() {
       setLoading(true);
       setError(null);
 
+      // Clear current markers to prevent leakage
+      setEvents([]);
+      setVenues([]);
+
       try {
-        // Build filter params
-        const eventFilters: any = {
-          limit: 500,
-          date_from: dateRange.start.toISOString(),
-          date_to: dateRange.end.toISOString(),
-        };
+        if (mapMode === 'events') {
+          // Build filter params
+          const eventFilters: any = {
+            limit: 500,
+            date_from: dateRange.start.toISOString(),
+            date_to: dateRange.end.toISOString(),
+          };
 
-        // Fetch categories and collections if not already loaded
-        const promises: Promise<any>[] = [];
-        if (categories.length === 0) promises.push(categoriesAPI.list());
-        if (collections.length === 0) promises.push(collectionsAPI.list({ show_on_map: true }));
+          // Fetch categories and collections if not already loaded
+          const promises: Promise<any>[] = [];
+          if (categories.length === 0) promises.push(categoriesAPI.list());
+          if (collections.length === 0) promises.push(collectionsAPI.list({ show_on_map: true }));
 
-        const results = await Promise.all(promises);
+          const results = await Promise.all(promises);
 
-        // REFINED: Index-based handling is safer since we know the order we pushed
-        let resultIdx = 0;
-        if (categories.length === 0) {
-          const res = results[resultIdx++];
-          if (res) {
-            const cats = res.categories || (Array.isArray(res) ? res : []);
-            setCategories(cats);
+          // REFINED: Index-based handling is safer since we know the order we pushed
+          let resultIdx = 0;
+          if (categories.length === 0) {
+            const res = results[resultIdx++];
+            if (res) {
+              const cats = res.categories || (Array.isArray(res) ? res : []);
+              setCategories(cats);
+            }
           }
-        }
-        if (collections.length === 0) {
-          const res = results[resultIdx++];
-          if (res) {
-            const cols = res.collections || (Array.isArray(res) ? res : []);
-            setCollections(cols);
+          if (collections.length === 0) {
+            const res = results[resultIdx++];
+            if (res) {
+              const cols = res.collections || (Array.isArray(res) ? res : []);
+              setCollections(cols);
+            }
           }
-        }
 
-        // Current collections state might be empty on first run, use results if needed
-        // We need to find where collections are in the results array if we just fetched them
-        const fetchedCollections = (collections.length === 0 && results.length > 0)
-          ? (categories.length === 0 // If categories were also fetched
-            ? (results[1]?.collections || (Array.isArray(results[1]) ? results[1] : [])) // Collections are at index 1
-            : (results[0]?.collections || (Array.isArray(results[0]) ? results[0] : []))) // Collections are at index 0
-          : [];
+          // Current collections state might be empty on first run, use results if needed
+          const fetchedCollections = (collections.length === 0 && results.length > 0)
+            ? (categories.length === 0 // If categories were also fetched
+              ? (results[1]?.collections || (Array.isArray(results[1]) ? results[1] : [])) // Collections are at index 1
+              : (results[0]?.collections || (Array.isArray(results[0]) ? results[0] : []))) // Collections are at index 0
+            : [];
 
-        const currentCollections = collections.length > 0 ? collections : fetchedCollections;
+          const currentCollections = collections.length > 0 ? collections : fetchedCollections;
 
-        // Mutual Exclusivity Logic: Collections take priority
-        const activeCollection = selectedCollectionSlug
-          ? currentCollections.find((c: Collection) => c.slug === selectedCollectionSlug)
-          : null;
+          // Mutual Exclusivity Logic: Collections take priority
+          const activeCollection = selectedCollectionSlug
+            ? currentCollections.find((c: Collection) => c.slug === selectedCollectionSlug)
+            : null;
 
-        if (activeCollection) {
-          // Merge collection's filter_params
-          if (activeCollection.filter_params) {
-            Object.entries(activeCollection.filter_params).forEach(([key, value]) => {
-              if (key === 'q') eventFilters.q = value;
-              // Add other relevant filter_params if necessary
-            });
+          if (activeCollection) {
+            // Merge collection's filter_params
+            if (activeCollection.filter_params) {
+              Object.entries(activeCollection.filter_params).forEach(([key, value]) => {
+                if (key === 'q') eventFilters.q = value;
+              });
+            }
+          } else if (selectedCategory) {
+            eventFilters.category_id = selectedCategory;
           }
-          // Force Override: ignore category_id when collection is active
-        } else if (selectedCategory) {
-          eventFilters.category_id = selectedCategory;
+
+          const eventsResponse = await eventsAPI.listMap(eventFilters);
+
+          // Cast to EventResponse[] as MapEventResponse is a compatible subset
+          setEvents(eventsResponse as unknown as EventResponse[]);
+        } else {
+          // Venues mode: fetch verified venues only
+          const venuesResponse = await venuesAPI.listMap();
+          setVenues(venuesResponse);
         }
-
-        const eventsResponse = await eventsAPI.listMap(eventFilters);
-
-        // Cast to EventResponse[] as MapEventResponse is a compatible subset
-        setEvents(eventsResponse as unknown as EventResponse[]);
       } catch (err) {
         console.error('Failed to fetch map data:', err);
         setError('Failed to load map data. Please try again.');
@@ -218,7 +227,7 @@ export function MapPage() {
     }
 
     fetchData();
-  }, [router.isReady, isInitialized, dateRange, selectedCategory, selectedCollectionSlug]); // Refetch when filters change
+  }, [router.isReady, isInitialized, dateRange, selectedCategory, selectedCollectionSlug, mapMode]); // Refetch when filters or mapMode change
 
   // Synchronize state back to URL (Two-way binding)
   useEffect(() => {
@@ -248,7 +257,7 @@ export function MapPage() {
   useEffect(() => {
     setSelectedEvents([]);
     setSelectedMarkerId(undefined);
-  }, [dateRange, selectedCategory]);
+  }, [dateRange, selectedCategory, mapMode]);
 
   // Filter events by category locally
   // (Date filtering is handled by backend refetch for efficiency/correctness with recurrence)
@@ -313,47 +322,75 @@ export function MapPage() {
           {/* Top Row: Title + Category (Mobile optimized) */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-gray-900 hidden md:block">Event Map</h1>
+              <h1 className="text-xl font-bold text-gray-900 hidden md:block">Interactive Map</h1>
 
-              {/* Collection Filter */}
-              <div className="relative">
-                <select
-                  value={selectedCollectionSlug || ''}
-                  onChange={(e) => {
-                    const slug = e.target.value || null;
-                    setSelectedCollectionSlug(slug);
-                    if (slug) setSelectedCategory(null); // Mutual Exclusivity
-                  }}
-                  className="text-sm font-medium border-none bg-emerald-50 text-emerald-800 rounded-full px-4 py-1.5 pr-8 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-emerald-100 transition-colors"
+              {/* Mode Toggle */}
+              <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+                <button
+                  onClick={() => setMapMode('events')}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-md transition-all ${
+                    mapMode === 'events'
+                      ? 'bg-white text-emerald-800 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-950'
+                  }`}
                 >
-                  <option value="">All Collections</option>
-                  {collections.map((col) => (
-                    <option key={col.id} value={col.slug}>
-                      {col.title}
-                    </option>
-                  ))}
-                </select>
+                  Events
+                </button>
+                <button
+                  onClick={() => setMapMode('venues')}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-md transition-all ${
+                    mapMode === 'venues'
+                      ? 'bg-white text-emerald-800 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-950'
+                  }`}
+                >
+                  Venues
+                </button>
               </div>
 
-              {/* Category Filter */}
-              <div className="relative">
-                <select
-                  value={selectedCategory || ''}
-                  disabled={!!selectedCollectionSlug}
-                  onChange={(e) => setSelectedCategory(e.target.value || null)}
-                  className={`text-sm font-medium border-none rounded-full px-4 py-1.5 pr-8 focus:ring-2 focus:ring-emerald-500 transition-colors ${selectedCollectionSlug
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-100/50 text-gray-700 cursor-pointer hover:bg-gray-100'
-                    }`}
-                >
-                  <option value="">{selectedCollectionSlug ? 'Disabled by Collection' : 'All Categories'}</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {mapMode === 'events' && (
+                <>
+                  {/* Collection Filter */}
+                  <div className="relative">
+                    <select
+                      value={selectedCollectionSlug || ''}
+                      onChange={(e) => {
+                        const slug = e.target.value || null;
+                        setSelectedCollectionSlug(slug);
+                        if (slug) setSelectedCategory(null); // Mutual Exclusivity
+                      }}
+                      className="text-sm font-medium border-none bg-emerald-50 text-emerald-800 rounded-full px-4 py-1.5 pr-8 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-emerald-100 transition-colors"
+                    >
+                      <option value="">All Collections</option>
+                      {collections.map((col) => (
+                        <option key={col.id} value={col.slug}>
+                          {col.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Category Filter */}
+                  <div className="relative">
+                    <select
+                      value={selectedCategory || ''}
+                      disabled={!!selectedCollectionSlug}
+                      onChange={(e) => setSelectedCategory(e.target.value || null)}
+                      className={`text-sm font-medium border-none rounded-full px-4 py-1.5 pr-8 focus:ring-2 focus:ring-emerald-500 transition-colors ${selectedCollectionSlug
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-100/50 text-gray-700 cursor-pointer hover:bg-gray-100'
+                        }`}
+                    >
+                      <option value="">{selectedCollectionSlug ? 'Disabled by Collection' : 'All Categories'}</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Mobile Title Spacer */}
@@ -361,13 +398,15 @@ export function MapPage() {
           </div>
 
           {/* Date Filter Pills & Custom Picker */}
-          <div className="flex items-center gap-4">
-            <MapDateFilter
-              selectedRangeId={selectedRangeId}
-              onRangeSelect={handleRangeSelect}
-              currentDateRange={dateRange}
-            />
-          </div>
+          {mapMode === 'events' && (
+            <div className="flex items-center gap-4">
+              <MapDateFilter
+                selectedRangeId={selectedRangeId}
+                onRangeSelect={handleRangeSelect}
+                currentDateRange={dateRange}
+              />
+            </div>
+          )}
 
         </div>
       </div>
@@ -376,31 +415,33 @@ export function MapPage() {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative h-full">
 
         {/* Left Panel - Event List Sidebar */}
-        <MapSidebar
-          events={filteredEvents}
-          loading={loading}
-          error={error}
-          selectedMarkerId={selectedMarkerId}
-          hoveredEventId={hoveredEventId}
-          onEventClick={(event) => {
-            router.push(`/events/${event.slug || event.id}`);
-          }}
-          onHover={(eventId) => setHoveredEventId(eventId)}
-          onFocusEvent={(eventId) => {
-            setFocusEventId(eventId);
-            // Also ensure it's selected (for marker highlight)
-            setSelectedMarkerId(eventId);
-          }}
-        />
+        {mapMode === 'events' && (
+          <MapSidebar
+            events={filteredEvents}
+            loading={loading}
+            error={error}
+            selectedMarkerId={selectedMarkerId}
+            hoveredEventId={hoveredEventId}
+            onEventClick={(event) => {
+              router.push(`/events/${event.slug || event.id}`);
+            }}
+            onHover={(eventId) => setHoveredEventId(eventId)}
+            onFocusEvent={(eventId) => {
+              setFocusEventId(eventId);
+              // Also ensure it's selected (for marker highlight)
+              setSelectedMarkerId(eventId);
+            }}
+          />
+        )}
 
         {/* Right Panel - Map */}
         <div className="flex-1 relative">
           <ErrorBoundary>
             <GoogleMapView
               events={filteredEvents}
-              venues={[]}
-              showEvents={true}
-              showVenues={false}
+              venues={venues}
+              showEvents={mapMode === 'events'}
+              showVenues={mapMode === 'venues'}
               onMarkerClick={handleMarkerClick}
               onMapClick={closeMobileModal}
               onEventClick={(event) => {
