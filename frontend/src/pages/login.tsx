@@ -26,10 +26,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Redirect if already authenticated
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && router.isReady) {
-      const returnTo = (router.query.redirect as string) || (router.query.returnTo as string) || '/account';
+      let returnTo = '/account';
+      const callbackUrl = router.query.callbackUrl as string;
+      const redirect = router.query.redirect as string;
+      const returnToParam = router.query.returnTo as string;
+
+      const target = callbackUrl || redirect || returnToParam;
+      if (target && target.startsWith('/')) {
+        returnTo = target;
+      }
       router.push(returnTo);
     }
   }, [isAuthenticated, router.isReady, router.query, router]);
@@ -223,7 +230,15 @@ export default function LoginPage() {
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
               <Link
-                href={`/register${router.query.redirect ? `?redirect=${encodeURIComponent(router.query.redirect as string)}` : router.query.returnTo ? `?returnTo=${encodeURIComponent(router.query.returnTo as string)}` : ''}`}
+                href={`/register${
+                  router.query.callbackUrl
+                    ? `?callbackUrl=${encodeURIComponent(router.query.callbackUrl as string)}`
+                    : router.query.redirect
+                    ? `?redirect=${encodeURIComponent(router.query.redirect as string)}`
+                    : router.query.returnTo
+                    ? `?returnTo=${encodeURIComponent(router.query.returnTo as string)}`
+                    : ''
+                }`}
                 className="font-medium text-emerald-600 hover:text-emerald-700"
               >
                 Create one now
