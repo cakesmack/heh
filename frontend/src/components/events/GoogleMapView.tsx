@@ -389,7 +389,7 @@ export function VenueMapPopup({
   const showImage = optimizedUrl && !imageError;
 
   return (
-    <div className="p-1 max-w-[200px] overflow-hidden">
+    <div className="p-1 max-w-[200px] overflow-hidden relative z-50">
       {/* Top: image_url */}
       {showImage ? (
         <div className="relative w-full h-24 rounded-lg overflow-hidden bg-gray-100 mb-3 -mt-1 -mx-1 w-[calc(100%+8px)]">

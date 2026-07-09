@@ -243,7 +243,7 @@ export function ClusteredVenueMarkers({
                 />
             ))}
 
-            {selectedVenue && !isMobile && markers[selectedVenue.id] && (
+            {selectedVenue && markers[selectedVenue.id] && (
                 <InfoWindow
                     anchor={markers[selectedVenue.id]}
                     onCloseClick={handleInfoWindowClose}
