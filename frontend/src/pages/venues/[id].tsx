@@ -759,7 +759,7 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                       alert("Claim submitted successfully!");
                       refreshUser();
                     } catch (err) {
-                      alert("Failed to submit claim.");
+                      alert(err instanceof Error ? err.message : "Failed to submit claim.");
                     }
                   }}
                   className="w-full py-3 bg-white text-stone-950 rounded-xl text-sm font-black hover:bg-stone-200 transition-all active:scale-[0.98]"
