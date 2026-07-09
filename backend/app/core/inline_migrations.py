@@ -92,5 +92,15 @@ def run_inline_migrations(session: Session) -> None:
     except Exception as e:
         logger.warning(f"Organizer migration skipped: {e}")
 
+    # --- notificationtype enum update ---
+    try:
+        session.commit()
+        connection = session.connection()
+        autocommit_conn = connection.execution_options(isolation_level="AUTOCOMMIT")
+        autocommit_conn.execute(text("ALTER TYPE notificationtype ADD VALUE 'NEW_CLAIM';"))
+    except Exception as e:
+        if "already exists" not in str(e).lower():
+            logger.warning("Could not add NEW_CLAIM to notificationtype enum: %s", e)
+
     session.commit()
     logger.info("Inline migrations complete")

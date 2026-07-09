@@ -748,6 +748,10 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                 <p className="text-sm text-stone-400 mb-6 leading-relaxed">Claim this listing to manage events, promotions, and verify your details.</p>
                 <button
                   onClick={async () => {
+                    if (!currentUser) {
+                      router.push('/login?callbackUrl=' + encodeURIComponent(window.location.pathname));
+                      return;
+                    }
                     const reason = prompt("Why do you want to claim this venue?");
                     if (!reason) return;
                     try {
