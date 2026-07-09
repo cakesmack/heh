@@ -522,9 +522,10 @@ export const venuesAPI = {
   /**
    * Search venues for typeahead
    */
-  search: async (q: string, limit = 10): Promise<VenueListResponse> => {
+  search: async (q: string, limit = 10, searchByName = false): Promise<VenueListResponse> => {
+    const param = searchByName ? `name=${encodeURIComponent(q)}` : `q=${encodeURIComponent(q)}`;
     return apiFetch<VenueListResponse>(
-      `/api/venues/search?q=${encodeURIComponent(q)}&limit=${limit}`
+      `/api/venues/search?${param}&limit=${limit}`
     );
   },
 

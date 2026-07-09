@@ -75,7 +75,11 @@ interface VenueFormData {
     category_id: string;
     website: string;
     phone: string;
+    email: string;
     image_url: string;
+    about_history: string;
+    facebook_url: string;
+    instagram_url: string;
     // Amenities
     is_dog_friendly: boolean;
     has_wheelchair_access: boolean;
@@ -98,7 +102,11 @@ export default function NewVenuePage() {
         category_id: '',
         website: '',
         phone: '',
+        email: '',
         image_url: '',
+        about_history: '',
+        facebook_url: '',
+        instagram_url: '',
         is_dog_friendly: false,
         has_wheelchair_access: false,
         has_parking: false,
@@ -133,8 +141,7 @@ export default function NewVenuePage() {
         setIsChecking(true);
         debounceRef.current = setTimeout(async () => {
             try {
-                const res = await venuesAPI.search(query, 3);
-                // Filter out exact matches if strictly equal (optional, but keep them for clarity)
+                const res = await venuesAPI.search(query, 3, true);
                 setPotentialDuplicates(res.venues);
             } catch (err) {
                 console.error("Duplicate check failed", err);
@@ -249,6 +256,7 @@ export default function NewVenuePage() {
             const newVenue = await venuesAPI.create({
                 name: formData.name,
                 description: formData.description || undefined,
+                about_history: formData.about_history || undefined,
                 address: formData.address,
                 postcode: formData.postcode || '',
                 latitude: formData.latitude,
@@ -256,12 +264,15 @@ export default function NewVenuePage() {
                 category_id: formData.category_id,
                 website: formData.website || undefined,
                 phone: formData.phone || undefined,
+                email: formData.email || undefined,
                 image_url: finalImageUrl || undefined,
                 is_dog_friendly: formData.is_dog_friendly,
                 has_wheelchair_access: formData.has_wheelchair_access,
                 has_parking: formData.has_parking,
                 serves_food: formData.serves_food,
                 amenities_notes: formData.amenities_notes || undefined,
+                facebook_url: formData.facebook_url || undefined,
+                instagram_url: formData.instagram_url || undefined,
             });
 
             setSuccess(true);
@@ -366,27 +377,24 @@ export default function NewVenuePage() {
                                         <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                         </svg>
-                                        <h4 className="font-medium text-amber-800">Possible duplicate found</h4>
+                                        <h4 className="font-bold text-amber-800 text-sm">A venue with a similar name already exists.</h4>
                                     </div>
                                     <p className="text-sm text-amber-700 mb-3">
-                                        We found venues with similar names. To avoid duplicates, please check if your venue already exists:
+                                        Please check the existing venue page to claim ownership if it belongs to you:
                                     </p>
                                     <div className="space-y-2">
                                         {potentialDuplicates.map(venue => (
-                                            <div key={venue.id} className="flex items-center justify-between bg-white/60 p-2 rounded border border-amber-100">
+                                            <div key={venue.id} className="flex items-center justify-between bg-white/60 p-2.5 rounded-lg border border-amber-100 shadow-sm">
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="font-medium text-amber-900 truncate">{venue.name}</p>
+                                                    <p className="font-bold text-amber-900 truncate text-sm">{venue.name}</p>
                                                     <p className="text-xs text-amber-700 truncate">{venue.address} {venue.postcode}</p>
                                                 </div>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="white"
-                                                    onClick={() => handleUseExisting(venue.id)}
-                                                    className="ml-3 shrink-0 text-xs border-amber-200 text-amber-700 hover:bg-white hover:text-emerald-700"
+                                                <Link
+                                                    href={`/venues/${venue.slug || venue.id}`}
+                                                    className="ml-3 shrink-0 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors"
                                                 >
-                                                    Use This Venue
-                                                </Button>
+                                                    View &amp; Claim Venue
+                                                </Link>
                                             </div>
                                         ))}
                                     </div>
@@ -465,6 +473,23 @@ export default function NewVenuePage() {
                             />
                         </div>
 
+                        {/* Email */}
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                                Email
+                            </label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                placeholder="hello@venue.com"
+                                disabled={isSubmitting}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                        </div>
+
                         {/* Map Preview */}
                         {formData.latitude && formData.longitude && (
                             <div>
@@ -497,6 +522,40 @@ export default function NewVenuePage() {
                             />
                         </div>
 
+                        {/* Facebook Link */}
+                        <div>
+                            <label htmlFor="facebook_url" className="block text-sm font-medium text-gray-700 mb-2">
+                                Facebook Link
+                            </label>
+                            <input
+                                id="facebook_url"
+                                name="facebook_url"
+                                type="url"
+                                value={formData.facebook_url}
+                                onChange={(e) => setFormData({ ...formData, facebook_url: e.target.value })}
+                                placeholder="https://facebook.com/..."
+                                disabled={isSubmitting}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                        </div>
+
+                        {/* Instagram Link */}
+                        <div>
+                            <label htmlFor="instagram_url" className="block text-sm font-medium text-gray-700 mb-2">
+                                Instagram Link
+                            </label>
+                            <input
+                                id="instagram_url"
+                                name="instagram_url"
+                                type="url"
+                                value={formData.instagram_url}
+                                onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
+                                placeholder="https://instagram.com/..."
+                                disabled={isSubmitting}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                        </div>
+
                         {/* Description */}
                         <div>
                             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
@@ -509,6 +568,23 @@ export default function NewVenuePage() {
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 placeholder="Briefly describe this venue..."
+                                disabled={isSubmitting}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                        </div>
+
+                        {/* About / History */}
+                        <div>
+                            <label htmlFor="about_history" className="block text-sm font-medium text-gray-700 mb-2">
+                                About / History
+                            </label>
+                            <textarea
+                                id="about_history"
+                                name="about_history"
+                                rows={4}
+                                value={formData.about_history}
+                                onChange={(e) => setFormData({ ...formData, about_history: e.target.value })}
+                                placeholder="Describe the venue's history, background, or special facts..."
                                 disabled={isSubmitting}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                             />

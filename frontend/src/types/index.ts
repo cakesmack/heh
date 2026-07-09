@@ -221,6 +221,8 @@ export interface VenueCreate {
   about_history?: string;
   website?: string;
   phone?: string;
+  email?: string;
+  opening_hours?: string;
   image_url?: string;
   // Amenities
   is_dog_friendly?: boolean;
@@ -245,6 +247,9 @@ export interface VenueUpdate {
   about_history?: string;
   website?: string;
   phone?: string;
+  email?: string;
+  opening_hours?: string;
+  image_url?: string;
   // Amenities
   is_dog_friendly?: boolean;
   has_wheelchair_access?: boolean;

@@ -207,7 +207,8 @@ def delete_venue_category(
 
 @router.get("/search", response_model=VenueListResponse)
 def search_venues(
-    q: str = Query(..., min_length=1, max_length=100, description="Search query"),
+    q: Optional[str] = Query(None, min_length=1, max_length=100, description="Search query"),
+    name: Optional[str] = Query(None, min_length=1, max_length=100, description="Name search query"),
     postcode: Optional[str] = Query(None, max_length=10),
     limit: int = Query(default=10, ge=1, le=50),
     session: Session = Depends(get_session)
@@ -215,17 +216,25 @@ def search_venues(
     """
     Search venues by name, address, or postcode.
 
-    Used for venue typeahead in event forms.
+    Used for venue typeahead in event forms and duplicate checking.
     Returns matching venues sorted by relevance.
     """
-    search_term = f"%{q.lower()}%"
+    if not q and not name:
+        return VenueListResponse(venues=[], total=0, skip=0, limit=limit)
 
-    query = select(Venue).outerjoin(VenueCategory, Venue.category_id == VenueCategory.id).where(
-        (Venue.name.ilike(search_term)) |
-        (Venue.address.ilike(search_term)) |
-        (Venue.formatted_address.ilike(search_term)) |
-        (VenueCategory.name.ilike(search_term))
-    )
+    if name:
+        search_term = f"%{name.lower()}%"
+        query = select(Venue).outerjoin(VenueCategory, Venue.category_id == VenueCategory.id).where(
+            Venue.name.ilike(search_term)
+        )
+    else:
+        search_term = f"%{q.lower()}%"
+        query = select(Venue).outerjoin(VenueCategory, Venue.category_id == VenueCategory.id).where(
+            (Venue.name.ilike(search_term)) |
+            (Venue.address.ilike(search_term)) |
+            (Venue.formatted_address.ilike(search_term)) |
+            (VenueCategory.name.ilike(search_term))
+        )
 
     # Additional postcode filter
     if postcode:
@@ -235,6 +244,7 @@ def search_venues(
     query = query.order_by(Venue.name).limit(limit)
     venues = session.exec(query).all()
 
+    # We use list comprehension with schema conversion safely
     venue_responses = [
         build_venue_response(venue, session)
         for venue in venues
