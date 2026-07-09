@@ -60,11 +60,17 @@ export function FollowButton({ targetId, targetType, className }: FollowButtonPr
 
     return (
         <Button
-            variant={isFollowing ? "outline" : "default"}
+            variant={isFollowing ? "default" : "outline"}
             size="sm"
             onClick={handleToggleFollow}
             disabled={isLoading}
-            className={cn("rounded-full px-6", className)}
+            className={cn(
+                "rounded-full px-6 transition-all",
+                isFollowing
+                    ? "bg-stone-800 text-white border border-white/10 hover:bg-stone-700 hover:text-white"
+                    : "border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 bg-transparent hover:text-emerald-700",
+                className
+            )}
         >
             {isFollowing ? (
                 <>

@@ -385,14 +385,16 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
               </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center md:justify-end gap-4 flex-wrap">
-              <SocialShare
-                url={typeof window !== 'undefined' ? window.location.href : ''}
-                title={venue.name}
-                description={venue.description}
-                variant="white"
-              />
-              <FollowButton targetId={venue.id} targetType="venue" className="rounded-full" />
+            <div className="flex-1 flex flex-col sm:flex-row items-center justify-center md:justify-end gap-4 w-full md:w-auto">
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-start">
+                <SocialShare
+                  url={typeof window !== 'undefined' ? window.location.href : ''}
+                  title={venue.name}
+                  description={venue.description}
+                  variant="white"
+                />
+                <FollowButton targetId={venue.id} targetType="venue" className="rounded-full" />
+              </div>
               {!isOwner && (
                 <button
                   onClick={async () => {
@@ -410,7 +412,7 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                       alert(err instanceof Error ? err.message : "Failed to submit claim.");
                     }
                   }}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center whitespace-nowrap shrink-0"
+                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center whitespace-nowrap shrink-0"
                 >
                   Claim Venue
                 </button>
@@ -418,7 +420,7 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
               {isOwner && (
                 <button
                   onClick={() => setEditModalOpen(true)}
-                  className="bg-stone-800 border border-white/10 hover:bg-stone-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center whitespace-nowrap shrink-0"
+                  className="w-full sm:w-auto bg-stone-800 border border-white/10 hover:bg-stone-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center whitespace-nowrap shrink-0"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
