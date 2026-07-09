@@ -252,8 +252,10 @@ export function ClusteredVenueMarkers({
                         id: selectedVenue.id,
                         slug: selectedVenue.slug,
                         title: selectedVenue.name,
+                        name: selectedVenue.name,
                         venue_type: selectedVenue.venue_type,
                         image_url: selectedVenue.image_url,
+                        event_count: selectedVenue.event_count,
                     }} />
                 </InfoWindow>
             )}

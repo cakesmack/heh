@@ -495,6 +495,11 @@ export function MapPage() {
                           <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-100 text-gray-700 capitalize border border-gray-200">
                             {venue.venue_type || 'Venue'}
                           </span>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {venue.event_count && venue.event_count > 0
+                              ? `${venue.event_count} Upcoming Events`
+                              : 'No Upcoming Events'}
+                          </p>
                         </div>
 
                         {/* Link to detail page */}

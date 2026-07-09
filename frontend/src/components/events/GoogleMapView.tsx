@@ -81,6 +81,7 @@ export interface MapMarker {
   slug?: string;
   venue_type?: string;
   image_url?: string | null;
+  event_count?: number;
 }
 
 interface GoogleMapViewProps {
@@ -160,6 +161,7 @@ export function GoogleMapView({
         slug: venue.slug,
         venue_type: venue.venue_type || (venue.category?.name || 'Venue'),
         image_url: venue.image_url || null,
+        event_count: venue.event_count || 0,
       }));
   }, [venues, showVenues]);
 
@@ -374,13 +376,15 @@ export function VenueMapPopup({
   venue: {
     id: string;
     slug?: string;
-    title: string;
+    title?: string;
+    name?: string;
     venue_type?: string;
     image_url?: string | null;
+    event_count?: number;
   };
 }) {
   const [imageError, setImageError] = useState(false);
-  const initials = getInitials(venue.title);
+  const initials = getInitials(venue.name || venue.title || '');
   const optimizedUrl = venue.image_url ? optimizeImage(venue.image_url, 'thumb') : null;
   const showImage = optimizedUrl && !imageError;
 
@@ -391,7 +395,7 @@ export function VenueMapPopup({
         <div className="relative w-full h-24 rounded-lg overflow-hidden bg-gray-100 mb-3 -mt-1 -mx-1 w-[calc(100%+8px)]">
           <img
             src={optimizedUrl}
-            alt={venue.title}
+            alt={venue.name || venue.title || ''}
             className="w-full h-full object-cover"
             onError={() => setImageError(true)}
           />
@@ -413,9 +417,16 @@ export function VenueMapPopup({
       )}
 
       {/* Middle: Venue name in bold heading */}
-      <h3 className="font-bold text-gray-900 text-sm leading-snug mb-3">
-        {venue.title}
+      <h3 className="font-bold text-gray-900 text-sm leading-snug mb-1">
+        {venue.name || venue.title}
       </h3>
+
+      {/* Middle: Upcoming Events count */}
+      <p className="text-sm text-gray-500 mb-3">
+        {venue.event_count && venue.event_count > 0
+          ? `${venue.event_count} Upcoming Events`
+          : 'No Upcoming Events'}
+      </p>
 
       {/* Bottom: full-width green "View Details >" button */}
       <a
