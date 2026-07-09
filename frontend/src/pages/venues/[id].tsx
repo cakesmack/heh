@@ -393,6 +393,28 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                 variant="white"
               />
               <FollowButton targetId={venue.id} targetType="venue" className="rounded-full" />
+              {!isOwner && (
+                <button
+                  onClick={async () => {
+                    if (!currentUser) {
+                      router.push('/login?callbackUrl=' + encodeURIComponent(window.location.pathname));
+                      return;
+                    }
+                    const reason = prompt("Why do you want to claim this venue?");
+                    if (!reason) return;
+                    try {
+                      await api.venueClaims.create(venue.id, reason);
+                      alert("Claim submitted successfully!");
+                      refreshUser();
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Failed to submit claim.");
+                    }
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center whitespace-nowrap shrink-0"
+                >
+                  Claim Venue
+                </button>
+              )}
               {isOwner && (
                 <button
                   onClick={() => setEditModalOpen(true)}
@@ -734,40 +756,7 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
               </Card>
             )}
 
-            {/* Claim Card */}
-            {!isOwner && (
-              <div className="p-8 bg-stone-900 rounded-3xl text-white shadow-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                  </div>
-                  <h3 className="font-bold text-lg">Is this your venue?</h3>
-                </div>
-                <p className="text-sm text-stone-400 mb-6 leading-relaxed">Claim this listing to manage events, promotions, and verify your details.</p>
-                <button
-                  onClick={async () => {
-                    if (!currentUser) {
-                      router.push('/login?callbackUrl=' + encodeURIComponent(window.location.pathname));
-                      return;
-                    }
-                    const reason = prompt("Why do you want to claim this venue?");
-                    if (!reason) return;
-                    try {
-                      await api.venueClaims.create(venue.id, reason);
-                      alert("Claim submitted successfully!");
-                      refreshUser();
-                    } catch (err) {
-                      alert(err instanceof Error ? err.message : "Failed to submit claim.");
-                    }
-                  }}
-                  className="w-full py-3 bg-white text-stone-950 rounded-xl text-sm font-black hover:bg-stone-200 transition-all active:scale-[0.98]"
-                >
-                  Claim Venue
-                </button>
-              </div>
-            )}
+
           </div>
         </div>
       </div>
