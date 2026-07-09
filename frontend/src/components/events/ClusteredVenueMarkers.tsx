@@ -42,7 +42,7 @@ function VenueMarkerWithRef({
             position={{ lat: venue.latitude, lng: venue.longitude }}
             ref={ref}
             onClick={onClick}
-            title={venue.name}
+            title={venue.title || venue.name}
         >
             <div
                 className="relative cursor-pointer transition-transform duration-150"
@@ -223,7 +223,7 @@ export function ClusteredVenueMarkers({
             type: 'venue',
             longitude: venue.longitude,
             latitude: venue.latitude,
-            title: venue.name,
+            title: venue.title || venue.name,
         });
     }, [onMarkerClick]);
 
@@ -251,8 +251,8 @@ export function ClusteredVenueMarkers({
                     <VenueMapPopup venue={{
                         id: selectedVenue.id,
                         slug: selectedVenue.slug,
-                        title: selectedVenue.name,
-                        name: selectedVenue.name,
+                        title: selectedVenue.title || selectedVenue.name,
+                        name: selectedVenue.title || selectedVenue.name,
                         venue_type: selectedVenue.venue_type,
                         image_url: selectedVenue.image_url,
                         event_count: selectedVenue.event_count,
