@@ -220,7 +220,14 @@ def search_venues(
     Returns matching venues sorted by relevance.
     """
     if not q and not name:
-        return VenueListResponse(venues=[], total=0, skip=0, limit=limit)
+        return VenueListResponse(
+            venues=[],
+            total=0,
+            data=[],
+            total_count=0,
+            skip=0,
+            limit=limit
+        )
 
     if name:
         search_term = f"%{name.lower()}%"
@@ -253,6 +260,8 @@ def search_venues(
     return VenueListResponse(
         venues=venue_responses,
         total=len(venue_responses),
+        data=venue_responses,
+        total_count=len(venue_responses),
         skip=0,
         limit=limit
     )
