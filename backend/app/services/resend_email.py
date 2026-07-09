@@ -1103,6 +1103,54 @@ class ResendEmailService:
             html_content=html_content
         )
 
+    async def send_new_venue_notification(self, venue_name: str, venue_id: str, creator_email: str) -> bool:
+        """Notify admin about a new venue submission."""
+        if not settings.ADMIN_EMAIL:
+            return True
+
+        subject = f"New Venue Created: {venue_name}"
+        html_content = f"""
+        <div style="font-family: sans-serif; padding: 20px;">
+            <h2>New Venue Created</h2>
+            <p>A new venue has been created by <strong>{creator_email}</strong>:</p>
+            <ul>
+                <li><strong>Venue Name:</strong> {venue_name}</li>
+                <li><strong>Venue ID:</strong> {venue_id}</li>
+            </ul>
+            <p><a href="{settings.FRONTEND_URL}/venues/{venue_id}">View Venue Profile</a></p>
+            <p><a href="{settings.FRONTEND_URL}/admin/venues">Review in Admin Dashboard</a></p>
+        </div>
+        """
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=settings.ADMIN_EMAIL,
+            subject=subject,
+            html_content=html_content
+        )
+
+    async def send_new_venue_claim_notification(self, admin_email: str, venue_name: str, venue_id: str, claimant_email: str) -> bool:
+        """Notify admin about a new venue claim request."""
+        subject = f"New Venue Claim Request: {venue_name}"
+        html_content = f"""
+        <div style="font-family: sans-serif; padding: 20px;">
+            <h2>New Venue Claim Request</h2>
+            <p>A new ownership claim has been submitted for the venue <strong>{venue_name}</strong>:</p>
+            <ul>
+                <li><strong>Venue Name:</strong> {venue_name}</li>
+                <li><strong>Venue ID:</strong> {venue_id}</li>
+                <li><strong>Claimed By (User):</strong> {claimant_email}</li>
+            </ul>
+            <p><a href="{settings.FRONTEND_URL}/venues/{venue_id}">View Venue Profile</a></p>
+            <p><a href="{settings.FRONTEND_URL}/admin/claims">Review Claim in Admin Dashboard</a></p>
+        </div>
+        """
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=admin_email,
+            subject=subject,
+            html_content=html_content
+        )
+
     async def send_moderation_required_notification(self, event_title: str, reason: str) -> bool:
         """Notify admin when an event is flagged for moderation."""
         if not settings.ADMIN_EMAIL:

@@ -2,9 +2,12 @@
 Venues API routes.
 Handles venue CRUD operations and filtering.
 """
+import logging
+logger = logging.getLogger(__name__)
+
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, BackgroundTasks
 from sqlmodel import Session, select, func
 from sqlalchemy.orm import selectinload
 
@@ -38,6 +41,7 @@ from app.schemas.venue import (
 from app.schemas.event import EventListResponse, EventResponse
 from app.services.geolocation import calculate_geohash, haversine_distance, get_bounding_box
 from app.utils.validators import validate_url, validate_phone
+from app.services.resend_email import resend_email_service
 
 router = APIRouter(tags=["Venues"])
 
@@ -412,6 +416,7 @@ def list_venues(
 @router.post("", response_model=VenueResponse, status_code=status.HTTP_201_CREATED)
 def create_venue(
     venue_data: VenueCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -553,6 +558,16 @@ def create_venue(
     session.add(new_venue)
     session.commit()
     session.refresh(new_venue)
+
+    try:
+        background_tasks.add_task(
+            resend_email_service.send_new_venue_notification,
+            new_venue.name,
+            str(new_venue.id),
+            current_user.email
+        )
+    except Exception as e:
+        logger.error(f"Failed to queue email notification for new venue {new_venue.id}: {e}")
 
     return build_venue_response(new_venue, session)
 
@@ -865,6 +880,7 @@ def get_venue_events(
 def claim_venue(
     venue_id: str,
     claim: VenueClaimCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -918,6 +934,17 @@ def claim_venue(
             session=session,
             admin_users=admin_users
         )
+        for admin_email in admin_emails:
+            try:
+                background_tasks.add_task(
+                    resend_email_service.send_new_venue_claim_notification,
+                    admin_email,
+                    venue.name,
+                    str(venue.id),
+                    current_user.email
+                )
+            except Exception as e:
+                logger.error(f"Failed to queue venue claim email alert for {admin_email}: {e}")
 
     return new_claim
 
