@@ -239,6 +239,7 @@ export default function CollectionPage() {
                 {((collection as any).seo_description || collection.subtitle || collection.description) && (
                     <meta name="description" content={((collection as any).seo_description || collection.subtitle || collection.description)} />
                 )}
+                <link rel="canonical" href={`https://highlandeventshub.co.uk/collections/${collection.slug}`} key="canonical" />
             </Head>
 
             {/* SECTION 1: HERO - ONLY PLACE FOR SHORT DESCRIPTION */}

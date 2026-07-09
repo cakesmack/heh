@@ -227,7 +227,7 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
 
   const townOrCity = venue.city || city || 'the Highlands';
 
-  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
+  const siteUrl = 'https://highlandeventshub.co.uk';
 
   // SEO: Priority → manual override → directory intent template
   const pageTitle = venue.seo_title
@@ -823,9 +823,10 @@ export const getServerSideProps: GetServerSideProps<VenueDetailPageProps> = asyn
     const venue: VenueResponse = await res.json();
 
     // --- 301 Redirect Enforcer ---
-    // If accessed via UUID (or outdated slug) and a canonical slug exists,
-    // permanently redirect to the slug URL to kill UUID exposure.
-    if (venue.slug && id !== venue.slug) {
+    // If accessed via UUID or outdated slug and a canonical slug exists,
+    // immediately execute a permanent 301 redirect to the clean slug path.
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id) || /^[0-9a-fA-F]{32}$/.test(id);
+    if ((isUuid || id !== venue.slug) && venue.slug) {
       // Preserve query parameters (UTM, etc.) through the redirect
       const queryString = context.resolvedUrl.includes('?')
         ? context.resolvedUrl.substring(context.resolvedUrl.indexOf('?'))

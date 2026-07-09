@@ -1751,12 +1751,13 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
     }
 
     const event: EventResponse = await res.json();
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
+    const baseUrl = 'https://highlandeventshub.co.uk';
 
     // --- 301 Redirect Enforcer ---
-    // If accessed via UUID (or outdated slug) and a canonical slug exists, 
-    // permanently redirect to the slug URL to kill UUID exposure.
-    if (event.slug && id !== event.slug) {
+    // If accessed via UUID or outdated slug and a canonical slug exists, 
+    // immediately execute a permanent 301 redirect to the clean slug path.
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id) || /^[0-9a-fA-F]{32}$/.test(id);
+    if ((isUuid || id !== event.slug) && event.slug) {
       // Preserve query parameters (UTM, ticket, etc.) through the redirect
       const queryString = context.resolvedUrl.includes('?')
         ? context.resolvedUrl.substring(context.resolvedUrl.indexOf('?'))
