@@ -806,16 +806,14 @@ export const getServerSideProps: GetServerSideProps<VenueDetailPageProps> = asyn
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
     const res = await fetch(`${apiUrl}/api/venues/${id}`);
 
-    if (res.status === 404) {
+    if (res.status === 404 || !res.ok) {
       return { notFound: true };
     }
 
-    if (!res.ok) {
-      // Let client-side handle errors
-      return { props: {} };
-    }
-
     const venue: VenueResponse = await res.json();
+    if (!venue) {
+      return { notFound: true };
+    }
 
     // --- 301 Redirect Enforcer ---
     // If accessed via UUID or outdated slug and a canonical slug exists,
@@ -841,6 +839,6 @@ export const getServerSideProps: GetServerSideProps<VenueDetailPageProps> = asyn
     };
   } catch (error) {
     console.error('SSR Error fetching venue:', error);
-    return { props: {} };
+    return { notFound: true };
   }
 };

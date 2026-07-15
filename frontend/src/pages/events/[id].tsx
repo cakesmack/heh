@@ -1741,16 +1741,15 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
     // Fetch Event Data directly to ensure SSR speed and isolation
     const res = await fetch(`${apiUrl}/api/events/${id}`);
 
-    if (res.status === 404) {
+    if (res.status === 404 || !res.ok) {
       return { notFound: true };
     }
 
-    if (!res.ok) {
-      // Allow client-side fallback or show error
-      throw new Error(`Failed to fetch event: ${res.status} ${res.statusText}`);
+    const event: EventResponse = await res.json();
+    if (!event) {
+      return { notFound: true };
     }
 
-    const event: EventResponse = await res.json();
     const baseUrl = 'https://highlandeventshub.co.uk';
 
     // --- 301 Redirect Enforcer ---
@@ -1796,12 +1795,6 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
     };
   } catch (error) {
     console.error('SSR Error fetching event:', error);
-    // Fallback to client-side fetching if server fails (e.g. backend down)
-    return {
-      props: {
-        initialEvent: undefined, // Let client components handle null/undefined
-        serverError: 'Failed to load event data server-side',
-      },
-    };
+    return { notFound: true };
   }
 };
