@@ -239,12 +239,20 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
   const canonicalUrl = `${siteUrl}/venues/${venue.slug || venue.id}`;
   const venueImageUrl = venue.image_url ? optimizeImage(venue.image_url, 1200) : null;
 
+  // Thin content check to avoid Google search console "crawled - currently not indexed" soft 404/thin content issues.
+  // We noindex if there are no upcoming events AND the description is missing or thin (under 100 characters plain text).
+  const plainDescription = venue.description ? venue.description.replace(/<[^>]*>?/gm, '').trim() : '';
+  const isThinContent = (!venue.upcoming_events_count || venue.upcoming_events_count === 0) && (plainDescription.length < 100);
+
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} key="description" />
         <link rel="canonical" href={canonicalUrl} key="canonical" />
+        {isThinContent && (
+          <meta name="robots" content="noindex, follow" key="robots" />
+        )}
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" key="og-type" />
