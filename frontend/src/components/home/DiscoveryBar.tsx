@@ -3,6 +3,7 @@
  * A clean, single pill-shaped predictive search bar.
  */
 import { useState, useEffect, useRef } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { searchAPI } from '@/lib/api';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -35,7 +36,31 @@ export default function DiscoveryBar({
     const [isInputFocused, setIsInputFocused] = useState(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const debouncedQ = useDebounce(q, 300);
+
+    // Reset dropdown on route change
+    useEffect(() => {
+        setShowSuggestions(false);
+        setSuggestions([]);
+        setSelectedIndex(-1);
+    }, [pathname, searchParams]);
+
+    // Close suggestions dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     // Initialize q state from initialFilters if present
     useEffect(() => {
@@ -70,6 +95,8 @@ export default function DiscoveryBar({
     const handleSearch = (searchTerm?: string) => {
         const queryToSubmit = searchTerm !== undefined ? searchTerm : q;
         setShowSuggestions(false);
+        setSuggestions([]);
+        setSelectedIndex(-1);
         if (inputRef.current) {
             inputRef.current.blur();
         }
@@ -117,7 +144,7 @@ export default function DiscoveryBar({
     };
 
     return (
-        <div className="w-full relative max-w-3xl mx-auto z-20">
+        <div ref={containerRef} className="w-full relative max-w-3xl mx-auto z-20">
             {/* Primary Pill-Shaped Search Input Container */}
             <div className="flex items-center w-full bg-black/40 backdrop-blur-md rounded-full border border-white/20 shadow-2xl p-1.5 transition-all focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-transparent">
                 {/* Magnifying Glass Icon */}
@@ -144,7 +171,7 @@ export default function DiscoveryBar({
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Search events, towns, or venues..."
-                    className="w-full bg-transparent py-3 px-2 text-white placeholder-gray-300 text-base sm:text-lg focus:outline-none"
+                    className="w-full bg-transparent py-3 px-2 text-white placeholder-gray-300 text-base sm:text-lg focus:outline-none focus:ring-0 border-none [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:shadow-[0_0_0px_1000px_rgba(0,0,0,0)_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]"
                     autoComplete="off"
                 />
 
