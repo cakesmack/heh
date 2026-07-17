@@ -15,7 +15,7 @@ import PopularLocations from '@/components/PopularLocations';
 import HappeningNextEvents from '@/components/home/HappeningNextEvents';
 import PromotedEvents from '@/components/home/PromotedEvents';
 import LocalPartners from '@/components/home/LocalPartners';
-import { eventsAPI } from '@/lib/api';
+import { eventsAPI, searchAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 
 // Dynamic imports for below-the-fold or conditional components
@@ -89,6 +89,7 @@ export default function HomePage() {
   }>({});
 
   // Search Events
+  const [matchingVenues, setMatchingVenues] = useState<any[]>([]);
   const {
     events: searchResults,
     total: totalSearchResults,
@@ -122,6 +123,7 @@ export default function HomePage() {
     if (!hasActiveFilters) {
       // Close search drawer and reset state when filters are cleared
       setActiveFilters({});
+      setMatchingVenues([]);
       setIsSearchOpen(false);
       return;
     }
@@ -153,6 +155,18 @@ export default function HomePage() {
     }
 
     // Fetch results first
+    if (filters.q) {
+      try {
+        const globalRes = await searchAPI.globalSearch(filters.q, 3);
+        setMatchingVenues(globalRes.venues || []);
+      } catch (err) {
+        console.error("Failed to fetch matching venues:", err);
+        setMatchingVenues([]);
+      }
+    } else {
+      setMatchingVenues([]);
+    }
+
     await fetchSearchEvents(searchFilters);
 
     // Track after state updates with accurate result count
@@ -270,6 +284,7 @@ export default function HomePage() {
         isOpen={isSearchOpen}
         isLoading={isSearchLoading}
         results={searchResults}
+        venues={matchingVenues}
         total={totalSearchResults}
         page={searchPage}
         itemsPerPage={SEARCH_ITEMS_PER_PAGE} // Pass the single source of truth

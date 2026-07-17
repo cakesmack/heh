@@ -1830,6 +1830,14 @@ export const searchAPI = {
     );
   },
 
+  globalSearch: async (q: string, limit = 10): Promise<{ events: EventResponse[]; venues: any[] }> => {
+    return apiFetch<{ events: EventResponse[]; venues: any[] }>(
+      `/api/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+      {},
+      false
+    );
+  },
+
   /**
    * Get trending event IDs
    */
