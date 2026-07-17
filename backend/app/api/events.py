@@ -48,6 +48,7 @@ from app.services.resend_email import resend_email_service
 from app.services.recurrence import generate_recurring_instances
 from app.services.moderation import check_content_with_reason
 from app.utils.pii import mask_email
+from app.utils.validators import append_skiddle_affiliate
 import logging
 
 logger = logging.getLogger(__name__)
@@ -1356,6 +1357,10 @@ async def create_event(
     """
     Create a new event.
     """
+    # Intercept Skiddle URLs to append affiliate tracking parameter
+    if event_data.ticket_url:
+        event_data.ticket_url = append_skiddle_affiliate(event_data.ticket_url)
+
     # Validate venue or location
     venue_id_normalized = None
     latitude = None
@@ -1945,6 +1950,10 @@ async def update_event(
     """
     Update an existing event.
     """
+    # Intercept Skiddle URLs to append affiliate tracking parameter
+    if event_data.ticket_url:
+        event_data.ticket_url = append_skiddle_affiliate(event_data.ticket_url)
+
     event = session.get(Event, normalize_uuid(event_id))
     if not event:
         raise HTTPException(

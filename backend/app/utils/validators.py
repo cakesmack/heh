@@ -4,6 +4,7 @@ Handles email, password, and other input validation.
 """
 import re
 from typing import Tuple
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 
 
 def validate_email(email: str) -> Tuple[bool, str]:
@@ -149,3 +150,36 @@ def sanitize_string(text: str, max_length: int = None) -> str:
         sanitized = sanitized[:max_length]
 
     return sanitized
+
+
+def append_skiddle_affiliate(url_str: str) -> str:
+    """
+    Parses url_str, checks if it's a Skiddle URL, and safely appends skig=15760.
+    """
+    if not url_str:
+        return url_str
+
+    try:
+        parsed = urlparse(url_str)
+        # Check domain targeting
+        if "skiddle.com" not in parsed.netloc.lower():
+            return url_str
+
+        # Parse query parameters to check if skig=15760 is already present
+        query_params = parse_qsl(parsed.query, keep_blank_values=True)
+
+        has_skig = any(k == "skig" and v == "15760" for k, v in query_params)
+        if has_skig:
+            return url_str
+
+        # Add the parameter
+        query_params.append(("skig", "15760"))
+
+        # Reconstruct query string and URL
+        new_query = urlencode(query_params)
+        new_parsed = parsed._replace(query=new_query)
+        return urlunparse(new_parsed)
+    except Exception:
+        # If parsing fails for any reason, return the original string safely
+        return url_str
+
