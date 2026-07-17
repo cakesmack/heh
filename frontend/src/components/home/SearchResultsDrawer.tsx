@@ -21,7 +21,21 @@ interface VenueSearchCardProps {
 
 export function VenueSearchCard({ venue }: VenueSearchCardProps) {
     const [imageError, setImageError] = useState(false);
-    const showImage = venue.image_url && !imageError;
+    
+    const isUuid = venue.image_url && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(venue.image_url);
+    
+    const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 
+        (process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH 
+            ? `https://imagedelivery.net/${process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH}` 
+            : 'https://imagedelivery.net/bo62dvlU2o27fRAdUvzFdA');
+
+    const fullImageUrl = venue.image_url
+        ? (isUuid 
+            ? `${imageBaseUrl}/${venue.image_url}/thumbnail` 
+            : venue.image_url)
+        : '';
+
+    const showImage = !!fullImageUrl && !imageError;
 
     return (
         <Link
@@ -32,7 +46,7 @@ export function VenueSearchCard({ venue }: VenueSearchCardProps) {
             <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center border border-gray-200/60">
                 {showImage ? (
                     <img
-                        src={venue.image_url}
+                        src={fullImageUrl}
                         alt={venue.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={() => setImageError(true)}
