@@ -3,10 +3,66 @@
  * A collapsible drawer displaying search results in a grid.
  */
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { MapPin, Building2 } from 'lucide-react';
 import { EventResponse } from '@/types';
 import SmallEventCard from '@/components/events/SmallEventCard';
 import FilterBar from '@/components/search/FilterBar';
+
+interface VenueSearchCardProps {
+    venue: {
+        id: string;
+        name: string;
+        slug?: string;
+        city?: string;
+        image_url?: string;
+    };
+}
+
+export function VenueSearchCard({ venue }: VenueSearchCardProps) {
+    const [imageError, setImageError] = useState(false);
+    const showImage = venue.image_url && !imageError;
+
+    return (
+        <Link
+            href={`/venues/${venue.slug || venue.id}`}
+            className="flex flex-row items-center gap-3 p-3 bg-gray-50 border border-gray-150 hover:border-emerald-250 hover:bg-emerald-50/10 rounded-xl transition-all duration-200 shadow-sm hover:shadow group w-full cursor-pointer"
+        >
+            {/* Left: Thumbnail Image or Fallback */}
+            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center border border-gray-200/60">
+                {showImage ? (
+                    <img
+                        src={venue.image_url}
+                        alt={venue.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={() => setImageError(true)}
+                    />
+                ) : (
+                    <Building2 className="w-6 h-6 text-gray-400" />
+                )}
+            </div>
+
+            {/* Right: Text Content */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-800">
+                        Venue
+                    </span>
+                </div>
+                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
+                    {venue.name}
+                </h4>
+                {venue.city && (
+                    <div className="flex items-center text-xs text-gray-500 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 mr-1 text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{venue.city}</span>
+                    </div>
+                )}
+            </div>
+        </Link>
+    );
+}
+
 
 interface SearchResultsDrawerProps {
     isOpen: boolean;
@@ -107,24 +163,9 @@ export default function SearchResultsDrawer({
                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">
                                     Matching Venues
                                 </h3>
-                                <div className="flex flex-wrap gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {venues.slice(0, 3).map((venue) => (
-                                        <Link
-                                            key={venue.id}
-                                            href={`/venues/${venue.slug || venue.id}`}
-                                            className="inline-flex items-center px-4 py-2 rounded-full bg-emerald-50 border border-emerald-100 hover:bg-emerald-100/70 text-emerald-800 text-sm font-semibold transition-all shadow-sm"
-                                        >
-                                            <svg className="w-4 h-4 mr-1.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span>{venue.name}</span>
-                                            {venue.city && (
-                                                <span className="text-emerald-600/70 font-normal ml-1.5 border-l border-emerald-200/60 pl-1.5 text-xs">
-                                                    {venue.city}
-                                                </span>
-                                            )}
-                                        </Link>
+                                        <VenueSearchCard key={venue.id} venue={venue} />
                                     ))}
                                 </div>
                             </div>
