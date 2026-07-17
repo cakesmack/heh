@@ -12,6 +12,10 @@ from app.models.event import Event
 from app.models.venue import Venue
 from app.models.category import Category
 from app.models.tag import Tag
+from app.schemas.event import EventResponse, GlobalSearchResponse
+from app.schemas.venue import VenueResponse
+from app.api.events import build_event_response
+from app.api.venues import build_venue_response
 
 router = APIRouter(tags=["Search"])
 
@@ -107,3 +111,43 @@ def get_suggestions(
                 break
 
     return SuggestionResponse(suggestions=unique_suggestions)
+
+
+@router.get("", response_model=GlobalSearchResponse)
+def global_search(
+    q: Optional[str] = Query(None, description="Search query"),
+    limit: int = Query(default=10, ge=1, le=50),
+    session: Session = Depends(get_session)
+):
+    """
+    Unified global search for events and venues.
+    """
+    if not q or not q.strip():
+        return GlobalSearchResponse(events=[], venues=[])
+
+    search_term = f"%{q.strip()}%"
+
+    # Query events
+    events_query = select(Event).where(
+        (Event.status == "published") &
+        (
+            (Event.title.ilike(search_term)) |
+            (Event.description.ilike(search_term)) |
+            (Event.location_name.ilike(search_term)) |
+            (Event.address_full.ilike(search_term)) |
+            (Event.postcode.ilike(search_term))
+        )
+    ).limit(limit)
+    events = session.exec(events_query).all()
+    event_responses = [build_event_response(e, session) for e in events]
+
+    # Query venues (strict column filtering: name or city only)
+    venues_query = select(Venue).where(
+        (Venue.name.ilike(search_term)) |
+        (Venue.city.ilike(search_term))
+    ).limit(limit)
+    venues = session.exec(venues_query).all()
+    venue_responses = [build_venue_response(v, session) for v in venues]
+
+    return GlobalSearchResponse(events=event_responses, venues=venue_responses)
+

@@ -34,7 +34,8 @@ from app.schemas.event import (
     EventListResponse,
     EventFilter,
     OrganizerProfileResponse,
-    MapEventResponse
+    MapEventResponse,
+    GlobalSearchResponse
 )
 from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
@@ -2633,3 +2634,18 @@ def get_my_event_claims(
         ))
     
     return results
+
+
+@router.get("/search", response_model=GlobalSearchResponse)
+def events_global_search(
+    q: Optional[str] = Query(None, description="Search query"),
+    limit: int = Query(default=10, ge=1, le=50),
+    session: Session = Depends(get_session)
+):
+    """
+    Unified global search endpoint.
+    Returns matching events and venues.
+    """
+    from app.api.search import global_search
+    return global_search(q=q, limit=limit, session=session)
+

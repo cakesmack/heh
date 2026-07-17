@@ -313,3 +313,9 @@ class MapEventResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class GlobalSearchResponse(BaseModel):
+    events: List[EventResponse]
+    venues: List[VenueResponse]
+
+
