@@ -12,6 +12,7 @@ import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { EventList } from '@/components/events/EventList';
 import { Spinner } from '@/components/common/Spinner';
 import { EventFilters } from '@/components/events/EventFilters';
+import type { Metadata } from 'next';
 import type { Collection, EventFilter, EventResponse } from '@/types';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
@@ -87,6 +88,23 @@ function mergeFilters(base: EventFilter, user: EventFilter): EventFilter {
     return merged;
 }
 
+/**
+ * Dynamic metadata generation for independent indexing (Next.js alternates.canonical config).
+ */
+export async function generateMetadata({
+    params
+}: {
+    params: { slug: string };
+}): Promise<Metadata> {
+    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
+    return {
+        alternates: {
+            canonical: `${siteUrl}/collections/${params.slug}`
+        }
+    };
+}
+
+
 export default function CollectionPage() {
     const router = useRouter();
     const { slug } = router.query;
@@ -103,6 +121,9 @@ export default function CollectionPage() {
     const [eventsError, setEventsError] = useState<string | null>(null);
     const [userFilters, setUserFilters] = useState<EventFilter>({});
     const [currentFilters, setCurrentFilters] = useState<EventFilter>({});
+
+    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
+    const canonicalUrl = collection ? `${siteUrl.replace(/\/$/, '')}/collections/${collection.slug}` : '';
 
     // Infinite scroll
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -239,7 +260,7 @@ export default function CollectionPage() {
                 {((collection as any).seo_description || collection.subtitle || collection.description) && (
                     <meta name="description" content={((collection as any).seo_description || collection.subtitle || collection.description)} />
                 )}
-                <link rel="canonical" href={`https://highlandeventshub.co.uk/collections/${collection.slug}`} key="canonical" />
+                {canonicalUrl && <link rel="canonical" href={canonicalUrl} key="canonical" />}
             </Head>
 
             {/* SECTION 1: HERO - ONLY PLACE FOR SHORT DESCRIPTION */}
