@@ -18,12 +18,6 @@ function proxyImageUrl(url: string | undefined): string {
     return `${base}/api/media/proxy-image?url=${encodeURIComponent(url)}&token=${token || ''}`;
 }
 
-interface ImportWizardProps {
-    venues: Venue[];
-    categories: Category[];
-    organizers?: any[];
-}
-
 interface StagedEvent {
     id: string; // Unique ID for tracking
     title: string;
@@ -32,6 +26,7 @@ interface StagedEvent {
     date_end?: string;
     image_url: string;
     ticket_url?: string;
+    website_url?: string;
     price_display?: string;
     min_price?: number;
     min_age?: number;
@@ -47,6 +42,12 @@ interface StagedEvent {
     latitude?: number;
     longitude?: number;
     tags?: string[];
+}
+
+interface ImportWizardProps {
+    venues: Venue[];
+    categories: Category[];
+    organizers?: any[];
 }
 
 const STORAGE_KEY = 'import_wizard_session';
@@ -135,7 +136,6 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                     const matchedVenue = findMatchingVenue(jsonVenueName);
 
                     // Smart Address Logic: Combine Venue Name + Address if not already present
-                    // This gives Google Places a better search string (e.g. "Eden Court, Bishops Rd" vs just "Bishops Rd")
                     const rawAddress = item.address || '';
                     let smartAddress = rawAddress;
 
@@ -145,7 +145,6 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                             smartAddress = `${jsonVenueName}, ${rawAddress}`;
                         }
                     } else if (jsonVenueName && !rawAddress) {
-                        // If no address but we have a venue name, use that as the "address" for searching
                         smartAddress = jsonVenueName;
                     }
 
@@ -159,8 +158,9 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                         raw_showtimes: typeof item.showtimes === 'string' ? [item.showtimes] : (item.showtimes || []),
                         status: 'pending' as const,
                         selectedCategoryId: matchedCategory?.id || '',
-                        selectedVenueId: matchedVenue?.id || null,
-                        venue_name: jsonVenueName
+                        selectedVenueId: item.venue_id || matchedVenue?.id || null,
+                        venue_name: jsonVenueName,
+                        website_url: item.website_url || item.event_url || ''
                     };
                 });
 
@@ -262,6 +262,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                 date_end: event.date_end || null,
                 image_url: event.image_url,
                 ticket_url: event.ticket_url || null,
+                website_url: event.website_url || null,
                 price_display: event.price_display || "Variable",
                 min_price: event.min_price || 0,
                 min_age: event.min_age || 0,
@@ -343,7 +344,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                 {stagedEvents.length > 0 && (
                     <button
                         onClick={clearSession}
-                        className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+                        className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1 font-semibold"
                     >
                         <Trash2 className="w-4 h-4" /> Clear Session
                     </button>
@@ -357,13 +358,13 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                     <div className="flex gap-3">
                         <button
                             onClick={resumeSession}
-                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold"
                         >
                             Resume Session
                         </button>
                         <button
                             onClick={clearSession}
-                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
                         >
                             Start Fresh
                         </button>
@@ -422,7 +423,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                 <button
                                     onClick={applyBulkVenue}
                                     disabled={!bulkVenueId || stagedEvents.length === 0}
-                                    className="px-4 py-2 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                                    className="px-4 py-2 text-sm font-semibold rounded-md bg-gray-250 hover:bg-gray-350 disabled:opacity-50 text-gray-700"
                                 >
                                     Apply
                                 </button>
@@ -435,7 +436,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
             {/* Stats & Actions */}
             {stagedEvents.length > 0 && (
                 <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="flex gap-4 text-sm">
+                    <div className="flex gap-4 text-sm font-medium">
                         <span className="text-gray-600">{stagedEvents.length} total</span>
                         <span className="text-amber-600">⏳ {pendingCount} pending</span>
                         <span className="text-emerald-600">✅ {importedCount} imported</span>
@@ -453,34 +454,34 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
 
             {/* Events Table */}
             {stagedEvents.length > 0 && (
-                <div className="overflow-x-auto border rounded-lg max-h-[400px] overflow-y-auto">
+                <div className="overflow-x-auto border rounded-lg max-h-[400px] overflow-y-auto shadow-sm">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50 sticky top-0">
                             <tr>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Event</th>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Venue</th>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Image</th>
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Event</th>
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Venue</th>
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {stagedEvents.map((event, idx) => (
                                 <tr key={event.id} className={
                                     event.status === 'imported' ? 'bg-emerald-50' :
-                                        event.status === 'rejected' ? 'bg-red-50 opacity-50' :
+                                        event.status === 'rejected' ? 'bg-red-50/50 opacity-60' :
                                             event.status === 'duplicate' ? 'bg-amber-50' : ''
                                 }>
                                     <td className="px-3 py-2 whitespace-nowrap">
                                         {event.status === 'pending' && <span className="text-amber-500">⏳</span>}
                                         {event.status === 'importing' && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>}
-                                        {event.status === 'imported' && <span className="text-emerald-600">✅</span>}
+                                        {event.status === 'imported' && <span className="text-emerald-600 font-bold">✅</span>}
                                         {event.status === 'rejected' && <span className="text-red-500">🗑️</span>}
                                         {event.status === 'duplicate' && <span className="text-amber-500">⚠️</span>}
-                                        {event.status === 'error' && <span className="text-red-600" title={event.message}>❌</span>}
+                                        {event.status === 'error' && <span className="text-red-600 font-bold" title={event.message}>❌</span>}
                                     </td>
                                     <td className="px-3 py-2">
-                                        <div className="relative h-8 w-12 rounded bg-gray-100 overflow-hidden">
+                                        <div className="relative h-8 w-12 rounded bg-gray-100 overflow-hidden border border-gray-200">
                                             <img
                                                 src={proxyImageUrl(event.image_url)}
                                                 alt=""
@@ -490,11 +491,11 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                         </div>
                                     </td>
                                     <td className="px-3 py-2">
-                                        <p className="text-sm font-medium text-gray-900 truncate max-w-[180px]">{event.title}</p>
+                                        <p className="text-sm font-semibold text-gray-900 truncate max-w-[180px]">{event.title}</p>
                                         <p className="text-xs text-gray-500">{new Date(event.date_start).toLocaleDateString()}</p>
                                     </td>
                                     <td className="px-3 py-2">
-                                        <span className="text-xs text-gray-600 truncate max-w-[120px] block">
+                                        <span className="text-xs text-gray-600 truncate max-w-[120px] block font-medium">
                                             {event.selectedVenueId ? venues.find(v => v.id === event.selectedVenueId)?.name : event.location_name || '—'}
                                         </span>
                                     </td>
@@ -502,7 +503,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                         {event.status === 'pending' && (
                                             <button
                                                 onClick={() => rejectEvent(idx)}
-                                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                                                 title="Reject"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -516,79 +517,141 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                 </div>
             )}
 
-            {/* Review Modal */}
+            {/* Redesigned Review Modal - Full Screen Workspace */}
             {reviewModalOpen && currentEvent && (
-                <div key={currentEvent.id} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                        {/* Modal Header */}
-                        <div className="flex items-center justify-between p-4 border-b">
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-900">Review Event</h3>
-                                <p className="text-sm text-gray-500">
-                                    {currentReviewIndex! + 1} of {stagedEvents.length} • {pendingCount} pending
-                                </p>
+                <div key={currentEvent.id} className="fixed inset-0 bg-white z-50 flex flex-col animate-in fade-in duration-200">
+                    
+                    {/* Modal Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <span>🛠️ Review & Approve Event</span>
+                                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">staged</span>
+                            </h3>
+                            <p className="text-sm text-gray-500 font-medium">
+                                Event {currentReviewIndex! + 1} of {stagedEvents.length} • <span className="text-amber-600 font-semibold">{pendingCount} remaining</span>
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => setReviewModalOpen(false)} 
+                            className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500 hover:text-gray-700"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    {/* Modal Body - Split Screen Layout */}
+                    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                        
+                        {/* Left Panel: Image & High-level status (Sticky left) */}
+                        <div className="w-full md:w-1/3 bg-gray-50 border-r border-gray-200 p-6 flex flex-col overflow-y-auto space-y-6">
+                            
+                            {/* Import progress bar */}
+                            <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Import Progress</h4>
+                                <div className="flex justify-between items-center text-sm font-bold text-gray-700">
+                                    <span>Staged List</span>
+                                    <span>{((stagedEvents.length - pendingCount) / stagedEvents.length * 100).toFixed(0)}% Done</span>
+                                </div>
+                                <div className="w-full bg-gray-200 h-2.5 rounded-full mt-3 overflow-hidden">
+                                    <div 
+                                        className="bg-emerald-600 h-full rounded-full transition-all duration-300"
+                                        style={{ width: `${((stagedEvents.length - pendingCount) / stagedEvents.length) * 100}%` }}
+                                    />
+                                </div>
                             </div>
-                            <button onClick={() => setReviewModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
-                                <X className="w-5 h-5" />
-                            </button>
+
+                            {/* Sticky Image Panel */}
+                            <div>
+                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Event Image</h4>
+                                {currentEvent.image_url ? (
+                                    <div className="relative w-full aspect-[4/3] rounded-xl bg-gray-200 overflow-hidden border border-gray-300 shadow-sm group">
+                                        <img
+                                            src={proxyImageUrl(currentEvent.image_url)}
+                                            alt="Staged Event"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            onError={(e) => { (e.target as HTMLImageElement).src = '/images/event-placeholder.jpg'; }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-full aspect-[4/3] bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
+                                        <div className="text-center">
+                                            <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                            <span className="text-sm font-medium text-gray-500">No Image URL Found</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Raw Showtimes metadata display */}
+                            {currentEvent.raw_showtimes && currentEvent.raw_showtimes.length > 0 && (
+                                <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Parsed Showtimes (Reference)</h4>
+                                    <ul className="text-xs text-gray-600 space-y-1.5 max-h-48 overflow-y-auto">
+                                        {currentEvent.raw_showtimes.map((st, i) => (
+                                            <li key={i} className="py-1 border-b border-gray-100 last:border-0 font-mono text-[11px] leading-tight">
+                                                {st}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Modal Body */}
-                        <div className="flex-1 overflow-y-auto p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Left: Image */}
-                                <div>
-                                    {currentEvent.image_url ? (
-                                        <div className="relative w-full h-64 rounded-lg bg-gray-100 overflow-hidden">
-                                            <img
-                                                src={proxyImageUrl(currentEvent.image_url)}
-                                                alt=""
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => { (e.target as HTMLImageElement).src = '/images/event-placeholder.jpg'; }}
+                        {/* Right Panel: Clean Workspace Form */}
+                        <div className="flex-1 overflow-y-auto p-8 bg-white">
+                            <div className="max-w-3xl mx-auto space-y-8">
+                                
+                                {/* Block 1: Core Info */}
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-bold text-gray-900 border-b pb-2 flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">1</span>
+                                        Core Info
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Event Title</label>
+                                            <input
+                                                type="text"
+                                                value={currentEvent.title || ''}
+                                                onChange={(e) => updateCurrentEvent({ title: e.target.value })}
+                                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base font-semibold px-4 py-2.5"
+                                                placeholder="Enter event title"
                                             />
                                         </div>
-                                    ) : (
-                                        <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                                            <ImageIcon className="w-12 h-12 text-gray-400" />
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Description Workspace</label>
+                                            <textarea
+                                                value={currentEvent.description || ''}
+                                                onChange={(e) => updateCurrentEvent({ description: e.target.value })}
+                                                rows={10}
+                                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm p-4 leading-relaxed font-sans focus:outline-none focus:ring-1"
+                                                placeholder="No description provided. Double check the raw showtimes details and copy relevant info here..."
+                                            />
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
 
-                                {/* Right: Form */}
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                                        <input
-                                            type="text"
-                                            value={currentEvent.title}
-                                            onChange={(e) => updateCurrentEvent({ title: e.target.value })}
-                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                        <textarea
-                                            value={currentEvent.description}
-                                            onChange={(e) => updateCurrentEvent({ description: e.target.value })}
-                                            rows={4}
-                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
+                                {/* Block 2: Logistics */}
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-bold text-gray-900 border-b pb-2 flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">2</span>
+                                        Logistics
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date/Time</label>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Start Date/Time</label>
                                             <input
                                                 type="datetime-local"
                                                 value={currentEvent.date_start?.slice(0, 16) || ''}
                                                 onChange={(e) => updateCurrentEvent({ date_start: e.target.value })}
-                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-4 py-2.5"
                                             />
                                         </div>
                                         <div>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <label className="block text-sm font-medium text-gray-700">End Date/Time</label>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <label className="block text-sm font-bold text-gray-700">End Date/Time</label>
                                                 <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
                                                     <input
                                                         type="checkbox"
@@ -604,73 +667,43 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                                 value={currentEvent.date_end?.slice(0, 16) || ''}
                                                 onChange={(e) => updateCurrentEvent({ date_end: e.target.value })}
                                                 disabled={!currentEvent.date_end}
-                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-4 py-2.5 disabled:bg-gray-100 disabled:text-gray-400"
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Ticket URL</label>
-                                        <input
-                                            type="url"
-                                            value={currentEvent.ticket_url || ''}
-                                            onChange={(e) => updateCurrentEvent({ ticket_url: e.target.value })}
-                                            placeholder="https://..."
-                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Price Display</label>
-                                            <input
-                                                type="text"
-                                                value={currentEvent.price_display || ''}
-                                                onChange={(e) => updateCurrentEvent({ price_display: e.target.value })}
-                                                placeholder="e.g. £15 / Free"
-                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Min Age (0+)</label>
-                                            <input
-                                                type="number"
-                                                value={currentEvent.min_age || 0}
-                                                onChange={(e) => updateCurrentEvent({ min_age: parseInt(e.target.value) || 0 })}
-                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1.5">Venue Location Selection</label>
                                         <UnifiedVenueSelect
                                             value={currentEvent.selectedVenueId || null}
                                             onChange={(id, venue) => updateCurrentEvent({
                                                 selectedVenueId: id || null,
-                                                // If we selected a venue, clear custom location fields
                                                 location_name: venue ? '' : currentEvent.location_name,
                                                 address: venue ? '' : currentEvent.address
                                             })}
-                                            placeholder={currentEvent.location_name || "Search for venue..."}
+                                            placeholder={currentEvent.location_name || "Search for an existing database venue..."}
                                         />
                                     </div>
 
                                     {/* Custom Location Inputs - Only show if NO venue selected */}
                                     {!currentEvent.selectedVenueId && (
-                                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
+                                            <p className="text-xs text-amber-800 font-semibold flex items-center gap-1.5">
+                                                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                                                No database venue selected. Custom details will create a fallback location marker.
+                                            </p>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Location Name (Custom)</label>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1.5">Location Name (Custom)</label>
                                                 <input
                                                     type="text"
-                                                    value={currentEvent.location_name}
+                                                    value={currentEvent.location_name || ''}
                                                     onChange={e => updateCurrentEvent({ location_name: e.target.value })}
-                                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                                                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-4 py-2.5"
                                                     placeholder="e.g. Inverness Castle"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Address Search (Google Maps)</label>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1.5">Address Search (Google Places API)</label>
                                                 <GooglePlacesAutocomplete
                                                     defaultValue={currentEvent.address || currentEvent.location_name || ''}
                                                     onPlaceSelect={(place) => {
@@ -680,26 +713,71 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                                             address: place.formatted_address || place.name || undefined,
                                                             latitude: lat,
                                                             longitude: lng,
-                                                            // Optional: also update location_name if it was generic
-                                                            // location_name: place.name || currentEvent.location_name 
                                                         });
                                                     }}
-                                                    placeholder="Search for address..."
+                                                    placeholder="Search for custom address coordinates..."
                                                     className="w-full"
                                                 />
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    Search and select to set address and map coordinates.
-                                                </p>
                                             </div>
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Block 3: Links & Settings */}
+                                <div className="space-y-6 pb-8">
+                                    <h3 className="text-lg font-bold text-gray-900 border-b pb-2 flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">3</span>
+                                        Links & Settings
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Event Website URL (event_url)</label>
+                                            <input
+                                                type="url"
+                                                value={currentEvent.website_url || ''}
+                                                onChange={(e) => updateCurrentEvent({ website_url: e.target.value })}
+                                                placeholder="https://example.com/main-page"
+                                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-4 py-2.5"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Ticket URL (ticket_url)</label>
+                                            <input
+                                                type="url"
+                                                value={currentEvent.ticket_url || ''}
+                                                onChange={(e) => updateCurrentEvent({ ticket_url: e.target.value })}
+                                                placeholder="https://example.com/tickets"
+                                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-4 py-2.5"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Price Display</label>
+                                            <input
+                                                type="text"
+                                                value={currentEvent.price_display || ''}
+                                                onChange={(e) => updateCurrentEvent({ price_display: e.target.value })}
+                                                placeholder="e.g. £15 / Free"
+                                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-4 py-2.5"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Min Age (0+)</label>
+                                            <input
+                                                type="number"
+                                                value={currentEvent.min_age || 0}
+                                                onChange={(e) => updateCurrentEvent({ min_age: parseInt(e.target.value) || 0 })}
+                                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-4 py-2.5"
+                                            />
+                                        </div>
+                                    </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1.5">Category Selection</label>
                                         <select
                                             value={currentEvent.selectedCategoryId || ''}
                                             onChange={(e) => updateCurrentEvent({ selectedCategoryId: e.target.value })}
-                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-4 py-2.5"
                                         >
                                             <option value="">Select Category</option>
                                             {categories.map(c => (
@@ -708,44 +786,46 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                         </select>
                                     </div>
                                 </div>
+
                             </div>
-
-                            {/* Error Message */}
-                            {importError && (
-                                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                                    <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                                    <p className="text-sm text-red-700">{importError}</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="flex items-center justify-between p-4 border-t bg-gray-50">
-                            <button
-                                onClick={rejectAndNext}
-                                disabled={isImporting}
-                                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                            >
-                                <Trash2 className="w-4 h-4" /> Reject / Skip
-                            </button>
-                            <button
-                                onClick={approveAndImport}
-                                disabled={isImporting || currentEvent.status === 'duplicate'}
-                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {isImporting ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                        Importing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Check className="w-4 h-4" /> Approve & Import
-                                    </>
-                                )}
-                            </button>
                         </div>
                     </div>
+
+                    {/* Error message banner */}
+                    {importError && (
+                        <div className="px-6 py-3 bg-red-50 border-t border-b border-red-200 flex items-start gap-2">
+                            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-700 font-medium">{importError}</p>
+                        </div>
+                    )}
+
+                    {/* Modal Footer (Actions) */}
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+                        <button
+                            onClick={rejectAndNext}
+                            disabled={isImporting}
+                            className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 font-bold transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" /> Reject / Skip Event
+                        </button>
+                        <button
+                            onClick={approveAndImport}
+                            disabled={isImporting || currentEvent.status === 'duplicate'}
+                            className="px-8 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2 font-bold transition-colors shadow-sm"
+                        >
+                            {isImporting ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    Importing...
+                                </>
+                            ) : (
+                                <>
+                                    <Check className="w-4 h-4" /> Approve & Import
+                                </>
+                            )}
+                        </button>
+                    </div>
+
                 </div>
             )}
         </div>
