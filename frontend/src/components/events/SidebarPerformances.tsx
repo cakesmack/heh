@@ -75,19 +75,17 @@ export default function SidebarPerformances({
                   )}
                 </div>
               </div>
-              <a
-                href={ticketUrl || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => ticketUrl && trackTicketClick(eventId)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-full ${
-                  ticketUrl
-                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Buy Tickets
-              </a>
+              {ticketUrl && (
+                <a
+                  href={ticketUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackTicketClick(eventId)}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-full bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shrink-0"
+                >
+                  Buy Tickets
+                </a>
+              )}
             </div>
           );
         })}

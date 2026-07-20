@@ -803,8 +803,8 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 {/* Main CTAs on the Right (Get Tickets dominant solid, Visit Website secondary ghost) */}
                 {!isPastEvent && (
                   <>
-                    {/* Get Tickets Button (Solid High-Contrast Primary CTA) */}
-                    {event.ticket_url ? (
+                    {/* Get Tickets Button (Solid High-Contrast Primary CTA) - Only rendered if ticket_url exists in DB */}
+                    {event.ticket_url && (
                       <a
                         href={event.ticket_url}
                         target="_blank"
@@ -814,34 +814,9 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       >
                         Get Tickets
                       </a>
-                    ) : upcomingPerformances.length > 0 ? (
-                      <button
-                        onClick={() => {
-                          const mobileSidebar = document.getElementById('mobile-dates-sidebar');
-                          const desktopSidebar = document.getElementById('dates-sidebar');
-                          const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
-                          if (sidebar) {
-                            sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                            setTimeout(() => {
-                              sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                            }, 1000);
-                          }
-                        }}
-                        className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
-                      >
-                        Get Tickets
-                      </button>
-                    ) : (event.showtimes && event.showtimes.length > 0) ? (
-                      <button
-                        disabled
-                        className="px-6 py-2.5 bg-gray-200 text-gray-400 text-sm font-bold rounded-full cursor-not-allowed text-center whitespace-nowrap shrink-0"
-                      >
-                        Get Tickets
-                      </button>
-                    ) : null}
+                    )}
 
-                    {/* Visit Website Button (Secondary Outlined/Ghost CTA) */}
+                    {/* Visit Website Button (Secondary Outlined/Ghost CTA) - Only rendered if website_url exists in DB */}
                     {event.website_url && (
                       <a
                         href={event.website_url}
@@ -860,9 +835,9 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
               {/* Mobile Action Group */}
               <div className="flex md:hidden flex-col w-full gap-3 mt-4">
                 {/* Primary CTAs (Get Tickets solid, Visit Website ghost) */}
-                {!isPastEvent && (
+                {!isPastEvent && (event.ticket_url || event.website_url) && (
                   <div className="flex flex-col gap-2 w-full">
-                    {event.ticket_url ? (
+                    {event.ticket_url && (
                       <a
                         href={event.ticket_url}
                         target="_blank"
@@ -872,25 +847,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       >
                         Get Tickets
                       </a>
-                    ) : upcomingPerformances.length > 0 ? (
-                      <button
-                        onClick={() => {
-                          const mobileSidebar = document.getElementById('mobile-dates-sidebar');
-                          const desktopSidebar = document.getElementById('dates-sidebar');
-                          const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
-                          if (sidebar) {
-                            sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                            setTimeout(() => {
-                              sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                            }, 1000);
-                          }
-                        }}
-                        className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
-                      >
-                        Get Tickets
-                      </button>
-                    ) : null}
+                    )}
 
                     {event.website_url && (
                       <a
