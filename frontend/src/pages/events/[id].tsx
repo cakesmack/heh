@@ -768,17 +768,42 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
             <div className="flex-1 flex flex-col md:flex-row items-center justify-center md:justify-end w-full md:w-auto">
               {/* Desktop Action Group */}
               <div className="hidden md:flex items-center gap-3 flex-wrap justify-end">
+                {/* Quiet Utilities on the Left */}
                 <SocialShare
                   url={typeof window !== 'undefined' ? window.location.href : ''}
                   title={event.title}
                   description={event.description}
                   variant="white"
+                  showLabel={false}
+                  size="md"
                 />
 
-                {/* Get Tickets, Visit Website, and RSVP (AttendingButton) suppressed if past event */}
+                <BookmarkButton
+                  eventId={event.id}
+                  initialBookmarked={event.is_bookmarked}
+                  showLabel={false}
+                  size="md"
+                  className="bg-stone-800/50 border-2 border-white/10 text-white hover:bg-stone-700 hover:border-white/20"
+                  onToggle={(isBookmarked, count) => {
+                    setEvent(prev => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        is_bookmarked: isBookmarked,
+                        save_count: count !== undefined 
+                          ? count 
+                          : (isBookmarked 
+                              ? (prev.save_count || 0) + 1 
+                              : Math.max(0, (prev.save_count || 0) - 1))
+                      };
+                    });
+                  }}
+                />
+
+                {/* Main CTAs on the Right (Get Tickets dominant solid, Visit Website secondary ghost) */}
                 {!isPastEvent && (
                   <>
-                    {/* Get Tickets Button Logic */}
+                    {/* Get Tickets Button (Solid High-Contrast Primary CTA) */}
                     {event.ticket_url ? (
                       <a
                         href={event.ticket_url}
@@ -816,159 +841,88 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       </button>
                     ) : null}
 
-                    {/* Visit Website Button */}
+                    {/* Visit Website Button (Secondary Outlined/Ghost CTA) */}
                     {event.website_url && (
                       <a
                         href={event.website_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackWebsiteClick(event.id)}
-                        className="px-6 py-2.5 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:white text-sm font-bold rounded-full transition-all transform hover:scale-105 text-center whitespace-nowrap shrink-0"
+                        className="px-6 py-2.5 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:text-white text-sm font-bold rounded-full transition-all transform hover:scale-105 text-center whitespace-nowrap shrink-0 bg-transparent"
                       >
                         Visit Website
                       </a>
                     )}
-
-                    <AttendingButton
-                      eventId={event.id}
-                      initialAttending={event.is_attending}
-                      showLabel={true}
-                      className="transform hover:scale-105 shadow-lg shrink-0 whitespace-nowrap"
-                      onToggle={(isAttending) => {
-                        setEvent(prev => {
-                          if (!prev) return null;
-                          return {
-                            ...prev,
-                            is_attending: isAttending,
-                            attending_count: isAttending
-                              ? (prev.attending_count || 0) + 1
-                              : Math.max(0, (prev.attending_count || 0) - 1)
-                          };
-                        });
-                      }}
-                    />
                   </>
                 )}
-
-                <BookmarkButton
-                  eventId={event.id}
-                  initialBookmarked={event.is_bookmarked}
-                  showLabel={true}
-                  className="transform hover:scale-105 shadow-lg shrink-0 whitespace-nowrap"
-                  onToggle={(isBookmarked, count) => {
-                    setEvent(prev => {
-                      if (!prev) return null;
-                      return {
-                        ...prev,
-                        is_bookmarked: isBookmarked,
-                        save_count: count !== undefined 
-                          ? count 
-                          : (isBookmarked 
-                              ? (prev.save_count || 0) + 1 
-                              : Math.max(0, (prev.save_count || 0) - 1))
-                      };
-                    });
-                  }}
-                />
               </div>
 
               {/* Mobile Action Group */}
               <div className="flex md:hidden flex-col w-full gap-3 mt-4">
-                {/* Primary CTA (Get Tickets or Visit Website) */}
-                {/* Primary CTA (Get Tickets or Visit Website) suppressed if past event */}
-                {!isPastEvent && (() => {
-                  const hasTickets = !!(event.ticket_url || (event.showtimes && event.showtimes.length > 0));
-                  const hasWebsite = !!event.website_url;
-                  
-                  if (hasTickets) {
-                    if (event.ticket_url) {
-                      return (
-                        <a
-                          href={event.ticket_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => trackTicketClick(event.id)}
-                          className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
-                        >
-                          Get Tickets
-                        </a>
-                      );
-                    } else if (upcomingPerformances.length > 0) {
-                      return (
-                        <button
-                          onClick={() => {
-                            const mobileSidebar = document.getElementById('mobile-dates-sidebar');
-                            const desktopSidebar = document.getElementById('dates-sidebar');
-                            const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
-                            if (sidebar) {
-                              sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                              setTimeout(() => {
-                                sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
-                              }, 1000);
-                            }
-                          }}
-                          className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
-                        >
-                          Get Tickets
-                        </button>
-                      );
-                    } else {
-                      return (
-                        <button
-                          disabled
-                          className="flex items-center justify-center w-full py-3 bg-gray-200 text-gray-400 text-sm font-bold rounded-full cursor-not-allowed text-center"
-                        >
-                          Get Tickets
-                        </button>
-                      );
-                    }
-                  } else if (hasWebsite) {
-                    return (
+                {/* Primary CTAs (Get Tickets solid, Visit Website ghost) */}
+                {!isPastEvent && (
+                  <div className="flex flex-col gap-2 w-full">
+                    {event.ticket_url ? (
+                      <a
+                        href={event.ticket_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackTicketClick(event.id)}
+                        className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
+                      >
+                        Get Tickets
+                      </a>
+                    ) : upcomingPerformances.length > 0 ? (
+                      <button
+                        onClick={() => {
+                          const mobileSidebar = document.getElementById('mobile-dates-sidebar');
+                          const desktopSidebar = document.getElementById('dates-sidebar');
+                          const sidebar = (mobileSidebar && mobileSidebar.offsetParent !== null) ? mobileSidebar : desktopSidebar;
+                          if (sidebar) {
+                            sidebar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            sidebar.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                            setTimeout(() => {
+                              sidebar.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'scale-[1.02]');
+                            }, 1000);
+                          }
+                        }}
+                        className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
+                      >
+                        Get Tickets
+                      </button>
+                    ) : null}
+
+                    {event.website_url && (
                       <a
                         href={event.website_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackWebsiteClick(event.id)}
-                        className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
+                        className="flex items-center justify-center w-full py-3 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:text-white text-sm font-bold rounded-full transition-all text-center bg-transparent"
                       >
                         Visit Website
                       </a>
-                    );
-                  }
-                  return null;
-                })()}
+                    )}
+                  </div>
+                )}
 
-                {/* Secondary Actions Row */}
-                <div className="flex items-center justify-center gap-3 w-full">
-                  {!isPastEvent && (
-                    <AttendingButton
-                      eventId={event.id}
-                      initialAttending={event.is_attending}
-                      showLabel={false}
-                      size="lg"
-                      className="transform active:scale-95 shadow-md"
-                      onToggle={(isAttending) => {
-                        setEvent(prev => {
-                          if (!prev) return null;
-                          return {
-                            ...prev,
-                            is_attending: isAttending,
-                            attending_count: isAttending
-                              ? (prev.attending_count || 0) + 1
-                              : Math.max(0, (prev.attending_count || 0) - 1)
-                          };
-                        });
-                      }}
-                    />
-                  )}
+                {/* Mobile Utilities (Quiet Share & Save SVG icons to the left) */}
+                <div className="flex items-center justify-start gap-3 w-full">
+                  <SocialShare
+                    url={typeof window !== 'undefined' ? window.location.href : ''}
+                    title={event.title}
+                    description={event.description}
+                    variant="white"
+                    showLabel={false}
+                    size="md"
+                  />
 
                   <BookmarkButton
                     eventId={event.id}
                     initialBookmarked={event.is_bookmarked}
                     showLabel={false}
-                    size="lg"
-                    className="transform active:scale-95 shadow-md"
+                    size="md"
+                    className="bg-stone-800/50 border-2 border-white/10 text-white hover:bg-stone-700"
                     onToggle={(isBookmarked, count) => {
                       setEvent(prev => {
                         if (!prev) return null;
@@ -984,32 +938,6 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       });
                     }}
                   />
-
-                  <SocialShare
-                    url={typeof window !== 'undefined' ? window.location.href : ''}
-                    title={event.title}
-                    description={event.description}
-                    variant="white"
-                    showLabel={false}
-                    size="lg"
-                    className="transform active:scale-95 shadow-md"
-                  />
-
-                  {/* Visit Website as secondary icon button only if Get Tickets is the primary CTA */}
-                  {!isPastEvent && !!(event.ticket_url || (event.showtimes && event.showtimes.length > 0)) && event.website_url && (
-                    <a
-                      href={event.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => trackWebsiteClick(event.id)}
-                      className="flex items-center justify-center w-12 h-12 bg-stone-800/50 border-2 border-white/10 hover:border-white/20 text-white rounded-full transition-all active:scale-95 shadow-md shrink-0"
-                      title="Visit Website"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                      </svg>
-                    </a>
-                  )}
                 </div>
               </div>
             </div>
@@ -1243,9 +1171,11 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
         <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
           {/* Event Details - 70% (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
-            <Card>
-              {(event.category || event.age_restriction) && (
-                <div className="mb-4 flex flex-wrap gap-2">
+            {/* Flat Editorial Container (No white box / no card borders) */}
+            <div className="space-y-4 pb-2">
+              {/* Front-Loaded Context: Category Badges, Age Restriction & Event Tags */}
+              {((event.category || event.age_restriction || (event.tags && event.tags.length > 0))) && (
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   {event.category && (
                     <Link href={`/category/${event.category.slug}`}>
                       <Badge variant="info" size="sm" className="hover:opacity-80 transition-opacity cursor-pointer">
@@ -1262,37 +1192,10 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       />
                     </Link>
                   )}
-                </div>
-              )}
-
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">About this event</h2>
-
-              {event.description && (
-                <div className="space-y-2">
-                  <RichText
-                    content={showFullDescription || event.description.length <= 400
-                      ? event.description
-                      : `${event.description.slice(0, 400)}...`}
-                    className="text-gray-700 leading-relaxed break-words w-full max-w-full overflow-hidden"
-                  />
-                  {event.description.length > 400 && (
-                    <button
-                      onClick={() => setShowFullDescription(!showFullDescription)}
-                      className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
-                    >
-                      {showFullDescription ? 'Show Less' : 'Show More'}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Tags */}
-              {event.tags && event.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-4">
-                  {event.tags.map((tag: any) => (
+                  {event.tags && event.tags.map((tag: any) => (
                     <Link key={tag.id} href={`/events?tag=${encodeURIComponent(tag.name)}`}>
                       <span
-                        className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full hover:bg-purple-200 transition-colors cursor-pointer"
+                        className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded-full hover:bg-purple-200 transition-colors cursor-pointer"
                       >
                         #{tag.name}
                       </span>
@@ -1301,8 +1204,27 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 </div>
               )}
 
+              <h2 className="text-2xl font-bold text-gray-900">About this event</h2>
 
-            </Card>
+              {event.description && (
+                <div className="space-y-3">
+                  <RichText
+                    content={showFullDescription || event.description.length <= 400
+                      ? event.description
+                      : `${event.description.slice(0, 400)}...`}
+                    className="text-gray-700 text-base leading-relaxed break-words w-full max-w-full overflow-hidden"
+                  />
+                  {event.description.length > 400 && (
+                    <button
+                      onClick={() => setShowFullDescription(!showFullDescription)}
+                      className="text-emerald-600 hover:text-emerald-700 font-semibold text-sm inline-flex items-center gap-1"
+                    >
+                      {showFullDescription ? 'Show Less' : 'Show More'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Event Location Card */}
             <Card>
