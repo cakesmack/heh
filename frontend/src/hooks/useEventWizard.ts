@@ -275,7 +275,104 @@ export function buildEventPayload(data: WizardFormData) {
   };
 }
 
+export const formatDateForInput = (isoString: string | Date | undefined | null): string => {
+  if (!isoString) return '';
+  if (typeof isoString === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(isoString)) {
+    return isoString;
+  }
+  let date: Date;
+  if (typeof isoString === 'string') {
+    const localStr = isoString.endsWith('Z') ? isoString.slice(0, -1) : isoString;
+    date = new Date(localStr);
+  } else {
+    date = isoString;
+  }
+  if (isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+export function parseInitialEventData(data: any): WizardFormData {
+  if (!data) return WIZARD_DEFAULTS;
+
+  const showtimes: ShowtimeCreate[] = Array.isArray(data.showtimes) ? data.showtimes.map((st: any) => ({
+    id: st.id,
+    start_time: formatDateForInput(st.start_time),
+    end_time: st.end_time ? formatDateForInput(st.end_time) : '',
+    ticket_url: st.ticket_url || '',
+    notes: st.notes || '',
+  })) : [];
+
+  const isMultiSession = showtimes.length > 0;
+  const isRecurring = Boolean(data.is_recurring || data.recurrence_rule);
+
+  const participatingVenueIds = data.participating_venues
+    ? data.participating_venues.map((v: any) => v.id)
+    : (data.participating_venue_ids || []);
+
+  const locationTab = participatingVenueIds.length > 0 ? 'multi' : 'main';
+  const venueId = data.venue_id || data.venue?.id || '';
+  const locationMode = venueId ? 'venue' : 'custom';
+
+  const categoryId = data.category_id || data.category?.id || '';
+  const organizerId = data.organizer_profile_id || data.organizer_profile?.id || '';
+
+  const tags = Array.isArray(data.tags)
+    ? data.tags.map((t: any) => (typeof t === 'string' ? t : t.name || String(t)))
+    : [];
+
+  return {
+    title: data.title || '',
+    category_id: categoryId,
+    price: data.price !== undefined && data.price !== null ? String(data.price) : '0',
+    organizer_profile_id: organizerId,
+    selectedOrganizer: organizerId || null,
+    venue_id: venueId,
+    location_name: data.location_name || '',
+    latitude: data.latitude ?? 57.4778,
+    longitude: data.longitude ?? -4.2247,
+    postcode: data.postcode || '',
+    address: data.address || '',
+    locationTab: locationTab,
+    locationMode: locationMode,
+    participating_venue_ids: participatingVenueIds,
+    map_display_lat: data.map_display_lat ?? null,
+    map_display_lng: data.map_display_lng ?? null,
+    map_display_label: data.map_display_label || '',
+
+    date_start: formatDateForInput(data.date_start),
+    date_end: formatDateForInput(data.date_end),
+    is_all_day: Boolean(data.is_all_day),
+    is_recurring: isRecurring,
+    frequency: data.frequency || (data.recurrence_rule ? 'CUSTOM' : 'WEEKLY'),
+    recurrence_end_date: formatDateForInput(data.recurrence_end_date),
+    ends_on: data.recurrence_end_date ? 'date' : 'never',
+    weekdays: data.weekdays || [],
+    recurrence_rule: data.recurrence_rule || '',
+    isMultiSession: isMultiSession,
+    noEndTime: !data.date_end,
+    showtimes: showtimes,
+
+    image_url: data.image_url || '',
+
+    description: data.description || '',
+    ticket_url: data.ticket_url || '',
+    website_url: data.website_url || '',
+    age_restriction: data.age_restriction || '',
+    tags: tags,
+  };
+}
+
 // ─── The Hook ──────────────────────────────────────────────
+export interface UseEventWizardOptions {
+  initialData?: any;
+  isEditMode?: boolean;
+}
+
 export interface UseEventWizardReturn {
   form: UseFormReturn<WizardFormData>;
   currentStep: WizardStepId;
@@ -292,30 +389,48 @@ export interface UseEventWizardReturn {
   completedSteps: Set<WizardStepId>;
 }
 
-export function useEventWizard(): UseEventWizardReturn {
-  const draft = useRef(loadDraft());
+export function useEventWizard(options: UseEventWizardOptions = {}): UseEventWizardReturn {
+  const { initialData, isEditMode = false } = options;
+
+  const getInitialValues = useCallback(() => {
+    if (isEditMode && initialData) {
+      return parseInitialEventData(initialData);
+    }
+    const draft = loadDraft();
+    return draft?.data ?? WIZARD_DEFAULTS;
+  }, [isEditMode, initialData]);
 
   const form = useForm<WizardFormData>({
-    defaultValues: draft.current?.data ?? WIZARD_DEFAULTS,
+    defaultValues: getInitialValues(),
     mode: 'onSubmit', // Validate on submit/next only
   });
 
   const { watch, getValues, setValue, reset } = form;
 
+  // Reset form when initialData updates asynchronously in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      const parsed = parseInitialEventData(initialData);
+      reset(parsed);
+    }
+  }, [isEditMode, initialData, reset]);
+
   // Track current step, direction, animation, and completed steps
-  // Using refs + state to avoid re-render loops
-  const [currentStep, setCurrentStep] = useState<WizardStepId>(
-    draft.current?.currentStep ?? 1
-  );
+  const [currentStep, setCurrentStep] = useState<WizardStepId>(() => {
+    if (isEditMode) return 1;
+    const draft = loadDraft();
+    return draft?.currentStep ?? 1;
+  });
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [isAnimating, setIsAnimating] = useState(false);
   const [stepErrors, setStepErrors] = useState<Record<string, string> | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<WizardStepId>>(new Set());
 
-  // Auto-save to sessionStorage on every form change (debounced)
+  // Auto-save to sessionStorage on every form change (debounced) - skip if in edit mode
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (isEditMode) return;
     const subscription = watch(() => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => {
@@ -326,12 +441,14 @@ export function useEventWizard(): UseEventWizardReturn {
       subscription.unsubscribe();
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [watch, getValues, currentStep]);
+  }, [isEditMode, watch, getValues, currentStep]);
 
-  // Also save step changes
+  // Also save step changes if not edit mode
   useEffect(() => {
-    saveDraft(getValues(), currentStep);
-  }, [currentStep]);
+    if (!isEditMode) {
+      saveDraft(getValues(), currentStep);
+    }
+  }, [isEditMode, currentStep]);
 
   const validateCurrentStep = useCallback((): Record<string, string> | null => {
     const validator = STEP_VALIDATORS[currentStep];
