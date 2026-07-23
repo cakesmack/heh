@@ -1333,7 +1333,7 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
       ? event.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...'
       : `Join us for ${event.title} at ${event.venue_name || event.location_name || 'Highland Events Hub'}`;
 
-    const optimizedOgUrl = event.image_url ? optimizeImage(event.image_url, 1200) : null;
+    const optimizedOgUrl = event.image_url ? optimizeImage(event.image_url, 'og') : null;
     const ogImage = optimizedOgUrl
       ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${baseUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
       : `${baseUrl}/images/og-default.jpg`;

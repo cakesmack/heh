@@ -13,7 +13,7 @@
  */
 export function optimizeImage(
     urlOrId: string | null | undefined,
-    options: number | 'thumb' | 'hero' | 'card' = 'hero'
+    options: number | 'thumb' | 'hero' | 'card' | 'og' = 'hero'
 ): string {
     if (!urlOrId) return '';
 
@@ -88,6 +88,8 @@ export function optimizeImage(
             cfVariant = 'thumbnail';
         } else if (options === 'hero' || options === 'card') {
             cfVariant = 'hero';
+        } else if (options === 'og') {
+            cfVariant = 'og'; // Maps to Cloudflare variant specifically configured for 1200x630
         } else if (typeof options === 'number' && options <= 150) {
             cfVariant = 'thumbnail'; // Handle number case if strictly small
         } else if (typeof options === 'number') {

@@ -817,9 +817,28 @@ export const getServerSideProps: GetServerSideProps<VenueDetailPageProps> = asyn
       };
     }
 
+    const baseUrl = 'https://highlandeventshub.co.uk';
+    
+    const description = venue.description 
+        ? venue.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...'
+        : `Check out upcoming events at ${venue.name} in ${venue.city || 'the Highlands'}.`;
+
+    const optimizedOgUrl = venue.image_url ? optimizeImage(venue.image_url, 'og') : null;
+    const ogImage = optimizedOgUrl
+      ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${baseUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
+      : `${baseUrl}/images/og-default.jpg`;
+
     return {
       props: {
         initialVenue: venue,
+        baseUrl,
+        meta: {
+          title: `${venue.name} - Events & Tickets | Highland Events Hub`,
+          description: description,
+          url: `${baseUrl}/venues/${venue.slug || venue.id}`,
+          image: ogImage,
+          type: 'website',
+        }
       },
     };
   } catch (error) {

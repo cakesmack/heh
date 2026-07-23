@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { GetServerSideProps } from 'next';
 import { GroupTeamList } from '@/components/groups/GroupTeamList';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -83,10 +84,14 @@ const PlusIcon = ({ className }: { className?: string }) => (
 
 
 
-export default function OrganizerProfilePage() {
+interface GroupDetailPageProps {
+    initialOrganizer: Organizer;
+}
+
+export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPageProps) {
     const router = useRouter();
     const { slug } = router.query;
-    const [organizer, setOrganizer] = useState<Organizer | null>(null);
+    const [organizer, setOrganizer] = useState<Organizer | null>(initialOrganizer || null);
     const [events, setEvents] = useState<EventResponse[]>([]);
     const [eventsTotal, setEventsTotal] = useState(0);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -94,7 +99,7 @@ export default function OrganizerProfilePage() {
     const [isMember, setIsMember] = useState(false);
     const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const [canEdit, setCanEdit] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(!initialOrganizer);
     const [error, setError] = useState<string | null>(null);
     const [isScrolled, setIsScrolled] = useState(false);
 
@@ -163,9 +168,9 @@ export default function OrganizerProfilePage() {
         }
     };
 
-    // Initial fetch of Organizer
+    // Initial fetch of Organizer (only if client-side navigation without SSR props)
     useEffect(() => {
-        if (!slug) return;
+        if (!slug || initialOrganizer) return;
 
         const fetchOrganizer = async () => {
             setIsLoading(true);
@@ -183,7 +188,7 @@ export default function OrganizerProfilePage() {
         };
 
         fetchOrganizer();
-    }, [slug]);
+    }, [slug, initialOrganizer]);
 
     // Fetch events when organizer or activeTab changes
     useEffect(() => {
@@ -615,3 +620,53 @@ export default function OrganizerProfilePage() {
         </>
     );
 }
+
+export const getServerSideProps: GetServerSideProps<GroupDetailPageProps> = async (context) => {
+    const { slug } = context.params as { slug: string };
+
+    try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
+        
+        // Fetch Organizer data
+        const res = await fetch(`${apiUrl}/api/organizers/${slug}`);
+
+        if (res.status === 404 || !res.ok) {
+            return { notFound: true };
+        }
+
+        const organizer: Organizer = await res.json();
+        if (!organizer) {
+            return { notFound: true };
+        }
+
+        const baseUrl = 'https://highlandeventshub.co.uk';
+
+        // Construct description
+        const description = organizer.bio
+            ? organizer.bio.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...'
+            : `Discover events, gigs, and festivals organized by ${organizer.name} on Highland Events Hub.`;
+
+        // Use the Cloudflare 'og' variant for strictly 1200x630
+        const imageToOptimize = organizer.cover_image_url || organizer.hero_image_url || organizer.logo_url;
+        const optimizedOgUrl = imageToOptimize ? optimizeImage(imageToOptimize, 'og') : null;
+        const ogImage = optimizedOgUrl
+            ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${baseUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
+            : `${baseUrl}/images/og-default.jpg`;
+
+        return {
+            props: {
+                initialOrganizer: organizer,
+                meta: {
+                    title: `${organizer.name} | Organizer on Highland Events Hub`,
+                    description: description,
+                    url: `${baseUrl}/groups/${slug}`,
+                    image: ogImage,
+                    type: 'website',
+                }
+            },
+        };
+    } catch (error) {
+        console.error('SSR Error fetching organizer:', error);
+        return { notFound: true };
+    }
+};
