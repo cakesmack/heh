@@ -1830,8 +1830,8 @@ export const searchAPI = {
     );
   },
 
-  globalSearch: async (q: string, limit = 10): Promise<{ events: EventResponse[]; venues: any[] }> => {
-    return apiFetch<{ events: EventResponse[]; venues: any[] }>(
+  globalSearch: async (q: string, limit = 10): Promise<{ events: EventResponse[]; venues: any[]; groups: any[] }> => {
+    return apiFetch<{ events: EventResponse[]; venues: any[]; groups: any[] }>(
       `/api/search?q=${encodeURIComponent(q)}&limit=${limit}`,
       {},
       false

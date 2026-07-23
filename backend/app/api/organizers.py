@@ -159,19 +159,9 @@ def get_organizer_by_slug(
             Event.status == "published"
         )
     ).one() or 0
-    
-    # Compute follower count
-    follower_count = session.exec(
-        select(func.count()).select_from(Follow).where(
-            Follow.target_id == organizer.id,
-            Follow.target_type == "group"
-        )
-    ).one() or 0
-    
     # Build response with computed fields
     response_data = OrganizerResponse.model_validate(organizer)
     response_data.total_events_hosted = total_events
-    response_data.follower_count = follower_count
     
     return response_data
 

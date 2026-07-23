@@ -90,6 +90,7 @@ export default function HomePage() {
 
   // Search Events
   const [matchingVenues, setMatchingVenues] = useState<any[]>([]);
+  const [matchingGroups, setMatchingGroups] = useState<any[]>([]);
   const {
     events: searchResults,
     total: totalSearchResults,
@@ -124,6 +125,7 @@ export default function HomePage() {
       // Close search drawer and reset state when filters are cleared
       setActiveFilters({});
       setMatchingVenues([]);
+      setMatchingGroups([]);
       setIsSearchOpen(false);
       return;
     }
@@ -159,12 +161,15 @@ export default function HomePage() {
       try {
         const globalRes = await searchAPI.globalSearch(filters.q, 3);
         setMatchingVenues(globalRes.venues || []);
+        setMatchingGroups(globalRes.groups || []);
       } catch (err) {
         console.error("Failed to fetch matching venues:", err);
         setMatchingVenues([]);
+        setMatchingGroups([]);
       }
     } else {
       setMatchingVenues([]);
+      setMatchingGroups([]);
     }
 
     await fetchSearchEvents(searchFilters);
@@ -285,6 +290,7 @@ export default function HomePage() {
         isLoading={isSearchLoading}
         results={searchResults}
         venues={matchingVenues}
+        groups={matchingGroups}
         total={totalSearchResults}
         page={searchPage}
         itemsPerPage={SEARCH_ITEMS_PER_PAGE} // Pass the single source of truth

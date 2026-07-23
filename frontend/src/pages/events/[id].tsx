@@ -587,83 +587,406 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
         })()}
       </Head>
 
-      {/* Cinematic Hero */}
-      <div className="relative h-[60vh] min-h-[500px] overflow-hidden">
-        {/* Blurred Background */}
-        <div className="absolute inset-0">
-          {event.image_url ? (
-            <OptimizedImage
-              key={`blur-${event.image_url}`}
-              src={event.image_url}
-              variant="thumb"
-              alt=""
-              fill
-              className="object-cover blur-2xl scale-110 opacity-60"
-              priority
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-stone-800 to-stone-950" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/40 to-transparent" />
-        </div>
-
-        {/* Sharp Centered Image - Now Full Container Width */}
-        <div className="absolute inset-0 flex items-center justify-center px-4 pt-24">
+      {/* ═══ Dark Hero Section ═══ */}
+      <div className="relative overflow-hidden bg-[#171717]">
+        {/* Full-Width Blurred Background Image Layer */}
+        {event.image_url && (
           <div
-            className={`relative w-full max-w-7xl aspect-[4/3] md:aspect-[21/9] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 ${event.image_url ? 'cursor-pointer group' : ''}`}
-            onClick={() => event.image_url && setImageLightboxOpen(true)}
-          >
-            {event.image_url ? (
-              <>
-                <OptimizedImage
-                  key={`hero-${event.image_url}`}
-                  src={event.image_url}
-                  variant="hero"
-                  alt={`${event.title} at ${venueName}`}
-                  fill
-                  sizes="100vw"
-                  className="object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
-                  priority
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors duration-300">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/10 backdrop-blur-md rounded-full p-4 border border-white/20">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                    </svg>
+            className="absolute inset-0 z-0"
+            style={{
+              backgroundImage: `url(${optimizeImage(event.image_url, 'hero')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(30px)',
+              transform: 'scale(1.1)',
+            }}
+          />
+        )}
+        
+        {/* Horizontal Gradient Overlay */}
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to right, rgba(23, 23, 23, 0.5) 0%, #171717 65%, #171717 100%)'
+          }}
+        />
+
+        {/* Content Wrapper (Must be relative to sit above background) */}
+        <div className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
+          {/* Back Button */}
+          <Link href="/events" className="inline-flex items-center text-sm font-medium text-slate-400 hover:text-white mb-6 transition-colors">
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Events
+          </Link>
+
+          {/* Two-Column Grid: Image (40%) | Content (60%) */}
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 lg:items-start">
+            {/* ─── Left Column: Event Poster Image ─── */}
+            <div className="w-full lg:w-[40%] flex-shrink-0">
+              <div
+                className="relative overflow-hidden rounded-lg"
+                onClick={() => event.image_url && setImageLightboxOpen(true)}
+              >
+                {/* Foreground Layer (The Image) */}
+                {event.image_url ? (
+                  <img
+                    src={optimizeImage(event.image_url, 'hero')}
+                    alt={`${event.title} at ${venueName}`}
+                    className="w-full h-auto cursor-pointer block relative z-10"
+                  />
+                ) : (
+                  <div className="w-full aspect-[4/5] bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center relative z-10">
+                    <span className="text-7xl">🎉</span>
+                  </div>
+                )}
+                {/* Featured Badge */}
+                {event.featured && (
+                  <div className="absolute top-4 left-4 z-20">
+                    <div className="px-3 py-1 bg-amber-400 text-amber-950 text-xs font-bold uppercase tracking-widest rounded-full shadow-lg flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      Featured
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ─── Right Column: Title, Logistics, Conversion Box ─── */}
+            <div className="w-full lg:w-[60%] flex flex-col">
+              {/* H1 Title */}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight break-words">
+                {event.title}
+              </h1>
+
+              {/* Organizer Info (Moved up) */}
+              {event.organizer_profile && (
+                <div className="flex items-center gap-2 mt-4">
+                  {event.organizer_profile.logo_url ? (
+                    <img 
+                      src={optimizeImage(event.organizer_profile.logo_url, 'thumb')} 
+                      alt={event.organizer_profile.name} 
+                      className="w-6 h-6 rounded-full object-cover bg-slate-700 flex-shrink-0" 
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  )}
+                  <span className="text-sm text-slate-400">
+                    Organised by{' '}
+                    <Link href={`/groups/${event.organizer_profile.slug}`} className="font-semibold text-white hover:underline transition-colors">
+                      {event.organizer_profile.name}
+                    </Link>
+                  </span>
+                </div>
+              )}
+
+              {/* Logistics: Date, Time, Venue (Inline Row) */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-slate-300">
+                {/* Date + Time */}
+                <div className="flex items-center gap-2">
+                  <svg className="w-6 h-6 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {(() => {
+                    const rawDates = [
+                      { start: event.date_start, end: event.date_end },
+                      ...(event.showtimes || []).map(st => ({ start: st.start_time, end: st.end_time }))
+                    ];
+                    // Deduplicate by start date string
+                    const uniqueDatesMap = new Map();
+                    rawDates.forEach(d => {
+                      if (!uniqueDatesMap.has(d.start)) {
+                        uniqueDatesMap.set(d.start, d);
+                      }
+                    });
+                    const uniqueDates = Array.from(uniqueDatesMap.values());
+                    
+                    if (uniqueDates.length > 1) {
+                      return (
+                        <div className="relative flex items-center">
+                          <select
+                            className="appearance-none bg-transparent border-none text-white font-medium focus:ring-0 cursor-pointer pr-8 py-0 m-0"
+                            style={{ outline: 'none', boxShadow: 'none' }}
+                            defaultValue=""
+                          >
+                            <option value="" disabled hidden className="bg-[#171717] text-white">
+                              Multiple Dates / Times
+                            </option>
+                            {uniqueDates.map((d, i) => (
+                              <option key={i} value={d.start} className="bg-[#171717] text-white">
+                                {formatDate(d.start)} • {event.is_all_day ? 'All Day' : `${formatTime(d.start)} – ${formatTime(d.end)}`}
+                              </option>
+                            ))}
+                          </select>
+                          <svg className="w-5 h-5 text-emerald-400 absolute right-1 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <>
+                        <span className="font-medium text-white">{formatDate(event.date_start)}</span>
+                        <span>{event.is_all_day ? 'All Day' : `${formatTime(event.date_start)} – ${formatTime(event.date_end)}`}</span>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <span className="text-slate-600 hidden sm:inline">•</span>
+
+                {/* Venue */}
+                <div className="flex items-center gap-2">
+                  <svg className="w-6 h-6 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {event.venue_id ? (
+                    <Link
+                      href={`/venues/${event.venue_id}`}
+                      className="font-medium text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
+                    >
+                      {event.venue_name || event.location_name}
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-white">{event.venue_name || event.location_name}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* ─── Conversion Stack ─── */}
+              <div className="mt-8 sm:mt-10 flex flex-col gap-3">
+                {/* Price */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-slate-400 uppercase tracking-widest">Price:</span>
+                  <span className="text-lg font-bold text-white">
+                    {event.price_display || (event.price && event.price > 0 ? `£${event.price.toFixed(2)}` : 'Free Entry')}
+                  </span>
+                </div>
+
+                {/* Primary CTA */}
+                {!isPastEvent && (
+                  <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3">
+                    {event.ticket_url && (
+                      <a
+                        href={event.ticket_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackTicketClick(event.id)}
+                        className="flex items-center justify-center sm:w-auto px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-lg transition-all shadow-md shadow-emerald-500/20"
+                      >
+                        Book Now
+                      </a>
+                    )}
+
+                    {event.website_url && (
+                      <a
+                        href={event.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackWebsiteClick(event.id)}
+                        className="flex items-center justify-center sm:w-auto px-6 py-2.5 border border-slate-500 hover:border-slate-300 text-slate-300 hover:text-white text-sm font-bold rounded-lg transition-all bg-transparent"
+                      >
+                        Visit Website
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {isPastEvent && (
+                  <p className="text-sm text-red-400 font-semibold mt-1">This event has ended.</p>
+                )}
+              </div>
+
+              {/* ─── Owner/Admin Tools Cluster (muted, below CTA) ─── */}
+              {hasEditRights && (
+                <div className="mt-6 sm:mt-8 p-4 bg-slate-800/60 border border-slate-700/50 rounded-xl">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                    <Link
+                      href={`/events/${event.id}/edit`}
+                      className="text-xs font-medium text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      Edit Event
+                    </Link>
+
+                    <a
+                      href={`/social/${event.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <span className="text-sm">🎨</span>
+                      Generate Poster
+                    </a>
+
+                    <button
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+                          return;
+                        }
+                        router.push(`/events/${event.id}/promote`);
+                      }}
+                      className="text-xs font-bold text-amber-900 bg-amber-400 hover:bg-amber-300 transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                      Promote
+                    </button>
+
+                    {event.is_recurring && (
+                      <button
+                        onClick={async () => {
+                          if (confirm('Are you sure you want to stop this recurring series? All future instances will be deleted.')) {
+                            try {
+                              const { api } = await import('@/lib/api');
+                              await api.events.stopRecurrence(event.id);
+                              alert('Recurring series stopped. Future instances have been removed.');
+                              refetch();
+                            } catch (err) {
+                              alert('Failed to stop series. Please try again.');
+                            }
+                          }
+                        }}
+                        className="text-xs font-medium text-orange-400/80 hover:text-orange-300 transition-colors inline-flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                        </svg>
+                        Stop Series
+                      </button>
+                    )}
+
+                    <button
+                      onClick={async () => {
+                        const isRecurring = event.is_recurring || event.parent_event_id;
+                        const message = isRecurring
+                          ? 'Are you sure you want to delete this event? This will also delete ALL child instances in this recurring series. This action cannot be undone.'
+                          : 'Are you sure you want to delete this event? This action cannot be undone.';
+
+                        if (confirm(message)) {
+                          try {
+                            const { api } = await import('@/lib/api');
+                            await api.events.delete(event.id);
+                            alert('Event deleted successfully.');
+                            window.location.href = '/events';
+                          } catch (err) {
+                            alert('Failed to delete event. Please try again.');
+                          }
+                        }
+                      }}
+                      className="text-xs font-medium text-red-400/80 hover:text-red-300 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
+
+                  {/* Admin Stats */}
+                  <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
+                    <span title="Views" className="flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      {event.view_count || 0}
+                    </span>
+                    <span title="Going" className="flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      {event.attending_count || 0}
+                    </span>
+                    <span title="Saves" className="flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      {event.save_count || 0}
+                    </span>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-stone-800 to-stone-700 flex items-center justify-center">
-                <span className="text-8xl">🎉</span>
-              </div>
-            )}
+              )}
 
-            {/* Featured Badge */}
-            {event.featured && (
-              <div className="absolute top-6 left-6">
-                <div className="px-4 py-1.5 bg-amber-400 text-amber-950 text-xs font-bold uppercase tracking-widest rounded-full shadow-lg flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                  Featured
-                </div>
+              {/* ─── Quiet Utilities Row (Share + Save) ─── */}
+              <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-3">
+                <SocialShare
+                  url={typeof window !== 'undefined' ? window.location.href : ''}
+                  title={event.title}
+                  description={event.description}
+                  variant="white"
+                  showLabel={false}
+                  size="md"
+                />
+
+                <BookmarkButton
+                  eventId={event.id}
+                  initialBookmarked={event.is_bookmarked}
+                  showLabel={false}
+                  size="md"
+                  className="border border-slate-600 text-slate-400 hover:bg-white/5 hover:border-slate-400 hover:text-white"
+                  onToggle={(isBookmarked, count) => {
+                    setEvent(prev => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        is_bookmarked: isBookmarked,
+                        save_count: count !== undefined 
+                          ? count 
+                          : (isBookmarked 
+                              ? (prev.save_count || 0) + 1 
+                              : Math.max(0, (prev.save_count || 0) - 1))
+                      };
+                    });
+                  }}
+                />
+
+                <AddToCalendar 
+                  event={event} 
+                  showLabel={false}
+                  buttonClassName="flex items-center justify-center w-10 h-10 rounded-full border border-slate-600 text-slate-400 hover:bg-white/5 hover:border-slate-400 hover:text-white transition-colors"
+                />
+
+                {/* Claim Event (for non-owners) */}
+                {isAuthenticated && user && !hasEditRights && (
+                  <button
+                    onClick={() => setClaimModalOpen(true)}
+                    className="text-xs font-medium text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1.5 ml-auto"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Claim Event
+                  </button>
+                )}
               </div>
-            )}
+              
+              {/* More Info Anchor */}
+              <div className="mt-8 sm:mt-10 border-t border-white/10 pt-6 flex justify-center lg:justify-start">
+                <a href="#about-event" className="text-sm font-medium text-emerald-500 hover:text-emerald-400 transition-colors inline-flex items-center gap-1.5">
+                  More Info & Map ↓
+                </a>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Back Button */}
-        <Link href="/events" className="absolute top-8 left-8 inline-flex items-center text-sm font-medium text-white/70 hover:text-white bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full backdrop-blur-md border border-white/10 transition-all z-20">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Events
-        </Link>
-
-
       </div>
 
+      {/* Past Event Banner */}
       {isPastEvent && (
         <div className="bg-red-50/50 border-b border-red-100 py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -696,440 +1019,11 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
         </div>
       )}
 
-      {/* Info Ribbon */}
-      <div className="sticky top-0 z-30 bg-stone-950/80 backdrop-blur-xl border-y border-white/5 text-white py-4 md:py-6 shadow-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-white break-words mb-2">{event.title}</h1>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-stone-400 text-sm">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="font-medium text-stone-200">{formatDate(event.date_start)}</span>
-                </div>
-                {event.venue_id ? (
-                  <Link
-                    href={`/venues/${event.venue_id}`}
-                    className="flex items-center gap-2 group text-stone-200 hover:text-emerald-400 transition-colors duration-200"
-                  >
-                    <svg className="w-4 h-4 text-emerald-500 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    </svg>
-                    <span className="group-hover:underline">{event.venue_name || event.location_name}</span>
-                  </Link>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    </svg>
-                    <span className="text-stone-200">{event.venue_name || event.location_name}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 9a2 2 0 10-4 0v5a2 2 0 01-2 2h6m-6-4h4m8 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="font-bold text-emerald-400">
-                    {event.price_display || (event.price && event.price > 0 ? `£${event.price.toFixed(2)}` : 'Free Entry')}
-                  </span>
-                </div>
-
-                {/* Stats */}
-                {hasEditRights && (
-                  <>
-                    <div className="flex items-center gap-2" title="Views">
-                      <svg className="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      <span className="text-stone-400">{event.view_count || 0}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2" title="Going">
-                      <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <span className="font-bold text-stone-200">{event.attending_count || 0}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2" title="Saves">
-                      <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
-                      <span className="font-bold text-stone-200">{event.save_count || 0}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 flex flex-col md:flex-row items-center justify-center md:justify-end w-full md:w-auto">
-              {/* Desktop Action Group */}
-              <div className="hidden md:flex items-center gap-3 flex-wrap justify-end">
-                {/* Quiet Utilities on the Left */}
-                <SocialShare
-                  url={typeof window !== 'undefined' ? window.location.href : ''}
-                  title={event.title}
-                  description={event.description}
-                  variant="white"
-                  showLabel={false}
-                  size="md"
-                />
-
-                <BookmarkButton
-                  eventId={event.id}
-                  initialBookmarked={event.is_bookmarked}
-                  showLabel={false}
-                  size="md"
-                  className="bg-stone-800/50 border-2 border-white/10 text-white hover:bg-stone-700 hover:border-white/20"
-                  onToggle={(isBookmarked, count) => {
-                    setEvent(prev => {
-                      if (!prev) return null;
-                      return {
-                        ...prev,
-                        is_bookmarked: isBookmarked,
-                        save_count: count !== undefined 
-                          ? count 
-                          : (isBookmarked 
-                              ? (prev.save_count || 0) + 1 
-                              : Math.max(0, (prev.save_count || 0) - 1))
-                      };
-                    });
-                  }}
-                />
-
-                {/* Main CTAs on the Right (Get Tickets dominant solid, Visit Website secondary ghost) */}
-                {!isPastEvent && (
-                  <>
-                    {/* Get Tickets Button (Solid High-Contrast Primary CTA) - Only rendered if ticket_url exists in DB */}
-                    {event.ticket_url && (
-                      <a
-                        href={event.ticket_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackTicketClick(event.id)}
-                        className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/20 text-center whitespace-nowrap shrink-0"
-                      >
-                        Get Tickets
-                      </a>
-                    )}
-
-                    {/* Visit Website Button (Secondary Outlined/Ghost CTA) - Only rendered if website_url exists in DB */}
-                    {event.website_url && (
-                      <a
-                        href={event.website_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackWebsiteClick(event.id)}
-                        className="px-6 py-2.5 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:text-white text-sm font-bold rounded-full transition-all transform hover:scale-105 text-center whitespace-nowrap shrink-0 bg-transparent"
-                      >
-                        Visit Website
-                      </a>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Mobile Action Group */}
-              <div className="flex md:hidden flex-col w-full gap-3 mt-4">
-                {/* Primary CTAs (Get Tickets solid, Visit Website ghost) */}
-                {!isPastEvent && (event.ticket_url || event.website_url) && (
-                  <div className="flex flex-col gap-2 w-full">
-                    {event.ticket_url && (
-                      <a
-                        href={event.ticket_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackTicketClick(event.id)}
-                        className="flex items-center justify-center w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-full transition-all shadow-lg shadow-emerald-500/20 text-center"
-                      >
-                        Get Tickets
-                      </a>
-                    )}
-
-                    {event.website_url && (
-                      <a
-                        href={event.website_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackWebsiteClick(event.id)}
-                        className="flex items-center justify-center w-full py-3 border-2 border-stone-400 hover:border-stone-200 text-stone-200 hover:text-white text-sm font-bold rounded-full transition-all text-center bg-transparent"
-                      >
-                        Visit Website
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {/* Mobile Utilities (Quiet Share & Save SVG icons to the left) */}
-                <div className="flex items-center justify-start gap-3 w-full">
-                  <SocialShare
-                    url={typeof window !== 'undefined' ? window.location.href : ''}
-                    title={event.title}
-                    description={event.description}
-                    variant="white"
-                    showLabel={false}
-                    size="md"
-                  />
-
-                  <BookmarkButton
-                    eventId={event.id}
-                    initialBookmarked={event.is_bookmarked}
-                    showLabel={false}
-                    size="md"
-                    className="bg-stone-800/50 border-2 border-white/10 text-white hover:bg-stone-700"
-                    onToggle={(isBookmarked, count) => {
-                      setEvent(prev => {
-                        if (!prev) return null;
-                        return {
-                          ...prev,
-                          is_bookmarked: isBookmarked,
-                          save_count: count !== undefined 
-                            ? count 
-                            : (isBookmarked 
-                                ? (prev.save_count || 0) + 1 
-                                : Math.max(0, (prev.save_count || 0) - 1))
-                        };
-                      });
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content - Wider Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Mobile: Organizer Badge */}
-        <div className="lg:hidden mb-6">
-          {event.organizer_profile && (
-            <OrganizerBadge organizer={event.organizer_profile} />
-          )}
-        </div>
-
-        {/* Mobile: Sidebar content appears first */}
-        <div id="mobile-dates-sidebar" className="lg:hidden mb-8 space-y-6 transition-all duration-1000">
-          {/* Mobile Date/Time Card */}
-          <Card>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              {event.showtimes && event.showtimes.length > 0 ? 'Dates + Times' : 'When'}
-            </h3>
-            <div className="space-y-4">
-              {/* Show showtimes table if available */}
-              {event.showtimes && event.showtimes.length > 0 ? (
-                <SidebarPerformances
-                  showtimes={event.showtimes}
-                  eventTicketUrl={event.ticket_url}
-                  eventId={event.id}
-                  trackTicketClick={trackTicketClick}
-                />
-              ) : (
-                /* Standard single date display */
-                <div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                      <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                        {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
-                      </span>
-                      <span className="text-lg font-bold text-emerald-900 leading-none">
-                        {new Date(event.date_start).getDate()}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
-                      <p className="text-sm text-gray-500">
-                        {event.is_all_day ? 'All Day' : `${formatTime(event.date_start)} - ${formatTime(event.date_end)}`}
-                      </p>
-                    </div>
-                  </div>
-                  {!isPastEvent && event.ticket_url && (
-                    <div className="mt-4">
-                      <a
-                        href={event.ticket_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackTicketClick(event.id)}
-                        className="w-full block px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-lg text-center transition-colors"
-                      >
-                        Get Tickets
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
-              <AddToCalendar event={event} className="w-full" />
-
-              {/* Recurring indicator for mobile */}
-              {event.is_recurring && (
-                <div className="p-3 bg-purple-50 rounded-lg flex items-start gap-2">
-                  <svg className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <p className="text-xs text-purple-800">
-                    {event.recurrence_rule
-                      ? (() => {
-                        try {
-                          const { rrulestr } = require('rrule');
-                          const text = rrulestr(event.recurrence_rule).toText();
-                          return text.charAt(0).toUpperCase() + text.slice(1);
-                        } catch (e) {
-                          return "This event repeats periodically.";
-                        }
-                      })()
-                      : "This event repeats periodically."}
-                    {' '}Check the calendar for more dates.
-                  </p>
-                </div>
-              )}
-            </div>
-          </Card>
-          
-          {/* Mobile: Event Tools (Organizers/Admins) */}
-          {hasEditRights && (
-            <Card className="border-l-4 border-l-purple-500 bg-purple-50">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Event Tools</h3>
-              <div className="space-y-2">
-                <a
-                  href={`/social/${event.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors"
-                >
-                  <span className="text-xl">🎨</span>
-                  Generate Poster
-                </a>
-              </div>
-            </Card>
-          )}
-
-          {/* Mobile: Claim Event Card */}
-          {isAuthenticated && user && !hasEditRights && (
-            <Card className="mt-4 border-purple-200 bg-purple-50/50">
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">Is this your event?</h3>
-              <p className="text-xs text-gray-600 mb-3">Claim this event to manage it, update details, and view stats.</p>
-              <button
-                onClick={() => setClaimModalOpen(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-medium transition-colors text-sm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Claim Event
-              </button>
-            </Card>
-          )}
-
-          {/* Mobile: Manage Event Section */}
-          {hasEditRights && (
-            <Card className="mt-4 border-l-4 border-l-emerald-500">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Manage Event</h3>
-              <div className="space-y-2">
-                <Link
-                  href={`/events/${event.id}/edit`}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-medium transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  Edit Event
-                </Link>
-
-                {event.is_recurring && (
-                  <button
-                    onClick={async () => {
-                      if (confirm('Are you sure you want to stop this recurring series? All future instances will be deleted.')) {
-                        try {
-                          const { api } = await import('@/lib/api');
-                          await api.events.stopRecurrence(event.id);
-                          alert('Recurring series stopped. Future instances have been removed.');
-                          refetch();
-                        } catch (err) {
-                          alert('Failed to stop series. Please try again.');
-                        }
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg font-medium transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                    </svg>
-                    Stop Recurring Series
-                  </button>
-                )}
-
-                <button
-                  onClick={async () => {
-                    const isRecurring = event.is_recurring || event.parent_event_id;
-                    const message = isRecurring
-                      ? 'Are you sure you want to delete this event? This will also delete ALL child instances in this recurring series. This action cannot be undone.'
-                      : 'Are you sure you want to delete this event? This action cannot be undone.';
-
-                    if (confirm(message)) {
-                      try {
-                        const { api } = await import('@/lib/api');
-                        await api.events.delete(event.id);
-                        alert('Event deleted successfully.');
-                        window.location.href = '/events';
-                      } catch (err) {
-                        alert('Failed to delete event. Please try again.');
-                      }
-                    }
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg font-medium transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Delete Event
-                </button>
-              </div>
-            </Card>
-          )}
-
-          {/* Sponsor Card (Mobile) */}
-          {hasEditRights && (
-            <Card className="mt-4 border-amber-200 bg-amber-50/50">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900">
-                  Promote Event
-                </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
-                  Featured
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mb-4">
-                Boost visibility by featuring this event on the homepage.
-              </p>
-              <button
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    router.push(`/login?returnUrl=${encodeURIComponent(router.asPath)}`);
-                    return;
-                  }
-                  router.push(`/events/${event.id}/promote`);
-                }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm text-sm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-                Promote Now
-              </button>
-            </Card>
-          )}
-        </div>
-
-        {/* Desktop: 70/30 Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
-          {/* Event Details - 70% (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Flat Editorial Container (No white box / no card borders) */}
-            <div className="space-y-4 pb-2">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-start" id="about-event">
+          {/* Flat Editorial Container (No white box / no card borders) */}
+          <div className="md:col-span-8 space-y-4 pb-2 max-w-3xl">
               {/* Front-Loaded Context: Category Badges, Age Restriction & Event Tags */}
               {((event.category || event.age_restriction || (event.tags && event.tags.length > 0))) && (
                 <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -1184,7 +1078,8 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
             </div>
 
             {/* Event Location Card */}
-            <Card>
+            <div className="md:col-span-4">
+              <Card>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 {/* Show custom location name for headless events, otherwise "Location" */}
                 {!event.venue_id && event.location_name
@@ -1324,232 +1219,17 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   return null;
                 })()}
               </div>
-            </Card>
-          </div>
-
-          {/* Sticky Sidebar - 30% (3 cols) - Hidden on Mobile (shown above) */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-24 space-y-6">
-
-              {/* Desktop: Organizer Badge */}
-              {event.organizer_profile && (
-                <Card className="border-l-4 border-l-emerald-500">
-                  <OrganizerBadge organizer={event.organizer_profile} />
-                </Card>
-              )}
-
-              {/* Event Tools (Visible to Organizers/Admins) */}
-              {hasEditRights && (
-                <Card className="border-l-4 border-l-purple-500 bg-purple-50">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">Event Tools</h3>
-                  <div className="space-y-2">
-                    <a
-                      href={`/social/${event.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors"
-                    >
-                      <span className="text-xl">🎨</span>
-                      Generate Poster
-                    </a>
-                  </div>
-                </Card>
-              )}
-
-              {/* Time & Date Sidebar Card */}
-              <div id="dates-sidebar" className="transition-all duration-1000">
-                <Card>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    {event.showtimes && event.showtimes.length > 0 ? 'Dates + Times' : 'When'}
-                  </h3>
-                  <div className="space-y-4">
-                    {/* Show showtimes table if available */}
-                    {event.showtimes && event.showtimes.length > 0 ? (
-                      <SidebarPerformances
-                        showtimes={event.showtimes}
-                        eventTicketUrl={event.ticket_url}
-                        eventId={event.id}
-                        trackTicketClick={trackTicketClick}
-                      />
-                    ) : (
-                      /* Standard single date display */
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-50 flex flex-col items-center justify-center flex-shrink-0">
-                          <span className="text-[10px] font-bold text-emerald-600 uppercase">
-                            {new Date(event.date_start).toLocaleDateString('en-GB', { month: 'short' })}
-                          </span>
-                          <span className="text-lg font-bold text-emerald-900 leading-none">
-                            {new Date(event.date_start).getDate()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{formatDate(event.date_start)}</p>
-                          <p className="text-sm text-gray-500">
-                            {event.is_all_day ? 'All Day' : `${formatTime(event.date_start)} - ${formatTime(event.date_end)}`}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    <AddToCalendar event={event} className="w-full" />
-
-                    {event.is_recurring && (
-                      <div className="p-3 bg-emerald-50 rounded-lg flex items-start gap-2">
-                        <svg className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <p className="text-xs text-emerald-800">
-                          {event.recurrence_rule
-                            ? (() => {
-                              try {
-                                const { rrulestr } = require('rrule');
-                                const text = rrulestr(event.recurrence_rule).toText();
-                                return text.charAt(0).toUpperCase() + text.slice(1);
-                              } catch (e) {
-                                return "This event repeats periodically.";
-                              }
-                            })()
-                            : "This event repeats periodically."}
-                          {' '}Check the calendar for more dates.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </div>
-
-              {/* Sponsor Card (Desktop) - Visible to owners/admins */}
-              {hasEditRights && (
-                <Card className="border-amber-200 bg-amber-50/50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      Promote Event
-                    </h3>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
-                      Featured
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 mb-4">
-                    Boost visibility by featuring this event on the homepage.
-                  </p>
-                  <button
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        router.push(`/login?returnTo=${encodeURIComponent(router.asPath)}`);
-                        return;
-                      }
-                      router.push(`/events/${event.id}/promote`);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 rounded-lg font-medium transition-colors shadow-sm text-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                    Promote Now
-                  </button>
-                </Card>
-              )}
-
-              {/* Claim Event Card - for users who don't have edit rights */}
-              {isAuthenticated && user && !hasEditRights && (
-                <Card className="mt-4 border-purple-200 bg-purple-50/50">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Is this your event?</h3>
-                  <p className="text-xs text-gray-600 mb-3">Claim this event to manage it, update details, and view stats.</p>
-                  <button
-                    onClick={() => setClaimModalOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-medium transition-colors text-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Claim Event
-                  </button>
-                </Card>
-              )}
-
-
-
-
-
-              {/* Owner Actions */}
-              {hasEditRights && (
-                <Card className="mt-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Manage Event</h3>
-                  <div className="space-y-2">
-                    {/* Owner Actions */}
-                    {hasEditRights && (
-                      <Link
-                        href={`/events/${event.id}/edit`}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                        Edit Event
-                      </Link>
-                    )}
-
-
-
-
-                    {event.is_recurring && (
-                      <button
-                        onClick={async () => {
-                          if (confirm('Are you sure you want to stop this recurring series? All future instances will be deleted.')) {
-                            try {
-                              const { api } = await import('@/lib/api');
-                              await api.events.stopRecurrence(event.id);
-                              alert('Recurring series stopped. Future instances have been removed.');
-                              refetch();
-                            } catch (err) {
-                              alert('Failed to stop series. Please try again.');
-                            }
-                          }
-                        }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                        </svg>
-                        Stop Recurring Series
-                      </button>
-                    )}
-
-                    <button
-                      onClick={async () => {
-                        const isRecurring = event.is_recurring || event.parent_event_id;
-                        const message = isRecurring
-                          ? 'Are you sure you want to delete this event? This will also delete ALL child instances in this recurring series. This action cannot be undone.'
-                          : 'Are you sure you want to delete this event? This action cannot be undone.';
-
-                        if (confirm(message)) {
-                          try {
-                            const { api } = await import('@/lib/api');
-                            await api.events.delete(event.id);
-                            alert('Event deleted successfully.');
-                            window.location.href = '/events';
-                          } catch (err) {
-                            alert('Failed to delete event. Please try again.');
-                          }
-                        }
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg font-medium transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete Event
-                    </button>
-                  </div>
-                </Card>
-              )}
+              </Card>
             </div>
           </div>
-        </div>
         <AccommodationAds ads={accommodationAds} />
 
-        {!isPastEvent && <SimilarEvents eventId={event.id} />}
+        {/* Divider above recommendations */}
+        {!isPastEvent && (
+          <div className="border-t border-gray-200 mt-12 pt-12">
+            <SimilarEvents eventId={event.id} />
+          </div>
+        )}
       </div>
 
       {

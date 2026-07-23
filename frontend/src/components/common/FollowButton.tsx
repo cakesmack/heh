@@ -9,9 +9,10 @@ interface FollowButtonProps {
     targetId: string;
     targetType: 'venue' | 'group';
     className?: string;
+    iconOnly?: boolean;
 }
 
-export function FollowButton({ targetId, targetType, className }: FollowButtonProps) {
+export function FollowButton({ targetId, targetType, className, iconOnly = false }: FollowButtonProps) {
     const { user } = useAuth();
     const [isFollowing, setIsFollowing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -61,26 +62,28 @@ export function FollowButton({ targetId, targetType, className }: FollowButtonPr
     return (
         <Button
             variant={isFollowing ? "default" : "outline"}
-            size="sm"
+            size={iconOnly ? "icon" : "sm"}
             onClick={handleToggleFollow}
             disabled={isLoading}
             className={cn(
-                "rounded-full px-6 transition-all",
+                "transition-all",
+                iconOnly ? "rounded-full w-10 h-10 p-0" : "rounded-full px-6",
                 isFollowing
-                    ? "bg-stone-800 text-white border border-white/10 hover:bg-stone-700 hover:text-white"
-                    : "border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 bg-transparent hover:text-emerald-700",
+                    ? "bg-red-500 text-white border-transparent hover:bg-red-600 hover:text-white"
+                    : "bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-400",
                 className
             )}
+            title={isFollowing ? "Unfollow" : "Follow"}
         >
             {isFollowing ? (
                 <>
-                    <HeartOff className="w-4 h-4 mr-2" />
-                    Unfollow
+                    <HeartOff className={cn("w-4 h-4", !iconOnly && "mr-2")} />
+                    {!iconOnly && "Unfollow"}
                 </>
             ) : (
                 <>
-                    <Heart className="w-4 h-4 mr-2" />
-                    Follow
+                    <Heart className={cn("w-4 h-4", !iconOnly && "mr-2")} />
+                    {!iconOnly && "Follow"}
                 </>
             )}
         </Button>

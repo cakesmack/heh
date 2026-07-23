@@ -302,153 +302,246 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
         />
       </Head>
 
-      {/* Cinematic Hero */}
-      <div className="relative h-[50vh] min-h-[400px] overflow-hidden">
-        {/* Blurred Background */}
-        <div className="absolute inset-0">
-          {venue.image_url ? (
-            <OptimizedImage
-              src={venue.image_url}
-              variant="thumb"
-              alt=""
-              fill
-              className="object-cover blur-2xl scale-110 opacity-60"
-              priority
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-800 to-blue-950" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/40 to-transparent" />
-        </div>
+      {/* ═══ Dark Hero Section ═══ */}
+      <div className="relative overflow-hidden bg-[#171717]">
+        {/* Full-Width Blurred Background Image Layer */}
+        {venue.image_url && (
+          <div
+            className="absolute inset-0 z-0"
+            style={{
+              backgroundImage: `url(${optimizeImage(venue.image_url, 'hero')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(30px)',
+              transform: 'scale(1.1)',
+            }}
+          />
+        )}
+        
+        {/* Horizontal Gradient Overlay */}
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to right, rgba(23, 23, 23, 0.5) 0%, #171717 65%, #171717 100%)'
+          }}
+        />
 
-        {/* Sharp Centered Image */}
-        <div className="absolute inset-0 flex items-center justify-center px-4 pt-24">
-          <div className="relative w-full max-w-3xl aspect-[16/9] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10">
-            {venue.image_url ? (
-              <OptimizedImage
-                src={venue.image_url}
-                variant="hero"
-                alt={venue.name}
-                fill
-                sizes="(max-width: 768px) 100vw, 800px"
-                className="object-cover object-top"
-                priority
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
-                <span className="text-8xl font-bold text-white/20">{venue.name.charAt(0)}</span>
-              </div>
-            )}
+        {/* Content Wrapper */}
+        <div className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
+          {/* Back Button */}
+          <Link href="/venues" className="inline-flex items-center text-sm font-medium text-slate-400 hover:text-white mb-6 transition-colors">
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Venues
+          </Link>
 
-            {/* Featured Badge */}
-            {venue.category && (
-              <div className="absolute top-6 left-6">
-                <div className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold uppercase tracking-widest rounded-full shadow-lg">
-                  {venue.category.name}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Back Button */}
-        <Link href="/venues" className="absolute top-8 left-8 inline-flex items-center text-sm font-medium text-white/70 hover:text-white bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full backdrop-blur-md border border-white/10 transition-all z-20">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Venues
-        </Link>
-
-        {/* Report Button */}
-        <button
-          onClick={() => setReportModalOpen(true)}
-          className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/10 hover:bg-red-500/20 backdrop-blur-md border border-white/10 text-white/70 hover:text-red-400 flex items-center justify-center transition-all z-20"
-          title="Report Venue"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Info Ribbon */}
-      <div className="sticky top-0 z-30 bg-stone-950/80 backdrop-blur-xl border-y border-white/5 text-white py-6 shadow-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-white truncate mb-2">{venue.name}</h1>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-stone-400 text-sm">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                  <span className="text-stone-200">{venue.address}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <span className="text-stone-200">{venue.category?.name || 'Venue'}</span>
-                </div>
+          {/* Two-Column Grid: Image (40%) | Content (60%) */}
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 lg:items-start">
+            {/* ─── Left Column: Venue Image ─── */}
+            <div className="w-full lg:w-[40%] flex-shrink-0">
+              <div className="relative overflow-hidden rounded-lg">
+                {venue.image_url ? (
+                  <img
+                    src={optimizeImage(venue.image_url, 'hero')}
+                    alt={venue.name}
+                    className="w-full h-auto block relative z-10"
+                  />
+                ) : (
+                  <div className="w-full aspect-[4/5] bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center relative z-10">
+                    <span className="text-8xl font-bold text-white/20">{venue.name.charAt(0)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col sm:flex-row items-center justify-center md:justify-end gap-4 w-full md:w-auto">
-              <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-start">
-                <SocialShare
-                  url={typeof window !== 'undefined' ? window.location.href : ''}
-                  title={venue.name}
-                  description={venue.description}
-                  variant="white"
-                />
-                <FollowButton targetId={venue.id} targetType="venue" className="rounded-full" />
+            {/* ─── Right Column: Venue Details ─── */}
+            <div className="w-full lg:w-[60%] flex flex-col justify-start">
+              {/* Top Section: Title & Logistics */}
+              <div className="mb-8">
+                {/* H1 Title */}
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight mb-4">
+                  {venue.name}
+                </h1>
+
+                {/* Metadata Stack */}
+                <div className="flex flex-col gap-3 text-sm text-slate-300">
+                  {/* Address */}
+                  <div className="flex items-center gap-3">
+                    <svg className="w-6 h-6 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="font-medium text-white">{venue.address}</span>
+                  </div>
+                  {/* Category */}
+                  <div className="flex items-center gap-3">
+                    <svg className="w-6 h-6 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-slate-300">
+                      {venue?.category?.name || 'Venue'}
+                    </span>
+                  </div>
+                  
+                  {/* Amenities Inline Stack */}
+                  {(venue.is_dog_friendly || venue.has_wheelchair_access || venue.has_parking || venue.serves_food) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {venue.is_dog_friendly && (
+                        <AmenityItem
+                          icon={<svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c1.5-1 3.5-.5 4.5 1s.5 3.5-1 4.5c-1.5 1-2 3-2 5 0 1-.5 2.5-1.5 3.5m0-14c-1.5-1-3.5-.5-4.5 1s-.5 3.5 1 4.5c1.5 1 2 3 2 5 0 1 .5 2.5 1.5 3.5m0-14v1m0 13v-1" /></svg>}
+                          label="Dog Friendly"
+                          active={true}
+                        />
+                      )}
+                      {venue.has_wheelchair_access && (
+                        <AmenityItem
+                          icon={<svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-4 8m4-8h4l2 8m-6-8h-4" /></svg>}
+                          label="Wheelchair Access"
+                          active={true}
+                        />
+                      )}
+                      {venue.has_parking && (
+                        <AmenityItem
+                          icon={<svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h3a2 2 0 010 4H9V9z" /></svg>}
+                          label="Parking"
+                          active={true}
+                        />
+                      )}
+                      {venue.serves_food && (
+                        <AmenityItem
+                          icon={<svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
+                          label="Food"
+                          active={true}
+                        />
+                      )}
+                    </div>
+                  )}
+                  {venue.amenities_notes && (
+                    <p className="mt-1 text-xs text-slate-400 italic">
+                      {venue.amenities_notes}
+                    </p>
+                  )}
+                </div>
               </div>
-              {!isOwner && (
-                <button
-                  onClick={async () => {
-                    if (!currentUser) {
-                      router.push('/login?callbackUrl=' + encodeURIComponent(window.location.pathname));
-                      return;
-                    }
-                    const reason = prompt("Why do you want to claim this venue?");
-                    if (!reason) return;
-                    try {
-                      await api.venueClaims.create(venue.id, reason);
-                      alert("Claim submitted successfully!");
-                      refreshUser();
-                    } catch (err) {
-                      alert(err instanceof Error ? err.message : "Failed to submit claim.");
-                    }
-                  }}
-                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center whitespace-nowrap shrink-0"
-                >
-                  Claim Venue
-                </button>
-              )}
-              {isOwner && (
-                <button
-                  onClick={() => setEditModalOpen(true)}
-                  className="w-full sm:w-auto bg-stone-800 border border-white/10 hover:bg-stone-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center whitespace-nowrap shrink-0"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  Edit Details
-                </button>
-              )}
+
+              {/* Utility Rows: Stacked Layout */}
+              <div className="mt-6 sm:mt-8 pt-6 border-t border-white/10 flex flex-col gap-4">
+                
+                {/* Top Row: User Actions (Socials + Share + Follow) */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {venue.website && (
+                    <a href={venue.website} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-slate-800/60 border border-white/5 text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition-colors" title="Website">
+                      <GlobeIcon className="w-4 h-4" />
+                    </a>
+                  )}
+                  {(venue.facebook_url || venue.social_facebook) && (
+                    <a href={venue.facebook_url || venue.social_facebook} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-slate-800/60 border border-white/5 text-slate-300 hover:bg-slate-700 hover:text-blue-400 transition-colors" title="Facebook">
+                      <FacebookIcon className="w-4 h-4" />
+                    </a>
+                  )}
+                  {(venue.instagram_url || venue.social_instagram) && (
+                    <a href={venue.instagram_url || venue.social_instagram} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-slate-800/60 border border-white/5 text-slate-300 hover:bg-slate-700 hover:text-pink-400 transition-colors" title="Instagram">
+                      <InstagramIcon className="w-4 h-4" />
+                    </a>
+                  )}
+                  {venue.social_x && (
+                    <a href={venue.social_x} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-slate-800/60 border border-white/5 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors" title="X (Twitter)">
+                      <TwitterIcon className="w-4 h-4" />
+                    </a>
+                  )}
+                  
+                  {/* Share */}
+                  <SocialShare
+                    url={typeof window !== 'undefined' ? window.location.href : ''}
+                    title={venue.name}
+                    description={venue.description}
+                    showLabel={false}
+                    className="!p-2.5 !w-auto !h-auto !rounded-full !bg-emerald-500/10 !border !border-emerald-500/30 !text-emerald-500 hover:!bg-emerald-500/20 hover:!border-emerald-500/50 hover:!text-emerald-400 !transition-colors"
+                  />
+                  
+                  {/* Follow */}
+                  <FollowButton 
+                    targetId={venue.id} 
+                    targetType="venue" 
+                    iconOnly={true}
+                    className="!p-2.5 !w-auto !h-auto !transition-colors" 
+                  />
+                </div>
+
+                {/* Bottom Row: Admin Actions */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {(isOwner || currentUser?.is_admin) ? (
+                    <div className="bg-slate-800/60 p-1.5 sm:p-2 rounded-full border border-white/5 flex items-center gap-1">
+                      <button
+                        onClick={() => setEditModalOpen(true)}
+                        className="flex items-center text-xs font-bold text-white bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-colors shrink-0"
+                      >
+                        <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setReportModalOpen(true)}
+                        className="text-xs font-bold text-slate-400 hover:text-red-400 px-3 py-2 rounded-full transition-colors shrink-0"
+                        title="Report Venue"
+                      >
+                        Report
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          if (!currentUser) {
+                            router.push('/login?callbackUrl=' + encodeURIComponent(window.location.pathname));
+                            return;
+                          }
+                          const reason = prompt("Why do you want to claim this venue?");
+                          if (!reason) return;
+                          try {
+                            await api.venueClaims.create(venue.id, reason);
+                            alert("Claim submitted successfully!");
+                            refreshUser();
+                          } catch (err) {
+                            alert(err instanceof Error ? err.message : "Failed to submit claim.");
+                          }
+                        }}
+                        className="text-xs font-bold text-emerald-400 hover:text-emerald-300 px-4 py-2 rounded-full border border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-500/10 transition-colors shrink-0"
+                      >
+                        Claim Venue
+                      </button>
+                      <button
+                        onClick={() => setReportModalOpen(true)}
+                        className="text-xs font-bold text-slate-400 hover:text-red-400 px-3 py-2 rounded-full border border-white/5 bg-slate-800/60 transition-colors shrink-0"
+                        title="Report Venue"
+                      >
+                        Report
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Anchor Link to Body */}
+              <div className="mt-8">
+                <a href="#venue-info" className="inline-flex items-center text-sm font-bold text-emerald-500 hover:text-emerald-400 transition-colors">
+                  More info, map & events ↓
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
-          {/* Content Area - 70% */}
-          <div className="lg:col-span-7 space-y-8">
-            {/* Title & Description Block */}
-            <div className="space-y-4">
-              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">{venue.name}</h1>
+      {/* ═══ Main Body (Below the Fold) ═══ */}
+      <div id="venue-info" className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Full-width 12-column Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+          {/* Left Column: Venue Info (8 cols) */}
+          <div className="md:col-span-8 space-y-8">
+            {/* Description Block */}
               {venue.description ? (
                 <Card>
                   <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6 flex items-center">
@@ -461,7 +554,6 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                   <p className="text-gray-400 italic bg-gray-50 rounded-lg p-6 border border-dashed border-gray-200">No description available for this venue.</p>
                 </Card>
               )}
-            </div>
 
             {/* About / History Section */}
             {venue.about_history && venue.about_history.trim() !== '' && (
@@ -491,48 +583,7 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
               </div>
             )}
 
-            {/* Amenities Section */}
-            <Card>
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Amenities & Features</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {venue.is_dog_friendly && (
-                  <AmenityItem
-                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c1.5-1 3.5-.5 4.5 1s.5 3.5-1 4.5c-1.5 1-2 3-2 5 0 1-.5 2.5-1.5 3.5m0-14c-1.5-1-3.5-.5-4.5 1s-.5 3.5 1 4.5c1.5 1 2 3 2 5 0 1 .5 2.5 1.5 3.5m0-14v1m0 13v-1" /></svg>}
-                    label="Dog Friendly"
-                    active={true}
-                  />
-                )}
-                {venue.has_wheelchair_access && (
-                  <AmenityItem
-                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0l-4 8m4-8h4l2 8m-6-8h-4" /></svg>}
-                    label="Wheelchair Access"
-                    active={true}
-                  />
-                )}
-                {venue.has_parking && (
-                  <AmenityItem
-                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h3a2 2 0 010 4H9V9z" /></svg>}
-                    label="Parking Available"
-                    active={true}
-                  />
-                )}
-                {venue.serves_food && (
-                  <AmenityItem
-                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
-                    label="Serves Food"
-                    active={true}
-                  />
-                )}
-              </div>
-              {!venue.is_dog_friendly && !venue.has_wheelchair_access && !venue.has_parking && !venue.serves_food && (
-                <p className="text-gray-500 italic text-sm">No amenities listed for this venue.</p>
-              )}
-              {venue.amenities_notes && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-600 italic">
-                  &ldquo;{venue.amenities_notes}&rdquo;
-                </div>
-              )}
-            </Card>
+
 
             {/* Upcoming Events Section */}
             {events.length > 0 && (
@@ -647,84 +698,9 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
             )}
           </div>
 
-          {/* Sidebar - 30% (Sticky) */}
-          <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-24 self-start">
-            {/* Contact Card (first for immediate visibility) */}
-            <Card>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-6">Connect</h3>
-              <div className="space-y-5 text-sm">
-                {(venue.phone || venue.email) && (
-                  <div className="space-y-4">
-                    {venue.phone && (
-                      <div className="pb-4 border-b border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Phone</p>
-                        <a href={`tel:${venue.phone}`} className="text-emerald-600 hover:text-emerald-700 font-bold transition-all text-base">
-                          {venue.phone}
-                        </a>
-                      </div>
-                    )}
-                    {venue.email && (
-                      <div className="pb-4 border-b border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Email</p>
-                        <a href={`mailto:${venue.email}`} className="text-emerald-600 hover:text-emerald-700 font-bold transition-all truncate block text-base">
-                          {venue.email}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
+          {/* Right Column: Connect & Map (4 cols) */}
+          <div className="md:col-span-4 space-y-6 md:sticky md:top-24 self-start">
 
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Socials & Website</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {venue.website && (
-                      <a
-                        href={venue.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-emerald-600 hover:border-emerald-200"
-                        title="Website"
-                      >
-                        <GlobeIcon className="w-5 h-5" />
-                      </a>
-                    )}
-                    {(venue.facebook_url || venue.social_facebook) && (
-                      <a
-                        href={venue.facebook_url || venue.social_facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-blue-600 hover:border-blue-200"
-                        title="Facebook"
-                      >
-                        <FacebookIcon className="w-5 h-5" />
-                      </a>
-                    )}
-                    {(venue.instagram_url || venue.social_instagram) && (
-                      <a
-                        href={venue.instagram_url || venue.social_instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-pink-600 hover:border-pink-200"
-                        title="Instagram"
-                      >
-                        <InstagramIcon className="w-5 h-5" />
-                      </a>
-                    )}
-                    {venue.social_x && (
-                      <a
-                        href={venue.social_x}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all hover:text-stone-900 hover:border-stone-300"
-                        title="X (Twitter)"
-                      >
-                        <TwitterIcon className="w-5 h-5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
 
             {/* Map Card */}
             <Card className="overflow-hidden p-0">
@@ -797,12 +773,13 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
 
 // Helper Component for Amenity Item
 function AmenityItem({ icon, label, active }: { icon: React.ReactNode; label: string; active: boolean }) {
+  if (!active) return null;
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-lg border ${active ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-gray-50 border-gray-100 text-gray-400'}`}>
-      <div className={active ? 'text-emerald-600' : 'text-gray-400'}>
+    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/60 border border-white/10 text-slate-300 text-xs font-medium">
+      <div className="w-3.5 h-3.5 text-emerald-400">
         {icon}
       </div>
-      <span className="font-medium text-sm">{label}</span>
+      <span>{label}</span>
     </div>
   );
 }

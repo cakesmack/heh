@@ -141,13 +141,27 @@ def global_search(
     events = session.exec(events_query).all()
     event_responses = [build_event_response(e, session) for e in events]
 
-    # Query venues (strict column filtering: name or city only)
+    # Query venues (strict column filtering: name or city only, verified only)
     venues_query = select(Venue).where(
-        (Venue.name.ilike(search_term)) |
-        (Venue.city.ilike(search_term))
+        (Venue.status == "VERIFIED") &
+        (
+            (Venue.name.ilike(search_term)) |
+            (Venue.city.ilike(search_term))
+        )
     ).limit(limit)
     venues = session.exec(venues_query).all()
     venue_responses = [build_venue_response(v, session) for v in venues]
 
-    return GlobalSearchResponse(events=event_responses, venues=venue_responses)
+    # Query groups (Organizers, all)
+    from app.models.organizer import Organizer
+    groups_query = select(Organizer).where(
+        (Organizer.name.ilike(search_term))
+    ).limit(limit)
+    groups = session.exec(groups_query).all()
+    
+    return GlobalSearchResponse(
+        events=event_responses,
+        venues=venue_responses,
+        groups=groups
+    )
 

@@ -163,7 +163,7 @@ class VenueResponse(BaseModel):
     longitude: float
     geohash: Optional[str]
     category_id: Optional[str] = None
-    category: Optional[VenueCategoryResponse] = Field(None, alias="category_rel")
+    category: Optional[VenueCategoryResponse] = Field(None, validation_alias="category_rel")
     description: Optional[str]
     about_history: Optional[str] = None
     city: Optional[str] = None
@@ -211,6 +211,7 @@ class VenueResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class VenueFilter(BaseModel):

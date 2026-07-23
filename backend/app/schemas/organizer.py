@@ -90,8 +90,6 @@ class OrganizerResponse(OrganizerBase):
     upcoming_events_count: int = 0
     # Computed stats (populated by API)
     total_events_hosted: Optional[int] = None
-    follower_count: Optional[int] = None
-    
     class Config:
         from_attributes = True
 

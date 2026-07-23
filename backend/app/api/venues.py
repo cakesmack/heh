@@ -310,9 +310,9 @@ def list_venues(
             .correlate(Venue)
             .scalar_subquery()
         )
-        query = select(Venue).add_columns(future_events_count.label("event_count"))
+        query = select(Venue).add_columns(future_events_count.label("event_count")).options(selectinload(Venue.category_rel))
     else:
-        query = select(Venue)
+        query = select(Venue).options(selectinload(Venue.category_rel))
 
     # Filter by category
     if category_id:
@@ -583,12 +583,18 @@ def get_venue(
     """
     # Try slug lookup first
     venue = session.exec(
-        select(Venue).where(Venue.slug == venue_id)
+        select(Venue)
+        .options(selectinload(Venue.category_rel))
+        .where(Venue.slug == venue_id)
     ).first()
 
     # Fall back to UUID lookup
     if not venue:
-        venue = session.get(Venue, normalize_uuid(venue_id))
+        venue = session.exec(
+            select(Venue)
+            .options(selectinload(Venue.category_rel))
+            .where(Venue.id == normalize_uuid(venue_id))
+        ).first()
 
     if not venue:
         raise HTTPException(

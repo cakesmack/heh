@@ -12,6 +12,7 @@ from app.schemas.category import CategoryResponse
 from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
 from app.schemas.venue import VenueResponse
+from app.schemas.organizer import OrganizerResponse
 from typing import Union
 import re
 
@@ -317,5 +318,6 @@ class MapEventResponse(BaseModel):
 class GlobalSearchResponse(BaseModel):
     events: List[EventResponse]
     venues: List[VenueResponse]
+    groups: List["OrganizerResponse"] = []
 
 

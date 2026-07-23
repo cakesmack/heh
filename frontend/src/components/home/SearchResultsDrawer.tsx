@@ -4,7 +4,7 @@
  */
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { MapPin, Building2 } from 'lucide-react';
+import { MapPin, Building2, Users } from 'lucide-react';
 import { EventResponse } from '@/types';
 import SmallEventCard from '@/components/events/SmallEventCard';
 import FilterBar from '@/components/search/FilterBar';
@@ -77,12 +77,73 @@ export function VenueSearchCard({ venue }: VenueSearchCardProps) {
     );
 }
 
+interface GroupSearchCardProps {
+    group: {
+        id: string;
+        name: string;
+        slug?: string;
+        logo_url?: string;
+    };
+}
+
+export function GroupSearchCard({ group }: GroupSearchCardProps) {
+    const [imageError, setImageError] = useState(false);
+    
+    const isUuid = group.logo_url && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(group.logo_url);
+    
+    const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 
+        (process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH 
+            ? `https://imagedelivery.net/${process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH}` 
+            : 'https://imagedelivery.net/bo62dvlU2o27fRAdUvzFdA');
+
+    const fullImageUrl = group.logo_url
+        ? (isUuid 
+            ? `${imageBaseUrl}/${group.logo_url}/thumbnail` 
+            : group.logo_url)
+        : '';
+
+    const showImage = !!fullImageUrl && !imageError;
+
+    return (
+        <Link
+            href={`/groups/${group.slug || group.id}`}
+            className="flex flex-row items-center gap-3 p-3 bg-gray-50 border border-gray-150 hover:border-emerald-250 hover:bg-emerald-50/10 rounded-xl transition-all duration-200 shadow-sm hover:shadow group w-full cursor-pointer"
+        >
+            {/* Left: Thumbnail Image or Fallback */}
+            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center border border-gray-200/60">
+                {showImage ? (
+                    <img
+                        src={fullImageUrl}
+                        alt={group.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={() => setImageError(true)}
+                    />
+                ) : (
+                    <Users className="w-6 h-6 text-gray-400" />
+                )}
+            </div>
+
+            {/* Right: Text Content */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-800">
+                        Group
+                    </span>
+                </div>
+                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
+                    {group.name}
+                </h4>
+            </div>
+        </Link>
+    );
+}
 
 interface SearchResultsDrawerProps {
     isOpen: boolean;
     isLoading: boolean;
     results: EventResponse[];
     venues?: any[];
+    groups?: any[];
     total: number;
     page: number;
     onClose: () => void;
@@ -99,6 +160,7 @@ export default function SearchResultsDrawer({
     isLoading,
     results,
     venues = [],
+    groups = [],
     total,
     page,
     onClose,
@@ -180,6 +242,20 @@ export default function SearchResultsDrawer({
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {venues.slice(0, 3).map((venue) => (
                                         <VenueSearchCard key={venue.id} venue={venue} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Matching Groups Section */}
+                        {groups.length > 0 && (
+                            <div className="mb-8 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">
+                                    Matching Groups
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {groups.slice(0, 3).map((group) => (
+                                        <GroupSearchCard key={group.id} group={group} />
                                     ))}
                                 </div>
                             </div>
