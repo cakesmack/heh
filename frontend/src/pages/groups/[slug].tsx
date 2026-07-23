@@ -627,8 +627,8 @@ export const getServerSideProps: GetServerSideProps<GroupDetailPageProps> = asyn
     try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
         
-        // Fetch Organizer data
-        const res = await fetch(`${apiUrl}/api/organizers/${slug}`);
+        // Fetch Organizer data by slug
+        const res = await fetch(`${apiUrl}/api/organizers/slug/${slug}`);
 
         if (res.status === 404 || !res.ok) {
             return { notFound: true };
