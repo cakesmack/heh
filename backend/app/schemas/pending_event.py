@@ -14,6 +14,6 @@ class PendingEventCreate(BaseModel):
     age_restriction: Optional[str] = None
     min_age: Optional[int] = None
     venue_name: str
-    category_name: str
+    category_name: Optional[str] = None
     source: str
     raw_showtimes: List[str] = []
