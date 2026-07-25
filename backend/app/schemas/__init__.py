@@ -30,7 +30,10 @@ from .venue import (
     VenueListResponse,
 )
 
-
+# Pending Event schemas
+from .pending_event import (
+    PendingEventCreate,
+)
 
 # Promotion schemas
 from .promotions import (

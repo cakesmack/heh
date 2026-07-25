@@ -27,6 +27,7 @@ from .bookmark import Bookmark
 from .report import Report
 from .notification import Notification, NotificationType
 from .featured_booking import FeaturedBooking, SlotType, BookingStatus, SLOT_CONFIG
+from .pending_event import PendingEvent
 from .slot_pricing import SlotPricing, DEFAULT_PRICING
 from .showtime import EventShowtime
 from .campaign_log import CampaignLog
@@ -100,4 +101,6 @@ __all__ = [
     "EventAttendee",
     # Accommodation Ads
     "AccommodationAd",
+    # Pending Events
+    "PendingEvent",
 ]

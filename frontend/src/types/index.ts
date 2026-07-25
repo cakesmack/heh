@@ -1055,3 +1055,29 @@ export interface GeographicHubUpdate {
   hero_image_url?: string;
   featured_event_id?: string;
 }
+
+// ============================================================
+// PENDING EVENT TYPES
+// ============================================================
+
+export interface PendingEvent {
+  id: string;
+  title: string;
+  description: string;
+  date_start: string;
+  date_end?: string | null;
+  image_url?: string | null;
+  ticket_url?: string | null;
+  website_url?: string | null;
+  price_display?: string | null;
+  min_price?: number | null;
+  age_restriction?: string | null;
+  min_age?: number | null;
+  venue_name: string;
+  category_name: string;
+  source: string;
+  raw_showtimes?: string[];
+  import_status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+

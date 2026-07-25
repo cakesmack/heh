@@ -25,6 +25,16 @@ if config.config_file_name is not None:
 # Set target_metadata to SQLModel.metadata
 target_metadata = SQLModel.metadata
 
+def include_object(object, name, type_, reflected, compare_to):
+    """
+    Filter out database objects not managed by SQLModel.
+    Prevents Alembic from generating destructive ops for unmanaged tables
+    like 'checkins', 'schema_migrations', etc.
+    """
+    if type_ == "table" and reflected and name not in target_metadata.tables:
+        return False
+    return True
+
 def get_url() -> str:
     """Dynamically retrieve database URL from environment variables or settings."""
     db_url = os.getenv("DATABASE_URL") or str(settings.DATABASE_URL)
@@ -40,6 +50,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -58,7 +69,8 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

@@ -61,6 +61,7 @@ import type {
   CheckoutResponse,
   FeaturedBooking,
   ActiveFeatured,
+  PendingEvent,
 } from '@/types';
 
 // ============================================================
@@ -1452,6 +1453,49 @@ export const adminAPI = {
 
   getCampaignLogs: async (campaignId: string): Promise<any> => {
     return apiFetch<any>(`/api/admin/campaigns/logs/${campaignId}`);
+  },
+
+  /**
+   * Get list of pending events staged for moderation review
+   */
+  getPendingEvents: async (): Promise<PendingEvent[]> => {
+    return apiFetch<PendingEvent[]>('/api/admin/pending-events');
+  },
+
+  /**
+   * Get count of pending events staged for moderation review
+   */
+  getPendingEventsCount: async (): Promise<{ count: number }> => {
+    return apiFetch<{ count: number }>('/api/admin/pending-events/count');
+  },
+
+  /**
+   * Update pending event fields in staging before approval
+   */
+  updatePendingEvent: async (id: string, data: Partial<PendingEvent>): Promise<PendingEvent> => {
+    return apiFetch<PendingEvent>(`/api/admin/pending-events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Approve a pending event and publish to live catalog (with optional overrides)
+   */
+  approvePendingEvent: async (id: string, overrides?: Partial<PendingEvent>): Promise<{ message: string; event_id: string; pending_id: string }> => {
+    return apiFetch<{ message: string; event_id: string; pending_id: string }>(`/api/admin/pending-events/${id}/approve`, {
+      method: 'POST',
+      body: overrides ? JSON.stringify(overrides) : undefined,
+    });
+  },
+
+  /**
+   * Reject a pending event from the staging queue
+   */
+  rejectPendingEvent: async (id: string): Promise<{ message: string; id: string }> => {
+    return apiFetch<{ message: string; id: string }>(`/api/admin/pending-events/${id}`, {
+      method: 'DELETE',
+    });
   },
 };
 

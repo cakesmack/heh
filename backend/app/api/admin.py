@@ -14,6 +14,8 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue, VenueStatus
+from app.models.category import Category
+from app.models.pending_event import PendingEvent
 
 from app.models.venue_claim import VenueClaim
 from app.models.venue_invite import VenueInvite
@@ -134,8 +136,10 @@ def get_admin_stats(
     # Pending Reports
     pending_reports = session.exec(select(func.count(Report.id)).where(Report.status == "pending")).one()
 
-    # Pending Events
-    pending_events = session.exec(select(func.count(Event.id)).where(Event.status == "pending")).one()
+    # Pending Events (User submitted + Scraped staging)
+    pending_user_events = session.exec(select(func.count(Event.id)).where(Event.status == "pending")).one()
+    pending_staged_events = session.exec(select(func.count(PendingEvent.id)).where(PendingEvent.import_status == "pending")).one()
+    pending_events = pending_user_events + pending_staged_events
 
     # Pending Claims
     pending_claims = session.exec(select(func.count(VenueClaim.id)).where(VenueClaim.status == "pending")).one()
@@ -1525,3 +1529,212 @@ def emergency_migrate(
         return {"message": "Migration successful: 'status' column added/updated to UPPERCASE."}
     except Exception as e:
         return {"error": str(e)}
+
+
+# ============================================================
+# PENDING EVENTS STAGING QUEUE
+# ============================================================
+
+class PendingEventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    date_start: Optional[datetime] = None
+    date_end: Optional[datetime] = None
+    image_url: Optional[str] = None
+    ticket_url: Optional[str] = None
+    website_url: Optional[str] = None
+    price_display: Optional[str] = None
+    min_price: Optional[float] = None
+    age_restriction: Optional[str] = None
+    min_age: Optional[int] = None
+    venue_name: Optional[str] = None
+    category_name: Optional[str] = None
+    source: Optional[str] = None
+
+
+@router.get("/pending-events", response_model=List[PendingEvent])
+def get_pending_events(
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Get all pending events waiting for moderation review.
+    Ordered by creation date descending.
+    """
+    statement = (
+        select(PendingEvent)
+        .where(PendingEvent.import_status == "pending")
+        .order_by(PendingEvent.created_at.desc())
+    )
+    return session.exec(statement).all()
+
+
+@router.get("/pending-events/count")
+def get_pending_events_count(
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Get count of pending events waiting for moderation review.
+    """
+    statement = (
+        select(func.count(PendingEvent.id))
+        .where(PendingEvent.import_status == "pending")
+    )
+    count = session.exec(statement).one()
+    return {"count": count}
+
+
+@router.put("/pending-events/{event_id}", response_model=PendingEvent)
+def update_pending_event(
+    event_id: str,
+    update_data: PendingEventUpdate,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Update a pending event staging record before approval.
+    """
+    pending = session.get(PendingEvent, event_id)
+    if not pending:
+        normalized_id = event_id.replace("-", "")
+        pending = session.get(PendingEvent, normalized_id)
+
+    if not pending:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pending event not found"
+        )
+
+    for field, value in update_data.model_dump(exclude_unset=True).items():
+        setattr(pending, field, value)
+
+    session.add(pending)
+    session.commit()
+    session.refresh(pending)
+    return pending
+
+
+@router.delete("/pending-events/{event_id}")
+def reject_pending_event(
+    event_id: str,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Reject a pending event staging record by updating import_status to 'rejected'.
+    """
+    pending = session.get(PendingEvent, event_id)
+    if not pending:
+        normalized_id = event_id.replace("-", "")
+        pending = session.get(PendingEvent, normalized_id)
+
+    if not pending:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pending event not found"
+        )
+
+    pending.import_status = "rejected"
+    session.add(pending)
+    session.commit()
+
+    return {"message": "Pending event rejected", "id": pending.id}
+
+
+@router.post("/pending-events/{event_id}/approve")
+def approve_pending_event(
+    event_id: str,
+    overrides: Optional[PendingEventUpdate] = None,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Approve a pending event from staging and publish it to the production events table.
+    Optionally accepts updated values to apply before approval.
+    """
+    pending = session.get(PendingEvent, event_id)
+    if not pending:
+        normalized_id = event_id.replace("-", "")
+        pending = session.get(PendingEvent, normalized_id)
+
+    if not pending:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pending event not found"
+        )
+
+    if pending.import_status == "approved":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Pending event has already been approved"
+        )
+
+    if overrides:
+        for field, value in overrides.model_dump(exclude_unset=True).items():
+            setattr(pending, field, value)
+
+    # 1. Graceful Venue matching by name
+    venue_id = None
+    lat = None
+    lng = None
+    geohash_val = None
+    if pending.venue_name:
+        venue_stmt = select(Venue).where(func.lower(Venue.name) == pending.venue_name.lower())
+        matched_venue = session.exec(venue_stmt).first()
+        if matched_venue:
+            venue_id = matched_venue.id
+            lat = matched_venue.latitude
+            lng = matched_venue.longitude
+            geohash_val = matched_venue.geohash
+
+    # 2. Graceful Category matching by name
+    category_id = None
+    if pending.category_name:
+        cat_stmt = select(Category).where(func.lower(Category.name) == pending.category_name.lower())
+        matched_cat = session.exec(cat_stmt).first()
+        if matched_cat:
+            category_id = matched_cat.id
+
+    # 3. Create production Event record
+    new_event = Event(
+        title=pending.title,
+        description=pending.description,
+        date_start=pending.date_start,
+        date_end=pending.date_end or pending.date_start,
+        venue_id=venue_id,
+        location_name=pending.venue_name,
+        latitude=lat,
+        longitude=lng,
+        geohash=geohash_val,
+        category_id=category_id,
+        price=pending.min_price or 0.0,
+        price_display=pending.price_display,
+        min_price=pending.min_price or 0.0,
+        status="published",
+        organizer_id=admin.id,
+        image_url=pending.image_url,
+        ticket_url=pending.ticket_url,
+        website_url=pending.website_url,
+        age_restriction=pending.age_restriction,
+        min_age=pending.min_age,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+
+    session.add(new_event)
+
+    # 4. Mark staging record as approved
+    pending.import_status = "approved"
+    session.add(pending)
+
+    session.commit()
+    session.refresh(new_event)
+
+    return {
+        "message": "Pending event approved and published successfully",
+        "event_id": new_event.id,
+        "pending_id": pending.id
+    }
+
+
