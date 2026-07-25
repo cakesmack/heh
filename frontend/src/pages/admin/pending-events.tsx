@@ -116,9 +116,14 @@ export default function PendingEventsModerationPage() {
       console.error('Failed to approve event:', err);
       const errorMsg = err?.message || '';
       if (errorMsg.includes('Duplicate event')) {
-        toast.error('❌ Failed to approve: This event is a duplicate and already exists.');
+        const msg = '❌ Failed to approve: This event is a duplicate and already exists.';
+        toast.error(msg);
+        setError(msg);
+        window.alert('ERROR: Failed to approve. This event is a duplicate and already exists in the database.');
       } else {
-        toast.error(errorMsg || `Failed to approve "${title}".`);
+        const fallbackMsg = errorMsg || `Failed to approve "${title}".`;
+        toast.error(fallbackMsg);
+        setError(fallbackMsg);
       }
     } finally {
       setProcessingId(null);
