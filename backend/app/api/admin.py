@@ -4,6 +4,7 @@ Dashboard stats, user management, and moderation endpoints.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, select, func, or_
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -1696,6 +1697,36 @@ def approve_pending_event(
         if matched_cat:
             category_id = matched_cat.id
 
+    # 2.5 Check if event already exists in production table (matching title, date_start, and venue_id)
+    existing_stmt = select(Event).where(
+        Event.title == pending.title,
+        Event.date_start == pending.date_start,
+        Event.venue_id == venue_id
+    )
+    existing_event = session.exec(existing_stmt).first()
+
+    if existing_event:
+        # Update existing event's details
+        existing_event.description = pending.description or existing_event.description
+        existing_event.image_url = pending.image_url or existing_event.image_url
+        existing_event.ticket_url = pending.ticket_url or existing_event.ticket_url
+        existing_event.website_url = pending.website_url or existing_event.website_url
+        if category_id:
+            existing_event.category_id = category_id
+        existing_event.updated_at = datetime.utcnow()
+
+        pending.import_status = "approved"
+        session.add(existing_event)
+        session.add(pending)
+        session.commit()
+
+        return {
+            "status": "already_exists",
+            "message": "Event is already published in the main directory.",
+            "event_id": existing_event.id,
+            "pending_id": pending.id
+        }
+
     # 3. Create production Event record
     new_event = Event(
         title=pending.title,
@@ -1722,19 +1753,39 @@ def approve_pending_event(
         updated_at=datetime.utcnow()
     )
 
-    session.add(new_event)
+    try:
+        session.add(new_event)
 
-    # 4. Mark staging record as approved
-    pending.import_status = "approved"
-    session.add(pending)
+        # 4. Mark staging record as approved
+        pending.import_status = "approved"
+        session.add(pending)
 
-    session.commit()
-    session.refresh(new_event)
+        session.commit()
+        session.refresh(new_event)
 
-    return {
-        "message": "Pending event approved and published successfully",
-        "event_id": new_event.id,
-        "pending_id": pending.id
-    }
+        return {
+            "message": "Pending event approved and published successfully",
+            "event_id": new_event.id,
+            "pending_id": pending.id
+        }
+    except IntegrityError:
+        session.rollback()
+        
+        # Mark pending record as approved despite duplicate creation failure
+        pending_refetched = session.get(PendingEvent, pending.id)
+        if pending_refetched:
+            pending_refetched.import_status = "approved"
+            session.add(pending_refetched)
+            session.commit()
+
+        dup_event = session.exec(existing_stmt).first()
+        dup_id = dup_event.id if dup_event else None
+
+        return {
+            "status": "already_exists",
+            "message": "Event is already published in the main directory.",
+            "event_id": dup_id,
+            "pending_id": pending.id
+        }
 
 
