@@ -24,6 +24,61 @@ interface EventFormProps {
   isSubmitting?: boolean;
 }
 
+/**
+ * Converts incoming UTC/ISO datetime string to UK local time ISO format (YYYY-MM-DDTHH:mm)
+ * in 'Europe/London' timezone so that summer (BST) times like 18:30 display as 18:30 in pickers.
+ */
+export function formatToUKLocalDateTime(dateInput: string | Date | undefined | null): string {
+  if (!dateInput) return '';
+
+  const strInput = typeof dateInput === 'string' ? dateInput.trim() : '';
+
+  if (strInput) {
+    const hasTimezone =
+      strInput.endsWith('Z') ||
+      strInput.includes('+') ||
+      (strInput.includes('T') && strInput.split('T')[1].includes('-'));
+    if (!hasTimezone) {
+      return strInput.slice(0, 16);
+    }
+  }
+
+  try {
+    const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    if (isNaN(d.getTime())) {
+      return strInput ? strInput.slice(0, 16) : '';
+    }
+
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/London',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+
+    const parts = formatter.formatToParts(d);
+    let year = '', month = '', day = '', hour = '', minute = '';
+    for (const p of parts) {
+      if (p.type === 'year') year = p.value;
+      if (p.type === 'month') month = p.value;
+      if (p.type === 'day') day = p.value;
+      if (p.type === 'hour') hour = p.value === '24' ? '00' : p.value;
+      if (p.type === 'minute') minute = p.value;
+    }
+
+    if (year && month && day && hour && minute) {
+      return `${year}-${month}-${day}T${hour}:${minute}`;
+    }
+  } catch (e) {
+    console.warn('Error formatting UK local datetime:', e);
+  }
+
+  return strInput ? strInput.slice(0, 16) : '';
+}
+
 export const EventForm: React.FC<EventFormProps> = ({
   initialValues,
   venues = [],
@@ -65,17 +120,38 @@ export const EventForm: React.FC<EventFormProps> = ({
       setSelectedCategoryId(matchedCategory ? matchedCategory.id : initialValues.category_id || '');
       setNoEndTime(!initialValues.date_end);
 
+      // Comprehensive price pre-population logic across all potential scraper payload keys
+      const rawPriceDisplay =
+        initialValues.price_display ||
+        (initialValues as any).price ||
+        (initialValues as any).raw_price ||
+        (initialValues as any).raw_data?.price ||
+        (initialValues as any).entryprice ||
+        (initialValues?.min_price !== undefined && initialValues?.min_price !== null
+          ? initialValues.min_price === 0
+            ? 'Free'
+            : `£${initialValues.min_price}`
+          : '');
+
+      const rawMinPrice =
+        initialValues.min_price ??
+        (typeof (initialValues as any).price === 'number'
+          ? (initialValues as any).price
+          : typeof (initialValues as any).minPrice === 'number'
+          ? (initialValues as any).minPrice
+          : undefined);
+
       setFormData({
         title: initialValues.title || '',
         description: initialValues.description || '',
-        date_start: initialValues.date_start ? initialValues.date_start.slice(0, 16) : '',
-        date_end: initialValues.date_end ? initialValues.date_end.slice(0, 16) : undefined,
+        date_start: formatToUKLocalDateTime(initialValues.date_start),
+        date_end: formatToUKLocalDateTime(initialValues.date_end) || undefined,
         venue_name: initialValues.venue_name || matchedVenue?.name || '',
         category_name: initialValues.category_name || matchedCategory?.name || '',
         venue_id: matchedVenue?.id || initialValues.venue_id || null,
         category_id: matchedCategory?.id || initialValues.category_id || null,
-        price_display: initialValues.price_display || '',
-        min_price: initialValues.min_price ?? undefined,
+        price_display: String(rawPriceDisplay || ''),
+        min_price: rawMinPrice,
         ticket_url: initialValues.ticket_url || '',
         website_url: initialValues.website_url || '',
         image_url: initialValues.image_url || '',
@@ -377,6 +453,21 @@ export const EventForm: React.FC<EventFormProps> = ({
                   value={formData.price_display || ''}
                   onChange={(e) => updateFormData({ price_display: e.target.value })}
                   placeholder="e.g. £15.00 / Free"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                  Min Price (£)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.min_price !== undefined && formData.min_price !== null ? formData.min_price : ''}
+                  onChange={(e) => updateFormData({ min_price: e.target.value !== '' ? parseFloat(e.target.value) : undefined })}
+                  placeholder="e.g. 15.00 (0 for Free)"
                   className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
