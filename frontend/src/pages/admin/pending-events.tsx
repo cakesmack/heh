@@ -97,7 +97,16 @@ export default function PendingEventsModerationPage() {
 
   const handleApprove = async (id: string, overrides?: Partial<PendingEvent>) => {
     const targetEvent = events.find((e) => e.id === id);
-    const title = overrides?.title || targetEvent?.title || 'Event';
+    if (!targetEvent) return;
+
+    // Pre-flight Category Validation
+    const categoryName = overrides?.category_name || targetEvent.category_name;
+    if (!categoryName || categoryName === 'Select Category' || categoryName.trim() === '') {
+      toast.error('⚠️ You must select a category before approving this event.');
+      return;
+    }
+
+    const title = overrides?.title || targetEvent.title || 'Event';
     try {
       setProcessingId(id);
       await adminAPI.approvePendingEvent(id, overrides);
@@ -105,8 +114,12 @@ export default function PendingEventsModerationPage() {
       toast.success(`Approved "${title}" and published live!`);
     } catch (err: any) {
       console.error('Failed to approve event:', err);
-      toast.error(err?.message || `Failed to approve "${title}".`);
-      throw err;
+      const errorMsg = err?.message || '';
+      if (errorMsg.includes('Duplicate event')) {
+        toast.error('❌ Failed to approve: This event is a duplicate and already exists.');
+      } else {
+        toast.error(errorMsg || `Failed to approve "${title}".`);
+      }
     } finally {
       setProcessingId(null);
     }

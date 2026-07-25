@@ -1697,35 +1697,23 @@ def approve_pending_event(
         if matched_cat:
             category_id = matched_cat.id
 
-    # 2.5 Check if event already exists in production table (matching title, date_start, and venue_id)
+    # 2.5 Check if event already exists in production table (matching title and date)
+    # Normalize Title: lowercase and trim whitespace
+    normalized_title = pending.title.strip().lower()
+    
+    # Normalize Date: extract date portion (Year-Month-Day)
+    # Using func.date to extract the date part from date_start
     existing_stmt = select(Event).where(
-        Event.title == pending.title,
-        Event.date_start == pending.date_start,
-        Event.venue_id == venue_id
+        func.trim(func.lower(Event.title)) == normalized_title,
+        func.date(Event.date_start) == pending.date_start.date()
     )
     existing_event = session.exec(existing_stmt).first()
 
     if existing_event:
-        # Update existing event's details
-        existing_event.description = pending.description or existing_event.description
-        existing_event.image_url = pending.image_url or existing_event.image_url
-        existing_event.ticket_url = pending.ticket_url or existing_event.ticket_url
-        existing_event.website_url = pending.website_url or existing_event.website_url
-        if category_id:
-            existing_event.category_id = category_id
-        existing_event.updated_at = datetime.utcnow()
-
-        pending.import_status = "approved"
-        session.add(existing_event)
-        session.add(pending)
-        session.commit()
-
-        return {
-            "status": "already_exists",
-            "message": "Event is already published in the main directory.",
-            "event_id": existing_event.id,
-            "pending_id": pending.id
-        }
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Duplicate event: An event with this title and date already exists in the database."
+        )
 
     # 3. Create production Event record
     new_event = Event(
