@@ -41,6 +41,11 @@ export default function EventsPage() {
     setError(null);
 
     try {
+      console.log("Fetching events with payload:", JSON.stringify({
+        ...filters,
+        limit: EVENTS_PER_PAGE,
+        skip: append ? displayedEvents.length : 0,
+      }));
       const response = await eventsAPI.list({
         ...filters,
         limit: EVENTS_PER_PAGE,

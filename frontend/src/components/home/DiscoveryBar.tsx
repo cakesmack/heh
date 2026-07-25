@@ -100,6 +100,7 @@ export default function DiscoveryBar({
         if (inputRef.current) {
             inputRef.current.blur();
         }
+        
         onSearch({ q: queryToSubmit || undefined });
     };
 
