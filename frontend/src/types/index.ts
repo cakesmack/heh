@@ -167,6 +167,7 @@ export interface Venue {
   about_history?: string;
   website?: string;
   phone?: string;
+  email?: string;
   image_url?: string;
   formatted_address?: string;
   owner_id: string;

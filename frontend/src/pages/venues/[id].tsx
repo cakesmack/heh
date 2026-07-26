@@ -19,7 +19,7 @@ import ReportModal from '@/components/common/ReportModal';
 import { Card } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import { Button, cn } from '@/components/ui/button';
-import { Heart, HeartOff } from 'lucide-react';
+import { Heart, HeartOff, Phone, Mail } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Spinner } from '@/components/common/Spinner';
 import { EventCard } from '@/components/events/EventCard';
@@ -383,6 +383,26 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
                       {venue?.category?.name || 'Venue'}
                     </span>
                   </div>
+
+                  {/* Phone */}
+                  {venue.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                      <a href={`tel:${venue.phone}`} className="font-medium text-white hover:text-emerald-400 transition-colors">
+                        {venue.phone}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Email */}
+                  {venue.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                      <a href={`mailto:${venue.email}`} className="font-medium text-white hover:text-emerald-400 transition-colors break-all">
+                        {venue.email}
+                      </a>
+                    </div>
+                  )}
                   
                   {/* Amenities Inline Stack */}
                   {(venue.is_dog_friendly || venue.has_wheelchair_access || venue.has_parking || venue.serves_food) && (
@@ -701,6 +721,53 @@ export default function VenueDetailPage({ initialVenue }: VenueDetailPageProps) 
           {/* Right Column: Connect & Map (4 cols) */}
           <div className="md:col-span-4 space-y-6 md:sticky md:top-24 self-start">
 
+            {/* Contact Details Card */}
+            {(venue.phone || venue.email || venue.website) && (
+              <Card>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Contact Details</p>
+                <div className="space-y-3.5 text-sm">
+                  {venue.phone && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-600">
+                        <Phone className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Phone</p>
+                        <a href={`tel:${venue.phone}`} className="font-bold text-gray-900 hover:text-emerald-600 transition-colors block truncate">
+                          {venue.phone}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  {venue.email && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-600">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email</p>
+                        <a href={`mailto:${venue.email}`} className="font-bold text-gray-900 hover:text-emerald-600 transition-colors block truncate break-all">
+                          {venue.email}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  {venue.website && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-600">
+                        <GlobeIcon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Website</p>
+                        <a href={venue.website} target="_blank" rel="noopener noreferrer" className="font-bold text-gray-900 hover:text-emerald-600 transition-colors block truncate">
+                          {venue.website.replace(/^https?:\/\/(www\.)?/, '')}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
 
             {/* Map Card */}
             <Card className="overflow-hidden p-0">
