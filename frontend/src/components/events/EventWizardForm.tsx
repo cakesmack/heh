@@ -188,7 +188,7 @@ function PostSubmitModal({
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-1">Your event is live!</h2>
-            <p className="text-gray-600 mb-6 text-sm">Promote your event from £3 a day.</p>
+            <p className="text-gray-600 mb-6 text-sm">Get more eyes on your listing. Feature it at the top of the homepage from just £3 a day.</p>
 
             {/* 16:9 Mockup Card */}
             <div className="mb-6 border border-stone-200 rounded-2xl overflow-hidden shadow-sm aspect-[16/9] relative bg-stone-100">
