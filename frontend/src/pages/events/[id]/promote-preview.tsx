@@ -217,9 +217,9 @@ export default function PromotePreviewPage() {
 
           {/* Booking / Stripe CTA */}
           <div className="bg-white p-8 rounded-3xl border border-stone-200 shadow-sm text-center">
-            <h3 className="text-stone-900 text-xl font-bold mb-2">3-Day Launch Package</h3>
+            <h3 className="text-stone-900 text-xl font-bold mb-2">Promote Your Event</h3>
             <p className="text-stone-500 text-sm mb-6 max-w-md mx-auto">
-              Get 3 days of prime feature placement in the Magazine spotlight row on our homepage. Starts tomorrow.
+              Promote your event from £3 a day and get featured in the Magazine spotlight row on our homepage.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
