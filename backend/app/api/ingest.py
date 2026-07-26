@@ -1,11 +1,13 @@
 import os
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Header, status
-from sqlmodel import Session
+from sqlmodel import Session, select
+from sqlalchemy import func
 from dotenv import load_dotenv
 
 from app.core.database import get_session
 from app.models.pending_event import PendingEvent
+from app.models.event import Event
 from app.schemas.pending_event import PendingEventCreate
 
 load_dotenv()
@@ -29,9 +31,43 @@ def ingest_events(
 ):
     """
     Bulk ingest scraped events into the pending_events staging table.
+    Filters out duplicates that match normalized title and date in either Event or PendingEvent tables.
     """
     count = 0
+    dropped = 0
     for event_data in events:
+        if not event_data.title or not event_data.date_start:
+            # Skip invalid events
+            dropped += 1
+            continue
+
+        normalized_title = event_data.title.strip().lower()
+        event_date = event_data.date_start.date() if hasattr(event_data.date_start, 'date') else event_data.date_start
+
+        # Check LiveEvents (Event)
+        live_duplicate = session.exec(
+            select(Event).where(
+                func.lower(func.trim(Event.title)) == normalized_title,
+                func.date(Event.date_start) == event_date
+            )
+        ).first()
+
+        if live_duplicate:
+            dropped += 1
+            continue
+
+        # Check PendingEvents
+        pending_duplicate = session.exec(
+            select(PendingEvent).where(
+                func.lower(func.trim(PendingEvent.title)) == normalized_title,
+                func.date(PendingEvent.date_start) == event_date
+            )
+        ).first()
+
+        if pending_duplicate:
+            dropped += 1
+            continue
+
         db_event = PendingEvent(
             **event_data.model_dump(),
             import_status="pending"
@@ -41,4 +77,5 @@ def ingest_events(
         
     session.commit()
     
-    return {"message": f"Successfully ingested {count} events", "count": count}
+    return {"message": f"Successfully ingested {count} events, dropped {dropped} duplicates.", "count": count, "dropped": dropped}
+

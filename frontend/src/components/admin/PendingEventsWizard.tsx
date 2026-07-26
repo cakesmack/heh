@@ -3,6 +3,7 @@ import { Venue, Category } from '@/types';
 import { X, Trash2, Check, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete';
 import { UnifiedVenueSelect } from '@/components/venues/UnifiedVenueSelect';
+import toast from 'react-hot-toast';
 
 /**
  * Proxy external image URLs through our backend to bypass hotlink protection.
@@ -96,10 +97,17 @@ export const PendingEventsWizard: React.FC<PendingEventsWizardProps> = ({ venues
         setShowResumePrompt(false);
     };
 
-    const clearSession = () => {
-        localStorage.removeItem(STORAGE_KEY);
-        setStagedEvents([]);
-        setShowResumePrompt(false);
+    const clearSession = async () => {
+        try {
+            await adminAPI.clearAllPendingEvents();
+            localStorage.removeItem(STORAGE_KEY);
+            setStagedEvents([]);
+            setShowResumePrompt(false);
+            toast.success("Pending queue wiped clean");
+        } catch (err) {
+            toast.error("Failed to wipe pending queue");
+            console.error(err);
+        }
     };
 
     // Smart venue matching

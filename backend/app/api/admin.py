@@ -1615,6 +1615,20 @@ def update_pending_event(
     session.refresh(pending)
     return pending
 
+@router.delete("/pending-events/clear-all")
+def clear_all_pending_events(
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """
+    Completely empty the PendingEvents table.
+    """
+    from sqlalchemy import delete
+    statement = delete(PendingEvent)
+    result = session.exec(statement)
+    session.commit()
+    return {"message": "Pending events queue wiped clean.", "deleted_count": result.rowcount}
+
 
 @router.delete("/pending-events/{event_id}")
 def reject_pending_event(

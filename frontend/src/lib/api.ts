@@ -1497,6 +1497,15 @@ export const adminAPI = {
       method: 'DELETE',
     });
   },
+
+  /**
+   * Completely clear all pending events from the database
+   */
+  clearAllPendingEvents: async (): Promise<{ message: string; deleted_count: number }> => {
+    return apiFetch<{ message: string; deleted_count: number }>('/api/admin/pending-events/clear-all', {
+      method: 'DELETE',
+    });
+  },
 };
 
 // ============================================================
