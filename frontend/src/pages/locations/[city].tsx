@@ -19,10 +19,10 @@ export interface LocationPageProps {
     metaDescription: string;
     h1Heading: string;
     isFallback: boolean;
-    fallbackNotice?: string;
+    fallbackNotice?: string | null;
     events: EventResponse[];
-    heroImageUrl?: string;
-    anchorText?: string;
+    heroImageUrl?: string | null;
+    anchorText?: string | null;
 }
 
 const DENSITY_THRESHOLD = 20;
@@ -49,10 +49,10 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
                     metaDescription: feed.meta_description,
                     h1Heading: feed.h1_heading,
                     isFallback: feed.is_fallback || false,
-                    fallbackNotice: feed.fallback_notice || undefined,
+                    fallbackNotice: feed.fallback_notice || null,
                     events: feed.events || [],
-                    heroImageUrl: feed.hero_image_url || undefined,
-                    anchorText: feed.seo_anchor_text || undefined,
+                    heroImageUrl: feed.hero_image_url || null,
+                    anchorText: feed.seo_anchor_text || null,
                 }
             };
         }
@@ -73,7 +73,9 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
             metaDescription: `Discover upcoming events in ${formattedCity}, Scottish Highlands.`,
             h1Heading: `Events in ${formattedCity}`,
             isFallback: false,
-            fallbackNotice: undefined,
+            fallbackNotice: null,
+            heroImageUrl: null,
+            anchorText: null,
             events: [],
         }
     };
