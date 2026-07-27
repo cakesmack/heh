@@ -647,7 +647,7 @@ export default function AdminEvents() {
                             onClick={(e) => { e.stopPropagation(); setPromotingEvent(event); setPromoteSlotType('premium'); setPromoteModalOpen(true); }}
                             className="text-xs text-emerald-600 hover:text-emerald-800 px-2 py-1 rounded hover:bg-emerald-50"
                           >
-                            Promote
+                            Promote Post
                           </button>
                         )}
                         <button
