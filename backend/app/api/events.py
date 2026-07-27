@@ -12,7 +12,7 @@ from sqlalchemy import case
 
 from app.core.database import get_session, engine
 from app.core.security import get_current_user, get_current_user_optional
-from app.core.utils import normalize_uuid
+from app.core.utils import normalize_uuid, to_london_naive
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
@@ -1464,8 +1464,8 @@ async def create_event(
         id=normalize_uuid(uuid4()),
         title=event_data.title,
         description=event_data.description or "",
-        date_start=event_data.date_start,
-        date_end=event_data.date_end,
+        date_start=to_london_naive(event_data.date_start),
+        date_end=to_london_naive(event_data.date_end),
         venue_id=venue_id_normalized,
         location_name=event_data.location_name,
         latitude=latitude,
@@ -1998,12 +1998,17 @@ async def update_event(
 
     # 1. Priority Update: Always update dates if provided
     if event_data.date_start is not None:
-        logger.info(f"[UPDATE_EVENT] explicit date_start: {event_data.date_start}")
-        event.date_start = event_data.date_start
+        local_start = to_london_naive(event_data.date_start)
+        logger.info(f"[UPDATE_EVENT] explicit date_start: {event_data.date_start} -> local_naive: {local_start}")
+        event.date_start = local_start
     
     if event_data.date_end is not None:
-        logger.info(f"[UPDATE_EVENT] explicit date_end: {event_data.date_end}")
-        event.date_end = event_data.date_end
+        local_end = to_london_naive(event_data.date_end)
+        logger.info(f"[UPDATE_EVENT] explicit date_end: {event_data.date_end} -> local_naive: {local_end}")
+        event.date_end = local_end
+
+    if event_data.recurrence_end_date is not None:
+        event.recurrence_end_date = to_london_naive(event_data.recurrence_end_date)
 
     # 2. Handle Recurring Status Logic
     # Check if recurrence details changed
@@ -2133,8 +2138,8 @@ async def update_event(
         for st_data in event_data.showtimes:
             new_showtime = EventShowtime(
                 event_id=event.id,
-                start_time=st_data.start_time,
-                end_time=st_data.end_time,
+                start_time=to_london_naive(st_data.start_time),
+                end_time=to_london_naive(st_data.end_time),
                 ticket_url=st_data.ticket_url,
                 notes=st_data.notes
             )

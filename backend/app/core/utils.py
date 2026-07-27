@@ -60,3 +60,24 @@ def generate_seo_slug(text: str, max_length: int = 80) -> str:
 def simple_slugify(text: str) -> str:
     """Backward-compatible wrapper around generate_seo_slug."""
     return generate_seo_slug(text)
+
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from typing import Optional
+
+
+def to_london_naive(dt: Optional[datetime]) -> Optional[datetime]:
+    """
+    Convert a datetime to Europe/London local time, then strip tzinfo so it can be stored
+    as a naive timestamp without timezone in the database.
+
+    If dt is timezone-aware (e.g. UTC ISO string from frontend), converts timezone to Europe/London and removes tzinfo.
+    If dt is already naive, returns as-is.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(ZoneInfo("Europe/London")).replace(tzinfo=None)
+    return dt
+

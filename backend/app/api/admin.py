@@ -17,6 +17,7 @@ from app.models.event import Event
 from app.models.venue import Venue, VenueStatus
 from app.models.category import Category
 from app.models.pending_event import PendingEvent
+from app.core.utils import to_london_naive
 
 from app.models.venue_claim import VenueClaim
 from app.models.venue_invite import VenueInvite
@@ -1608,6 +1609,8 @@ def update_pending_event(
         )
 
     for field, value in update_data.model_dump(exclude_unset=True).items():
+        if field in ("date_start", "date_end", "recurrence_end_date") and value is not None:
+            value = to_london_naive(value)
         setattr(pending, field, value)
 
     session.add(pending)
@@ -1733,8 +1736,8 @@ def approve_pending_event(
     new_event = Event(
         title=pending.title,
         description=pending.description,
-        date_start=pending.date_start,
-        date_end=pending.date_end or pending.date_start,
+        date_start=to_london_naive(pending.date_start),
+        date_end=to_london_naive(pending.date_end or pending.date_start),
         venue_id=venue_id,
         location_name=pending.venue_name,
         latitude=lat,

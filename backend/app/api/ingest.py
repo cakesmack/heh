@@ -10,6 +10,8 @@ from app.models.pending_event import PendingEvent
 from app.models.event import Event
 from app.schemas.pending_event import PendingEventCreate
 
+from app.core.utils import to_london_naive
+
 load_dotenv()
 
 router = APIRouter()
@@ -68,8 +70,15 @@ def ingest_events(
             dropped += 1
             continue
 
+        dumped = event_data.model_dump()
+        dumped["date_start"] = to_london_naive(dumped.get("date_start"))
+        if dumped.get("date_end"):
+            dumped["date_end"] = to_london_naive(dumped.get("date_end"))
+        if dumped.get("recurrence_end_date"):
+            dumped["recurrence_end_date"] = to_london_naive(dumped.get("recurrence_end_date"))
+
         db_event = PendingEvent(
-            **event_data.model_dump(),
+            **dumped,
             import_status="pending"
         )
         session.add(db_event)
