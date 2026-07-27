@@ -228,7 +228,7 @@ export default function PromotePreviewPage() {
                 disabled={isSubmitting}
                 className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-md transition-colors min-w-[200px]"
               >
-                {isSubmitting ? 'Connecting...' : `Pay & Feature Now (£${(priceQuote / 100).toFixed(2)})`}
+                {isSubmitting ? 'Connecting...' : 'Pay & Feature Now'}
               </button>
 
               <Link
