@@ -4,10 +4,7 @@ import Link from 'next/link';
 import { eventsAPI, locationsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 import { GetServerSideProps } from 'next';
-import { LocationFeed } from '@/components/locations/LocationFeed';
 import { LocationHeroBanner } from '@/components/locations/LocationHeroBanner';
-import { SpotlightCard } from '@/components/locations/SpotlightCard';
-import { CategorySwimlane } from '@/components/locations/CategorySwimlane';
 import { LeadGenBlock } from '@/components/locations/LeadGenBlock';
 import { EventCard } from '@/components/events/EventCard';
 
@@ -96,52 +93,16 @@ export default function LocationPage({
 }: LocationPageProps) {
     const formattedCity = city || citySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const hasEvents = events.length > 0;
-    const isHighDensity = events.length >= DENSITY_THRESHOLD;
+    // Calculate venue count for the hero banner
+    const venueCount = useMemo(() => {
+        const ids = new Set(events.map(e => e.venue_id || e.venue?.id).filter(Boolean));
+        return ids.size;
+    }, [events]);
 
     // Canonical URL with sub-route support
     const canonicalUrl = timeframe && timeframe !== 'all'
         ? `${SITE_URL}/locations/${citySlug}/${timeframe}`
         : `${SITE_URL}/locations/${citySlug}`;
-
-    // Compute spotlight event
-    const spotlightEvent = useMemo(() => {
-        if (events.length === 0) return null;
-
-        if (isHighDensity) {
-            return [...events].sort((a, b) =>
-                (b.popularity_score ?? 0) - (a.popularity_score ?? 0)
-            )[0];
-        } else {
-            return events[0];
-        }
-    }, [events, isHighDensity]);
-
-    // Remaining events (excluding spotlight)
-    const remainingEvents = useMemo(() => {
-        if (!spotlightEvent) return events;
-        return events.filter(e => e.id !== spotlightEvent.id);
-    }, [events, spotlightEvent]);
-
-    // Category swimlanes
-    const swimlanes = useMemo(() => {
-        if (!isHighDensity) return [];
-
-        const categoryMap = new Map<string, { name: string; events: EventResponse[] }>();
-
-        for (const event of remainingEvents) {
-            const slug = event.category?.slug || 'other';
-            const name = event.category?.name || 'Other';
-
-            if (!categoryMap.has(slug)) {
-                categoryMap.set(slug, { name, events: [] });
-            }
-            categoryMap.get(slug)!.events.push(event);
-        }
-
-        return Array.from(categoryMap.values())
-            .filter(cat => cat.events.length >= 2)
-            .sort((a, b) => b.events.length - a.events.length);
-    }, [remainingEvents, isHighDensity]);
 
     // JSON-LD ItemList
     const jsonLd = hasEvents ? {
@@ -184,21 +145,25 @@ export default function LocationPage({
                 )}
             </Head>
 
-            <div className="container mx-auto px-4 py-8">
-                {/* Zone 1: Dynamic SEO Hero Banner */}
-                <LocationHeroBanner
-                    city={formattedCity}
-                    eventCount={events.length}
-                    heroImageUrl={heroImageUrl}
-                    anchorText={anchorText}
-                    h1Heading={h1Heading}
-                />
+            {/* Zone 1: Dynamic Full-Width SEO Hero Banner */}
+            <LocationHeroBanner
+                city={formattedCity}
+                citySlug={citySlug}
+                timeframe={timeframe}
+                eventCount={events.length}
+                venueCount={venueCount}
+                heroImageUrl={heroImageUrl}
+                anchorText={anchorText}
+                h1Heading={h1Heading}
+            />
 
-                {/* Crawlable Timeframe Navigation Tabs */}
-                <div className="mb-8 flex items-center gap-2 border-b border-gray-200 pb-4">
+            <div className="container mx-auto px-4 py-4">
+
+                {/* Crawlable Timeframe Navigation Toolbar */}
+                <div className="mb-8 flex items-center gap-2 border-b border-gray-200 pb-4 overflow-x-auto hide-scrollbar">
                     <Link
                         href={`/locations/${citySlug}`}
-                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
                             !timeframe || timeframe === 'all'
                                 ? 'bg-emerald-600 text-white shadow-md'
                                 : 'bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200'
@@ -208,7 +173,7 @@ export default function LocationPage({
                     </Link>
                     <Link
                         href={`/locations/${citySlug}/today`}
-                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
                             timeframe === 'today'
                                 ? 'bg-emerald-600 text-white shadow-md'
                                 : 'bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200'
@@ -218,7 +183,7 @@ export default function LocationPage({
                     </Link>
                     <Link
                         href={`/locations/${citySlug}/this-weekend`}
-                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
                             timeframe === 'this-weekend'
                                 ? 'bg-emerald-600 text-white shadow-md'
                                 : 'bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200'
@@ -240,62 +205,19 @@ export default function LocationPage({
 
                 {hasEvents ? (
                     <>
-                        {/* Zone 2: Spotlight Card */}
-                        {spotlightEvent && (
-                            <SpotlightCard
-                                event={spotlightEvent}
-                                label={isHighDensity ? 'Trending' : 'Up Next'}
-                            />
-                        )}
+                        <div className="mb-10">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                                All Upcoming Events
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {events.map((event) => (
+                                    <EventCard key={event.id} event={event} />
+                                ))}
+                            </div>
+                        </div>
 
-                        {isHighDensity ? (
-                            /* ===== CONDITION A: High-Density Layout (>= 20 events) ===== */
-                            <>
-                                {/* Zone 3: Category Swimlanes */}
-                                {swimlanes.length > 0 && (
-                                    <div className="mb-8">
-                                        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                                            Browse by Category
-                                        </h2>
-                                        {swimlanes.map((lane) => (
-                                            <CategorySwimlane
-                                                key={lane.name}
-                                                categoryName={lane.name}
-                                                events={lane.events}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Zone 4: Full Filtered Grid */}
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                                        All Events
-                                    </h2>
-                                    <LocationFeed initialEvents={remainingEvents} city={formattedCity} />
-                                </div>
-                            </>
-                        ) : (
-                            /* ===== CONDITION B: Low-Density Layout (< 20 events) ===== */
-                            <>
-                                {/* Zone 3: Simple Chronological Grid */}
-                                {remainingEvents.length > 0 && (
-                                    <div className="mb-8">
-                                        <h2 className="text-xl font-bold text-gray-900 mb-5">
-                                            {remainingEvents.length} More Event{remainingEvents.length !== 1 ? 's' : ''} Coming Up
-                                        </h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            {remainingEvents.map((event) => (
-                                                <EventCard key={event.id} event={event} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Zone 4: Lead Generation Block */}
-                                <LeadGenBlock city={formattedCity} />
-                            </>
-                        )}
+                        {/* Lead Generation Block */}
+                        <LeadGenBlock city={formattedCity} />
                     </>
                 ) : (
                     /* ===== EMPTY STATE ===== */
