@@ -1,6 +1,13 @@
 import Link from 'next/link';
-import React from 'react';
-import { LOCATIONS } from '@/constants/locations';
+import React, { useState, useEffect } from 'react';
+import { locationsAPI } from '@/lib/api';
+
+export interface LocationHub {
+    id: number;
+    name: string;
+    slug: string;
+    hero_image_url?: string;
+}
 
 interface PopularLocationsProps {
     activeLocation?: string;
@@ -17,20 +24,59 @@ export function LocationPillSkeleton() {
     );
 }
 
-export default function PopularLocations({ activeLocation, onSelectLocation }: PopularLocationsProps = {}) {
-    if (LOCATIONS.length === 0) return null;
+export default function PopularLocations({ activeLocation, onSelectLocation, categorySlug }: PopularLocationsProps = {}) {
+    const [locations, setLocations] = useState<LocationHub[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchLocations = async () => {
+            try {
+                const data = await locationsAPI.list({ category_slug: categorySlug });
+                if (isMounted && Array.isArray(data)) {
+                    setLocations(data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch geographic hubs:', err);
+                if (isMounted) setLocations([]);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        fetchLocations();
+        return () => {
+            isMounted = false;
+        };
+    }, [categorySlug]);
+
+    if (loading) {
+        return (
+            <section className="py-3 bg-gray-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <LocationPillSkeleton key={i} />
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    if (!locations || locations.length === 0) return null;
 
     return (
         <section className="py-3 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
-                    {LOCATIONS.map((location) => {
+                    {locations.map((location) => {
                         const isActive = activeLocation === location.name;
 
                         if (onSelectLocation) {
                             return (
                                 <button
-                                    key={location.slug}
+                                    key={location.id || location.slug}
                                     type="button"
                                     onClick={() => onSelectLocation(location.name)}
                                     className={`group inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:translate-y-0 flex-shrink-0 cursor-pointer ${
@@ -67,7 +113,7 @@ export default function PopularLocations({ activeLocation, onSelectLocation }: P
 
                         return (
                             <Link
-                                key={location.slug}
+                                key={location.id || location.slug}
                                 href={`/locations/${location.slug}`}
                                 className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-white border border-gray-200 text-gray-700 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:translate-y-0 flex-shrink-0"
                             >

@@ -1,6 +1,5 @@
 import { GetServerSideProps } from 'next';
-import { collectionsAPI, eventsAPI } from '@/lib/api';
-import { CORE_LOCATIONS } from '@/constants/locations';
+import { collectionsAPI, eventsAPI, locationsAPI } from '@/lib/api';
 
 /**
  * Dynamic XML Sitemap Generator for Next.js (Pages Router)
@@ -9,7 +8,7 @@ import { CORE_LOCATIONS } from '@/constants/locations';
 
 const EXTERNAL_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
 
-function generateSiteMap(collections: any[], events: any[]) {
+function generateSiteMap(collections: any[], events: any[], locations: any[]) {
     return `<?xml version="1.0" encoding="UTF-8"?>
    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
      <!-- Static URLs -->
@@ -24,8 +23,8 @@ function generateSiteMap(collections: any[], events: any[]) {
        <priority>0.9</priority>
      </url>
 
-     <!-- Location Hub URLs (Base, /today, /this-weekend for 8 Core Locations) -->
-     ${CORE_LOCATIONS
+     <!-- Location Hub URLs (Base, /today, /this-weekend for DB Geographic Hubs) -->
+     ${locations
             .map((loc) => {
                 return `
        <url>
@@ -84,15 +83,16 @@ function SiteMap() {
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
     try {
         // Fetch data for dynamic routes
-        const [collections, eventsResponse] = await Promise.all([
+        const [collections, eventsResponse, locations] = await Promise.all([
             collectionsAPI.list().catch(() => []),
             eventsAPI.list({ limit: 1000, include_past: false }).catch(() => ({ events: [] })),
+            locationsAPI.list().catch(() => []),
         ]);
 
         const events = eventsResponse.events || [];
 
         // Generate the XML sitemap with the data
-        const sitemap = generateSiteMap(collections, events);
+        const sitemap = generateSiteMap(collections, events, locations);
 
         res.setHeader('Content-Type', 'text/xml');
         res.write(sitemap);
