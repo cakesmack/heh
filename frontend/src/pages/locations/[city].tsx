@@ -20,6 +20,9 @@ export interface LocationPageProps {
     events: EventResponse[];
     heroImageUrl?: string | null;
     anchorText?: string | null;
+    partnerLogo?: string | null;
+    partnerName?: string | null;
+    partnerUrl?: string | null;
 }
 
 const DENSITY_THRESHOLD = 20;
@@ -50,6 +53,9 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
                     events: feed.events || [],
                     heroImageUrl: feed.hero_image_url || null,
                     anchorText: feed.seo_anchor_text || null,
+                    partnerLogo: feed.partner_logo || null,
+                    partnerName: feed.partner_name || null,
+                    partnerUrl: feed.partner_url || null,
                 }
             };
         }
@@ -73,6 +79,9 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
             fallbackNotice: null,
             heroImageUrl: null,
             anchorText: null,
+            partnerLogo: null,
+            partnerName: null,
+            partnerUrl: null,
             events: [],
         }
     };
@@ -89,7 +98,10 @@ export default function LocationPage({
     fallbackNotice,
     events,
     heroImageUrl,
-    anchorText
+    anchorText,
+    partnerLogo,
+    partnerName,
+    partnerUrl
 }: LocationPageProps) {
     const formattedCity = city || citySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const hasEvents = events.length > 0;
@@ -155,6 +167,9 @@ export default function LocationPage({
                 heroImageUrl={heroImageUrl}
                 anchorText={anchorText}
                 h1Heading={h1Heading}
+                partnerLogo={partnerLogo}
+                partnerName={partnerName}
+                partnerUrl={partnerUrl}
             />
 
             <div className="container mx-auto px-4 py-4">

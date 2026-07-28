@@ -179,6 +179,9 @@ function HubEditForm({ hub, onCancel, onSaved }: HubEditFormProps) {
     seo_anchor_text: hub.seo_anchor_text || '',
     hero_image_url: hub.hero_image_url || '',
     featured_event_id: hub.featured_event_id || '',
+    partner_logo: hub.partner_logo || '',
+    partner_name: hub.partner_name || '',
+    partner_url: hub.partner_url || '',
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -233,6 +236,15 @@ function HubEditForm({ hub, onCancel, onSaved }: HubEditFormProps) {
 
   const handleSave = async () => {
     try {
+      if (formData.partner_logo && (!formData.partner_name || !formData.partner_url)) {
+        setSaveError('Partner Name and Partner URL are required when a Partner Logo is provided.');
+        return;
+      }
+      if (!formData.partner_logo) {
+        formData.partner_name = '';
+        formData.partner_url = '';
+      }
+
       setSaving(true);
       setSaveError(null);
 
@@ -466,6 +478,58 @@ function HubEditForm({ hub, onCancel, onSaved }: HubEditFormProps) {
             onClick={() => setShowDropdown(false)}
           />
         )}
+      </div>
+
+      {/* Partner Block */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
+          <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          Official Partner
+        </h3>
+        <p className="text-sm text-gray-500 mb-6">
+          Optional. Display an official partner logo on the public hub page. Both URL and Name are required if a logo is set.
+        </p>
+
+        <div className="space-y-5">
+          <ImageUpload
+            folder="locations/partners"
+            currentImageUrl={formData.partner_logo || undefined}
+            onUpload={(urls) => setFormData(prev => ({ ...prev, partner_logo: urls.url }))}
+            onRemove={() => setFormData(prev => ({ ...prev, partner_logo: '' }))}
+            aspectRatio="16/9"
+            label="Partner Logo"
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Partner Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.partner_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, partner_name: e.target.value }))}
+              placeholder="e.g. Inverness City Council"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+              maxLength={200}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Partner URL <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              value={formData.partner_url}
+              onChange={(e) => setFormData(prev => ({ ...prev, partner_url: e.target.value }))}
+              placeholder="https://..."
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+              maxLength={500}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Save Actions */}

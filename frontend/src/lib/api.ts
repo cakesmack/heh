@@ -892,7 +892,12 @@ export const mediaAPI = {
       const error = await response.json().catch(() => ({
         detail: `HTTP ${response.status}: ${response.statusText}`,
       }));
-      throw new Error(error.detail || 'Upload failed');
+      console.error('Upload Error Payload:', error);
+      let detailMessage = error.detail;
+      if (typeof detailMessage === 'object') {
+        detailMessage = JSON.stringify(detailMessage);
+      }
+      throw new Error(detailMessage || 'Upload failed');
     }
 
     return response.json();

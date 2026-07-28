@@ -23,6 +23,11 @@ class Location(SQLModel, table=True):
     # Hero
     hero_image_url: Optional[str] = Field(default=None, max_length=500)
 
+    # Official Partner Fields
+    partner_logo: Optional[str] = Field(default=None, max_length=500)
+    partner_url: Optional[str] = Field(default=None, max_length=500)
+    partner_name: Optional[str] = Field(default=None, max_length=200)
+
     # Featured Event (FK to events.id — not enforced via ORM to keep this decoupled)
     featured_event_id: Optional[str] = Field(default=None, max_length=64)
 

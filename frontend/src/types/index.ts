@@ -1045,6 +1045,9 @@ export interface GeographicHub {
   seo_anchor_text?: string;
   hero_image_url?: string;
   featured_event_id?: string;
+  partner_logo?: string;
+  partner_name?: string;
+  partner_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1055,6 +1058,9 @@ export interface GeographicHubUpdate {
   seo_anchor_text?: string;
   hero_image_url?: string;
   featured_event_id?: string;
+  partner_logo?: string;
+  partner_name?: string;
+  partner_url?: string;
 }
 
 // ============================================================

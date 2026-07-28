@@ -11,6 +11,9 @@ interface LocationHeroBannerProps {
   heroImageUrl?: string | null;
   anchorText?: string | null;
   h1Heading?: string;
+  partnerLogo?: string | null;
+  partnerName?: string | null;
+  partnerUrl?: string | null;
 }
 
 const FALLBACK_IMAGE = '/images/defaults/category_festivals.jpg';
@@ -24,6 +27,9 @@ export function LocationHeroBanner({
   heroImageUrl,
   anchorText,
   h1Heading,
+  partnerLogo,
+  partnerName,
+  partnerUrl,
 }: LocationHeroBannerProps) {
   const formattedCity = city.replace(/\b\w/g, (c) => c.toUpperCase());
   const bgImage = heroImageUrl || FALLBACK_IMAGE;
@@ -49,18 +55,18 @@ export function LocationHeroBanner({
       <div className="absolute inset-0 z-[1] bg-gradient-to-t from-gray-950 via-gray-950/60 to-gray-950/40" />
 
       {/* Content Container - Grid Aligned */}
-      <div className="relative z-[2] container mx-auto px-4 py-6 md:py-8 w-full flex flex-col gap-6">
+      <div className="relative z-[2] container mx-auto px-4 py-20 md:py-24 w-full flex flex-col gap-6">
         
         {/* Main Hero Card (Frosted Glass) */}
-        <div className="backdrop-blur-md bg-black/40 border border-white/10 rounded-2xl p-6 md:p-10 max-w-5xl shadow-2xl">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div className="backdrop-blur-md bg-black/40 border border-white/10 rounded-2xl py-6 md:py-10 w-full px-4 sm:px-6 lg:px-8 shadow-2xl">
+          <div className="flex flex-col md:flex-row justify-between gap-12">
             
-            {/* Left Column: Title, Description & Metrics */}
-            <div className="flex-1">
+            {/* Left Column: Title, Description, Metrics & Actions */}
+            <div className="flex-1 flex flex-col items-start">
               <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
                 {headingText}
               </h1>
-              <p className="text-gray-200 text-sm md:text-base leading-relaxed mt-4 max-w-2xl">
+              <p className="text-gray-200 text-sm md:text-base leading-relaxed mt-4 max-w-4xl">
                 {anchorText
                   ? anchorText
                   : eventCount > 0
@@ -86,30 +92,56 @@ export function LocationHeroBanner({
                   </span>
                 )}
               </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-row items-center gap-3 mt-8">
+                <Link
+                  href="/submit-event"
+                  className="w-full md:w-auto inline-flex justify-center items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/50 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Submit Event
+                </Link>
+
+                <Link
+                  href="/map"
+                  className="w-full md:w-auto inline-flex justify-center items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  View Map
+                </Link>
+              </div>
             </div>
 
-            {/* Right Column: Action Buttons */}
-            <div className="flex flex-row items-center gap-3 shrink-0">
-              <Link
-                href="/submit-event"
-                className="w-full md:w-auto inline-flex justify-center items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/50 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Submit Event
-              </Link>
-
-              <Link
-                href="/map"
-                className="w-full md:w-auto inline-flex justify-center items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                View Map
-              </Link>
-            </div>
+            {/* Right Column: Partner Block */}
+            {partnerLogo && partnerUrl && partnerName && (
+              <div className="flex-shrink-0 shrink-0 flex flex-col items-start text-left mt-10 md:mt-0 self-end">
+                <span className="text-xs uppercase tracking-widest text-white/60 font-semibold mb-4">Official Partner</span>
+                <a 
+                  href={partnerUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="block transition-transform hover:scale-105 w-full flex flex-col items-start"
+                  title={partnerName}
+                >
+                  <OptimizedImage 
+                    src={partnerLogo} 
+                    alt={partnerName} 
+                    width={440}
+                    height={200}
+                    className="w-[180px] md:w-[220px] h-auto object-contain" 
+                    variant="card"
+                  />
+                  <span className="text-sm font-medium text-white/90 mt-2 block">
+                    {partnerName}
+                  </span>
+                </a>
+              </div>
+            )}
 
           </div>
         </div>

@@ -44,6 +44,9 @@ class LocationResponse(BaseModel):
     seo_anchor_text: Optional[str] = None
     hero_image_url: Optional[str] = None
     featured_event_id: Optional[str] = None
+    partner_logo: Optional[str] = None
+    partner_url: Optional[str] = None
+    partner_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -57,6 +60,9 @@ class LocationUpdate(BaseModel):
     seo_anchor_text: Optional[str] = None
     hero_image_url: Optional[str] = None
     featured_event_id: Optional[str] = None
+    partner_logo: Optional[str] = None
+    partner_url: Optional[str] = None
+    partner_name: Optional[str] = None
 
 
 class LocationFeedResponse(BaseModel):
@@ -68,6 +74,9 @@ class LocationFeedResponse(BaseModel):
     h1_heading: str
     hero_image_url: Optional[str] = None
     seo_anchor_text: Optional[str] = None
+    partner_logo: Optional[str] = None
+    partner_url: Optional[str] = None
+    partner_name: Optional[str] = None
     is_fallback: bool = False
     fallback_notice: Optional[str] = None
     events: List[EventResponse]
@@ -197,6 +206,9 @@ def get_location_feed(
 
     hero_image_url = location_record.hero_image_url if location_record else None
     anchor_text = location_record.seo_anchor_text if location_record else None
+    partner_logo = location_record.partner_logo if location_record else None
+    partner_url = location_record.partner_url if location_record else None
+    partner_name = location_record.partner_name if location_record else None
 
     return LocationFeedResponse(
         location_name=formatted_name,
@@ -207,6 +219,9 @@ def get_location_feed(
         h1_heading=h1_heading,
         hero_image_url=hero_image_url,
         seo_anchor_text=anchor_text,
+        partner_logo=partner_logo,
+        partner_url=partner_url,
+        partner_name=partner_name,
         is_fallback=is_fallback,
         fallback_notice=fallback_notice,
         events=[EventResponse.model_validate(e) for e in events]
