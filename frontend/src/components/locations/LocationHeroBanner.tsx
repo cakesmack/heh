@@ -37,22 +37,22 @@ export function LocationHeroBanner({
   const activeTimeframe = timeframe || 'all';
 
   return (
-    <section className="relative w-full overflow-hidden bg-gray-900 min-h-[420px] flex flex-col justify-end mb-8">
+    <section className="relative w-full overflow-hidden bg-gray-900 flex flex-col justify-end mb-8">
       {/* Background Image */}
       <div className="absolute inset-0">
         <OptimizedImage
           src={bgImage}
           alt={headingText}
           fill
-          className="object-cover"
+          className="object-cover object-center"
           sizes="100vw"
           variant="hero"
           priority
         />
       </div>
 
-      {/* Balanced Dark Scrim Gradients */}
-      <div className="absolute inset-0 z-[1] bg-gradient-to-t from-gray-950 via-gray-950/60 to-gray-950/40" />
+      {/* Dark Overlay for Readability */}
+      <div className="absolute inset-0 z-[1] bg-slate-900/60" />
 
       {/* Content Container - Grid Aligned */}
       <div className="relative z-[2] container mx-auto px-4 py-20 md:py-24 w-full flex flex-col gap-6">
