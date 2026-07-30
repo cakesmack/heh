@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { recommendationsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
-import SmallEventCard from '@/components/events/SmallEventCard';
+import { EventCard } from '@/components/events/EventCard';
 
 interface SimilarEventsProps {
     eventId: string;
@@ -54,7 +54,7 @@ export default function SimilarEvents({ eventId }: SimilarEventsProps) {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">You Might Also Like</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {events.map((event) => (
-                    <SmallEventCard key={event.id} event={event} />
+                    <EventCard key={event.id} event={event} />
                 ))}
             </div>
         </div>

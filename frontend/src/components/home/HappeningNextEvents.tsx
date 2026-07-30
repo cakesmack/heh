@@ -67,11 +67,11 @@ export default function HappeningNextEvents({ events, isLoading }: HappeningNext
             </div>
 
             {/* Scroll Wrapper */}
-            <div className="relative group">
+            <div className="relative group/slider">
                 {/* Left Scroll Button (Desktop Only) */}
                 <button
                     onClick={() => scroll('left')}
-                    className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 text-stone-900 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all ml-4 opacity-0 group-hover:opacity-100 focus:opacity-100 border border-gray-100"
+                    className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 text-stone-900 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all ml-4 opacity-0 group-hover/slider:opacity-100 focus:opacity-100 border border-gray-100"
                     aria-label="Scroll left"
                 >
                     <ChevronLeft className="w-5 h-5" />
@@ -80,7 +80,7 @@ export default function HappeningNextEvents({ events, isLoading }: HappeningNext
                 {/* Right Scroll Button (Desktop Only) */}
                 <button
                     onClick={() => scroll('right')}
-                    className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 text-stone-900 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all mr-4 opacity-0 group-hover:opacity-100 focus:opacity-100 border border-gray-100"
+                    className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 text-stone-900 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all mr-4 opacity-0 group-hover/slider:opacity-100 focus:opacity-100 border border-gray-100"
                     aria-label="Scroll right"
                 >
                     <ChevronRight className="w-5 h-5" />

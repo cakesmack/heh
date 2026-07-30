@@ -34,7 +34,7 @@ import { OrganizerBadge } from '@/components/events/OrganizerBadge';
 import { api, apiFetch, locationsAPI } from '@/lib/api';
 import type { EventResponse } from '@/types';
 import SidebarPerformances from '@/components/events/SidebarPerformances';
-import SmallEventCard from '@/components/events/SmallEventCard';
+import { EventCard } from '@/components/events/EventCard';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
@@ -689,56 +689,91 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
 
               {/* Logistics: Date, Time, Venue (Inline Row) */}
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-slate-300">
-                {/* Date + Time */}
-                <div className="flex items-center gap-2">
-                  <svg className="w-6 h-6 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  {(() => {
-                    const rawDates = [
-                      { start: event.date_start, end: event.date_end },
-                      ...(event.showtimes || []).map(st => ({ start: st.start_time, end: st.end_time }))
-                    ];
-                    // Deduplicate by start date string
-                    const uniqueDatesMap = new Map();
-                    rawDates.forEach(d => {
-                      if (!uniqueDatesMap.has(d.start)) {
-                        uniqueDatesMap.set(d.start, d);
-                      }
-                    });
-                    const uniqueDates = Array.from(uniqueDatesMap.values());
-                    
-                    if (uniqueDates.length > 1) {
-                      return (
-                        <div className="relative flex items-center">
-                          <select
-                            className="appearance-none bg-transparent border-none text-white font-medium focus:ring-0 cursor-pointer pr-8 py-0 m-0"
-                            style={{ outline: 'none', boxShadow: 'none' }}
-                            defaultValue=""
-                          >
-                            <option value="" disabled hidden className="bg-[#171717] text-white">
-                              Multiple Dates / Times
-                            </option>
-                            {uniqueDates.map((d, i) => (
-                              <option key={i} value={d.start} className="bg-[#171717] text-white">
-                                {formatDate(d.start)} • {event.is_all_day ? 'All Day' : `${formatTime(d.start)} – ${formatTime(d.end)}`}
+                {/* Date + Time Block */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-6 h-6 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {(() => {
+                      const rawDates = [
+                        { start: event.date_start, end: event.date_end },
+                        ...(event.showtimes || []).map(st => ({ start: st.start_time, end: st.end_time }))
+                      ];
+                      // Deduplicate by start date string
+                      const uniqueDatesMap = new Map();
+                      rawDates.forEach(d => {
+                        if (!uniqueDatesMap.has(d.start)) {
+                          uniqueDatesMap.set(d.start, d);
+                        }
+                      });
+                      const uniqueDates = Array.from(uniqueDatesMap.values());
+                      
+                      if (uniqueDates.length > 1) {
+                        return (
+                          <div className="relative flex items-center">
+                            <select
+                              className="appearance-none bg-transparent border-none text-white font-medium focus:ring-0 cursor-pointer pr-8 py-0 m-0"
+                              style={{ outline: 'none', boxShadow: 'none' }}
+                              defaultValue=""
+                            >
+                              <option value="" disabled hidden className="bg-[#171717] text-white">
+                                Multiple Dates / Times
                               </option>
-                            ))}
-                          </select>
-                          <svg className="w-5 h-5 text-emerald-400 absolute right-1 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
+                              {uniqueDates.map((d, i) => (
+                                <option key={i} value={d.start} className="bg-[#171717] text-white">
+                                  {formatDate(d.start)} • {event.is_all_day ? 'All Day' : `${formatTime(d.start)} – ${formatTime(d.end)}`}
+                                </option>
+                              ))}
+                            </select>
+                            <svg className="w-5 h-5 text-emerald-400 absolute right-1 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <>
+                          <span className="font-medium text-white">{formatDate(event.date_start)}</span>
+                          <span>{event.is_all_day ? 'All Day' : `${formatTime(event.date_start)} – ${formatTime(event.date_end)}`}</span>
+                        </>
                       );
-                    }
-                    
-                    return (
-                      <>
-                        <span className="font-medium text-white">{formatDate(event.date_start)}</span>
-                        <span>{event.is_all_day ? 'All Day' : `${formatTime(event.date_start)} – ${formatTime(event.date_end)}`}</span>
-                      </>
-                    );
-                  })()}
+                    })()}
+                  </div>
+                  
+                  {/* Recurring Indicator */}
+                  {event.is_recurring && (
+                    <div className="flex items-center gap-1.5 ml-8 text-emerald-300/90 text-xs font-medium">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>
+                        {(() => {
+                          try {
+                            if (!event.recurrence_rule) return 'Recurring event';
+                            // Dynamic import to avoid SSR issues if any, or just use it if imported.
+                            // But since we can't easily import conditionally without async here, we'll format it gracefully.
+                            // For a truly zero-dependency fallback:
+                            let text = 'Repeats ';
+                            const rule = event.recurrence_rule.toLowerCase();
+                            if (rule.includes('freq=weekly')) text += 'weekly';
+                            else if (rule.includes('freq=monthly')) text += 'monthly';
+                            else if (rule.includes('freq=daily')) text += 'daily';
+                            else text += 'regularly';
+                            
+                            if (event.recurrence_end_date) {
+                              const d = new Date(event.recurrence_end_date);
+                              text += ` until ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                            }
+                            return text;
+                          } catch (e) {
+                            return 'Recurring event';
+                          }
+                        })()}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <span className="text-slate-600 hidden sm:inline">•</span>
@@ -760,6 +795,28 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                     <span className="font-medium text-white">{event.venue_name || event.location_name}</span>
                   )}
                 </div>
+
+                {/* Age Restriction */}
+                {(event.age_restriction || (event.min_age !== undefined && event.min_age !== null)) && (
+                  <>
+                    <span className="text-slate-600 hidden sm:inline">•</span>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span className="font-medium text-white">
+                        {(() => {
+                          const text = event.age_restriction ? String(event.age_restriction).trim() : String(event.min_age);
+                          if (/^\d+$/.test(text)) {
+                            if (text === '0') return 'All Ages';
+                            return `${text}+`;
+                          }
+                          return text;
+                        })()}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* ─── Conversion Stack ─── */}
@@ -1010,7 +1067,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                   {upcomingEvents.map((evt) => (
-                    <SmallEventCard key={evt.id} event={evt} />
+                    <EventCard key={evt.id} event={evt} />
                   ))}
                 </div>
               </div>

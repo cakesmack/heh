@@ -112,6 +112,7 @@ class Event(SQLModel, table=True):
     recurrence_rule: Optional[str] = Field(default=None, max_length=500)  # RRULE string
     parent_event_id: Optional[str] = Field(default=None, index=True)  # UUID of parent series
     recurrence_group_id: Optional[str] = Field(default=None, index=True)  # Shared UUID for all events in a recurring series
+    recurrence_end_date: Optional[datetime] = Field(default=None)
     
     # Analytics (Denormalized)
     view_count: int = Field(default=0)

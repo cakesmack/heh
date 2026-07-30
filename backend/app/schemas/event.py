@@ -227,7 +227,7 @@ class EventResponse(BaseModel):
     is_upcoming_occurrence: bool = False
 
     # Nested related data
-    category: Optional[CategoryResponse] = None
+    category: Optional[CategoryResponse] = Field(default=None, validation_alias="category_rel")
     tags: Optional[List[TagResponse]] = None
     participating_venues: List[VenueResponse] = []
     showtimes: List[ShowtimeResponse] = []
@@ -300,7 +300,7 @@ class MapEventResponse(BaseModel):
     date_end: datetime
     image_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
-    category: Optional[CategoryResponse] = None
+    category: Optional[CategoryResponse] = Field(default=None, validation_alias="category_rel")
     venue_name: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None

@@ -22,12 +22,14 @@ interface DiscoveryBarProps {
     };
     mode?: 'floating' | 'embedded';
     hideCategory?: boolean;
+    variant?: 'light' | 'dark';
 }
 
 export default function DiscoveryBar({
     onSearch,
     isLoading = false,
     initialFilters,
+    variant = 'dark',
 }: DiscoveryBarProps) {
     const [q, setQ] = useState<string>('');
     const [suggestions, setSuggestions] = useState<Array<{ term: string; type: string }>>([]);
@@ -147,9 +149,17 @@ export default function DiscoveryBar({
     return (
         <div ref={containerRef} className="w-full relative max-w-3xl mx-auto z-20">
             {/* Primary Pill-Shaped Search Input Container */}
-            <div className="flex items-center w-full bg-black/40 backdrop-blur-md rounded-full border border-white/20 shadow-2xl p-1.5 transition-all focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-transparent">
+            <div 
+                className={`flex items-center w-full rounded-full p-1.5 transition-all focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-transparent ${
+                    variant === 'dark'
+                        ? 'bg-black/40 backdrop-blur-md border border-white/20 shadow-2xl'
+                        : 'bg-white border border-gray-200 shadow-md'
+                }`}
+            >
                 {/* Magnifying Glass Icon */}
-                <div className="pl-4 pr-2 text-white/60 flex items-center pointer-events-none flex-shrink-0">
+                <div className={`pl-4 pr-2 flex items-center pointer-events-none flex-shrink-0 ${
+                    variant === 'dark' ? 'text-white/60' : 'text-gray-400'
+                }`}>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
@@ -172,7 +182,11 @@ export default function DiscoveryBar({
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Search events, towns, or venues..."
-                    className="w-full bg-transparent py-3 px-2 text-white placeholder-gray-300 text-base sm:text-lg focus:outline-none focus:ring-0 border-none [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:shadow-[0_0_0px_1000px_rgba(0,0,0,0)_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]"
+                    className={`w-full bg-transparent py-3 px-2 text-base sm:text-lg focus:outline-none focus:ring-0 border-none [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:shadow-[0_0_0px_1000px_rgba(0,0,0,0)_inset] ${
+                        variant === 'dark'
+                            ? 'text-white placeholder-gray-300 [&:-webkit-autofill]:[-webkit-text-fill-color:white]'
+                            : 'text-gray-900 placeholder-gray-500 [&:-webkit-autofill]:[-webkit-text-fill-color:black]'
+                    }`}
                     autoComplete="off"
                 />
 
@@ -181,7 +195,11 @@ export default function DiscoveryBar({
                     <button
                         type="button"
                         onClick={handleClear}
-                        className="p-2 text-white/60 hover:text-white rounded-full transition-colors flex-shrink-0 mr-1"
+                        className={`p-2 rounded-full transition-colors flex-shrink-0 mr-1 ${
+                            variant === 'dark'
+                                ? 'text-white/60 hover:text-white'
+                                : 'text-gray-400 hover:text-gray-600'
+                        }`}
                         title="Clear search"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

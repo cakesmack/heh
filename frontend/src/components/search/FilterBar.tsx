@@ -107,27 +107,6 @@ export function FilterBar({
                         </div>
                     </div>
 
-                    {/* Vertical Visual Separation Divider */}
-                    <div className="h-6 w-[1px] bg-gray-300 flex-shrink-0 mx-1.5" />
-
-                    {/* Category Toggle Pills */}
-                    {!isCategoriesLoading && categories.map((cat) => {
-                        const isSelected = activeCategory === cat.slug;
-                        return (
-                            <button
-                                key={cat.id}
-                                type="button"
-                                onClick={() => handleCategoryToggle(cat.slug)}
-                                className={`text-sm font-medium px-4 py-2 rounded-full border transition-all flex-shrink-0 whitespace-nowrap active:scale-95 shadow-sm ${
-                                    isSelected
-                                        ? 'bg-emerald-600 text-white border-emerald-600 font-semibold shadow-md'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                                }`}
-                            >
-                                {cat.name}
-                            </button>
-                        );
-                    })}
                 </div>
             </div>
         </div>

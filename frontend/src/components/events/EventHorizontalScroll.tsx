@@ -4,7 +4,7 @@
  */
 
 import { EventResponse } from '@/types';
-import SmallEventCard from '@/components/events/SmallEventCard';
+import { EventCard } from '@/components/events/EventCard';
 
 interface EventHorizontalScrollProps {
     events: EventResponse[];
@@ -28,7 +28,7 @@ export default function EventHorizontalScroll({ events, className = '' }: EventH
                     key={event.id}
                     className="snap-start shrink-0 min-w-[280px] w-72"
                 >
-                    <SmallEventCard event={event} />
+                    <EventCard event={event} />
                 </div>
             ))}
         </div>

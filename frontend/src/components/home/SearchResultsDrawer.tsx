@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, Building2, Users } from 'lucide-react';
 import { EventResponse } from '@/types';
-import SmallEventCard from '@/components/events/SmallEventCard';
+import { EventCard } from '@/components/events/EventCard';
 import FilterBar from '@/components/search/FilterBar';
 
 interface VenueSearchCardProps {
@@ -265,7 +265,7 @@ export default function SearchResultsDrawer({
                             <>
                                 <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {results.map((event) => (
-                                        <SmallEventCard key={event.id} event={event} />
+                                        <EventCard key={event.id} event={event} />
                                     ))}
                                 </div>
 

@@ -3,41 +3,10 @@ import Link from 'next/link';
 import { recommendationsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import OptimizedImage from '@/components/ui/OptimizedImage';
+import { EventCard } from '@/components/events/EventCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-// Compact card variant for recommended events - image and title only
-function CompactEventCard({ event }: { event: EventResponse }) {
-    return (
-        <Link href={`/events/${event.slug || event.id}`} className="block group">
-            <div className="relative overflow-hidden rounded-xl md:rounded-none">
-                <div className="relative aspect-[4/3] overflow-hidden">
-                    <OptimizedImage
-                        src={event.image_url || '/images/event-placeholder.jpg'}
-                        alt={event.title}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                        variant="thumb"
-                    />
-                </div>
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                {/* Title at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 className="text-white font-semibold text-sm line-clamp-2 group-hover:text-emerald-300 transition-colors">
-                        {event.title}
-                    </h3>
-                    {event.category && (
-                        <span className="text-emerald-400 text-xs font-medium mt-1 block">
-                            {event.category.name}
-                        </span>
-                    )}
-                </div>
-            </div>
-        </Link>
-    );
-}
+
 
 export default function RecommendedEvents() {
     const { isAuthenticated } = useAuth();
@@ -110,11 +79,11 @@ export default function RecommendedEvents() {
             </div>
 
             {/* Scroll Wrapper */}
-            <div className="relative group">
+            <div className="relative group/slider">
                 {/* Left Scroll Button (Desktop Only) */}
                 <button
                     onClick={() => scroll('left')}
-                    className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 text-stone-900 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all ml-4 opacity-0 group-hover:opacity-100 focus:opacity-100 border border-gray-100"
+                    className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 text-stone-900 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all ml-4 opacity-0 group-hover/slider:opacity-100 focus:opacity-100 border border-gray-100"
                     aria-label="Scroll left"
                 >
                     <ChevronLeft className="w-5 h-5" />
@@ -123,7 +92,7 @@ export default function RecommendedEvents() {
                 {/* Right Scroll Button (Desktop Only) */}
                 <button
                     onClick={() => scroll('right')}
-                    className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 text-stone-900 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all mr-4 opacity-0 group-hover:opacity-100 focus:opacity-100 border border-gray-100"
+                    className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 text-stone-900 p-2.5 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all mr-4 opacity-0 group-hover/slider:opacity-100 focus:opacity-100 border border-gray-100"
                     aria-label="Scroll right"
                 >
                     <ChevronRight className="w-5 h-5" />
@@ -144,7 +113,7 @@ export default function RecommendedEvents() {
                                 index === Math.min(events.length, 8) - 1 ? 'mr-4 md:mr-[max(1rem,calc((100vw-80rem)/2+1rem))]' : ''
                             }`}
                         >
-                            <CompactEventCard event={event} />
+                            <EventCard event={event} />
                         </div>
                     ))}
                 </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { EventResponse } from '@/types';
-import SmallEventCard from '@/components/events/SmallEventCard';
+import { EventCard } from '@/components/events/EventCard';
 import { Spinner } from '@/components/common/Spinner';
 import { EventCardSkeleton } from '@/components/events/EventCardSkeleton';
 
@@ -66,7 +66,7 @@ export function EventList({ events, isLoading, error }: EventListProps) {
         </div>
       ) : (
         events.map((event) => (
-          <SmallEventCard key={event.id} event={event} />
+          <EventCard key={event.id} event={event} />
         ))
       )}
     </div>

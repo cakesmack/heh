@@ -9,6 +9,7 @@ from sqlmodel import Session, select, or_
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timedelta
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_session
 from app.core.security import get_current_user
@@ -171,6 +172,7 @@ def get_location_feed(
     term = f"%{city_name}%"
     base_query = (
         select(Event)
+        .options(selectinload(Event.category_rel), selectinload(Event.venue))
         .outerjoin(Venue, Event.venue_id == Venue.id)
         .where(Event.status == "published")
         .where(

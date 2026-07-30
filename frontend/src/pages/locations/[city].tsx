@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { eventsAPI, locationsAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
@@ -7,6 +7,7 @@ import { GetServerSideProps } from 'next';
 import { LocationHeroBanner } from '@/components/locations/LocationHeroBanner';
 import { LeadGenBlock } from '@/components/locations/LeadGenBlock';
 import { EventCard } from '@/components/events/EventCard';
+import CategoryGrid from '@/components/categories/CategoryGrid';
 
 export interface LocationPageProps {
     city: string;
@@ -105,11 +106,25 @@ export default function LocationPage({
 }: LocationPageProps) {
     const formattedCity = city || citySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const hasEvents = events.length > 0;
+    
+    const [activeCategorySlug, setActiveCategorySlug] = useState<string | undefined>(undefined);
+
+    const displayedEvents = useMemo(() => {
+        if (!activeCategorySlug) return events;
+        return events.filter(event => 
+            event.category?.slug === activeCategorySlug || 
+            (event as any).category_slug === activeCategorySlug
+        );
+    }, [events, activeCategorySlug]);
     // Calculate venue count for the hero banner
     const venueCount = useMemo(() => {
         const ids = new Set(events.map(e => e.venue_id || e.venue?.id).filter(Boolean));
         return ids.size;
     }, [events]);
+
+    if (events.length > 0 && typeof window !== 'undefined') {
+        console.log("DEBUG Location Event Payload [0]:", events[0]);
+    }
 
     // Canonical URL with sub-route support
     const canonicalUrl = timeframe && timeframe !== 'all'
@@ -220,15 +235,35 @@ export default function LocationPage({
 
                 {hasEvents ? (
                     <>
+                        <div className="mb-4 -mx-4 sm:mx-0">
+                            <CategoryGrid 
+                                activeCategory={activeCategorySlug}
+                                onSelectCategory={(slug) => {
+                                    setActiveCategorySlug(prev => prev === slug ? undefined : slug);
+                                }}
+                            />
+                        </div>
                         <div className="mb-10">
                             <h2 className="text-2xl font-bold text-gray-900 mb-6">
                                 All Upcoming Events
                             </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {events.map((event) => (
-                                    <EventCard key={event.id} event={event} />
-                                ))}
-                            </div>
+                            {displayedEvents.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {displayedEvents.map((event) => (
+                                        <EventCard key={event.id} event={event} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
+                                    <p className="text-gray-500">No events found for this category in {formattedCity}.</p>
+                                    <button 
+                                        onClick={() => setActiveCategorySlug(undefined)}
+                                        className="mt-4 text-emerald-600 font-medium hover:text-emerald-700"
+                                    >
+                                        Clear Category Filter
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Lead Generation Block */}

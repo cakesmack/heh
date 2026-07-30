@@ -178,27 +178,9 @@ export default function EventsPage() {
           </p>
         </div>
 
-        {/* Mobile Search Trigger */}
-        <div className="md:hidden mb-6">
-          <button
-            onClick={openMobileSearch}
-            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <span className="flex items-center">
-              <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <span className="font-medium">Search & Filter Events...</span>
-            </span>
-            <span className="bg-gray-100 p-1.5 rounded-md">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
-            </span>
-          </button>
-        </div>
 
-        {/* Search Bar (Desktop) */}
+
+        {/* Search Bar */}
         <div className="mb-8">
           <DiscoveryBar
             onSearch={handleSearch}
@@ -206,36 +188,35 @@ export default function EventsPage() {
             initialFilters={initialFilters}
             mode="embedded"
             hideCategory={true}
+            variant="light"
           />
         </div>
 
-        {/* Category & Location scrolling pills (Only rendered on base state when no search/filters are active) */}
-        {!Boolean(currentFilters.q || currentFilters.category || currentFilters.location || currentFilters.date || currentFilters.date_from || currentFilters.radius_km) && (
-          <div className="space-y-4 mb-8">
-            <CategoryGrid
-              activeCategory={currentFilters.category}
-              onSelectCategory={(slug) => {
-                const newCategory = currentFilters.category === slug ? undefined : slug;
-                handleSearch({ ...currentFilters, category: newCategory });
-              }}
-            />
-            <PopularLocations
-              activeLocation={currentFilters.location}
-              onSelectLocation={(name) => {
-                const newLocation = currentFilters.location === name ? undefined : name;
-                // Reset GPS parameters when location pill is selected
-                handleSearch({
-                  ...currentFilters,
-                  location: newLocation,
-                  latitude: undefined,
-                  longitude: undefined,
-                  radius: undefined
-                });
-              }}
-              categorySlug={currentFilters.category}
-            />
-          </div>
-        )}
+        {/* Category & Location scrolling pills */}
+        <div className="space-y-4 mb-8">
+          <CategoryGrid
+            activeCategory={currentFilters.category}
+            onSelectCategory={(slug) => {
+              const newCategory = currentFilters.category === slug ? undefined : slug;
+              handleSearch({ ...currentFilters, category: newCategory });
+            }}
+          />
+          <PopularLocations
+            activeLocation={currentFilters.location}
+            onSelectLocation={(name) => {
+              const newLocation = currentFilters.location === name ? undefined : name;
+              // Reset GPS parameters when location pill is selected
+              handleSearch({
+                ...currentFilters,
+                location: newLocation,
+                latitude: undefined,
+                longitude: undefined,
+                radius: undefined
+              });
+            }}
+            categorySlug={currentFilters.category}
+          />
+        </div>
 
         {/* Sticky Filter Bar */}
         <FilterBar
