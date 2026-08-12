@@ -252,6 +252,7 @@ def search_venues(
         postcode_term = f"%{postcode.upper()}%"
         query = query.where(Venue.postcode.ilike(postcode_term))
 
+    total_count = session.exec(select(func.count()).select_from(query.subquery())).one()
     query = query.order_by(Venue.name).limit(limit)
     venues = session.exec(query).all()
 
@@ -263,9 +264,9 @@ def search_venues(
 
     return VenueListResponse(
         venues=venue_responses,
-        total=len(venue_responses),
+        total=total_count,
         data=venue_responses,
-        total_count=len(venue_responses),
+        total_count=total_count,
         skip=0,
         limit=limit
     )

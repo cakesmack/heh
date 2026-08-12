@@ -1794,3 +1794,56 @@ def approve_pending_event(
         }
 
 
+from fastapi import Header
+
+def verify_scraper_key(x_scraper_api_key: str = Header(...)):
+    import os
+    expected_key = os.getenv("SCRAPER_API_KEY")
+    if not expected_key or x_scraper_api_key != expected_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing Scraper API Key",
+        )
+    return x_scraper_api_key
+
+
+@router.get("/rejected-urls", response_model=List[str])
+def get_rejected_urls(
+    session: Session = Depends(get_session),
+    api_key: str = Depends(verify_scraper_key)
+):
+    """
+    Query the live database for all events marked as 'rejected'
+    (in PendingEvent staging or live Event tables) and return a JSON array of their origin URLs.
+    Protected by X-Scraper-API-Key.
+    """
+    rejected_urls = set()
+
+    # 1. Fetch ticket_url and website_url from rejected PendingEvents
+    pending_rejected = session.exec(
+        select(PendingEvent.ticket_url, PendingEvent.website_url).where(
+            PendingEvent.import_status == "rejected"
+        )
+    ).all()
+    for ticket_url, website_url in pending_rejected:
+        if ticket_url and ticket_url.strip():
+            rejected_urls.add(ticket_url.strip())
+        if website_url and website_url.strip():
+            rejected_urls.add(website_url.strip())
+
+    # 2. Fetch ticket_url and website_url from rejected Live Events
+    live_rejected = session.exec(
+        select(Event.ticket_url, Event.website_url).where(
+            Event.status == "rejected"
+        )
+    ).all()
+    for ticket_url, website_url in live_rejected:
+        if ticket_url and ticket_url.strip():
+            rejected_urls.add(ticket_url.strip())
+        if website_url and website_url.strip():
+            rejected_urls.add(website_url.strip())
+
+    return list(rejected_urls)
+
+
+

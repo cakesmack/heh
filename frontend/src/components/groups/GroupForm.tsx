@@ -220,7 +220,7 @@ export default function GroupForm({
 
                 <div>
                     <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                        Bio / Short Summary
+                        Bio / Main Summary
                     </label>
                     <textarea
                         id="bio"
@@ -233,6 +233,7 @@ export default function GroupForm({
                         disabled={isLoading}
                     />
                     {fieldErrors.bio && <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.bio}</p>}
+                    <p className="mt-1 text-xs text-gray-500">This description appears on your public group profile in the Overview section above the event schedule.</p>
                 </div>
 
                 <div>
@@ -250,7 +251,7 @@ export default function GroupForm({
                         disabled={isLoading}
                     />
                     {fieldErrors.description && <p className="mt-1 text-xs text-red-600 font-medium">{fieldErrors.description}</p>}
-                    <p className="mt-1 text-xs text-gray-500">This description appears on your group profile above the event schedule.</p>
+                    <p className="mt-1 text-xs text-gray-500">This description is used for search engine results (Google snippets) and social media link previews.</p>
                 </div>
 
                 <div>

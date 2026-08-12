@@ -802,6 +802,18 @@ export interface Collection {
   slug?: string;
   description?: string;
   filter_params?: Record<string, any> | null;
+  
+  // Hero Customization & Stats (Optional)
+  badge_text?: string;
+  external_link_url?: string;
+  external_link_label?: string;
+  stat_1_label?: string;
+  stat_1_value?: string;
+  stat_2_label?: string;
+  stat_2_value?: string;
+  stat_3_label?: string;
+  stat_3_value?: string;
+  specific_venue_ids?: string[];
 }
 
 export interface CollectionCreate {
@@ -816,6 +828,18 @@ export interface CollectionCreate {
   slug?: string;
   description?: string;
   filter_params?: Record<string, any> | null;
+  
+  // Hero Customization & Stats (Optional)
+  badge_text?: string;
+  external_link_url?: string;
+  external_link_label?: string;
+  stat_1_label?: string;
+  stat_1_value?: string;
+  stat_2_label?: string;
+  stat_2_value?: string;
+  stat_3_label?: string;
+  stat_3_value?: string;
+  specific_venue_ids?: string[];
 }
 
 export interface CollectionUpdate {
@@ -830,6 +854,18 @@ export interface CollectionUpdate {
   slug?: string;
   description?: string;
   filter_params?: Record<string, any> | null;
+  
+  // Hero Customization & Stats (Optional)
+  badge_text?: string;
+  external_link_url?: string;
+  external_link_label?: string;
+  stat_1_label?: string;
+  stat_1_value?: string;
+  stat_2_label?: string;
+  stat_2_value?: string;
+  stat_3_label?: string;
+  stat_3_value?: string;
+  specific_venue_ids?: string[];
 }
 
 // ============================================================

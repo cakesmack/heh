@@ -279,7 +279,12 @@ export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPa
 
     const currentYear = new Date().getFullYear();
     const pageTitle = organizer ? `${organizer.name} Events, Dates & ${currentYear} Schedule` : 'Group Profile | Highland Events Hub';
-    const pageDescription = organizer ? `Find upcoming events, dates, and local information for ${organizer.name}. View their complete, up-to-date schedule on the Highland Events Hub.` : '';
+    
+    // SEO Summary Description binding
+    const pageDescription = organizer?.description || organizer?.bio || `Find upcoming events, dates, and local information for ${organizer?.name}. View their complete, up-to-date schedule on the Highland Events Hub.`;
+    
+    // Fallback for URL if we need it
+    const canonicalUrl = typeof window !== 'undefined' ? window.location.href : '';
 
     return (
         <>
@@ -289,6 +294,7 @@ export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPa
                 <meta property="og:title" content={pageTitle} />
                 <meta property="og:description" content={pageDescription} />
                 <meta property="og:type" content="profile" />
+                <meta property="og:url" content={canonicalUrl} />
                 {organizer?.logo_url && <meta property="og:image" content={organizer.logo_url} />}
                 <meta name="twitter:card" content="summary_large_image" />
                 <meta name="twitter:title" content={pageTitle} />
@@ -473,9 +479,9 @@ export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPa
                     <h2 className="text-xl font-bold text-gray-900 mb-4">
                         Overview
                     </h2>
-                    {(organizer.description || organizer.bio) ? (
+                    {organizer.bio ? (
                         <p className="text-gray-600 text-lg leading-relaxed whitespace-pre-wrap">
-                            {organizer.description || organizer.bio}
+                            {organizer.bio}
                         </p>
                     ) : (
                         <p className="text-gray-400 italic bg-white rounded-lg p-6 border border-dashed border-gray-200">

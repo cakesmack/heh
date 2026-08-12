@@ -23,6 +23,18 @@ class CollectionBase(BaseModel):
     show_on_map: bool = False
     filter_params: Optional[dict] = None
 
+    # Hero Customization & Stats (Optional)
+    badge_text: Optional[str] = None
+    external_link_url: Optional[str] = None
+    external_link_label: Optional[str] = None
+    stat_1_label: Optional[str] = None
+    stat_1_value: Optional[str] = None
+    stat_2_label: Optional[str] = None
+    stat_2_value: Optional[str] = None
+    stat_3_label: Optional[str] = None
+    stat_3_value: Optional[str] = None
+    specific_venue_ids: Optional[list] = None
+
     @field_validator('filter_params', mode='before')
     @classmethod
     def parse_filter_params(cls, v):
@@ -48,6 +60,18 @@ class CollectionUpdate(CollectionBase):
     is_featured: Optional[bool] = None
     show_on_map: Optional[bool] = None
     filter_params: Optional[dict] = None
+
+    # Hero Customization & Stats (Optional)
+    badge_text: Optional[str] = None
+    external_link_url: Optional[str] = None
+    external_link_label: Optional[str] = None
+    stat_1_label: Optional[str] = None
+    stat_1_value: Optional[str] = None
+    stat_2_label: Optional[str] = None
+    stat_2_value: Optional[str] = None
+    stat_3_label: Optional[str] = None
+    stat_3_value: Optional[str] = None
+    specific_venue_ids: Optional[list] = None
 
 class Collection(CollectionBase):
     id: int

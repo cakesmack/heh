@@ -264,7 +264,7 @@ export default function CollectionPage() {
             </Head>
 
             {/* SECTION 1: HERO - ONLY PLACE FOR SHORT DESCRIPTION */}
-            <section className="relative h-[40vh] flex items-end pb-12">
+            <section className="relative min-h-[40vh] flex items-end pb-12 pt-24">
                 {/* Background Image Logic Here */}
                 {collection.image_url && (
                     <div
@@ -273,18 +273,83 @@ export default function CollectionPage() {
                     />
                 )}
                 {/* Dark gradient overlay for text legibility */}
-                <div className="absolute inset-0 bg-black/40 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+                <div className="absolute inset-0 bg-black/40 bg-gradient-to-t from-black/90 via-black/60 to-black/20" />
 
                 <div className="relative z-10 max-w-7xl mx-auto px-4 text-white w-full">
+                    {/* Badge */}
+                    {(collection as any).badge_text && (
+                        <div className="mb-4">
+                            <span className="inline-block px-3 py-1 bg-emerald-600 text-white text-xs font-bold tracking-wider rounded-full uppercase shadow-sm">
+                                {(collection as any).badge_text}
+                            </span>
+                        </div>
+                    )}
+
                     {collection.subtitle && (
                         <span className="block mb-2 text-sm font-semibold tracking-wide uppercase text-emerald-400">
                             {collection.subtitle}
                         </span>
                     )}
-                    <h1 className="text-5xl font-bold">{collection.title}</h1>
+                    <h1 className="text-4xl md:text-5xl font-bold">{collection.title}</h1>
                     {collection.description && (
-                        <p className="text-xl mt-4">{collection.description}</p>
+                        <p className="text-lg md:text-xl mt-4 max-w-3xl text-gray-100">{collection.description}</p>
                     )}
+
+                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mt-8">
+                        {/* Stats Bar */}
+                        <div className="flex flex-wrap gap-8">
+                            {/* Auto Stat: Events */}
+                            <div className="flex flex-col">
+                                <span className="text-xl md:text-2xl font-bold text-emerald-400">{total}</span>
+                                <span className="text-xs md:text-sm text-gray-300 uppercase tracking-wide mt-1">Events</span>
+                            </div>
+                            
+                            {/* Auto Stat: Venues */}
+                            <div className="flex flex-col">
+                                <span className="text-xl md:text-2xl font-bold text-emerald-400">{new Set(events.map(e => (e as any).venue_id || (e as any).venue?.id).filter(Boolean)).size}</span>
+                                <span className="text-xs md:text-sm text-gray-300 uppercase tracking-wide mt-1">Venues</span>
+                            </div>
+
+                            {/* Custom Stat 1 */}
+                            {((collection as any).stat_1_label || (collection as any).stat_1_value) && (
+                                <div className="flex flex-col">
+                                    <span className="text-xl md:text-2xl font-bold text-emerald-400">{(collection as any).stat_1_value}</span>
+                                    <span className="text-xs md:text-sm text-gray-300 uppercase tracking-wide mt-1">{(collection as any).stat_1_label}</span>
+                                </div>
+                            )}
+                            {/* Custom Stat 2 */}
+                            {((collection as any).stat_2_label || (collection as any).stat_2_value) && (
+                                <div className="flex flex-col">
+                                    <span className="text-xl md:text-2xl font-bold text-emerald-400">{(collection as any).stat_2_value}</span>
+                                    <span className="text-xs md:text-sm text-gray-300 uppercase tracking-wide mt-1">{(collection as any).stat_2_label}</span>
+                                </div>
+                            )}
+                            {/* Custom Stat 3 */}
+                            {((collection as any).stat_3_label || (collection as any).stat_3_value) && (
+                                <div className="flex flex-col">
+                                    <span className="text-xl md:text-2xl font-bold text-emerald-400">{(collection as any).stat_3_value}</span>
+                                    <span className="text-xs md:text-sm text-gray-300 uppercase tracking-wide mt-1">{(collection as any).stat_3_label}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* External Link */}
+                        {(collection as any).external_link_url && (
+                            <div>
+                                <a
+                                    href={(collection as any).external_link_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-6 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
+                                >
+                                    {(collection as any).external_link_label || 'Learn More'}
+                                    <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                </a>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </section>
 
@@ -307,11 +372,6 @@ export default function CollectionPage() {
                     </div>
                 ) : (
                     <>
-                        <div className="mb-6">
-                            <p className="text-sm text-gray-600">
-                                {total} event{total !== 1 ? 's' : ''} in this collection
-                            </p>
-                        </div>
                         <EventList events={events} isLoading={eventsLoading} error={eventsError} />
 
                         {/* Infinite Scroll Sentinel */}

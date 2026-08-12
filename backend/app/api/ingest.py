@@ -88,3 +88,43 @@ def ingest_events(
     
     return {"message": f"Successfully ingested {count} events, dropped {dropped} duplicates.", "count": count, "dropped": dropped}
 
+
+@router.get("/rejected-urls", response_model=List[str])
+def get_rejected_urls(
+    session: Session = Depends(get_session),
+    api_key: str = Depends(verify_scraper_key)
+):
+    """
+    Query the live PostgreSQL database for all events marked as 'rejected'
+    (in PendingEvent staging or live Event tables) and return a JSON array of their origin URLs.
+    Protected by X-Scraper-API-Key.
+    """
+    rejected_urls = set()
+
+    # 1. Fetch ticket_url and website_url from rejected PendingEvents
+    pending_rejected = session.exec(
+        select(PendingEvent.ticket_url, PendingEvent.website_url).where(
+            PendingEvent.import_status == "rejected"
+        )
+    ).all()
+    for ticket_url, website_url in pending_rejected:
+        if ticket_url and ticket_url.strip():
+            rejected_urls.add(ticket_url.strip())
+        if website_url and website_url.strip():
+            rejected_urls.add(website_url.strip())
+
+    # 2. Fetch ticket_url and website_url from rejected Live Events
+    live_rejected = session.exec(
+        select(Event.ticket_url, Event.website_url).where(
+            Event.status == "rejected"
+        )
+    ).all()
+    for ticket_url, website_url in live_rejected:
+        if ticket_url and ticket_url.strip():
+            rejected_urls.add(ticket_url.strip())
+        if website_url and website_url.strip():
+            rejected_urls.add(website_url.strip())
+
+    return list(rejected_urls)
+
+

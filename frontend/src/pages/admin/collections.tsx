@@ -36,6 +36,15 @@ export default function AdminCollections() {
         is_featured: false,
         show_on_map: false,
         filter_params: null as Record<string, any> | null,
+        badge_text: '',
+        external_link_url: '',
+        external_link_label: '',
+        stat_1_label: '',
+        stat_1_value: '',
+        stat_2_label: '',
+        stat_2_value: '',
+        stat_3_label: '',
+        stat_3_value: '',
     });
     const slugManuallyEdited = useRef(false);
     const [saving, setSaving] = useState(false);
@@ -101,6 +110,15 @@ export default function AdminCollections() {
             is_featured: false,
             show_on_map: false,
             filter_params: null,
+            badge_text: '',
+            external_link_url: '',
+            external_link_label: '',
+            stat_1_label: '',
+            stat_1_value: '',
+            stat_2_label: '',
+            stat_2_value: '',
+            stat_3_label: '',
+            stat_3_value: '',
         });
         setQbState({
             category: [],
@@ -152,6 +170,15 @@ export default function AdminCollections() {
             is_featured: (collection as any).is_featured || false,
             show_on_map: (collection as any).show_on_map || false,
             filter_params: collection.filter_params || null,
+            badge_text: collection.badge_text || '',
+            external_link_url: collection.external_link_url || '',
+            external_link_label: collection.external_link_label || '',
+            stat_1_label: collection.stat_1_label || '',
+            stat_1_value: collection.stat_1_value || '',
+            stat_2_label: collection.stat_2_label || '',
+            stat_2_value: collection.stat_2_value || '',
+            stat_3_label: collection.stat_3_label || '',
+            stat_3_value: collection.stat_3_value || '',
         });
 
         // Initialize QB State from filter_params FIRST (JSON-first architecture)
@@ -421,24 +448,19 @@ export default function AdminCollections() {
                     isOpen={modalOpen}
                     onClose={() => setModalOpen(false)}
                     title={editingCollection ? 'Edit Collection' : 'Add Collection'}
+                    size="full"
                 >
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {error && (
-                            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-                                {error}
-                            </div>
-                        )}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+    {error && (
+        <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            {error}
+        </div>
+    )}
 
-                        {/* Collection Image */}
-                        <ImageUpload
-                            folder="categories" // Reusing categories folder for now
-                            currentImageUrl={formData.image_url}
-                            onUpload={handleImageUpload}
-                            onRemove={handleImageRemove}
-                            aspectRatio="16/9"
-                        />
-
-                        <div>
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 text-left">
+        {/* --- Left Column --- */}
+        <div className="lg:col-span-3 space-y-4">
+            <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Title *
                             </label>
@@ -457,8 +479,7 @@ export default function AdminCollections() {
                                 required
                             />
                         </div>
-
-                        <div>
+            <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 URL Slug
                             </label>
@@ -477,8 +498,7 @@ export default function AdminCollections() {
                             </div>
                             <p className="text-xs text-gray-400 mt-1">Auto-generated from title. Edit to override.</p>
                         </div>
-
-                        <div>
+            <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Subtitle
                             </label>
@@ -489,8 +509,7 @@ export default function AdminCollections() {
                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
                             />
                         </div>
-
-                        <div>
+            <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Description
                             </label>
@@ -502,8 +521,110 @@ export default function AdminCollections() {
                                 placeholder="Optional description for this collection..."
                             />
                         </div>
+            {/* --- NEW SEO FIELDS --- */}
+                        <div className="border-t pt-4 mt-6">
+                            <h4 className="text-sm font-semibold text-gray-900 mb-3">SEO & Metadata</h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Long Description (Markdown Supported)
+                                    </label>
+                                    <textarea
+                                        value={formData.long_description}
+                                        onChange={(e) => setFormData({ ...formData, long_description: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 font-mono text-sm"
+                                        rows={6}
+                                        placeholder="Detailed content for the main body of the collection page..."
+                                    />
+                                </div>
 
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        SEO Meta Title
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.seo_title}
+                                        onChange={(e) => setFormData({ ...formData, seo_title: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        placeholder="Defaults to Collection Title if empty"
+                                        maxLength={100}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Keep under 60 characters for best results.</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        SEO Meta Description
+                                    </label>
+                                    <textarea
+                                        value={formData.seo_description}
+                                        onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        rows={2}
+                                        placeholder="Defaults to Subtitle or Description if empty"
+                                        maxLength={300}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Keep between 150-160 characters for optimal search snippet display.</p>
+                                </div>
+                            </div>
+                        </div>
+            <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Sort Order
+                                </label>
+                                <input
+                                    type="number"
+                                    value={formData.sort_order}
+                                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+                        </div>
+            <div className="flex flex-col gap-4">
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="is_active"
+                                    checked={formData.is_active}
+                                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                    className="w-4 h-4 text-emerald-600 rounded"
+                                />
+                                <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
+                                    Active
+                                </label>
+                            </div>
+
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="show_on_map"
+                                    checked={(formData as any).show_on_map}
+                                    onChange={(e) => setFormData({ ...formData, show_on_map: e.target.checked } as any)}
+                                    className="w-4 h-4 text-blue-600 rounded"
+                                />
+                                <label htmlFor="show_on_map" className="ml-2 text-sm text-gray-700">
+                                    Feature on Map
+                                </label>
+                            </div>
+                        </div>
+        </div>
+        {/* --- Right Column --- */}
+        <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 text-left">Featured Image</h4>
+                {/* Collection Image */}
+                        <ImageUpload
+                            folder="categories" // Reusing categories folder for now
+                            currentImageUrl={formData.image_url}
+                            onUpload={handleImageUpload}
+                            onRemove={handleImageRemove}
+                            aspectRatio="16/9"
+                        />
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <div className="flex justify-between items-center mb-3">
                                 <label className="block text-sm font-medium text-gray-700">
                                     Filter Configuration
@@ -840,114 +961,90 @@ export default function AdminCollections() {
                             </div>
                         </div>
 
-                        {/* --- NEW SEO FIELDS --- */}
-                        <div className="border-t pt-4 mt-6">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-3">SEO & Metadata</h4>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Long Description (Markdown Supported)
-                                    </label>
-                                    <textarea
-                                        value={formData.long_description}
-                                        onChange={(e) => setFormData({ ...formData, long_description: e.target.value })}
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 font-mono text-sm"
-                                        rows={6}
-                                        placeholder="Detailed content for the main body of the collection page..."
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        SEO Meta Title
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.seo_title}
-                                        onChange={(e) => setFormData({ ...formData, seo_title: e.target.value })}
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                                        placeholder="Defaults to Collection Title if empty"
-                                        maxLength={100}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Keep under 60 characters for best results.</p>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        SEO Meta Description
-                                    </label>
-                                    <textarea
-                                        value={formData.seo_description}
-                                        onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                                        rows={2}
-                                        placeholder="Defaults to Subtitle or Description if empty"
-                                        maxLength={300}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Keep between 150-160 characters for optimal search snippet display.</p>
-                                </div>
-                            </div>
+            {/* --- NEW HERO CUSTOMIZATION ACCORDION --- */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden text-left">
+                <details className="group">
+                    <summary className="flex justify-between items-center font-medium cursor-pointer list-none p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <span className="text-sm text-gray-900">Hero Customization & Stats (Optional)</span>
+                        <span className="transition group-open:rotate-180">
+                            <svg fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
+                        </span>
+                    </summary>
+                    <div className="p-4 space-y-4 border-t border-gray-200 text-sm">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Badge Text</label>
+                            <input
+                                type="text"
+                                value={formData.badge_text || ''}
+                                onChange={(e) => setFormData({ ...formData, badge_text: e.target.value })}
+                                className="w-full px-2 py-1.5 border rounded focus:ring-1 focus:ring-emerald-500"
+                                placeholder="e.g. FESTIVAL COLLECTION"
+                            />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Sort Order
-                                </label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">External Link URL</label>
                                 <input
-                                    type="number"
-                                    value={formData.sort_order}
-                                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                    type="text"
+                                    value={formData.external_link_url || ''}
+                                    onChange={(e) => setFormData({ ...formData, external_link_url: e.target.value })}
+                                    className="w-full px-2 py-1.5 border rounded focus:ring-1 focus:ring-emerald-500"
+                                    placeholder="https://..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">External Link Label</label>
+                                <input
+                                    type="text"
+                                    value={formData.external_link_label || ''}
+                                    onChange={(e) => setFormData({ ...formData, external_link_label: e.target.value })}
+                                    className="w-full px-2 py-1.5 border rounded focus:ring-1 focus:ring-emerald-500"
+                                    placeholder="e.g. Get Tickets"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-4">
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    id="is_active"
-                                    checked={formData.is_active}
-                                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                    className="w-4 h-4 text-emerald-600 rounded"
-                                />
-                                <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
-                                    Active
-                                </label>
-                            </div>
-
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    id="show_on_map"
-                                    checked={(formData as any).show_on_map}
-                                    onChange={(e) => setFormData({ ...formData, show_on_map: e.target.checked } as any)}
-                                    className="w-4 h-4 text-blue-600 rounded"
-                                />
-                                <label htmlFor="show_on_map" className="ml-2 text-sm text-gray-700">
-                                    Feature on Map
-                                </label>
+                        <div className="pt-2 border-t">
+                            <label className="block text-xs font-medium text-gray-500 mb-2">Stats (Optional)</label>
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input type="text" placeholder="Stat 1 Label (e.g. Days)" value={formData.stat_1_label || ''} onChange={(e) => setFormData({ ...formData, stat_1_label: e.target.value })} className="w-full px-2 py-1.5 border rounded" />
+                                    <input type="text" placeholder="Stat 1 Value (e.g. 3)" value={formData.stat_1_value || ''} onChange={(e) => setFormData({ ...formData, stat_1_value: e.target.value })} className="w-full px-2 py-1.5 border rounded" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input type="text" placeholder="Stat 2 Label" value={formData.stat_2_label || ''} onChange={(e) => setFormData({ ...formData, stat_2_label: e.target.value })} className="w-full px-2 py-1.5 border rounded" />
+                                    <input type="text" placeholder="Stat 2 Value" value={formData.stat_2_value || ''} onChange={(e) => setFormData({ ...formData, stat_2_value: e.target.value })} className="w-full px-2 py-1.5 border rounded" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input type="text" placeholder="Stat 3 Label" value={formData.stat_3_label || ''} onChange={(e) => setFormData({ ...formData, stat_3_label: e.target.value })} className="w-full px-2 py-1.5 border rounded" />
+                                    <input type="text" placeholder="Stat 3 Value" value={formData.stat_3_value || ''} onChange={(e) => setFormData({ ...formData, stat_3_value: e.target.value })} className="w-full px-2 py-1.5 border rounded" />
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
 
-                        <div className="flex justify-end gap-3 pt-4 border-t">
-                            <button
-                                type="button"
-                                onClick={() => setModalOpen(false)}
-                                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-                            >
-                                {saving ? 'Saving...' : editingCollection ? 'Update' : 'Create'}
-                            </button>
-                        </div>
-                    </form>
+    <div className="flex justify-end space-x-3 pt-6 border-t mt-6">
+        <button
+            type="button"
+            onClick={() => setModalOpen(false)}
+            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+        >
+            Cancel
+        </button>
+        <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+        >
+            {saving ? 'Saving...' : editingCollection ? 'Update' : 'Create'}
+        </button>
+    </div>
+</form>
                 </Modal>
             </AdminLayout>
         </AdminGuard >
