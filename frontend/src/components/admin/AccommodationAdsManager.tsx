@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Accommodation Ads Manager Component
  * Reusable dashboard view for managing location-based accommodation advertising slots.
  */
@@ -218,7 +218,7 @@ export default function AccommodationAdsManager() {
             onClick={openCreate}
             className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium text-sm"
           >
-            Create your first ad →
+            Create your first ad â†’
           </button>
         </div>
       ) : (
@@ -279,7 +279,7 @@ export default function AccommodationAdsManager() {
                           {formatDate(ad.start_date)}
                         </div>
                         <div className="text-xs text-gray-400">
-                          → {formatDate(ad.end_date)}
+                          â†’ {formatDate(ad.end_date)}
                         </div>
                       </td>
                       <td className="px-5 py-4">

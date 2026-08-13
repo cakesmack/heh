@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
-import EventsManager from '@/components/admin/EventsManager';
-import EventCategoryManager from '@/components/admin/EventCategoryManager';
+import GeographicHubsManager from '@/components/admin/GeographicHubsManager';
+import CollectionsManager from '@/components/admin/CollectionsManager';
 
-export default function AdminEventsPage() {
+export default function AdminCurated() {
     const router = useRouter();
     const tabQuery = router.query.tab as string;
-    const activeTab = tabQuery === 'categories' ? 'categories' : 'all';
+    const activeTab = tabQuery === 'collections' ? 'collections' : 'hubs';
 
     const handleTabChange = (tab: string) => {
         router.push({
@@ -19,29 +19,29 @@ export default function AdminEventsPage() {
 
     return (
         <AdminGuard>
-            <AdminLayout title="Events">
+            <AdminLayout title="Hubs & Collections">
                 <div className="mb-6 flex space-x-4 border-b border-gray-200">
                     <button
-                        className={`py-2 px-4 font-medium text-sm ${activeTab === 'all'
+                        className={`py-2 px-4 font-medium text-sm ${activeTab === 'hubs'
                             ? 'text-emerald-600 border-b-2 border-emerald-600'
                             : 'text-gray-500 hover:text-gray-700'
                             }`}
-                        onClick={() => handleTabChange('all')}
+                        onClick={() => handleTabChange('hubs')}
                     >
-                        All Events
+                        Geographic Hubs
                     </button>
                     <button
-                        className={`py-2 px-4 font-medium text-sm ${activeTab === 'categories'
+                        className={`py-2 px-4 font-medium text-sm ${activeTab === 'collections'
                             ? 'text-emerald-600 border-b-2 border-emerald-600'
                             : 'text-gray-500 hover:text-gray-700'
                             }`}
-                        onClick={() => handleTabChange('categories')}
+                        onClick={() => handleTabChange('collections')}
                     >
-                        Categories
+                        Collections
                     </button>
                 </div>
 
-                {activeTab === 'all' ? <EventsManager /> : <EventCategoryManager />}
+                {activeTab === 'hubs' ? <GeographicHubsManager /> : <CollectionsManager />}
             </AdminLayout>
         </AdminGuard>
     );
