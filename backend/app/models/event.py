@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING, List
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, String, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, ForeignKey, UniqueConstraint, Index
 
 from .tag import EventTag
 from .event_participating_venue import EventParticipatingVenue
@@ -48,6 +48,7 @@ class Event(SQLModel, table=True):
     __tablename__ = "events"
     __table_args__ = (
         UniqueConstraint("title", "date_start", "venue_id", name="uq_event_title_date_venue"),
+        Index("idx_status_date_start", "status", "date_start"),
     )
 
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)

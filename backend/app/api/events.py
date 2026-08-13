@@ -1349,7 +1349,9 @@ def get_top_events(
 
 
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_event(
+    request: Request,
     event_data: EventCreate,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),

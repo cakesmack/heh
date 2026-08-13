@@ -16,13 +16,43 @@ from app.models.user_preferences import UserPreferences
 from app.models.event import Event
 from app.models.venue import Venue
 from app.models.featured_booking import FeaturedBooking, BookingStatus
-from app.api.email_testing import get_featured_events, format_event_data
 from app.services.resend_email import resend_email_service
 
 router = APIRouter(prefix="/cron", tags=["Cron Jobs"])
 logger = logging.getLogger(__name__)
 
 CRON_SECRET = os.getenv("CRON_SECRET_KEY", "super-secret-cron-key")
+
+def get_featured_events(session: Session, limit: int = 3) -> List[Event]:
+    """Helper to fetch top featured events for emails."""
+    now = datetime.utcnow()
+    query = (
+        select(Event)
+        .options(selectinload(Event.venue))
+        .where(Event.featured == True)
+        .where(Event.status == "published")
+        .where(Event.date_start >= now)
+        .order_by(Event.date_start.asc())
+        .limit(limit)
+    )
+    return session.exec(query).all()
+
+def format_event_data(event: Event, session: Session = None) -> dict:
+    """Format event model into dictionary for email templates."""
+    venue_name = event.venue.name if event.venue else (event.location_name or "Highlands")
+    
+    date_display = ""
+    if event.date_start:
+        date_display = event.date_start.strftime("%a, %d %b at %H:%M")
+
+    return {
+        "id": str(event.id),
+        "title": event.title,
+        "image_url": event.image_url,
+        "date_display": date_display,
+        "venue_name": venue_name
+    }
+
 
 def verify_cron_access(
     x_cron_secret: Optional[str] = Header(None, alias="X-Cron-Secret"),

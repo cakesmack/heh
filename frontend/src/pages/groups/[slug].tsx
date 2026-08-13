@@ -645,6 +645,20 @@ export const getServerSideProps: GetServerSideProps<GroupDetailPageProps> = asyn
             return { notFound: true };
         }
 
+        // --- 301 Redirect Enforcer ---
+        const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(slug) || /^[0-9a-fA-F]{32}$/.test(slug);
+        if ((isUuid || slug !== organizer.slug) && organizer.slug) {
+            const queryString = context.resolvedUrl.includes('?')
+                ? context.resolvedUrl.substring(context.resolvedUrl.indexOf('?'))
+                : '';
+            return {
+                redirect: {
+                    destination: `/groups/${organizer.slug}${queryString}`,
+                    permanent: true,
+                },
+            };
+        }
+
         const baseUrl = 'https://highlandeventshub.co.uk';
 
         // Construct description

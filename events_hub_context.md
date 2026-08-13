@@ -22,6 +22,13 @@
 **Database & Environment:**
 * Primary Database: PostgreSQL (Strictly NO SQLite syntax)
 * Production Hosting: Render (Automated pre-deploy migrations via `alembic upgrade head`)
+* Connection Pooling: SQLAlchemy engine must enforce Render stability parameters (`pool_pre_ping=True`, `pool_size=50`, `max_overflow=50`, `pool_recycle=1800`) to prevent dropped SSL connections and handle traffic spikes.
+
+**Backend Dependency Management:**
+* Explicitly banned dependencies: `beautifulsoup4` or any unstructured scraping logic. Core backend ingestion scripts must remain isolated or rely strictly on established, typed APIs.
+
+**Frontend Security (XSS Prevention):**
+* Any component rendering raw HTML (e.g., `RichText.tsx`) must strictly sanitize content using `isomorphic-dompurify` via `DOMPurify.sanitize(content)` before passing it to `dangerouslySetInnerHTML`.
 
 ---
 
@@ -117,7 +124,7 @@
 | `name` | `str(255)` | indexed |
 | `address` | `str(500)` | required |
 | `city` | `str(100)` | indexed (`ix_venues_city`), town/city location |
-| `status` | `VenueStatus` enum | `VERIFIED` · `UNVERIFIED` · `ARCHIVED` (indexed `ix_venues_status`) |
+| `status` | `str(50)` | explicit string mapping (`VERIFIED` · `UNVERIFIED` · `ARCHIVED`), indexed `ix_venues_status` |
 | `latitude` / `longitude` | `float` | indexed, required |
 | `geohash` | `str(12)` | indexed |
 | `slug` | `str(300)` | indexed, for SEO URLs |
@@ -218,6 +225,10 @@
 > **Detail Pages** (`events/[id].tsx`, `venues/[id].tsx`, `groups/[slug].tsx`) implement `getServerSideProps` with canonical redirect logic. Any new detail page **must** replicate this pattern.
 
 **Rule:** If the entity has a canonical `slug` and the URL param `id ≠ slug`, issue an **HTTP 301 Permanent Redirect** to the slug URL. Query parameters (UTM, ticket refs, etc.) are preserved through the redirect.
+
+### Custom Error Pages (Next.js)
+
+**Rule:** The Next.js `pages/` directory must strictly implement and maintain custom `404.tsx` and `500.tsx` pages styled with Tailwind CSS to match the platform's visual identity. Falling back to the default unstyled Next.js error boundaries is prohibited.
 
 ### Static & Dynamic Metadata Architecture
 

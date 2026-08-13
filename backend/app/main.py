@@ -25,7 +25,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.limiter import limiter
-from app.api import auth, events, venues, promotions, categories, tags, media, geocode, users, admin, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, email_testing, cron, admin_import, campaigns, locations, accommodation_ads, public_ads, map, ingest
+from app.api import auth, events, venues, promotions, categories, tags, media, geocode, users, admin, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, cron, admin_import, campaigns, locations, accommodation_ads, public_ads, map, ingest
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ app.include_router(preferences.router, prefix="/api")
 app.include_router(preferences.public_router, prefix="/api")
 app.include_router(featured.router, prefix="/api/featured", tags=["Featured"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
-app.include_router(email_testing.router, prefix="/api/admin/email-testing", tags=["Admin Email Testing"])
+
 app.include_router(admin_import.router, prefix="/api/admin", tags=["Admin Import"])
 app.include_router(cron.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api/admin/campaigns", tags=["Campaigns"])

@@ -41,7 +41,9 @@ class GoogleTokenRequest(BaseModel):
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session)
@@ -188,8 +190,10 @@ def login(
 
 
 @router.post("/google", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def google_login(
-    request: GoogleTokenRequest,
+    request: Request,
+    payload: GoogleTokenRequest,
     session: Session = Depends(get_session)
 ):
     """
@@ -202,7 +206,7 @@ async def google_login(
         try:
             response = await client.get(
                 "https://www.googleapis.com/oauth2/v3/userinfo",
-                headers={"Authorization": f"Bearer {request.token}"}
+                headers={"Authorization": f"Bearer {payload.token}"}
             )
             
             if response.status_code != 200:
@@ -328,8 +332,10 @@ class MessageResponse(BaseModel):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit("3/minute")
 async def forgot_password(
-    request: ForgotPasswordRequest,
+    request: Request,
+    payload: ForgotPasswordRequest,
     session: Session = Depends(get_session)
 ):
     """
@@ -342,7 +348,7 @@ async def forgot_password(
     
     # Find user by email
     user = session.exec(
-        select(User).where(User.email == request.email)
+        select(User).where(User.email == payload.email)
     ).first()
     
     if not user:
@@ -351,7 +357,7 @@ async def forgot_password(
     
     # Delete any existing tokens for this email (cleanup)
     existing_tokens = session.exec(
-        select(PasswordResetToken).where(PasswordResetToken.email == request.email)
+        select(PasswordResetToken).where(PasswordResetToken.email == payload.email)
     ).all()
     for token in existing_tokens:
         session.delete(token)
@@ -365,7 +371,7 @@ async def forgot_password(
     
     # Create and save token
     reset_token = PasswordResetToken(
-        email=request.email,
+        email=payload.email,
         token=hashed_token,
         expires_at=expires_at
     )
@@ -373,19 +379,21 @@ async def forgot_password(
     session.commit()
     
     # Send email using Resend (with raw token in link)
-    email_sent = await resend_email_service.send_password_reset(request.email, raw_token)
+    email_sent = await resend_email_service.send_password_reset(payload.email, raw_token)
     
     if not email_sent:
         # Log the error but still return success for security
         import logging
-        logging.error(f"Failed to send password reset email to {request.email}")
+        logging.error(f"Failed to send password reset email to {payload.email}")
     
     return MessageResponse(message=success_message)
 
 
 @router.post("/reset-password", response_model=MessageResponse)
+@limiter.limit("3/minute")
 def reset_password(
-    request: ResetPasswordRequest,
+    request: Request,
+    payload: ResetPasswordRequest,
     session: Session = Depends(get_session)
 ):
     """
@@ -394,7 +402,7 @@ def reset_password(
     Token must be valid and not expired.
     """
     # Validate new password
-    password_valid, password_error = validate_password(request.new_password)
+    password_valid, password_error = validate_password(payload.new_password)
     if not password_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -412,7 +420,7 @@ def reset_password(
     # Find matching token
     matching_token = None
     for token_record in all_tokens:
-        if verify_password(request.token, token_record.token):
+        if verify_password(payload.token, token_record.token):
             matching_token = token_record
             break
     
@@ -434,7 +442,7 @@ def reset_password(
         )
     
     # Update password
-    user.password_hash = hash_password(request.new_password)
+    user.password_hash = hash_password(payload.new_password)
     session.add(user)
     
     # Delete the used token

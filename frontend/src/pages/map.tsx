@@ -89,7 +89,6 @@ export function MapPage() {
     end: endOfDay(addDays(today, 7)) // Optimized: Default to Next 7 Days for performance
   });
   const [selectedRangeId, setSelectedRangeId] = useState<string>('week');
-  const [customDate, setCustomDate] = useState<string>(''); // For custom date picker
 
   // Map Interaction State
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | undefined>(undefined);
@@ -114,19 +113,8 @@ export function MapPage() {
   const handleRangeSelect = (range: DateRange) => {
     setSelectedRangeId(range.id);
     setDateRange({ start: range.start, end: range.end });
-    setCustomDate(''); // Clear custom date picker
   };
 
-  // Handle Custom Date Picker
-  const handleCustomDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setCustomDate(val);
-    if (val) {
-      const date = startOfDay(new Date(val));
-      setDateRange({ start: date, end: endOfDay(date) });
-      setSelectedRangeId('custom');
-    }
-  };
 
   // Fetch events, categories, collections, or venues
   useEffect(() => {

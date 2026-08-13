@@ -17,6 +17,7 @@ scripts/_archive/
 scripts/archive/
 backend/scripts/_archive/
 backend/scripts/archive/
+archive/
 
 # Env Examples
 .env.example

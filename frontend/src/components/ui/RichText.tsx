@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface RichTextProps {
     content: string;
@@ -23,10 +24,11 @@ export default function RichText({ content, className = '' }: RichTextProps) {
 
     // Handle HTML content (from Tiptap editor)
     if (isHtml(content)) {
+        const cleanContent = DOMPurify.sanitize(content);
         return (
             <div
                 className={`prose prose-sm max-w-none text-gray-700 ${className} [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&>a]:text-emerald-600 [&>a]:underline`}
-                dangerouslySetInnerHTML={{ __html: content }}
+                dangerouslySetInnerHTML={{ __html: cleanContent }}
             />
         );
     }

@@ -33,6 +33,8 @@ def include_object(object, name, type_, reflected, compare_to):
     """
     if type_ == "table" and reflected and name not in target_metadata.tables:
         return False
+    if type_ == "index" and name == "idx_events_title_trgm":
+        return False
     return True
 
 def get_url() -> str:

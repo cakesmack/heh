@@ -49,7 +49,10 @@ class Venue(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()).replace("-", ""), primary_key=True)
     name: str = Field(max_length=255, index=True)
     address: str = Field(max_length=500)
-    status: VenueStatus = Field(default=VenueStatus.UNVERIFIED, index=True)
+    status: VenueStatus = Field(
+        default=VenueStatus.UNVERIFIED, 
+        sa_column=Column(String(50), default="UNVERIFIED", index=True, nullable=True)
+    )
 
     # Geolocation
     latitude: float = Field(index=True)
