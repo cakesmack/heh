@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Any, Dict, List, Optional, Union, Tuple
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, or_
 from sqlalchemy import func

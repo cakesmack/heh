@@ -1,6 +1,7 @@
+from __future__ import annotations
+from typing import Any, Dict, List, Optional, Union, Tuple
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from typing import List, Dict, Any
 from app.core.database import get_session
 from app.api.auth import get_current_user
 from app.models.user import User

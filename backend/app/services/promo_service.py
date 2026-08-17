@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Any, Dict, List, Optional, Union, Tuple
 from datetime import datetime
 from sqlmodel import Session, select
 from app.models import PromoCode

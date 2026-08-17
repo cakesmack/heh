@@ -1,6 +1,7 @@
+from __future__ import annotations
+from typing import Any, Dict, List, Optional, Union, Tuple
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
-from typing import Dict, Any, Optional
 from pydantic import BaseModel
 import logging
 

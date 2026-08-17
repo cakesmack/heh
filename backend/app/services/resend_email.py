@@ -1,9 +1,6 @@
-"""
-Resend email service for marketing and transactional emails.
-Uses Resend API for reliable email delivery with tracking.
-"""
+from __future__ import annotations
 import logging
-from typing import Optional
+from typing import Any, Dict, List, Optional, Union, Tuple
 import resend
 
 from app.core.config import settings

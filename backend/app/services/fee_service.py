@@ -1,5 +1,6 @@
+from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import Any, Dict, List, Optional, Union, Tuple
 from datetime import datetime, timedelta
 from sqlmodel import Session, select, func
 
