@@ -35,6 +35,8 @@ import { api, apiFetch, locationsAPI } from '@/lib/api';
 import type { EventResponse } from '@/types';
 import SidebarPerformances from '@/components/events/SidebarPerformances';
 import { EventCard } from '@/components/events/EventCard';
+import { TicketTierSelector } from '@/components/ticketing/TicketTierSelector';
+import { CheckoutModal } from '@/components/ticketing/CheckoutModal';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
@@ -280,6 +282,15 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const [accommodationAds, setAccommodationAds] = useState<any[]>([]);
   const [resolvedLocationId, setResolvedLocationId] = useState<number | null>(null);
   const [locations, setLocations] = useState<any[]>([]);
+  
+  // Ticketing Modals
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [checkoutItems, setCheckoutItems] = useState<{tier_id: string, quantity: number}[]>([]);
+  const [checkoutPromo, setCheckoutPromo] = useState<string | null>(null);
+  const [checkoutTotal, setCheckoutTotal] = useState(0);
+  const [checkoutBreakdown, setCheckoutBreakdown] = useState<{ subtotal: number; bookingFee: number; discount: number } | undefined>(undefined);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  
   const venue = event?.venue;
 
   const isPastEvent = event
@@ -827,12 +838,24 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                   <span className="text-lg font-bold text-white">
                     {event.price_display || (event.price && event.price > 0 ? `£${event.price.toFixed(2)}` : 'Free Entry')}
                   </span>
+                  {event.is_ticketing_enabled && event.pass_fees_to_buyer && (event.price > 0 || (event.ticket_tiers && event.ticket_tiers.some((t: any) => t.price > 0))) && (
+                    <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      (+ booking fee)
+                    </span>
+                  )}
                 </div>
 
                 {/* Primary CTA */}
                 {!isPastEvent && (
                   <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3">
-                    {event.ticket_url && (
+                    {event.is_ticketing_enabled ? (
+                      <button
+                        onClick={() => setTicketModalOpen(true)}
+                        className="flex items-center justify-center sm:w-auto px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-sm font-bold rounded-lg transition-all shadow-md shadow-emerald-500/20"
+                      >
+                        Buy Tickets
+                      </button>
+                    ) : event.ticket_url ? (
                       <a
                         href={event.ticket_url}
                         target="_blank"
@@ -842,7 +865,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       >
                         Book Now
                       </a>
-                    )}
+                    ) : null}
 
                     {event.website_url && (
                       <a
@@ -1343,6 +1366,47 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
           </div>
         )
       }
+
+      {/* Ticket Selection Modal */}
+      {ticketModalOpen && event && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="relative w-full max-w-md">
+            <button 
+              onClick={() => setTicketModalOpen(false)}
+              className="absolute -top-10 right-0 text-white text-xl hover:text-gray-300"
+            >
+              &times; Close
+            </button>
+            <TicketTierSelector 
+              eventId={event.id}
+              tiers={event.ticket_tiers || []}
+              passFeesToBuyer={Boolean(event.pass_fees_to_buyer)}
+              onProceed={(items, promoCode, total, breakdown) => {
+                setCheckoutItems(items);
+                setCheckoutPromo(promoCode);
+                setCheckoutTotal(total);
+                setCheckoutBreakdown(breakdown);
+                setTicketModalOpen(false);
+                setCheckoutModalOpen(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Checkout Modal */}
+      {checkoutModalOpen && event && (
+        <CheckoutModal 
+          eventId={event.id}
+          items={checkoutItems}
+          promoCode={checkoutPromo}
+          total={checkoutTotal}
+          passFeesToBuyer={Boolean(event.pass_fees_to_buyer)}
+          breakdown={checkoutBreakdown}
+          onClose={() => setCheckoutModalOpen(false)}
+        />
+      )}
+
     </div >
   );
 }

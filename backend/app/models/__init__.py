@@ -34,6 +34,12 @@ from .campaign_log import CampaignLog
 from .location import Location
 from .event_attendee import EventAttendee
 from .accommodation_ad import AccommodationAd
+from .organizer_stripe_account import OrganizerStripeAccount
+from .ticket_tier import TicketTier
+from .promo_code import PromoCode
+from .order import Order
+from .ticket import Ticket
+from .platform_settings import PlatformSettings
 
 __all__ = [
     # User
@@ -103,4 +109,11 @@ __all__ = [
     "AccommodationAd",
     # Pending Events
     "PendingEvent",
+    # Ticketing
+    "OrganizerStripeAccount",
+    "TicketTier",
+    "PromoCode",
+    "Order",
+    "Ticket",
+    "PlatformSettings",
 ]

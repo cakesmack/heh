@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { AuthGuard } from '@/components/common/AuthGuard';
 
 import ImageUpload from '@/components/common/ImageUpload';
@@ -492,7 +492,7 @@ function HubEditForm({ hub, onCancel, onSaved }: HubEditFormProps) {
 
         <div className="space-y-5">
           <ImageUpload
-            folder="locations/partners"
+            folder="locations"
             currentImageUrl={formData.partner_logo || undefined}
             onUpload={(urls) => setFormData(prev => ({ ...prev, partner_logo: urls.url }))}
             onRemove={() => setFormData(prev => ({ ...prev, partner_logo: '' }))}

@@ -13,6 +13,7 @@ from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
 from app.schemas.venue import VenueResponse
 from app.schemas.organizer import OrganizerResponse
+from app.schemas.ticketing import TicketTierCreate, TicketTierResponse
 from typing import Union
 import re
 
@@ -116,6 +117,10 @@ class EventCreate(BaseModel):
     map_display_lat: Optional[float] = None
     map_display_lng: Optional[float] = None
     map_display_label: Optional[str] = Field(None, max_length=255)
+    # Native Ticketing
+    is_ticketing_enabled: Optional[bool] = False
+    pass_fees_to_buyer: Optional[bool] = False
+    ticket_tiers: Optional[List[TicketTierCreate]] = None
     # SEO Overrides
     seo_title: Optional[str] = Field(None, max_length=120)
     seo_description: Optional[str] = Field(None, max_length=500)
@@ -165,6 +170,10 @@ class EventUpdate(BaseModel):
     recurrence_end_date: Optional[datetime] = None
     weekdays: Optional[List[int]] = Field(None, description="Days of the week for recurring events (0=Mon, 6=Sun)")
     status: Optional[str] = Field(None, description="Admin only: Update event status")
+    # Native Ticketing
+    is_ticketing_enabled: Optional[bool] = None
+    pass_fees_to_buyer: Optional[bool] = None
+    ticket_tiers: Optional[List[TicketTierCreate]] = None
     # SEO Overrides
     seo_title: Optional[str] = Field(None, max_length=120)
     seo_description: Optional[str] = Field(None, max_length=500)
@@ -216,6 +225,8 @@ class EventResponse(BaseModel):
     min_age: Optional[int] = None  # Numeric minimum age
     postcode: Optional[str] = None
     address_full: Optional[str] = None
+    is_ticketing_enabled: bool = False
+    pass_fees_to_buyer: bool = False
     
     # Phase 2.3 additions
     organizer_profile_id: Optional[UUID] = None
@@ -232,6 +243,7 @@ class EventResponse(BaseModel):
     participating_venues: List[VenueResponse] = []
     showtimes: List[ShowtimeResponse] = []
     venue: Optional[VenueResponse] = None
+    ticket_tiers: List[TicketTierResponse] = []
     
     # Organizer Profile (Group)
     organizer_profile: Optional[OrganizerProfileResponse] = None

@@ -51,13 +51,13 @@ export function BottomNavBar() {
     <>
       {/* Account Menu Overlay */}
       {isMenuOpen && isAuthenticated && (
-        <div className="md:hidden fixed inset-0 bg-black/50 z-40 animate-fade-in" onClick={() => setIsMenuOpen(false)} />
+        <div className="md:hidden fixed inset-0 bg-black/50 z-40 animate-fade-in print:hidden" onClick={() => setIsMenuOpen(false)} />
       )}
 
       {/* Account Menu Bottom Sheet */}
       <div
         ref={menuRef}
-        className={`md:hidden fixed bottom-16 left-0 right-0 bg-white rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-50 transition-transform duration-300 ease-out transform ${isMenuOpen && isAuthenticated ? 'translate-y-0' : 'translate-y-[120%]'
+        className={`md:hidden fixed bottom-16 left-0 right-0 bg-white rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-50 transition-transform duration-300 ease-out transform print:hidden ${isMenuOpen && isAuthenticated ? 'translate-y-0' : 'translate-y-[120%]'
           }`}
       >
         <div className="p-4">
@@ -84,13 +84,21 @@ export function BottomNavBar() {
             </Link>
 
             <Link
-              href="/account?tab=events"
+              href="/account/tickets"
               className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
             >
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
               </svg>
-              <span className="font-medium">My Events</span>
+              <span className="font-medium">My Tickets</span>
+            </Link>
+
+            <Link
+              href="/organizers/hub"
+              className="flex items-center gap-3 px-4 py-3 text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors font-semibold"
+            >
+              <span className="text-lg">🎪</span>
+              <span className="font-semibold">Organizer Hub</span>
             </Link>
 
             {user?.is_admin && (
@@ -118,7 +126,7 @@ export function BottomNavBar() {
         </div>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 print:hidden">
         <div className="grid grid-cols-5 h-16">
           {/* Events */}
           <Link

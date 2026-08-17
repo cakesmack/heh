@@ -27,7 +27,7 @@ const MailIcon = ({ className }: { className?: string }) => (
 
 export function Footer() {
   return (
-    <footer className="bg-slate-900 mt-auto pb-24 md:pb-0">
+    <footer className="bg-slate-900 mt-auto pb-24 md:pb-0 print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8 lg:gap-8">
           {/* Column 1: Brand - Full width on mobile */}

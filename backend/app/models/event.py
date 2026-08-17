@@ -7,6 +7,7 @@ from typing import Optional, TYPE_CHECKING, List
 from uuid import uuid4
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column, String, ForeignKey, UniqueConstraint, Index
+from sqlalchemy.dialects.postgresql import JSONB
 
 from .tag import EventTag
 from .event_participating_venue import EventParticipatingVenue
@@ -20,6 +21,9 @@ if TYPE_CHECKING:
     from .organizer import Organizer
     from .showtime import EventShowtime
     from .event_attendee import EventAttendee
+    from .ticket_tier import TicketTier
+    from .order import Order
+    from .promo_code import PromoCode
 
 
 class Event(SQLModel, table=True):
@@ -135,6 +139,15 @@ class Event(SQLModel, table=True):
     postcode: Optional[str] = Field(default=None, max_length=10)
     address_full: Optional[str] = Field(default=None, max_length=500)
 
+    # Ticketing
+    is_ticketing_enabled: bool = Field(default=False)
+    sales_frozen: bool = Field(default=False)
+    pass_fees_to_buyer: bool = Field(default=False)
+    refund_cutoff_hours: int = Field(default=48)
+    ticket_support_email: Optional[str] = Field(default=None, max_length=255)
+    scanner_access_key: Optional[str] = Field(default=None, max_length=64, index=True)
+    checkout_questions: Optional[list] = Field(default=None, sa_column=Column(JSONB))
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -152,3 +165,7 @@ class Event(SQLModel, table=True):
     bookmarks: List["Bookmark"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     showtimes: List["EventShowtime"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     attendees: List["EventAttendee"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    
+    ticket_tiers: List["TicketTier"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    orders: List["Order"] = Relationship(back_populates="event")
+    promo_codes: List["PromoCode"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

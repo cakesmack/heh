@@ -68,7 +68,7 @@ import type {
 // CONFIGURATION
 // ============================================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 // ============================================================
 // HELPER FUNCTIONS
 // ============================================================
@@ -1702,6 +1702,18 @@ export const notificationsAPI = {
   markAllAsRead: async () => {
     return apiFetch<{ success: boolean; marked_count: number }>('/api/notifications/read-all', {
       method: 'POST',
+    });
+  },
+
+  delete: async (notificationId: string) => {
+    return apiFetch<{ success: boolean }>(`/api/notifications/${notificationId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  clearAll: async () => {
+    return apiFetch<{ success: boolean; cleared_count: number }>('/api/notifications/clear', {
+      method: 'DELETE',
     });
   },
 };

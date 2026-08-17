@@ -2,20 +2,22 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
-import { moderationAPI, eventsAPI } from '@/lib/api';
+import { moderationAPI, eventsAPI, adminAPI } from '@/lib/api';
 import { Report, EventResponse } from '@/types';
 import DuplicateDiffModal from '@/components/admin/DuplicateDiffModal';
 import ReportItem from '@/components/admin/ReportItem';
 import ClaimsManager from '@/components/admin/ClaimsManager';
+import PendingEventsQueue from '@/components/admin/PendingEventsQueue';
 
 export default function AdminModeration() {
     const router = useRouter();
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [pendingEventsCount, setPendingEventsCount] = useState<number>(0);
     
     const tabQuery = router.query.tab as string;
-    const activeTab = tabQuery === 'claims' ? 'claims' : 'reports';
+    const activeTab = tabQuery === 'claims' ? 'claims' : tabQuery === 'pending' ? 'pending' : 'reports';
 
     const handleTabChange = (tab: string) => {
         router.push({
@@ -44,6 +46,13 @@ export default function AdminModeration() {
             setLoading(false);
         }
     };
+
+    // Fetch initial count for badge
+    useEffect(() => {
+        adminAPI.getPendingEventsCount()
+            .then((res) => setPendingEventsCount(res.count))
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         if (activeTab === 'reports') {
@@ -107,24 +116,43 @@ export default function AdminModeration() {
         <AdminGuard>
             <AdminLayout title="Moderation & Claims">
                 <div className="mb-6">
-                    <div className="flex space-x-4 border-b border-gray-200">
+                    <div className="flex space-x-2 sm:space-x-4 border-b border-gray-200">
                         <button
-                            className={`py-2 px-4 font-medium text-sm ${activeTab === 'reports'
+                            className={`py-3 px-4 font-semibold text-sm transition-colors relative ${activeTab === 'reports'
                                 ? 'text-emerald-600 border-b-2 border-emerald-600'
                                 : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             onClick={() => handleTabChange('reports')}
                         >
-                            User Reports {activeTab === 'reports' && !loading && `(${reports.length})`}
+                            <span>User Reports</span>
+                            {reports.length > 0 && activeTab === 'reports' && (
+                                <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full font-bold">
+                                    {reports.length}
+                                </span>
+                            )}
                         </button>
                         <button
-                            className={`py-2 px-4 font-medium text-sm ${activeTab === 'claims'
+                            className={`py-3 px-4 font-semibold text-sm transition-colors ${activeTab === 'claims'
                                 ? 'text-emerald-600 border-b-2 border-emerald-600'
                                 : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             onClick={() => handleTabChange('claims')}
                         >
                             Venue & Group Claims
+                        </button>
+                        <button
+                            className={`py-3 px-4 font-semibold text-sm transition-colors relative flex items-center gap-2 ${activeTab === 'pending'
+                                ? 'text-emerald-600 border-b-2 border-emerald-600'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            onClick={() => handleTabChange('pending')}
+                        >
+                            <span>Pending Events</span>
+                            {pendingEventsCount > 0 && (
+                                <span className="px-2 py-0.5 text-xs bg-emerald-100 text-emerald-800 rounded-full font-bold">
+                                    {pendingEventsCount}
+                                </span>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -156,6 +184,10 @@ export default function AdminModeration() {
                 )}
 
                 {activeTab === 'claims' && <ClaimsManager />}
+
+                {activeTab === 'pending' && (
+                    <PendingEventsQueue onCountChange={setPendingEventsCount} />
+                )}
 
                 {/* Duplicate Comparison Modal */}
                 {duplicateModalOpen && duplicateEvent && duplicateMatchId && (

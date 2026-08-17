@@ -272,3 +272,80 @@ def delete_organizer(
     session.delete(organizer)
     session.commit()
     return None
+
+
+@router.get("/events")
+@router.get("/events/")
+def get_organizer_events(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Returns ticketed events owned by the authenticated user or their organization profiles.
+    """
+    from app.models.order import Order
+    from app.models.ticket import Ticket
+    from sqlmodel import or_
+
+    organizer_profile_ids = [p.id for p in (getattr(current_user, "organizer_profiles", []) or [])]
+    
+    query = select(Event).where(Event.is_ticketing_enabled == True)
+    
+    if not current_user.is_admin:
+        conditions = [Event.organizer_id == current_user.id]
+        if organizer_profile_ids:
+            conditions.append(Event.organizer_profile_id.in_(organizer_profile_ids))
+        query = query.where(or_(*conditions))
+
+    events = session.exec(query.order_by(Event.date_start.desc())).all()
+    
+    results = []
+    for ev in events:
+        all_tickets = session.exec(
+            select(Ticket).join(Order, Ticket.order_id == Order.id).where(Order.event_id == ev.id)
+        ).all()
+        total_sold = len(all_tickets)
+        checked_in = len([t for t in all_tickets if t.status == "checked_in"])
+        
+        venue_name = ""
+        if ev.venue:
+            venue_name = ev.venue.name or ""
+        elif ev.location_name:
+            venue_name = ev.location_name or ""
+
+        is_active = bool(ev.scanner_access_key)
+        scanner_url = f"/scan/{ev.id}?token={ev.scanner_access_key}" if is_active else None
+
+        results.append({
+            "id": ev.id,
+            "event_id": ev.id,
+            "title": ev.title,
+            "date_start": ev.date_start.isoformat() if ev.date_start else None,
+            "date_end": ev.date_end.isoformat() if ev.date_end else None,
+            "venue_name": venue_name,
+            "image_url": ev.image_url,
+            "sales_frozen": ev.sales_frozen,
+            "is_scanner_active": is_active,
+            "scanner_access_key": ev.scanner_access_key,
+            "scanner_url": scanner_url,
+            "total_tickets_sold": total_sold,
+            "total_checked_in": checked_in,
+        })
+
+    return {"events": results}
+
+
+@router.get("/invoices")
+@router.get("/invoices/")
+def get_organizer_invoices_route(
+    event_id: Optional[str] = None,
+    tax_year: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Returns platform fee line items and net payout summaries for the organizer's events.
+    """
+    from app.api.organizer_ticketing import get_organizer_invoices
+    return get_organizer_invoices(event_id=event_id, tax_year=tax_year, current_user=current_user, session=session)
+

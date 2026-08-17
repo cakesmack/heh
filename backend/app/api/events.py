@@ -24,6 +24,7 @@ from app.models.featured_booking import FeaturedBooking, SlotType, BookingStatus
 from app.models.showtime import EventShowtime
 from app.models.bookmark import Bookmark
 from app.models.event_attendee import EventAttendee
+from app.models.ticket_tier import TicketTier
 from app.schemas.event import (
     EventCreate,
     EventUpdate,
@@ -1499,6 +1500,8 @@ async def create_event(
     # SEO Overrides
         seo_title=event_data.seo_title,
         seo_description=event_data.seo_description,
+        is_ticketing_enabled=event_data.is_ticketing_enabled if event_data.is_ticketing_enabled is not None else False,
+        pass_fees_to_buyer=event_data.pass_fees_to_buyer if event_data.pass_fees_to_buyer is not None else False,
     )
     
     
@@ -1678,6 +1681,22 @@ async def create_event(
                 notes=showtime_data.notes
             )
             session.add(showtime)
+
+    # Handle ticket tiers
+    if event_data.ticket_tiers:
+        for tier_data in event_data.ticket_tiers:
+            tier_dict = tier_data.model_dump() if hasattr(tier_data, "model_dump") else (tier_data if isinstance(tier_data, dict) else tier_data.dict())
+            new_tier = TicketTier(
+                event_id=new_event.id,
+                name=tier_dict.get("name", ""),
+                price=float(tier_dict.get("price", 0.0) or 0.0),
+                quantity_available=int(tier_dict.get("quantity_available", 0) or 0),
+                max_per_order=int(tier_dict.get("max_per_order", 6) or 6),
+                sale_start=tier_dict.get("sale_start"),
+                sale_end=tier_dict.get("sale_end"),
+                is_hidden=bool(tier_dict.get("is_hidden", False)),
+            )
+            session.add(new_tier)
 
     session.commit()
     session.refresh(new_event)
@@ -1986,7 +2005,7 @@ async def update_event(
         )
 
     # Update fields (exclude tags, participating_venue_ids, showtimes, and explicit dates for special handling)
-    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring"})
+    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring", "ticket_tiers"})
 
     # Prevent destructive scraper wipes for venue_id
     if "venue_id" in update_data and update_data["venue_id"] is None:
@@ -2147,6 +2166,68 @@ async def update_event(
             )
             session.add(new_showtime)
 
+    # Handle ticket tiers update
+    if event_data.ticket_tiers is not None:
+        existing_tiers = session.exec(
+            select(TicketTier).where(TicketTier.event_id == event.id)
+        ).all()
+        existing_tiers_map = {t.id: t for t in existing_tiers}
+        retained_tier_ids = set()
+
+        for tier_data in event_data.ticket_tiers:
+            tier_dict = tier_data.model_dump() if hasattr(tier_data, "model_dump") else (tier_data if isinstance(tier_data, dict) else tier_data.dict())
+            tier_id = tier_dict.get("id")
+            tier_name = tier_dict.get("name")
+
+            # Try to match by ID first, then by name among unused existing tiers
+            matched_tier = None
+            if tier_id and tier_id in existing_tiers_map:
+                matched_tier = existing_tiers_map[tier_id]
+            elif not tier_id and tier_name:
+                for et in existing_tiers:
+                    if et.id not in retained_tier_ids and et.name == tier_name:
+                        matched_tier = et
+                        break
+
+            if matched_tier:
+                if "name" in tier_dict and tier_dict["name"] is not None:
+                    matched_tier.name = tier_dict["name"]
+                if "price" in tier_dict and tier_dict["price"] is not None:
+                    matched_tier.price = float(tier_dict["price"])
+                if "quantity_available" in tier_dict and tier_dict["quantity_available"] is not None:
+                    matched_tier.quantity_available = int(tier_dict["quantity_available"])
+                if "max_per_order" in tier_dict and tier_dict["max_per_order"] is not None:
+                    matched_tier.max_per_order = int(tier_dict["max_per_order"])
+                if "sale_start" in tier_dict:
+                    matched_tier.sale_start = tier_dict["sale_start"]
+                if "sale_end" in tier_dict:
+                    matched_tier.sale_end = tier_dict["sale_end"]
+                if "is_hidden" in tier_dict and tier_dict["is_hidden"] is not None:
+                    matched_tier.is_hidden = bool(tier_dict["is_hidden"])
+                matched_tier.updated_at = datetime.utcnow()
+                session.add(matched_tier)
+                retained_tier_ids.add(matched_tier.id)
+            else:
+                new_tier = TicketTier(
+                    event_id=event.id,
+                    name=tier_dict.get("name", ""),
+                    price=float(tier_dict.get("price", 0.0) or 0.0),
+                    quantity_available=int(tier_dict.get("quantity_available", 0) or 0),
+                    max_per_order=int(tier_dict.get("max_per_order", 6) or 6),
+                    sale_start=tier_dict.get("sale_start"),
+                    sale_end=tier_dict.get("sale_end"),
+                    is_hidden=bool(tier_dict.get("is_hidden", False)),
+                )
+                session.add(new_tier)
+
+        for old_tier_id, old_tier in existing_tiers_map.items():
+            if old_tier_id not in retained_tier_ids:
+                if old_tier.quantity_sold == 0:
+                    session.delete(old_tier)
+                else:
+                    old_tier.is_hidden = True
+                    session.add(old_tier)
+
     # Handle updates
     
     # Track status changes for notifications
@@ -2157,7 +2238,8 @@ async def update_event(
     excluded_fields = {
         "tags", "participating_venue_ids", "showtimes", 
         "date_start", "date_end", "is_recurring",
-        "weekdays", "recurrence_end_date", "frequency"
+        "weekdays", "recurrence_end_date", "frequency",
+        "ticket_tiers"
     }
     
     for field, value in update_data.items():

@@ -25,7 +25,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.limiter import limiter
-from app.api import auth, events, venues, promotions, categories, tags, media, geocode, users, admin, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, cron, admin_import, campaigns, locations, accommodation_ads, public_ads, map, ingest
+from app.api import auth, events, venues, promotions, categories, tags, media, geocode, users, admin, bookmarks, analytics, moderation, recommendations, collections, organizers, social, groups, search, preferences, featured, notifications, cron, admin_import, campaigns, locations, accommodation_ads, public_ads, map, ingest, sellers, admin_sellers, webhooks, checkout, scanner, organizer_ticketing, buyer_ticketing, admin_ticketing
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +184,15 @@ app.include_router(recommendations.router, prefix="/api/recommendations", tags=[
 app.include_router(collections.router, prefix="/api/collections", tags=["Collections"])
 app.include_router(organizers.router, prefix="/api/organizers", tags=["Organizers"])
 app.include_router(social.router, prefix="/api/social", tags=["Social"])
+app.include_router(sellers.router, prefix="/api/sellers", tags=["Sellers"])
+app.include_router(admin_sellers.router, prefix="/api/admin/sellers", tags=["Admin Sellers"])
+app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
+app.include_router(checkout.router, prefix="/api/ticketing/checkout", tags=["Checkout"])
+app.include_router(scanner.router, prefix="/api/ticketing/scan", tags=["Scanner"])
+app.include_router(organizer_ticketing.router, prefix="/api/ticketing/organizer", tags=["Organizer Ticketing"])
+app.include_router(buyer_ticketing.router, prefix="/api/ticketing/buyer", tags=["Buyer Ticketing"])
+app.include_router(buyer_ticketing.router, prefix="/api/ticketing", tags=["Buyer Ticketing"])
+app.include_router(admin_ticketing.router, prefix="/api/admin/ticketing", tags=["Admin Ticketing"])
 app.include_router(groups.router, prefix="/api/groups", tags=["Groups"])
 app.include_router(preferences.router, prefix="/api")
 app.include_router(preferences.public_router, prefix="/api")

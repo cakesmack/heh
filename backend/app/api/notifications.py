@@ -92,6 +92,7 @@ def get_notifications(
 
 
 @router.post("/{notification_id}/read")
+@router.put("/{notification_id}/read")
 def mark_as_read(
     notification_id: str,
     current_user: User = Depends(get_current_user),
@@ -100,17 +101,18 @@ def mark_as_read(
     """Mark a notification as read."""
     notification = session.get(Notification, notification_id)
 
-    if not notification or notification.user_id != current_user.id:
+    if not notification or str(notification.user_id) != str(current_user.id):
         return {"success": False, "message": "Notification not found"}
 
     notification.is_read = True
     session.add(notification)
     session.commit()
 
-    return {"success": True}
+    return {"success": True, "id": notification_id, "is_read": True}
 
 
 @router.post("/read-all")
+@router.put("/read-all")
 def mark_all_as_read(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
@@ -130,6 +132,39 @@ def mark_all_as_read(
     session.commit()
 
     return {"success": True, "marked_count": len(notifications)}
+
+
+@router.delete("/{notification_id}")
+def delete_notification(
+    notification_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Delete a single notification."""
+    notification = session.get(Notification, notification_id)
+    if not notification or str(notification.user_id) != str(current_user.id):
+        return {"success": False, "message": "Notification not found"}
+
+    session.delete(notification)
+    session.commit()
+    return {"success": True, "id": notification_id}
+
+
+@router.delete("/clear")
+@router.post("/clear")
+@router.put("/clear")
+def clear_all_notifications(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Clear all notifications for the current user."""
+    notifications = session.exec(
+        select(Notification).where(Notification.user_id == current_user.id)
+    ).all()
+    for n in notifications:
+        session.delete(n)
+    session.commit()
+    return {"success": True, "cleared_count": len(notifications)}
 
 
 # ============================================================

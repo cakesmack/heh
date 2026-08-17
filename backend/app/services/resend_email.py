@@ -1330,5 +1330,264 @@ class ResendEmailService:
             html_content=html_content
         )
 
+    async def send_ticket_order_confirmation(
+        self,
+        to_email: str,
+        order_ref: str,
+        event_title: str,
+        event_date_str: str,
+        venue_info: str,
+        buyer_name: str,
+        total_amount: float,
+        ticket_summary: list,
+    ) -> bool:
+        """
+        Send ticket booking confirmation and digital ticket link to buyer.
+        """
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send ticket confirmation email to {mask_email(to_email)} for {order_ref}")
+            return True
+
+        subject = f"Your Tickets: {event_title} ({order_ref}) 🎟️"
+        tickets_url = f"{settings.FRONTEND_URL}/orders/{order_ref}"
+
+        tickets_rows = ""
+        for item in ticket_summary:
+            name = item.get("name") or item.get("tier_name") or "General Admission"
+            qty = item.get("quantity") or item.get("qty") or 1
+            price = item.get("price", 0.0)
+            price_str = f"£{price:.2f}" if price > 0 else "Free"
+            tickets_rows += f"""
+            <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #374151; font-size: 14px;"><strong>{name}</strong></td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 14px;">{qty}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #111827; font-weight: 600; font-size: 14px;">{price_str}</td>
+            </tr>
+            """
+
+        html_content = f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 32px 16px;">
+                <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
+                    <!-- Brand Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #064e3b, #047857); padding: 36px 32px; text-align: center; color: #ffffff;">
+                            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #a7f3d0; margin-bottom: 6px;">Highland Events Hub • Official Ticket</div>
+                            <h1 style="margin: 0; font-size: 26px; font-weight: 800; line-height: 1.2; color: #ffffff;">Booking Confirmed!</h1>
+                            <p style="margin: 8px 0 0 0; font-size: 15px; color: #d1fae5;">Order Reference: <strong>{order_ref}</strong></p>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 32px 32px 24px 32px;">
+                            <p style="margin: 0 0 20px 0; font-size: 16px; color: #111827; line-height: 1.5;">Hi <strong>{buyer_name}</strong>,</p>
+                            <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">Thank you for your booking! Your tickets for <strong>{event_title}</strong> are confirmed and ready for gate check-in.</p>
+
+                            <!-- Event Details Card -->
+                            <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; color: #065f46;">{event_title}</h2>
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td style="padding: 4px 0; font-size: 14px; color: #374151;">
+                                            📅 <strong>Date & Time:</strong> {event_date_str}
+                                        </td>
+                                    </tr>
+                                    {f'<tr><td style="padding: 4px 0; font-size: 14px; color: #374151;">📍 <strong>Venue:</strong> {venue_info}</td></tr>' if venue_info else ''}
+                                </table>
+                            </div>
+
+                            <!-- Tickets Summary Table -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 8px 0; border-bottom: 2px solid #d1d5db; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700;">Ticket Type</th>
+                                        <th style="padding: 8px 0; border-bottom: 2px solid #d1d5db; text-align: center; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700;">Qty</th>
+                                        <th style="padding: 8px 0; border-bottom: 2px solid #d1d5db; text-align: right; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700;">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tickets_rows}
+                                    <tr>
+                                        <td colspan="2" style="padding: 14px 0 0 0; font-size: 16px; font-weight: 700; color: #111827;">Total Paid</td>
+                                        <td style="padding: 14px 0 0 0; text-align: right; font-size: 18px; font-weight: 800; color: #047857;">£{total_amount:.2f}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 32px 0 24px 0;">
+                                <a href="{tickets_url}" style="display: inline-block; background-color: #059669; color: #ffffff; padding: 16px 36px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; letter-spacing: 0.01em; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">View & Download Tickets 🎟️</a>
+                            </div>
+
+                            <p style="margin: 0; font-size: 13px; color: #6b7280; text-align: center; line-height: 1.5;">You can present the digital QR code directly on your phone or print a physical copy at home.</p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 24px 32px; text-align: center;">
+                            <p style="margin: 0 0 6px 0; font-size: 13px; color: #6b7280; font-weight: 600;">Highland Events Hub</p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">Discover what's on across the Scottish Highlands • <a href="{settings.FRONTEND_URL}/account/tickets" style="color: #059669; text-decoration: underline;">My Tickets</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        from app.services.email_service import EmailType
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.WELCOME,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
+
+    async def send_organizer_ticket_sale_notification(
+        self,
+        organizer_email: str,
+        organizer_name: str,
+        event_title: str,
+        event_id: str,
+        order_ref: str,
+        buyer_name: str,
+        buyer_email: str,
+        tickets_breakdown: List[Dict[str, Any]],
+        total_amount: float,
+        platform_fee: float,
+        net_amount: float
+    ) -> bool:
+        """
+        Send notification to event organizer when a ticket is purchased for their event.
+        """
+        subject = f"🎟️ New Ticket Sale: {event_title} ({order_ref})"
+        dashboard_url = f"{settings.FRONTEND_URL}/organizers/events/{event_id}/ticketing"
+        invoices_url = f"{settings.FRONTEND_URL}/organizers/invoices"
+
+        tickets_rows = ""
+        for t in tickets_breakdown:
+            name = t.get("name", "General Admission")
+            qty = t.get("quantity", 1)
+            price = t.get("price", 0.0)
+            tickets_rows += f"""
+            <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #1f2937; font-weight: 600;">{name}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; text-align: center; font-size: 14px; color: #4b5563;">{qty}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; text-align: right; font-size: 14px; color: #111827; font-weight: 600;">£{price * qty:.2f}</td>
+            </tr>
+            """
+
+        html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Ticket Sale</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f6f8; padding: 32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 32px; text-align: center;">
+                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">🎉 New Ticket Sale!</h1>
+                            <p style="margin: 0; color: #a7f3d0; font-size: 15px; font-weight: 500;">{event_title}</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 32px;">
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5; color: #1f2937;">
+                                Hi {organizer_name or 'Organizer'},
+                            </p>
+                            <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.5; color: #4b5563;">
+                                Great news! A new booking has just been confirmed for your event.
+                            </p>
+
+                            <!-- Buyer Info Card -->
+                            <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;">
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td style="padding-bottom: 6px; font-size: 13px; color: #6b7280; text-transform: uppercase; font-weight: 700;">Customer Details</td>
+                                        <td style="padding-bottom: 6px; font-size: 13px; color: #6b7280; text-transform: uppercase; font-weight: 700; text-align: right;">Order Ref</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 15px; font-weight: 700; color: #111827;">{buyer_name} <span style="font-size: 13px; font-weight: normal; color: #6b7280;">({buyer_email})</span></td>
+                                        <td style="font-size: 14px; font-family: monospace; font-weight: 700; color: #047857; text-align: right;">{order_ref}</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Tickets Summary Table -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 8px 0; border-bottom: 2px solid #d1d5db; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700;">Ticket Tier</th>
+                                        <th style="padding: 8px 0; border-bottom: 2px solid #d1d5db; text-align: center; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700;">Qty</th>
+                                        <th style="padding: 8px 0; border-bottom: 2px solid #d1d5db; text-align: right; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700;">Gross</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tickets_rows}
+                                    <tr>
+                                        <td colspan="2" style="padding: 12px 0 4px 0; font-size: 14px; color: #4b5563;">Total Gross Sales</td>
+                                        <td style="padding: 12px 0 4px 0; text-align: right; font-size: 14px; font-weight: 600; color: #111827;">£{total_amount:.2f}</td>
+                                    </tr>
+                                    {f'<tr><td colspan="2" style="padding: 2px 0; font-size: 13px; color: #9ca3af;">Platform & Processing Fees</td><td style="padding: 2px 0; text-align: right; font-size: 13px; color: #9ca3af;">-£{platform_fee:.2f}</td></tr>' if platform_fee > 0 else ''}
+                                    <tr>
+                                        <td colspan="2" style="padding: 10px 0 0 0; border-top: 1px solid #e5e7eb; font-size: 16px; font-weight: 700; color: #111827;">Net Payout</td>
+                                        <td style="padding: 10px 0 0 0; border-top: 1px solid #e5e7eb; text-align: right; font-size: 18px; font-weight: 800; color: #047857;">£{net_amount:.2f}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- CTA Buttons -->
+                            <div style="text-align: center; margin: 32px 0 16px 0;">
+                                <a href="{dashboard_url}" style="display: inline-block; background-color: #059669; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; margin: 0 6px 10px 6px; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">View Event Dashboard & Guest List</a>
+                                <a href="{invoices_url}" style="display: inline-block; background-color: #f3f4f6; color: #374151; padding: 14px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 0 6px 10px 6px; border: 1px solid #d1d5db;">Tax Invoices & Statement</a>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 24px 32px; text-align: center;">
+                            <p style="margin: 0 0 6px 0; font-size: 13px; color: #6b7280; font-weight: 600;">Highland Events Hub Organizer Services</p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">Access all your event ticketing stats, scanner passes, and payouts at <a href="{settings.FRONTEND_URL}/account" style="color: #059669; text-decoration: underline;">My Account</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        from app.services.email_service import EmailType
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.WELCOME,
+            to=organizer_email,
+            subject=subject,
+            html_content=html_content
+        )
+
 # Create global instance
 resend_email_service = ResendEmailService()
+

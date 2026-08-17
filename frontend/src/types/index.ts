@@ -351,10 +351,13 @@ export interface Event {
   is_recurring?: boolean;
   parent_event_id?: string;
   recurrence_group_id?: string;
+  recurrence_end_date?: string;
   // SEO fields
   seo_title?: string;
   seo_description?: string;
   slug?: string;
+  is_ticketing_enabled?: boolean;
+  pass_fees_to_buyer?: boolean;
 }
 
 export interface OrganizerProfileResponse {
@@ -390,6 +393,9 @@ export interface EventResponse extends Event {
   is_bookmarked?: boolean;
   attending_count?: number;
   venue?: VenueResponse;
+  ticket_tiers?: any[];
+  is_ticketing_enabled?: boolean;
+  pass_fees_to_buyer?: boolean;
 }
 
 export interface EventCreate {
@@ -422,6 +428,9 @@ export interface EventCreate {
   map_display_lat?: number | null;
   map_display_lng?: number | null;
   map_display_label?: string | null;
+  is_ticketing_enabled?: boolean;
+  pass_fees_to_buyer?: boolean;
+  ticket_tiers?: any[];
 }
 
 export interface EventUpdate {
@@ -457,6 +466,9 @@ export interface EventUpdate {
   map_display_lng?: number | null;
   map_display_label?: string | null;
   status?: string;
+  is_ticketing_enabled?: boolean;
+  pass_fees_to_buyer?: boolean;
+  ticket_tiers?: any[];
 }
 
 export interface EventFilter {

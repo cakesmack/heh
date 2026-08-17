@@ -16,18 +16,40 @@ import { VenueResponse, ShowtimeCreate, Category, Organizer } from '@/types';
 const STORAGE_KEY = 'heh_event_wizard_draft';
 
 // ─── Wizard Step Definitions ───────────────────────────────
-export const WIZARD_STEPS = [
-  { id: 1, label: 'Basics',   icon: '📋', shortLabel: 'Basics' },
-  { id: 2, label: 'Timeline', icon: '📅', shortLabel: 'When' },
-  { id: 3, label: 'Media',    icon: '📸', shortLabel: 'Media' },
-  { id: 4, label: 'Details',  icon: '✨', shortLabel: 'Review' },
-] as const;
+export interface WizardStep {
+  id: number;
+  label: string;
+  icon: string;
+  shortLabel: string;
+}
 
-export type WizardStepId = 1 | 2 | 3 | 4;
+export const getWizardSteps = (isTicketingEnabled: boolean): WizardStep[] => {
+  const steps: WizardStep[] = [
+    { id: 1, label: 'Basics',   icon: '📋', shortLabel: 'Basics' },
+    { id: 2, label: 'Timeline', icon: '📅', shortLabel: 'When' },
+    { id: 3, label: 'Media',    icon: '📸', shortLabel: 'Media' },
+  ];
+  if (isTicketingEnabled) {
+    steps.push({ id: 4, label: 'Tickets', icon: '🎟️', shortLabel: 'Tickets' });
+    steps.push({ id: 5, label: 'Details', icon: '✨', shortLabel: 'Review' });
+  } else {
+    steps.push({ id: 4, label: 'Details', icon: '✨', shortLabel: 'Review' });
+  }
+  return steps;
+};
+
+export type WizardStepId = 1 | 2 | 3 | 4 | 5;
 
 // ─── Form Data Shape ───────────────────────────────────────
 // This is the unified form state across all wizard steps.
 // It maps 1:1 to the fields used in the current submit-event.tsx.
+export interface TicketTierCreate {
+  name: string;
+  price: number;
+  quantity_available: number;
+  max_per_order: number;
+}
+
 export interface WizardFormData {
   // Step 1: Core Info & Location
   title: string;
@@ -65,7 +87,12 @@ export interface WizardFormData {
   // Step 3: Media
   image_url: string;
 
-  // Step 4: Details & Review
+  // Optional Tickets Step
+  is_ticketing_enabled: boolean;
+  pass_fees_to_buyer: boolean;
+  ticket_tiers: TicketTierCreate[];
+
+  // Step 4/5: Details & Review
   description: string;
   ticket_url: string;
   website_url: string;
@@ -111,7 +138,12 @@ export const WIZARD_DEFAULTS: WizardFormData = {
   // Step 3
   image_url: '',
 
-  // Step 4
+  // Optional Tickets Step
+  is_ticketing_enabled: false,
+  pass_fees_to_buyer: false,
+  ticket_tiers: [],
+
+  // Step 4/5
   description: '',
   ticket_url: '',
   website_url: '',
@@ -172,16 +204,36 @@ const validateStep3: StepValidator = () => {
   return null;
 };
 
-const validateStep4: StepValidator = () => {
+const validateTickets: StepValidator = (data) => {
+  const errors: Record<string, string> = {};
+  if (data.is_ticketing_enabled) {
+    if (data.ticket_tiers.length === 0) {
+      errors.ticket_tiers = 'Please add at least one ticket tier.';
+    }
+    data.ticket_tiers.forEach((tier, index) => {
+      if (!tier.name.trim()) errors[`ticket_tiers.${index}.name`] = 'Tier name is required.';
+      if (tier.quantity_available <= 0) errors[`ticket_tiers.${index}.quantity_available`] = 'Capacity must be greater than 0.';
+    });
+  }
+  return Object.keys(errors).length > 0 ? errors : null;
+};
+
+const validateReview: StepValidator = () => {
   // Description and links are optional
   return null;
 };
 
-export const STEP_VALIDATORS: Record<WizardStepId, StepValidator> = {
-  1: validateStep1,
-  2: validateStep2,
-  3: validateStep3,
-  4: validateStep4,
+export const getStepValidator = (stepId: number, isTicketingEnabled: boolean): StepValidator => {
+  if (stepId === 1) return validateStep1;
+  if (stepId === 2) return validateStep2;
+  if (stepId === 3) return validateStep3;
+  if (isTicketingEnabled) {
+    if (stepId === 4) return validateTickets;
+    if (stepId === 5) return validateReview;
+  } else {
+    if (stepId === 4) return validateReview;
+  }
+  return () => null;
 };
 
 // ─── sessionStorage Persistence ────────────────────────────
@@ -254,6 +306,9 @@ export function buildEventPayload(data: WizardFormData) {
     date_end: calculatedDateEnd,
     price: data.price,
     image_url: data.image_url || undefined,
+    is_ticketing_enabled: data.is_ticketing_enabled,
+    pass_fees_to_buyer: data.pass_fees_to_buyer,
+    ticket_tiers: data.is_ticketing_enabled ? data.ticket_tiers : undefined,
     ticket_url: data.ticket_url || undefined,
     website_url: data.website_url || undefined,
     is_all_day: data.is_all_day,
@@ -358,6 +413,9 @@ export function parseInitialEventData(data: any): WizardFormData {
     showtimes: showtimes,
 
     image_url: data.image_url || '',
+    is_ticketing_enabled: Boolean(data.is_ticketing_enabled),
+    pass_fees_to_buyer: Boolean(data.pass_fees_to_buyer),
+    ticket_tiers: data.ticket_tiers || [],
 
     description: data.description || '',
     ticket_url: data.ticket_url || '',
@@ -376,6 +434,7 @@ export interface UseEventWizardOptions {
 export interface UseEventWizardReturn {
   form: UseFormReturn<WizardFormData>;
   currentStep: WizardStepId;
+  steps: WizardStep[];
   stepErrors: Record<string, string> | null;
   direction: 'forward' | 'backward';
   isAnimating: boolean;
@@ -450,12 +509,15 @@ export function useEventWizard(options: UseEventWizardOptions = {}): UseEventWiz
     }
   }, [isEditMode, currentStep]);
 
+  const isTicketingEnabled = watch('is_ticketing_enabled');
+  const steps = getWizardSteps(isTicketingEnabled);
+
   const validateCurrentStep = useCallback((): Record<string, string> | null => {
-    const validator = STEP_VALIDATORS[currentStep];
+    const validator = getStepValidator(currentStep, isTicketingEnabled);
     const errors = validator(getValues());
     setStepErrors(errors);
     return errors;
-  }, [currentStep, getValues]);
+  }, [currentStep, getValues, isTicketingEnabled]);
 
   const goNext = useCallback((): boolean => {
     const errors = validateCurrentStep();
@@ -465,7 +527,7 @@ export function useEventWizard(options: UseEventWizardOptions = {}): UseEventWiz
     setCompletedSteps(prev => new Set(prev).add(currentStep));
     setStepErrors(null);
 
-    if (currentStep < 4) {
+    if (currentStep < steps.length) {
       setDirection('forward');
       setIsAnimating(true);
       setTimeout(() => {
@@ -517,6 +579,7 @@ export function useEventWizard(options: UseEventWizardOptions = {}): UseEventWiz
   return {
     form,
     currentStep,
+    steps,
     stepErrors,
     direction,
     isAnimating,
@@ -526,7 +589,7 @@ export function useEventWizard(options: UseEventWizardOptions = {}): UseEventWiz
     validateCurrentStep,
     clearWizard,
     isFirstStep: currentStep === 1,
-    isLastStep: currentStep === 4,
+    isLastStep: currentStep === steps.length,
     completedSteps,
   };
 }

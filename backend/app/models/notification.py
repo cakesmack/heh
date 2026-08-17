@@ -26,6 +26,7 @@ class NotificationType(str, Enum):
     NEW_CLAIM = "new_claim"  # For admins when a new claim is submitted
     FEATURED_APPROVED = "featured_approved"
     FEATURED_REJECTED = "featured_rejected"
+    TICKET_PURCHASED = "ticket_purchased"
     SYSTEM = "system"
 
 

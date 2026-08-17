@@ -23,6 +23,8 @@ const navItems = [
   { href: '/admin/venues', label: 'Venues', icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z', section: 'management' },
   { href: '/admin/groups', label: 'Groups', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', section: 'management' },
   { href: '/admin/users', label: 'Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', section: 'management' },
+  { href: '/admin/ticketing', label: 'Ticketing & Orders', icon: 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z', section: 'management' },
+  { href: '/admin/sellers', label: 'Seller Vetting', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', section: 'management' },
   // System
   { href: '/admin/curated', label: 'Hubs & Collections', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z', section: 'system' },
   // Actions
@@ -67,18 +69,18 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden print:h-auto print:overflow-visible print:bg-white">
       {/* Mobile Sidebar Backdrop Overlay */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden print:hidden"
         />
       )}
 
       {/* Sidebar Navigation */}
       <div
-        className={`bg-gray-900 w-64 flex-shrink-0 flex flex-col z-50 transition-transform duration-300 ease-in-out
+        className={`bg-gray-900 w-64 flex-shrink-0 flex flex-col z-50 transition-transform duration-300 ease-in-out print:hidden
           ${isSidebarOpen 
             ? 'fixed inset-y-0 left-0 translate-x-0' 
             : 'hidden md:flex md:translate-x-0'
@@ -136,9 +138,9 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-y-auto min-w-0">
+      <div className="flex-1 flex flex-col overflow-y-auto min-w-0 print:overflow-visible print:h-auto">
         {/* Mobile Header Bar */}
-        <header className="flex md:hidden items-center justify-between px-6 py-4 bg-gray-900 text-white border-b border-gray-800 flex-shrink-0">
+        <header className="flex md:hidden items-center justify-between px-6 py-4 bg-gray-900 text-white border-b border-gray-800 flex-shrink-0 print:hidden">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -153,14 +155,14 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         </header>
 
         {/* Desktop Header */}
-        <header className="hidden md:block bg-white shadow-sm flex-shrink-0">
+        <header className="hidden md:block bg-white shadow-sm flex-shrink-0 print:hidden">
           <div className="px-8 py-4">
             <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
           </div>
         </header>
 
         {/* Main Content Pane */}
-        <main className="p-4 md:p-8 flex-1">
+        <main className="p-4 md:p-8 flex-1 print:p-0">
           {children}
         </main>
       </div>

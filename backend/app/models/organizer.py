@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from .event import Event
     from .group_member import GroupMember
     from .group_invite import GroupInvite
+    from .organizer_stripe_account import OrganizerStripeAccount
 
 class Organizer(SQLModel, table=True):
     """
@@ -54,3 +55,7 @@ class Organizer(SQLModel, table=True):
     events: List["Event"] = Relationship(back_populates="organizer_profile")
     members: List["GroupMember"] = Relationship(back_populates="group")
     invites: List["GroupInvite"] = Relationship(back_populates="group")
+    stripe_account: Optional["OrganizerStripeAccount"] = Relationship(
+        back_populates="organizer",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )

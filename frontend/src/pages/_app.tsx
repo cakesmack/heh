@@ -90,15 +90,15 @@ export default function App({ Component, pageProps }: AppProps) {
                 <Footer />
 
                 {/* Bottom Navigation Bar - Mobile only */}
-                <div className="md:hidden">
+                <div className="md:hidden print:hidden">
                   <BottomNavBar />
                 </div>
 
-                <ScrollToTop />
-                <UsernameBlockerModal />
-
-                {/* Cookie Consent Banner */}
-                <CookieBanner />
+                <div className="print:hidden">
+                  <ScrollToTop />
+                  <UsernameBlockerModal />
+                  <CookieBanner />
+                </div>
               </div>
             </AnalyticsProvider>
           </SearchProvider>

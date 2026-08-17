@@ -529,15 +529,24 @@ function AccountPageContent() {
                     <h2 className="text-xl font-semibold text-gray-900">
                       Organizer Profiles ({myOrganizers.length})
                     </h2>
-                    <Link
-                      href="/account/organizers/create"
-                      className="inline-flex items-center px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      New Profile
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href="/organizers/hub"
+                        className="inline-flex items-center px-3.5 py-1.5 bg-emerald-700 text-white text-sm font-bold rounded-lg hover:bg-emerald-800 transition-colors shadow-xs"
+                      >
+                        <span className="mr-1.5">🎪</span>
+                        Organizer Hub
+                      </Link>
+                      <Link
+                        href="/account/organizers/create"
+                        className="inline-flex items-center px-3 py-1.5 bg-stone-800 text-white text-sm font-medium rounded-lg hover:bg-stone-900 transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Profile
+                      </Link>
+                    </div>
                   </div>
                   {myOrganizers.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

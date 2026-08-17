@@ -52,6 +52,10 @@ class User(SQLModel, table=True):
     # Account status (False = banned/inactive)
     is_active: bool = Field(default=True)
     
+    # Seller
+    seller_tier: int = Field(default=1) # 1 = Standard Poster, 2 = Verified Seller
+    seller_status: str = Field(default="none") # none, requested, approved, rejected
+    
 
     # Timestamps
     last_login: Optional[datetime] = Field(default=None)

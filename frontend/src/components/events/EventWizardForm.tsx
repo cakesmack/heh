@@ -16,7 +16,6 @@ import { Button } from '@/components/common/Button';
 import { toast } from 'react-hot-toast';
 import {
   useEventWizard,
-  WIZARD_STEPS,
   WizardStepId,
   buildEventPayload,
   clearDraft,
@@ -25,6 +24,7 @@ import {
 import StepBasicsComponent from '@/components/events/wizard/StepBasics';
 import StepTimelineComponent from '@/components/events/wizard/StepTimeline';
 import StepMediaComponent from '@/components/events/wizard/StepMedia';
+import StepTicketsComponent from '@/components/events/wizard/StepTickets';
 import StepReviewComponent from '@/components/events/wizard/StepReview';
 
 export interface EventWizardFormProps {
@@ -39,10 +39,12 @@ export interface EventWizardFormProps {
 function WizardProgressBar({
   currentStep,
   completedSteps,
+  steps,
   onStepClick,
 }: {
   currentStep: WizardStepId;
   completedSteps: Set<WizardStepId>;
+  steps: any[];
   onStepClick: (step: WizardStepId) => void;
 }) {
   return (
@@ -52,24 +54,24 @@ function WizardProgressBar({
         <div className="sm:hidden">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold text-gray-900">
-              Step {currentStep} of {WIZARD_STEPS.length}
+              Step {currentStep} of {steps.length}
             </span>
             <span className="text-sm text-gray-500">
-              {WIZARD_STEPS[currentStep - 1].label}
+              {steps[currentStep - 1]?.label}
             </span>
           </div>
           {/* Progress track */}
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${(currentStep / WIZARD_STEPS.length) * 100}%` }}
+              style={{ width: `${(currentStep / steps.length) * 100}%` }}
             />
           </div>
         </div>
 
         {/* Desktop: Full step indicator */}
         <div className="hidden sm:flex items-center justify-between">
-          {WIZARD_STEPS.map((step, index) => {
+          {steps.map((step, index) => {
             const isActive = step.id === currentStep;
             const isCompleted = completedSteps.has(step.id);
             const isClickable = isCompleted || step.id <= currentStep;
@@ -112,7 +114,7 @@ function WizardProgressBar({
                 </button>
 
                 {/* Connector line */}
-                {index < WIZARD_STEPS.length - 1 && (
+                {index < steps.length - 1 && (
                   <div className="flex-1 mx-3">
                     <div className="h-0.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
@@ -327,6 +329,7 @@ export default function EventWizardForm({
   const {
     form,
     currentStep,
+    steps,
     direction,
     isAnimating,
     goNext,
@@ -474,8 +477,12 @@ export default function EventWizardForm({
 
   // Render Step Component
   const renderStep = () => {
-    switch (currentStep) {
-      case 1:
+    // Determine the actual step name based on the current steps array
+    const stepDef = wizard.steps.find((s) => s.id === currentStep);
+    const stepLabel = stepDef ? stepDef.label : '';
+
+    switch (stepLabel) {
+      case 'Basics':
         return (
           <StepBasicsComponent
             form={form}
@@ -485,21 +492,29 @@ export default function EventWizardForm({
             stepErrors={stepErrors}
           />
         );
-      case 2:
+      case 'Timeline':
         return (
           <StepTimelineComponent
             form={form}
             stepErrors={stepErrors}
           />
         );
-      case 3:
+      case 'Media':
         return (
           <StepMediaComponent
             form={form}
             stepErrors={stepErrors}
           />
         );
-      case 4:
+      case 'Tickets':
+        // Dynamically imported or standard component
+        return (
+          <StepTicketsComponent
+            form={form}
+            stepErrors={stepErrors}
+          />
+        );
+      case 'Details':
         return (
           <StepReviewComponent
             form={form}
@@ -530,6 +545,7 @@ export default function EventWizardForm({
       <WizardProgressBar
         currentStep={currentStep}
         completedSteps={completedSteps}
+        steps={steps}
         onStepClick={goToStep}
       />
 
@@ -540,9 +556,10 @@ export default function EventWizardForm({
         </h1>
         <p className="text-base sm:text-lg text-gray-500 mt-2">
           {currentStep === 1 && (isEditMode ? 'Update event core details & location.' : "Let\u2019s start with the basics.")}
-          {currentStep === 2 && 'When is it happening?'}
-          {currentStep === 3 && 'Make it stand out with a great image.'}
-          {currentStep === 4 && (isEditMode ? 'Review changes before saving.' : 'Final touches before publishing.')}
+          {steps.find(s => s.id === currentStep)?.label === 'Timeline' && 'When is it happening?'}
+          {steps.find(s => s.id === currentStep)?.label === 'Media' && 'Make it stand out with a great image.'}
+          {steps.find(s => s.id === currentStep)?.label === 'Tickets' && 'Set up your ticketing options.'}
+          {steps.find(s => s.id === currentStep)?.label === 'Details' && (isEditMode ? 'Review changes before saving.' : 'Final touches before publishing.')}
         </p>
       </div>
 
@@ -622,7 +639,7 @@ export default function EventWizardForm({
 
             {/* Step Counter (Mobile) */}
             <div className="sm:hidden text-xs text-gray-400 font-medium">
-              {currentStep} / {WIZARD_STEPS.length}
+              {currentStep} / {steps.length}
             </div>
 
             {/* Next / Submit */}

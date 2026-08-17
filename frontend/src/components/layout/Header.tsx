@@ -53,7 +53,7 @@ export function Header() {
   }, [lastScrollY]);
 
   return (
-    <header className={`bg-highland-green border-b border-stone-dark/20 sticky top-0 z-50 shadow-soft transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+    <header className={`bg-highland-green border-b border-stone-dark/20 sticky top-0 z-50 shadow-soft transition-transform duration-300 print:hidden ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo + Title (grouped) */}
@@ -144,9 +144,24 @@ export function Header() {
 
                     <Link
                       href="/account"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium"
                     >
                       My Account
+                    </Link>
+
+                    <Link
+                      href="/account/tickets"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium"
+                    >
+                      My Tickets
+                    </Link>
+
+                    <Link
+                      href="/organizers/hub"
+                      className="block px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 font-bold flex items-center justify-between"
+                    >
+                      <span>Organizer Hub</span>
+                      <span className="text-xs bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">Pro</span>
                     </Link>
 
                     {user?.is_admin && (

@@ -67,26 +67,53 @@ export default function NotificationsPage() {
     }, [user, filter]);
 
     // Mark notification as read
-    const markAsRead = async (notificationId: string) => {
+    const markAsRead = async (notificationId: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setNotifications(prev =>
+            prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+
         try {
             await apiFetch(`/api/notifications/${notificationId}/read`, { method: 'POST' });
-            setNotifications(prev =>
-                prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
-            );
-            setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (err) {
             console.error('Failed to mark notification as read:', err);
         }
     };
 
+    // Delete single notification
+    const deleteNotification = async (notificationId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        setTotal(prev => Math.max(0, prev - 1));
+        try {
+            await apiFetch(`/api/notifications/${notificationId}`, { method: 'DELETE' });
+        } catch (err) {
+            console.error('Failed to delete notification:', err);
+        }
+    };
+
     // Mark all as read
     const markAllAsRead = async () => {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setUnreadCount(0);
         try {
             await apiFetch('/api/notifications/read-all', { method: 'POST' });
-            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-            setUnreadCount(0);
         } catch (err) {
             console.error('Failed to mark all as read:', err);
+        }
+    };
+
+    // Clear all notifications
+    const clearAll = async () => {
+        if (!confirm('Are you sure you want to clear all notifications?')) return;
+        setNotifications([]);
+        setUnreadCount(0);
+        setTotal(0);
+        try {
+            await apiFetch('/api/notifications/clear', { method: 'DELETE' });
+        } catch (err) {
+            console.error('Failed to clear all notifications:', err);
         }
     };
 
@@ -119,6 +146,12 @@ export default function NotificationsPage() {
     // Get icon for notification type
     const getTypeIcon = (type: string) => {
         switch (type) {
+            case 'ticket_purchased':
+                return (
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-base">🎟️</span>
+                    </div>
+                );
             case 'event_approved':
                 return (
                     <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -181,27 +214,37 @@ export default function NotificationsPage() {
                             </Link>
                             <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
                             {unreadCount > 0 && (
-                                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
                                     {unreadCount} unread
                                 </span>
                             )}
                         </div>
-                        {unreadCount > 0 && (
-                            <button
-                                onClick={markAllAsRead}
-                                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                            >
-                                Mark all as read
-                            </button>
-                        )}
+                        <div className="flex items-center gap-4">
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={markAllAsRead}
+                                    className="text-sm text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
+                                >
+                                    Mark all as read
+                                </button>
+                            )}
+                            {notifications.length > 0 && (
+                                <button
+                                    onClick={clearAll}
+                                    className="text-sm text-gray-500 hover:text-red-600 font-medium transition-colors"
+                                >
+                                    Clear all
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Filter Tabs */}
                     <div className="flex gap-2 mb-6">
                         <button
                             onClick={() => setFilter('all')}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filter === 'all'
-                                    ? 'bg-emerald-600 text-white'
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-colors ${filter === 'all'
+                                    ? 'bg-emerald-600 text-white shadow-xs'
                                     : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                                 }`}
                         >
@@ -209,8 +252,8 @@ export default function NotificationsPage() {
                         </button>
                         <button
                             onClick={() => setFilter('unread')}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filter === 'unread'
-                                    ? 'bg-emerald-600 text-white'
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-colors ${filter === 'unread'
+                                    ? 'bg-emerald-600 text-white shadow-xs'
                                     : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                                 }`}
                         >
@@ -219,7 +262,7 @@ export default function NotificationsPage() {
                     </div>
 
                     {/* Notifications List */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-xs border border-gray-200 overflow-hidden">
                         {loading ? (
                             <div className="px-6 py-12 text-center text-gray-500">
                                 Loading notifications...
@@ -241,25 +284,41 @@ export default function NotificationsPage() {
                                     <div
                                         key={notification.id}
                                         onClick={() => handleNotificationClick(notification)}
-                                        className={`flex gap-4 p-4 cursor-pointer transition-colors hover:bg-gray-50 ${!notification.is_read ? 'bg-emerald-50/50' : ''
+                                        className={`flex items-start gap-4 p-4 cursor-pointer transition-colors hover:bg-gray-50 group relative ${!notification.is_read ? 'bg-emerald-50/40' : ''
                                             }`}
                                     >
                                         {getTypeIcon(notification.type)}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-start justify-between gap-2">
-                                                <p className={`text-sm ${!notification.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                                                <p className={`text-sm ${!notification.is_read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
                                                     {notification.title}
                                                 </p>
-                                                {!notification.is_read && (
-                                                    <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 mt-1.5"></div>
-                                                )}
+                                                <span className="text-xs text-gray-400 shrink-0">
+                                                    {formatTime(notification.created_at)}
+                                                </span>
                                             </div>
                                             <p className="text-sm text-gray-600 mt-1">
                                                 {notification.message}
                                             </p>
-                                            <p className="text-xs text-gray-400 mt-2">
-                                                {formatTime(notification.created_at)}
-                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {!notification.is_read ? (
+                                                <button
+                                                    onClick={(e) => markAsRead(notification.id, e)}
+                                                    className="px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-lg hover:bg-emerald-200 transition-colors"
+                                                    title="Mark as read"
+                                                >
+                                                    Mark read
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => deleteNotification(notification.id, e)}
+                                                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 transition-all text-xs"
+                                                    title="Delete"
+                                                >
+                                                    Delete
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
