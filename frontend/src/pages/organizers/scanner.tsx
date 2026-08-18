@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { QRCodeSVG } from 'qrcode.react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch } from '@/lib/api';
 
 interface ScannerEvent {
@@ -21,6 +22,7 @@ interface ScannerEvent {
 }
 
 export default function OrganizerScannerHubPage() {
+  const router = useRouter();
   const { isAuthenticated, user, isLoading: authLoading } = useAuth();
   const [events, setEvents] = useState<ScannerEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,12 +45,16 @@ export default function OrganizerScannerHubPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      fetchEvents();
-    } else if (!authLoading && !isAuthenticated) {
-      window.location.href = '/login?returnUrl=/organizers/scanner';
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.replace('/login?redirect=/organizers/scanner');
+      } else if (!isApprovedSeller(user)) {
+        router.replace('/403');
+      } else {
+        fetchEvents();
+      }
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, user, router]);
 
   const handleActivate = async (eventId: string) => {
     setActionLoading(eventId);

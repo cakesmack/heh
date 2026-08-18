@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { api, apiFetch } from '@/lib/api';
 import { Category, Organizer, EventResponse } from '@/types';
 import { Button } from '@/components/common/Button';
@@ -397,6 +397,13 @@ export default function EventWizardForm({
 
     fetchData();
   }, [user, isEditMode]);
+
+  // Security Shield: Ensure standard non-sellers cannot have native ticketing enabled
+  useEffect(() => {
+    if (user && !isApprovedSeller(user) && form.getValues('is_ticketing_enabled')) {
+      form.setValue('is_ticketing_enabled', false);
+    }
+  }, [user, form]);
 
   // Handle URL parameters for organizer profile ID if creating
   useEffect(() => {

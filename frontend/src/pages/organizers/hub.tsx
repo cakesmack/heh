@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { QRCodeSVG } from 'qrcode.react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch, API_BASE_URL } from '@/lib/api';
 
 type TabType = 'events' | 'payouts' | 'invoices' | 'scanner';
@@ -120,10 +120,14 @@ export default function OrganizerHubPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login?redirect=/organizers/hub');
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.replace('/login?redirect=/organizers/hub');
+      } else if (!isApprovedSeller(user)) {
+        router.replace('/403');
+      }
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, user, router]);
 
   // 1. Fetch Organizer Events (Safe try/catch)
   const fetchEvents = async () => {
@@ -297,7 +301,7 @@ export default function OrganizerHubPage() {
       });
   };
 
-  if (authLoading) {
+  if (authLoading || !isAuthenticated || !isApprovedSeller(user)) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>

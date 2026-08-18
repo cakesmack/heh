@@ -12,6 +12,7 @@ import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import OrganizerSelector from '@/components/events/OrganizerSelector';
 import { Category, Organizer, VenueResponse } from '@/types';
 import { eventsAPI } from '@/lib/api';
+import { isApprovedSeller } from '@/hooks/useAuth';
 
 interface StepBasicsProps {
   form: UseFormReturn<WizardFormData>;
@@ -207,35 +208,31 @@ export default function StepBasics({
         </div>
       </div>
 
-      {/* ─── Native Ticketing ────────────────────────────── */}
-      <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-5 shadow-xs transition-all">
-        <div className="flex items-start justify-between">
-          <div className="pr-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">🎟️</span>
-              <h3 className="text-base font-bold text-emerald-950">Sell Tickets on Highland Events Hub</h3>
-            </div>
-            <p className="text-sm text-emerald-900/80 mt-1">
-              Enable our native ticketing engine to sell tickets directly. Manage inventory, live door scanning, and self-service refunds.
-            </p>
-            {(!user || user.seller_tier < 2) && (
-              <p className="text-sm font-medium text-amber-700 mt-2 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200/60 inline-block">
-                Requires a Verified Organizer account. <a href="/account" className="underline font-bold">Upgrade now</a>.
+      {/* ─── Native Ticketing (Tier 2 / Approved Sellers Only) ─── */}
+      {isApprovedSeller(user) && (
+        <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-5 shadow-xs transition-all">
+          <div className="flex items-start justify-between">
+            <div className="pr-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">🎟️</span>
+                <h3 className="text-base font-bold text-emerald-950">Sell Tickets on Highland Events Hub</h3>
+              </div>
+              <p className="text-sm text-emerald-900/80 mt-1">
+                Enable our native ticketing engine to sell tickets directly. Manage inventory, live door scanning, and self-service refunds.
               </p>
-            )}
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={formData.is_ticketing_enabled || false}
+                onChange={(e) => setValue('is_ticketing_enabled', e.target.checked)}
+              />
+              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            </label>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={formData.is_ticketing_enabled || false}
-              onChange={(e) => setValue('is_ticketing_enabled', e.target.checked)}
-              disabled={!user || user.seller_tier < 2}
-            />
-            <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-          </label>
         </div>
-      </div>
+      )}
 
       {/* ─── Location Section ────────────────────────────── */}
       <div className="space-y-4">

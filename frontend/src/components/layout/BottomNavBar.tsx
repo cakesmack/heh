@@ -13,7 +13,7 @@ import { useSearch } from '@/context/SearchContext';
 
 export function BottomNavBar() {
   const router = useRouter();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, isSeller, logout } = useAuth();
   const { openMobileSearch } = useSearch();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,7 +44,6 @@ export function BottomNavBar() {
   const handleLogout = async () => {
     await logout();
     setIsMenuOpen(false);
-    router.push('/');
   };
 
   return (
@@ -93,13 +92,15 @@ export function BottomNavBar() {
               <span className="font-medium">My Tickets</span>
             </Link>
 
-            <Link
-              href="/organizers/hub"
-              className="flex items-center gap-3 px-4 py-3 text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors font-semibold"
-            >
-              <span className="text-lg">🎪</span>
-              <span className="font-semibold">Organizer Hub</span>
-            </Link>
+            {isSeller && (
+              <Link
+                href="/organizers/hub"
+                className="flex items-center gap-3 px-4 py-3 text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors font-semibold"
+              >
+                <span className="text-lg">🎪</span>
+                <span className="font-semibold">Organizer Hub</span>
+              </Link>
+            )}
 
             {user?.is_admin && (
               <Link

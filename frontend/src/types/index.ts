@@ -99,6 +99,8 @@ export interface User {
   trust_level?: number;
   is_active: boolean;
   is_admin: boolean;
+  seller_tier?: number;
+  seller_status?: string;
   created_at: string;
   organizer_profiles?: Organizer[];
 }

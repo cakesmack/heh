@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch } from '@/lib/api';
 
 interface LineItem {
@@ -50,20 +50,24 @@ interface InvoiceDetail {
 export default function SingleInvoicePage() {
   const router = useRouter();
   const { order_id } = router.query;
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push(`/login?redirect=/organizers/invoices/${order_id}`);
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.replace(`/login?redirect=/organizers/invoices/${order_id}`);
+      } else if (!isApprovedSeller(user)) {
+        router.replace('/403');
+      }
     }
-  }, [authLoading, isAuthenticated, order_id, router]);
+  }, [authLoading, isAuthenticated, user, order_id, router]);
 
   useEffect(() => {
-    if (order_id && isAuthenticated) {
+    if (order_id && isAuthenticated && isApprovedSeller(user)) {
       setLoading(true);
       apiFetch<InvoiceDetail>(`/api/ticketing/organizer/invoices/${order_id}`)
         .then((data) => {
@@ -75,9 +79,9 @@ export default function SingleInvoicePage() {
         })
         .finally(() => setLoading(false));
     }
-  }, [order_id, isAuthenticated]);
+  }, [order_id, isAuthenticated, user]);
 
-  if (loading || authLoading) {
+  if (loading || authLoading || !isAuthenticated || !isApprovedSeller(user)) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="text-center">

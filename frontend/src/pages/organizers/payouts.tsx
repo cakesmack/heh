@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch, API_BASE_URL } from '@/lib/api';
 import { AuthGuard } from '@/components/common/AuthGuard';
 import { Spinner } from '@/components/common/Spinner';
@@ -67,10 +67,16 @@ function PayoutsContent() {
   };
 
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      fetchStatus();
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.replace('/login?redirect=/organizers/payouts');
+      } else if (!isApprovedSeller(user)) {
+        router.replace('/403');
+      } else {
+        fetchStatus();
+      }
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, user, router]);
 
   // Handle Stripe Onboarding Redirection
   const handleConnectStripe = async () => {

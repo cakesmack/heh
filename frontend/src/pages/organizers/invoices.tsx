@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch } from '@/lib/api';
 
 interface InvoiceSummary {
@@ -50,10 +50,14 @@ export default function OrganizerInvoicesPage() {
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login?redirect=/organizers/invoices');
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.replace('/login?redirect=/organizers/invoices');
+      } else if (!isApprovedSeller(user)) {
+        router.replace('/403');
+      }
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, user, router]);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -129,6 +133,14 @@ export default function OrganizerInvoicesPage() {
       inv.event_title.toLowerCase().includes(s)
     );
   });
+
+  if (authLoading || !isAuthenticated || !isApprovedSeller(user)) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <>

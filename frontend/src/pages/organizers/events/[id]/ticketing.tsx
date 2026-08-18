@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch } from '@/lib/api';
 
 interface InventoryItem {
@@ -25,25 +25,31 @@ interface DashboardMetrics {
 export default function OrganizerTicketingDashboard() {
   const router = useRouter();
   const { id } = router.query;
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading: authLoading } = useAuth();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isAuthenticated || !id) return;
-    
-    apiFetch<DashboardMetrics>(`/api/ticketing/organizer/events/${id}/dashboard`)
-      .then(data => {
-        setMetrics(data);
-      })
-      .catch(err => {
-        setError(err.message || 'Failed to load ticketing metrics.');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [id, isAuthenticated]);
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.replace(`/login?redirect=/organizers/events/${id}/ticketing`);
+      } else if (!isApprovedSeller(user)) {
+        router.replace('/403');
+      } else if (id) {
+        apiFetch<DashboardMetrics>(`/api/ticketing/organizer/events/${id}/dashboard`)
+          .then(data => {
+            setMetrics(data);
+          })
+          .catch(err => {
+            setError(err.message || 'Failed to load ticketing metrics.');
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
+    }
+  }, [id, isAuthenticated, authLoading, user, router]);
 
   const handleExport = () => {
     // We can just open the API URL to trigger a download since we pass the token in cookies, 
@@ -68,8 +74,16 @@ export default function OrganizerTicketingDashboard() {
     .catch(() => alert('Failed to export guests'));
   };
 
-  if (!isAuthenticated) return <div className="p-8 text-center">Please log in.</div>;
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading dashboard...</div>;
+  if (authLoading || !isAuthenticated || !isApprovedSeller(user) || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent mb-3" />
+          <p className="text-gray-500 font-medium">Loading ticketing dashboard...</p>
+        </div>
+      </div>
+    );
+  }
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
   if (!metrics) return null;
 

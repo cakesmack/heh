@@ -27,7 +27,7 @@ export default function AccountPage() {
 
 function AccountPageContent() {
   const router = useRouter();
-  const { user, isAuthenticated, logout, refreshUser } = useAuth();
+  const { user, isAuthenticated, isSeller, logout, refreshUser } = useAuth();
   const [dashboardStats, setDashboardStats] = useState<UserDashboardStats | null>(null);
 
   const [submittedEvents, setSubmittedEvents] = useState<EventResponse[]>([]);
@@ -530,13 +530,15 @@ function AccountPageContent() {
                       Organizer Profiles ({myOrganizers.length})
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Link
-                        href="/organizers/hub"
-                        className="inline-flex items-center px-3.5 py-1.5 bg-emerald-700 text-white text-sm font-bold rounded-lg hover:bg-emerald-800 transition-colors shadow-xs"
-                      >
-                        <span className="mr-1.5">🎪</span>
-                        Organizer Hub
-                      </Link>
+                      {isSeller && (
+                        <Link
+                          href="/organizers/hub"
+                          className="inline-flex items-center px-3.5 py-1.5 bg-emerald-700 text-white text-sm font-bold rounded-lg hover:bg-emerald-800 transition-colors shadow-xs"
+                        >
+                          <span className="mr-1.5">🎪</span>
+                          Organizer Hub
+                        </Link>
+                      )}
                       <Link
                         href="/account/organizers/create"
                         className="inline-flex items-center px-3 py-1.5 bg-stone-800 text-white text-sm font-medium rounded-lg hover:bg-stone-900 transition-colors"

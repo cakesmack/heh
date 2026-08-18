@@ -9,12 +9,22 @@ import { useState, useEffect, useCallback, createContext, useContext, ReactNode 
 import { useRouter } from 'next/router';
 import { toast } from 'react-hot-toast';
 import { api } from '@/lib/api';
-import type { User, LoginRequest, RegisterRequest } from '@/types';
+/**
+ * Check if a user is an approved Tier 2 seller or Admin
+ */
+export function isApprovedSeller(user?: User | null): boolean {
+  if (!user) return false;
+  if (user.is_admin) return true;
+  return (user.seller_tier !== undefined && user.seller_tier >= 2) || 
+         user.seller_status === 'active' || 
+         user.seller_status === 'approved';
+}
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isSeller: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   loginWithGoogle: (googleToken: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
@@ -156,6 +166,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     isLoading,
     isAuthenticated: !!user,
+    isSeller: isApprovedSeller(user),
     login,
     loginWithGoogle,
     register,
