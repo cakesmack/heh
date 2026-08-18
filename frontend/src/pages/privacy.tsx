@@ -83,6 +83,14 @@ export default function PrivacyPage() {
                             Our website contains links to third-party websites (e.g., ticket providers, venues). We are not responsible for the privacy policies or content of those websites.
                         </p>
                     </section>
+
+                    {/* Section 6 */}
+                    <section>
+                        <h2 className="text-xl font-bold text-gray-900 mb-3">6. Payment Processing</h2>
+                        <p className="text-gray-600">
+                            Highland Events Hub does not store or process your credit card information. All payment processing and financial data routing is handled securely by our third-party payment processor, Stripe. By purchasing a ticket or onboarding as an Organizer, you agree to Stripe’s Privacy Policy.
+                        </p>
+                    </section>
                 </div>
 
                 <div className="pt-8 mt-8 border-t border-gray-200">

@@ -70,6 +70,68 @@ export default function TermsPage() {
                     </section>
                 </div>
 
+                {/* Ticketing, Refunds, and Organizer Terms */}
+                <div className="mt-12 pt-8 border-t border-gray-200">
+                    <section id="ticketing-terms">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-6">Ticketing, Refunds, and Organizer Terms</h2>
+
+                        <div className="prose prose-gray max-w-none space-y-6">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-2">1. Role of Highland Events Hub</h3>
+                                <p className="text-gray-600">
+                                    Highland Events Hub acts solely as a ticketing software provider and directory platform. We do not organize, host, or manage the events listed on this site. When you purchase a ticket, your contract of sale is strictly between you (the Buyer) and the Event Organizer (the Seller). Highland Events Hub is not liable for the quality, safety, or execution of the events, nor are we responsible for any cancellations, venue changes, or misrepresentations made by the Organizer.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-2">2. Ticket Refunds and Cancellations</h3>
+                                <ul className="list-disc list-inside text-gray-600 space-y-2">
+                                    <li>
+                                        <strong>Self-Serve Refunds:</strong> Buyers may request a refund automatically through their "My Tickets" dashboard up to 48 hours before the event's scheduled start time (unless the Organizer has explicitly stated a stricter no-refund policy).
+                                    </li>
+                                    <li>
+                                        <strong>Cancellations:</strong> If an event is canceled or significantly rescheduled by the Organizer, buyers are entitled to a refund of the ticket face value.
+                                    </li>
+                                    <li>
+                                        <strong>Booking Fees:</strong> Platform booking fees are non-refundable under any circumstances unless the event is canceled by the Organizer.
+                                    </li>
+                                    <li>
+                                        <strong>Disputes:</strong> Any refund requests made outside of the 48-hour window must be directed to the Event Organizer. Highland Events Hub cannot override an Organizer's refund policy once the cutoff window has passed.
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-2">3. Terms for Event Organizers (Sellers)</h3>
+                                <p className="text-gray-600 mb-2">
+                                    By creating a ticketed event on Highland Events Hub, Organizers agree to the following:
+                                </p>
+                                <ul className="list-disc list-inside text-gray-600 space-y-2">
+                                    <li>
+                                        All payouts are processed securely via Stripe. Organizers must agree to the Stripe Connected Account Agreement.
+                                    </li>
+                                    <li>
+                                        Highland Events Hub charges a platform fee per ticket sold. Organizers may choose to absorb this fee or pass it on to the buyer at checkout. Total platform fees are capped at £75.00 per event.
+                                    </li>
+                                    <li>
+                                        Highland Events Hub does not hold your funds. Net payouts are routed directly to your connected Stripe account.
+                                    </li>
+                                    <li>
+                                        Highland Events Hub reserves the right to freeze ticket sales, withhold payouts, or force refunds to buyers in the event of suspected fraud, severe misrepresentation, or failure to deliver the event as advertised.
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-2">4. E-Tickets and Admission</h3>
+                                <p className="text-gray-600">
+                                    Upon successful payment, buyers will receive a digital e-ticket containing a secure QR code. This digital ticket (presented on a mobile device or printed) is required for entry. The Event Organizer reserves the right to refuse admission in accordance with their own venue policies.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
                 {/* Refund & Cancellation Policy */}
                 <div className="mt-12 pt-8 border-t border-gray-200">
                     <section id="refund-policy">
