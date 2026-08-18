@@ -1,79 +1,158 @@
 from __future__ import annotations
+import logging
 from typing import Any, Dict, List, Optional, Union, Tuple
 import stripe
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, Header
 from sqlmodel import Session
-import logging
 
 from app.core.config import settings
 from app.core.database import get_session
-from app.models import Order, TicketTier, Ticket, PromoCode, Event
 from app.services import stripe_service
-import json
-import secrets
+from app.services.featured import handle_checkout_completed, handle_checkout_expired
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-@router.post("/stripe-connect")
-async def stripe_connect_webhook(
+
+# ============================================================
+# STANDARD PLATFORM STRIPE WEBHOOK (e.g. Promoted Events / Featured Ads)
+# ============================================================
+
+@router.post("/stripe")
+@router.post("/stripe/")
+async def standard_stripe_webhook(
     request: Request,
+    stripe_signature: Optional[str] = Header(None, alias="stripe-signature"),
     session: Session = Depends(get_session)
 ):
     """
-    Webhook receiver for Stripe Connect events.
-    Verifies the Stripe signature and processes account updates.
+    Webhook endpoint for standard platform Stripe events (e.g., promoted event bookings).
+    Uses STRIPE_WEBHOOK_SECRET for signature verification.
+    """
+    if not settings.STRIPE_WEBHOOK_SECRET:
+        logger.error("STRIPE_WEBHOOK_SECRET is not configured.")
+        raise HTTPException(status_code=500, detail="Standard Stripe webhook secret not configured")
+
+    payload = await request.body()
+    sig_header = stripe_signature or request.headers.get("stripe-signature")
+
+    if not sig_header:
+        raise HTTPException(status_code=400, detail="Missing stripe-signature header")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        logger.error(f"[Standard Webhook] Invalid payload: {e}")
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"[Standard Webhook] Invalid signature: {e}")
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    logger.info(f"[Standard Webhook] Received event: {event.type}")
+
+    try:
+        if event.type == "checkout.session.completed":
+            session_data = event.data.object
+            logger.info("[Standard Webhook] Processing checkout.session.completed for featured/platform booking")
+            handle_checkout_completed(session, session_data)
+        elif event.type == "checkout.session.expired":
+            session_data = event.data.object
+            logger.info("[Standard Webhook] Processing checkout.session.expired")
+            handle_checkout_expired(session, session_data)
+        else:
+            logger.info(f"[Standard Webhook] Unhandled event type: {event.type}")
+    except Exception as e:
+        logger.error(f"[Standard Webhook] Error processing event {event.type}: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+    return {"status": "success"}
+
+
+# ============================================================
+# STRIPE CONNECT WEBHOOK (Ticket Sales & Connected Accounts)
+# ============================================================
+
+@router.post("/stripe-connect")
+@router.post("/stripe-connect/")
+async def stripe_connect_webhook(
+    request: Request,
+    stripe_signature: Optional[str] = Header(None, alias="stripe-signature"),
+    session: Session = Depends(get_session)
+):
+    """
+    Webhook receiver for Stripe Connect events (connected organizer accounts).
+    Verifies the signature using STRIPE_CONNECT_WEBHOOK_SECRET.
+    Catches checkout.session.completed and payment_intent.succeeded for ticket fulfillment,
+    and account.updated for Stripe onboarding sync.
     """
     if not settings.STRIPE_CONNECT_WEBHOOK_SECRET:
         logger.error("STRIPE_CONNECT_WEBHOOK_SECRET is not configured.")
-        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+        raise HTTPException(status_code=500, detail="Stripe Connect webhook secret not configured")
 
     payload = await request.body()
-    sig_header = request.headers.get("stripe-signature")
+    sig_header = stripe_signature or request.headers.get("stripe-signature")
 
     if not sig_header:
-        raise HTTPException(status_code=400, detail="Missing signature header")
+        raise HTTPException(status_code=400, detail="Missing stripe-signature header")
 
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_CONNECT_WEBHOOK_SECRET
         )
     except ValueError as e:
-        logger.error(f"Invalid payload: {e}")
+        logger.error(f"[Connect Webhook] Invalid payload: {e}")
         raise HTTPException(status_code=400, detail="Invalid payload")
     except stripe.error.SignatureVerificationError as e:
-        logger.error(f"Invalid signature: {e}")
+        logger.error(f"[Connect Webhook] Invalid signature: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-    # Handle the event
-    if event.type == "account.updated":
-        account = event.data.object
-        account_id = account.id
-        
-        logger.info(f"Processing account.updated for Stripe Account: {account_id}")
-        
-        try:
-            stripe_service.sync_account_status(account_id, session)
-        except ValueError as e:
-            # If the account isn't in our DB, we log and ignore (might be from another environment)
-            logger.warning(f"Failed to sync account status: {e}")
-            pass
-        except Exception as e:
-            logger.error(f"Error syncing account status: {e}")
-            # We return 200 to Stripe anyway if it's an internal error we can't fix via retry,
-            # or we could return 500 to let Stripe retry. Let's return 500 to allow retries.
-            raise HTTPException(status_code=500, detail="Internal server error syncing account")
-            
-    elif event.type == "payment_intent.succeeded":
-        intent = event.data.object
-        pi_id = getattr(intent, "id", "")
-        logger.info(f"Processing payment_intent.succeeded for {pi_id}")
-        order = stripe_service.fulfill_payment_intent(intent, session)
-        if not order:
-            logger.warning(f"Could not fulfill payment intent {pi_id} (may not be a ticket order or failed transaction).")
-        return {"status": "success"}
+    logger.info(f"[Connect Webhook] Received event: {event.type}")
 
-    else:
-        logger.info(f"Unhandled Stripe Connect event type: {event.type}")
+    try:
+        if event.type == "checkout.session.completed":
+            session_data = event.data.object
+            cs_id = getattr(session_data, "id", "")
+            logger.info(f"[Connect Webhook] Processing checkout.session.completed for session: {cs_id}")
+            order = stripe_service.fulfill_checkout_session(session_data, session)
+            if order:
+                logger.info(f"[Connect Webhook] Successfully fulfilled ticket order: {order.order_ref}")
+            else:
+                logger.warning(f"[Connect Webhook] Could not fulfill checkout session {cs_id}")
+            return {"status": "success"}
+
+        elif event.type == "payment_intent.succeeded":
+            intent = event.data.object
+            pi_id = getattr(intent, "id", "")
+            logger.info(f"[Connect Webhook] Processing payment_intent.succeeded for intent: {pi_id}")
+            order = stripe_service.fulfill_payment_intent(intent, session)
+            if order:
+                logger.info(f"[Connect Webhook] Successfully fulfilled ticket order: {order.order_ref}")
+            else:
+                logger.warning(f"[Connect Webhook] Could not fulfill payment intent {pi_id}")
+            return {"status": "success"}
+
+        elif event.type == "account.updated":
+            account = event.data.object
+            account_id = getattr(account, "id", "")
+            logger.info(f"[Connect Webhook] Processing account.updated for Stripe Account: {account_id}")
+            try:
+                stripe_service.sync_account_status(account_id, session)
+            except ValueError as e:
+                logger.warning(f"[Connect Webhook] Unlinked account sync skipped: {e}")
+            except Exception as e:
+                logger.error(f"[Connect Webhook] Error syncing account status: {e}")
+                raise HTTPException(status_code=500, detail="Internal server error syncing account")
+            return {"status": "success"}
+
+        else:
+            logger.info(f"[Connect Webhook] Unhandled Connect event type: {event.type}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Connect Webhook] Error handling event {event.type}: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
 
     return {"status": "success"}

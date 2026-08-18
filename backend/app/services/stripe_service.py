@@ -4,7 +4,7 @@ import json
 import secrets
 import logging
 from typing import Any, Dict, List, Optional, Union, Tuple
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_
 from app.core.config import settings
 from app.models import OrganizerStripeAccount, User, Order, TicketTier, Ticket, PromoCode
 
@@ -340,4 +340,242 @@ def fulfill_payment_intent(
     except Exception as e:
         session.rollback()
         logger.error(f"FulfillPaymentIntent failed for {pi_id}: {e}")
+        return None
+
+
+def fulfill_checkout_session(session_or_id: Any, session: Session) -> Optional[Order]:
+    """
+    Fulfills a completed Stripe Checkout session (checkout.session.completed) on a connected account.
+    Extracts ticket/order details from the session metadata, locks inventory, creates order and tickets,
+    and dispatches buyer/organizer confirmation emails.
+    """
+    if isinstance(session_or_id, str):
+        if not settings.STRIPE_SECRET_KEY:
+            return None
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            checkout_session = stripe.checkout.Session.retrieve(session_or_id)
+        except Exception as e:
+            logger.error(f"Error retrieving Checkout session {session_or_id}: {e}")
+            return None
+    else:
+        checkout_session = session_or_id
+
+    if not checkout_session:
+        return None
+
+    cs_id = getattr(checkout_session, "id", "")
+    payment_intent_id = getattr(checkout_session, "payment_intent", None) or cs_id
+    payment_status = getattr(checkout_session, "payment_status", "")
+
+    if payment_status != "paid":
+        logger.info(f"CheckoutSession {cs_id} payment_status is '{payment_status}', skipping fulfillment.")
+        return None
+
+    # Idempotency check: check if order already exists by payment_intent_id or session id
+    existing_order = session.exec(
+        select(Order).where(
+            or_(
+                Order.stripe_payment_intent_id == payment_intent_id,
+                Order.stripe_payment_intent_id == cs_id
+            )
+        )
+    ).first()
+    if existing_order:
+        logger.info(f"CheckoutSession {cs_id} already fulfilled (order {existing_order.order_ref}).")
+        return existing_order
+
+    metadata = getattr(checkout_session, "metadata", {}) or {}
+    if hasattr(metadata, "to_dict"):
+        metadata = metadata.to_dict()
+    elif not isinstance(metadata, dict):
+        try:
+            metadata = dict(metadata)
+        except Exception:
+            metadata = {}
+
+    event_id = metadata.get("event_id")
+    if not event_id:
+        logger.warning(f"CheckoutSession {cs_id} missing event_id in metadata.")
+        return None
+
+    try:
+        items_payload = json.loads(metadata.get("items_json", "[]"))
+        promo_code = metadata.get("promo_code")
+
+        # 1. Lock and decrement inventory
+        tier_ids = [item.get("tier_id") for item in items_payload if item.get("tier_id")]
+        tiers = session.exec(select(TicketTier).where(TicketTier.id.in_(tier_ids)).with_for_update()).all()
+        tier_map = {t.id: t for t in tiers}
+
+        tier_items = []
+        for item in items_payload:
+            tier = tier_map.get(item["tier_id"])
+            if not tier:
+                continue
+            qty = item.get("quantity", 1)
+            tier.quantity_sold += qty
+            session.add(tier)
+            tier_items.append((tier, qty))
+
+        # 2. Promo Code usage
+        if promo_code:
+            promo = session.exec(
+                select(PromoCode).where(PromoCode.event_id == event_id, PromoCode.code_text == promo_code).with_for_update()
+            ).first()
+            if promo:
+                promo.usage_count += 1
+                session.add(promo)
+
+        # 3. Generate Order Ref
+        def generate_order_ref():
+            return "HEH-" + secrets.token_hex(3).upper()
+
+        order_ref = generate_order_ref()
+        while session.exec(select(Order).where(Order.order_ref == order_ref)).first():
+            order_ref = generate_order_ref()
+
+        total_amount = float(getattr(checkout_session, "amount_total", 0) or 0) / 100.0
+        platform_fee_amount = float(metadata.get("platform_fee_amount", 0) or 0)
+
+        customer_details = getattr(checkout_session, "customer_details", None)
+        buyer_email = metadata.get("buyer_email") or (getattr(customer_details, "email", None) if customer_details else "") or ""
+        buyer_name = metadata.get("buyer_name") or (getattr(customer_details, "name", None) if customer_details else "") or "Ticket Buyer"
+        buyer_phone = metadata.get("buyer_phone") or (getattr(customer_details, "phone", None) if customer_details else None)
+
+        buyer_email_clean = buyer_email.strip().lower()
+        buyer_user_id = metadata.get("buyer_user_id") or None
+        if not buyer_user_id and buyer_email_clean:
+            from sqlalchemy import func
+            matching_user = session.exec(select(User).where(func.lower(User.email) == buyer_email_clean)).first()
+            if matching_user:
+                buyer_user_id = matching_user.id
+
+        attendee_responses = {}
+        if metadata.get("attendee_responses"):
+            try:
+                attendee_responses = json.loads(metadata.get("attendee_responses"))
+            except Exception:
+                attendee_responses = {}
+
+        order = Order(
+            order_ref=order_ref,
+            event_id=event_id,
+            buyer_user_id=buyer_user_id,
+            buyer_email=buyer_email,
+            buyer_name=buyer_name,
+            buyer_phone=buyer_phone,
+            total_amount=total_amount,
+            platform_fee_amount=platform_fee_amount,
+            stripe_payment_intent_id=payment_intent_id or cs_id,
+            status="completed",
+            attendee_responses=attendee_responses
+        )
+        session.add(order)
+        session.flush()
+
+        # 4. Generate Tickets
+        for tier, qty in tier_items:
+            for _ in range(qty):
+                ticket = Ticket(
+                    order_id=order.id,
+                    tier_id=tier.id,
+                    qr_token=secrets.token_urlsafe(48),
+                    status="valid"
+                )
+                session.add(ticket)
+
+        session.commit()
+        session.refresh(order)
+        logger.info(f"FulfillCheckoutSession: Successfully created order {order_ref} for {cs_id}")
+
+        # 5. Dispatch confirmation email & notifications
+        try:
+            from app.models.event import Event
+            from app.services.resend_email import resend_email_service
+            import asyncio
+
+            event = session.get(Event, event_id)
+            event_title = event.title if event else "Highland Event"
+            event_date_str = event.date_start.strftime("%A, %d %B %Y at %H:%M") if event and event.date_start else ""
+
+            venue_info = ""
+            if event:
+                if event.venue:
+                    venue_info = f"{event.venue.name}, {getattr(event.venue, 'address', '')}".strip(", ")
+                elif event.location_name:
+                    venue_info = f"{event.location_name}, {getattr(event, 'location_town', '') or ''}".strip(", ")
+
+            ticket_summary = [
+                {"name": tier.name, "qty": qty, "price": tier.price}
+                for tier, qty in tier_items
+            ]
+
+            # In-app notification for organizer
+            try:
+                if event and event.organizer_id:
+                    from app.models.notification import Notification, NotificationType
+                    n_type = getattr(NotificationType, "TICKET_PURCHASED", NotificationType.SYSTEM)
+                    total_tickets = sum(qty for _, qty in tier_items)
+                    tiers_label = ", ".join(f"{qty}x {tier.name}" for tier, qty in tier_items)
+                    organizer_notif = Notification(
+                        user_id=event.organizer_id,
+                        type=n_type,
+                        title=f"🎟️ New Ticket Sale: {event.title}",
+                        message=f"{order.buyer_name} purchased {total_tickets} ticket(s) ({tiers_label}) for £{order.total_amount:.2f} ({order.order_ref}).",
+                        link=f"/organizers/events/{event.id}/ticketing"
+                    )
+                    session.add(organizer_notif)
+                    session.commit()
+            except Exception as notif_err:
+                logger.warning(f"Could not create in-app notification for organizer: {notif_err}")
+
+            # Fire email tasks
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(
+                        resend_email_service.send_ticket_order_confirmation(
+                            to_email=order.buyer_email,
+                            order_ref=order.order_ref,
+                            event_title=event_title,
+                            event_date_str=event_date_str,
+                            venue_info=venue_info,
+                            buyer_name=order.buyer_name,
+                            total_amount=order.total_amount,
+                            ticket_summary=ticket_summary
+                        )
+                    )
+
+                    organizer_user = session.get(User, event.organizer_id) if event and event.organizer_id else None
+                    organizer_email = organizer_user.email if organizer_user else None
+                    if not organizer_email and event and event.organizer_profile:
+                        organizer_email = event.organizer_profile.contact_email
+
+                    if organizer_email:
+                        organizer_name = organizer_user.username if organizer_user else "Organizer"
+                        loop.create_task(
+                            resend_email_service.send_organizer_ticket_sale_notification(
+                                organizer_email=organizer_email,
+                                organizer_name=organizer_name,
+                                event_title=event_title,
+                                event_id=event.id,
+                                order_ref=order.order_ref,
+                                buyer_name=order.buyer_name,
+                                buyer_email=order.buyer_email,
+                                tickets_breakdown=ticket_summary,
+                                total_amount=order.total_amount,
+                                platform_fee=order.platform_fee_amount,
+                                net_amount=order.total_amount - order.platform_fee_amount
+                            )
+                        )
+            except Exception as task_err:
+                logger.warning(f"Could not queue async email task: {task_err}")
+        except Exception as email_err:
+            logger.warning(f"Failed to prepare ticket confirmation email: {email_err}")
+
+        return order
+    except Exception as e:
+        session.rollback()
+        logger.error(f"FulfillCheckoutSession failed for {cs_id}: {e}")
         return None
