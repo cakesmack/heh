@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,22 +28,21 @@ export function Header() {
   useEffect(() => {
     if (user?.is_admin) {
       apiFetch<{ pending_events: number }>('/api/admin/stats')
-        .then(data => setPendingCount(data.pending_events || 0))
-        .catch(() => setPendingCount(0));
+        .then((data) => setPendingCount(data.pending_events || 0))
+        .catch((err) => console.error('Failed to fetch admin stats:', err));
     }
   }, [user?.is_admin]);
 
+  // Scroll direction tracking
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      // Show header if scrolling up or at the top
-      if (currentScrollY < 10) {
-        setIsVisible(true);
+      // Only hide after scrolling down past 100px
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
       } else if (currentScrollY < lastScrollY) {
         setIsVisible(true);
-      } else if (currentScrollY > lastScrollY && currentScrollY > 80) {
-        setIsVisible(false);
       }
 
       setLastScrollY(currentScrollY);
@@ -54,101 +53,99 @@ export function Header() {
   }, [lastScrollY]);
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-40 bg-highland-green shadow-sm transition-transform duration-300 print:hidden ${isVisible ? 'translate-y-0' : '-translate-y-full'
-        }`}
-    >
+    <header className={`bg-highland-green border-b border-stone-dark/20 sticky top-0 z-50 shadow-soft transition-transform duration-300 print:hidden ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2.5 sm:space-x-3 group">
-            <div className="relative flex items-center justify-center flex-shrink-0">
-              <Image
-                src="/images/logo-white.png"
+        <div className="flex justify-between items-center h-16">
+          {/* Logo + Title (grouped) */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-warm-white/20 group-hover:border-golden-heather transition-colors flex-shrink-0">
+              <OptimizedImage
+                src="/logo_knot.jpg"
                 alt="Highland Events Hub"
-                width={40}
-                height={40}
-                priority
-                className="h-8 sm:h-9 w-auto object-contain transition-transform group-hover:scale-105"
+                fill
+                className="object-cover"
+                sizes="40px"
               />
             </div>
-            <span className="text-lg sm:text-xl font-bold text-white tracking-tight">
+            <span className="text-lg sm:text-xl font-bold text-warm-white">
               Highland Events Hub
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link
+              href="/"
+              className={`text-sm font-medium transition-colors hover:text-golden-heather ${isActive('/') ? 'text-white' : 'text-mist-grey'
+                }`}
+            >
+              Home
+            </Link>
             <Link
               href="/events"
-              className={`text-sm font-medium transition-colors ${isActive('/events')
-                ? 'text-golden-heather'
-                : 'text-mist-grey hover:text-golden-heather'
+              className={`text-sm font-medium transition-colors hover:text-golden-heather ${isActive('/events') ? 'text-white' : 'text-mist-grey'
                 }`}
             >
               Events
             </Link>
             <Link
-              href="/map"
-              className={`text-sm font-medium transition-colors ${isActive('/map')
-                ? 'text-golden-heather'
-                : 'text-mist-grey hover:text-golden-heather'
-                }`}
-            >
-              Map
-            </Link>
-            <Link
               href="/venues"
-              className={`text-sm font-medium transition-colors ${isActive('/venues')
-                ? 'text-golden-heather'
-                : 'text-mist-grey hover:text-golden-heather'
+              className={`text-sm font-medium transition-colors hover:text-golden-heather ${isActive('/venues') ? 'text-white' : 'text-mist-grey'
                 }`}
             >
               Venues
             </Link>
             <Link
               href="/groups"
-              className={`text-sm font-medium transition-colors ${isActive('/groups')
-                ? 'text-golden-heather'
-                : 'text-mist-grey hover:text-golden-heather'
+              className={`text-sm font-medium transition-colors hover:text-golden-heather ${isActive('/groups') ? 'text-white' : 'text-mist-grey'
                 }`}
             >
               Groups
             </Link>
+
+            <Link
+              href="/map"
+              className={`text-sm font-medium transition-colors hover:text-golden-heather ${isActive('/map') ? 'text-white' : 'text-mist-grey'
+                }`}
+            >
+              Map
+            </Link>
+
             <Link
               href="/submit-event"
-              className="text-sm font-medium text-white/90 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
+              className="text-sm font-medium bg-highland-green border border-golden-heather text-golden-heather px-4 py-2 rounded-lg hover:bg-golden-heather hover:text-stone-dark transition-all shadow-sm"
             >
-              + Create Event
+              Create Event
             </Link>
 
             {isAuthenticated ? (
               <>
                 <NotificationCenter pendingCount={pendingCount} />
-
-                {/* User Dropdown */}
                 <div className="relative group">
-                  <button className="flex items-center space-x-2 text-sm font-medium text-white hover:text-golden-heather focus:outline-none py-2">
-                    <div className="w-8 h-8 rounded-full bg-golden-heather text-stone-dark flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                      {user?.username ? user.username.charAt(0) : user?.email?.charAt(0) || 'U'}
+                  <button className="flex items-center space-x-2 bg-moss-green/20 px-3 py-1.5 rounded-full border border-moss-green/30 hover:bg-moss-green/30 transition-colors">
+                    <span className="text-sm font-medium text-soft-sky">
+                      {user?.username || user?.email?.split('@')[0]}
+                    </span>
+                    <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-bold">
+                      {(user?.username || user?.email)?.[0].toUpperCase()}
                     </div>
-                    <span className="max-w-[100px] truncate">{user?.username || user?.email?.split('@')[0]}</span>
-                    <svg className="w-4 h-4 text-white/70 group-hover:text-golden-heather transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-mist-grey" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
 
-                  <div className="absolute right-0 top-full pt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 hidden group-hover:block transition-all transform origin-top-right animate-fade-in z-50">
-                    <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                  {/* Dropdown Menu */}
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
+                    <div className="px-4 py-2 border-b border-gray-100">
                       <p className="text-xs text-gray-500">Signed in as</p>
-                      <p className="text-sm font-bold text-gray-900 truncate">{user?.username || user?.email}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{user?.username || user?.email}</p>
                     </div>
 
                     <Link
                       href="/account"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium"
                     >
-                      Dashboard
+                      My Account
                     </Link>
 
                     <Link
