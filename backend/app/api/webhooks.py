@@ -111,24 +111,13 @@ async def stripe_connect_webhook(
     logger.info(f"[Connect Webhook] Received event: {event.type}")
 
     try:
-        if event.type == "checkout.session.completed":
-            session_data = event.data.object
-            cs_id = getattr(session_data, "id", "")
-            logger.info(f"[Connect Webhook] Processing checkout.session.completed for session: {cs_id}")
-            order = stripe_service.fulfill_checkout_session(session_data, session)
-            if order:
-                logger.info(f"[Connect Webhook] Successfully fulfilled ticket order: {order.order_ref}")
-            else:
-                logger.warning(f"[Connect Webhook] Could not fulfill checkout session {cs_id}")
-            return {"status": "success"}
-
-        elif event.type == "payment_intent.succeeded":
+        if event.type == "payment_intent.succeeded":
             intent = event.data.object
             pi_id = getattr(intent, "id", "")
             logger.info(f"[Connect Webhook] Processing payment_intent.succeeded for intent: {pi_id}")
             order = stripe_service.fulfill_payment_intent(intent, session)
             if order:
-                logger.info(f"[Connect Webhook] Successfully fulfilled ticket order: {order.order_ref}")
+                logger.info(f"[Connect Webhook] Successfully fulfilled ticket order: {order.order_ref} (PaymentIntent: {pi_id})")
             else:
                 logger.warning(f"[Connect Webhook] Could not fulfill payment intent {pi_id}")
             return {"status": "success"}

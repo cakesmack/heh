@@ -45,7 +45,7 @@ def client_fixture(test_db: Session):
     yield client
     app.dependency_overrides.clear()
 
-def test_stripe_connect_webhook_checkout_session_completed(client: TestClient, test_db: Session):
+def test_stripe_connect_webhook_payment_intent_succeeded(client: TestClient, test_db: Session):
     # Setup test event and tier
     event = Event(
         id="evt-connect-1",
@@ -69,13 +69,13 @@ def test_stripe_connect_webhook_checkout_session_completed(client: TestClient, t
     test_db.add(tier)
     test_db.commit()
 
-    # Mock Stripe Event construction
-    fake_session_data = MagicMock()
-    fake_session_data.id = "cs_test_connect_123"
-    fake_session_data.payment_intent = "pi_test_connect_123"
-    fake_session_data.payment_status = "paid"
-    fake_session_data.amount_total = 5000 # £50.00
-    fake_session_data.metadata = {
+    # Mock Stripe Event construction for payment_intent.succeeded
+    fake_intent_data = MagicMock()
+    fake_intent_data.id = "pi_test_connect_123"
+    fake_intent_data.status = "succeeded"
+    fake_intent_data.amount = 5000  # £50.00 in pence
+    fake_intent_data.application_fee_amount = 250  # £2.50 in pence
+    fake_intent_data.metadata = {
         "event_id": "evt-connect-1",
         "buyer_name": "Hamish MacLeod",
         "buyer_email": "hamish@example.com",
@@ -84,11 +84,11 @@ def test_stripe_connect_webhook_checkout_session_completed(client: TestClient, t
         "items_json": json.dumps([{"tier_id": "tier-conn-1", "quantity": 2}]),
         "attendee_responses": json.dumps({"t-shirt": "XL"})
     }
-    fake_session_data.customer_details = MagicMock(email="hamish@example.com", name="Hamish MacLeod", phone=None)
+    fake_intent_data.charges = MagicMock(data=[])
 
     fake_stripe_event = MagicMock()
-    fake_stripe_event.type = "checkout.session.completed"
-    fake_stripe_event.data.object = fake_session_data
+    fake_stripe_event.type = "payment_intent.succeeded"
+    fake_stripe_event.data.object = fake_intent_data
 
     with patch.object(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_test_connect_secret"), \
          patch("stripe.Webhook.construct_event", return_value=fake_stripe_event):
@@ -110,6 +110,7 @@ def test_stripe_connect_webhook_checkout_session_completed(client: TestClient, t
     assert order.total_amount == 50.0
     assert order.platform_fee_amount == 2.50
     assert order.status == "completed"
+    assert order.stripe_payment_intent_id == "pi_test_connect_123"
 
     tickets = test_db.exec(select(Ticket).where(Ticket.order_id == order.id)).all()
     assert len(tickets) == 2

@@ -166,13 +166,31 @@ def fulfill_payment_intent(
         return existing_order
 
     metadata = getattr(intent, "metadata", {}) or {}
+    if hasattr(metadata, "to_dict"):
+        metadata = metadata.to_dict()
+    elif not isinstance(metadata, dict):
+        try:
+            metadata = dict(metadata)
+        except Exception:
+            metadata = {}
+
     event_id = metadata.get("event_id")
     if not event_id:
         logger.warning(f"PaymentIntent {pi_id} missing event_id in metadata.")
         return None
 
     try:
-        items_payload = json.loads(metadata.get("items_json", "[]"))
+        raw_items = metadata.get("items_json", "[]")
+        if isinstance(raw_items, list):
+            items_payload = raw_items
+        elif isinstance(raw_items, str):
+            try:
+                items_payload = json.loads(raw_items)
+            except Exception:
+                items_payload = []
+        else:
+            items_payload = []
+
         promo_code = metadata.get("promo_code")
         
         # 1. Lock and decrement inventory
@@ -207,10 +225,36 @@ def fulfill_payment_intent(
         while session.exec(select(Order).where(Order.order_ref == order_ref)).first():
             order_ref = generate_order_ref()
             
-        total_amount = float(getattr(intent, "amount", 0)) / 100.0
-        platform_fee_amount = float(getattr(intent, "application_fee_amount", 0) or 0) / 100.0
+        total_amount = float(getattr(intent, "amount", 0) or 0) / 100.0
         
-        buyer_email_clean = (metadata.get("buyer_email", "")).strip().lower()
+        app_fee = getattr(intent, "application_fee_amount", None)
+        if app_fee is not None and app_fee > 0:
+            platform_fee_amount = float(app_fee) / 100.0
+        else:
+            platform_fee_amount = float(metadata.get("platform_fee_amount", 0) or 0)
+        
+        charges = getattr(intent, "charges", None)
+        billing_details = None
+        if charges and getattr(charges, "data", None) and len(charges.data) > 0:
+            billing_details = getattr(charges.data[0], "billing_details", None)
+
+        buyer_email = (
+            metadata.get("buyer_email")
+            or getattr(intent, "receipt_email", None)
+            or (getattr(billing_details, "email", None) if billing_details else None)
+            or ""
+        )
+        buyer_name = (
+            metadata.get("buyer_name")
+            or (getattr(billing_details, "name", None) if billing_details else None)
+            or "Ticket Buyer"
+        )
+        buyer_phone = (
+            metadata.get("buyer_phone")
+            or (getattr(billing_details, "phone", None) if billing_details else None)
+        )
+
+        buyer_email_clean = buyer_email.strip().lower()
         buyer_user_id = metadata.get("buyer_user_id") or None
         if not buyer_user_id and buyer_email_clean:
             from sqlalchemy import func
@@ -218,18 +262,29 @@ def fulfill_payment_intent(
             if matching_user:
                 buyer_user_id = matching_user.id
         
+        attendee_responses = {}
+        raw_responses = metadata.get("attendee_responses")
+        if raw_responses:
+            if isinstance(raw_responses, dict):
+                attendee_responses = raw_responses
+            elif isinstance(raw_responses, str):
+                try:
+                    attendee_responses = json.loads(raw_responses)
+                except Exception:
+                    attendee_responses = {}
+
         order = Order(
             order_ref=order_ref,
             event_id=event_id,
             buyer_user_id=buyer_user_id,
-            buyer_email=metadata.get("buyer_email", ""),
-            buyer_name=metadata.get("buyer_name", ""),
-            buyer_phone=metadata.get("buyer_phone", None),
+            buyer_email=buyer_email,
+            buyer_name=buyer_name,
+            buyer_phone=buyer_phone,
             total_amount=total_amount,
             platform_fee_amount=platform_fee_amount,
             stripe_payment_intent_id=pi_id,
             status="completed",
-            attendee_responses=json.loads(metadata.get("attendee_responses", "{}"))
+            attendee_responses=attendee_responses
         )
         session.add(order)
         session.flush()
