@@ -118,6 +118,10 @@ async def stripe_connect_webhook(
             order = stripe_service.fulfill_payment_intent(intent, session)
             if order:
                 logger.info(f"[Connect Webhook] Successfully fulfilled ticket order: {order.order_ref} (PaymentIntent: {pi_id})")
+                try:
+                    await stripe_service.dispatch_order_confirmation_emails(order, session)
+                except Exception as email_err:
+                    logger.error(f"[Connect Webhook] Failed to dispatch order confirmation emails: {email_err}", exc_info=True)
             else:
                 logger.warning(f"[Connect Webhook] Could not fulfill payment intent {pi_id}")
             return {"status": "success"}

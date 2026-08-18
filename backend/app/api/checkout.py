@@ -314,87 +314,9 @@ def create_payment_intent(
             
         session.commit()
         
-        # Dispatch email for free order
-        try:
-            from app.services.resend_email import resend_email_service
-            import asyncio
-            event_title = event.title if event else "Highland Event"
-            event_date_str = event.date_start.strftime("%A, %d %B %Y at %H:%M") if event and event.date_start else ""
-            venue_info = ""
-            if event:
-                if event.venue:
-                    venue_info = f"{event.venue.name}, {getattr(event.venue, 'address', '')}".strip(", ")
-                elif event.location_name:
-                    venue_info = f"{event.location_name}, {getattr(event, 'location_town', '') or ''}".strip(", ")
-                    
-            ticket_summary = [
-                {"name": tier.name, "qty": qty, "price": 0.0}
-                for tier, qty in tier_items
-            ]
-            # Create in-app notification for event organizer
-            try:
-                if event and event.organizer_id:
-                    from app.models.notification import Notification, NotificationType
-                    n_type = getattr(NotificationType, "TICKET_PURCHASED", NotificationType.SYSTEM)
-                    total_tickets = sum(qty for _, qty in tier_items)
-                    tiers_label = ", ".join(f"{qty}x {tier.name}" for tier, qty in tier_items)
-                    organizer_notif = Notification(
-                        user_id=event.organizer_id,
-                        type=n_type,
-                        title=f"🎟️ New Ticket Booking: {event.title}",
-                        message=f"{order.buyer_name} booked {total_tickets} free ticket(s) ({tiers_label}) ({order.order_ref}).",
-                        link=f"/organizers/events/{event.id}/ticketing"
-                    )
-                    session.add(organizer_notif)
-                    session.commit()
-            except Exception as notif_err:
-                logger.warning(f"Could not create in-app notification for organizer: {notif_err}")
-
-            # Dispatch emails
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # 1. Buyer email
-                    loop.create_task(
-                        resend_email_service.send_ticket_order_confirmation(
-                            to_email=order.buyer_email,
-                            order_ref=order.order_ref,
-                            event_title=event_title,
-                            event_date_str=event_date_str,
-                            venue_info=venue_info,
-                            buyer_name=order.buyer_name,
-                            total_amount=0.0,
-                            ticket_summary=ticket_summary
-                        )
-                    )
-
-                    # 2. Organizer notification email
-                    organizer_user = session.get(User, event.organizer_id) if event and event.organizer_id else None
-                    organizer_email = organizer_user.email if organizer_user else None
-                    if not organizer_email and event and event.organizer_profile:
-                        organizer_email = event.organizer_profile.contact_email
-
-                    if organizer_email:
-                        organizer_name = organizer_user.username if organizer_user else "Organizer"
-                        loop.create_task(
-                            resend_email_service.send_organizer_ticket_sale_notification(
-                                organizer_email=organizer_email,
-                                organizer_name=organizer_name,
-                                event_title=event_title,
-                                event_id=event.id,
-                                order_ref=order.order_ref,
-                                buyer_name=order.buyer_name,
-                                buyer_email=order.buyer_email,
-                                tickets_breakdown=ticket_summary,
-                                total_amount=0.0,
-                                platform_fee=0.0,
-                                net_amount=0.0
-                            )
-                        )
-            except Exception as task_err:
-                logger.warning(f"Could not queue free order email task: {task_err}")
-        except Exception as email_err:
-            logger.warning(f"Failed to prepare free order email: {email_err}")
+        # Dispatch email and notification for free order
+        from app.services.stripe_service import trigger_order_confirmation_emails
+        trigger_order_confirmation_emails(order, session)
 
         return {"free_order": True, "order_ref": order.order_ref}
 

@@ -91,7 +91,8 @@ def test_stripe_connect_webhook_payment_intent_succeeded(client: TestClient, tes
     fake_stripe_event.data.object = fake_intent_data
 
     with patch.object(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_test_connect_secret"), \
-         patch("stripe.Webhook.construct_event", return_value=fake_stripe_event):
+         patch("stripe.Webhook.construct_event", return_value=fake_stripe_event), \
+         patch("app.services.resend_email.resend_email_service.send_ticket_order_confirmation") as mock_send_email:
         
         response = client.post(
             "/api/webhooks/stripe-connect",
@@ -119,6 +120,13 @@ def test_stripe_connect_webhook_payment_intent_succeeded(client: TestClient, tes
     # Verify Tier quantity_sold incremented
     test_db.refresh(tier)
     assert tier.quantity_sold == 2
+
+    # Verify email dispatch was triggered for the buyer
+    mock_send_email.assert_called_once()
+    call_kwargs = mock_send_email.call_args.kwargs
+    assert call_kwargs["to_email"] == "hamish@example.com"
+    assert call_kwargs["order_ref"] == order.order_ref
+    assert call_kwargs["event_title"] == "Connect Test Event"
 
 
 def test_standard_stripe_webhook_coexists(client: TestClient):

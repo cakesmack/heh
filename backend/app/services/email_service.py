@@ -16,6 +16,7 @@ class EmailType:
     WELCOME = "WELCOME"
     MODERATION = "MODERATION"
     INVITE = "INVITE"
+    TICKETING = "TICKETING"
 
 class SmartEmailService:
     """Consolidated email service with provider routing."""
@@ -54,8 +55,13 @@ class SmartEmailService:
         """
         if email_type == EmailType.SECURITY:
             return await self._send_via_resend(to, subject, html_content)
-        else:
+        elif self.smtp_enabled:
             return await self._send_via_smtp(to, subject, html_content, text_content)
+        elif self.resend_enabled:
+            return await self._send_via_resend(to, subject, html_content)
+        else:
+            logger.info(f"[DRY RUN] Would send {email_type} email to {mask_email(to)}")
+            return True
 
     async def _send_via_resend(self, to: str, subject: str, html_content: str) -> bool:
         """Internal method for Resend delivery."""

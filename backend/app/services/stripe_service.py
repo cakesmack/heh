@@ -303,93 +303,6 @@ def fulfill_payment_intent(
         session.commit()
         session.refresh(order)
         logger.info(f"FulfillPaymentIntent: Successfully created order {order_ref} for {pi_id}")
-        
-        # 5. Dispatch confirmation email in background
-        try:
-            from app.models.event import Event
-            from app.services.resend_email import resend_email_service
-            import asyncio
-            
-            event = session.get(Event, event_id)
-            event_title = event.title if event else "Highland Event"
-            event_date_str = event.date_start.strftime("%A, %d %B %Y at %H:%M") if event and event.date_start else ""
-            
-            venue_info = ""
-            if event:
-                if event.venue:
-                    venue_info = f"{event.venue.name}, {getattr(event.venue, 'address', '')}".strip(", ")
-                elif event.location_name:
-                    venue_info = f"{event.location_name}, {getattr(event, 'location_town', '') or ''}".strip(", ")
-                    
-            ticket_summary = [
-                {"name": tier.name, "qty": qty, "price": tier.price}
-                for tier, qty in tier_items
-            ]
-            
-            # Create in-app notification for event organizer
-            try:
-                if event and event.organizer_id:
-                    from app.models.notification import Notification, NotificationType
-                    n_type = getattr(NotificationType, "TICKET_PURCHASED", NotificationType.SYSTEM)
-                    total_tickets = sum(qty for _, qty in tier_items)
-                    tiers_label = ", ".join(f"{qty}x {tier.name}" for tier, qty in tier_items)
-                    organizer_notif = Notification(
-                        user_id=event.organizer_id,
-                        type=n_type,
-                        title=f"🎟️ New Ticket Sale: {event.title}",
-                        message=f"{order.buyer_name} purchased {total_tickets} ticket(s) ({tiers_label}) for £{order.total_amount:.2f} ({order.order_ref}).",
-                        link=f"/organizers/events/{event.id}/ticketing"
-                    )
-                    session.add(organizer_notif)
-                    session.commit()
-            except Exception as notif_err:
-                logger.warning(f"Could not create in-app notification for organizer: {notif_err}")
-
-            # Fire & forget email tasks
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # 1. Buyer confirmation email
-                    loop.create_task(
-                        resend_email_service.send_ticket_order_confirmation(
-                            to_email=order.buyer_email,
-                            order_ref=order.order_ref,
-                            event_title=event_title,
-                            event_date_str=event_date_str,
-                            venue_info=venue_info,
-                            buyer_name=order.buyer_name,
-                            total_amount=order.total_amount,
-                            ticket_summary=ticket_summary
-                        )
-                    )
-
-                    # 2. Organizer sale notification email
-                    organizer_user = session.get(User, event.organizer_id) if event and event.organizer_id else None
-                    organizer_email = organizer_user.email if organizer_user else None
-                    if not organizer_email and event and event.organizer_profile:
-                        organizer_email = event.organizer_profile.contact_email
-                    
-                    if organizer_email:
-                        organizer_name = organizer_user.username if organizer_user else "Organizer"
-                        loop.create_task(
-                            resend_email_service.send_organizer_ticket_sale_notification(
-                                organizer_email=organizer_email,
-                                organizer_name=organizer_name,
-                                event_title=event_title,
-                                event_id=event.id,
-                                order_ref=order.order_ref,
-                                buyer_name=order.buyer_name,
-                                buyer_email=order.buyer_email,
-                                tickets_breakdown=ticket_summary,
-                                total_amount=order.total_amount,
-                                platform_fee=order.platform_fee_amount,
-                                net_amount=order.total_amount - order.platform_fee_amount
-                            )
-                        )
-            except Exception as task_err:
-                logger.warning(f"Could not queue async email task: {task_err}")
-        except Exception as email_err:
-            logger.warning(f"Failed to prepare ticket confirmation email: {email_err}")
 
         return order
     except Exception as e:
@@ -544,93 +457,161 @@ def fulfill_checkout_session(session_or_id: Any, session: Session) -> Optional[O
         session.refresh(order)
         logger.info(f"FulfillCheckoutSession: Successfully created order {order_ref} for {cs_id}")
 
-        # 5. Dispatch confirmation email & notifications
-        try:
-            from app.models.event import Event
-            from app.services.resend_email import resend_email_service
-            import asyncio
-
-            event = session.get(Event, event_id)
-            event_title = event.title if event else "Highland Event"
-            event_date_str = event.date_start.strftime("%A, %d %B %Y at %H:%M") if event and event.date_start else ""
-
-            venue_info = ""
-            if event:
-                if event.venue:
-                    venue_info = f"{event.venue.name}, {getattr(event.venue, 'address', '')}".strip(", ")
-                elif event.location_name:
-                    venue_info = f"{event.location_name}, {getattr(event, 'location_town', '') or ''}".strip(", ")
-
-            ticket_summary = [
-                {"name": tier.name, "qty": qty, "price": tier.price}
-                for tier, qty in tier_items
-            ]
-
-            # In-app notification for organizer
-            try:
-                if event and event.organizer_id:
-                    from app.models.notification import Notification, NotificationType
-                    n_type = getattr(NotificationType, "TICKET_PURCHASED", NotificationType.SYSTEM)
-                    total_tickets = sum(qty for _, qty in tier_items)
-                    tiers_label = ", ".join(f"{qty}x {tier.name}" for tier, qty in tier_items)
-                    organizer_notif = Notification(
-                        user_id=event.organizer_id,
-                        type=n_type,
-                        title=f"🎟️ New Ticket Sale: {event.title}",
-                        message=f"{order.buyer_name} purchased {total_tickets} ticket(s) ({tiers_label}) for £{order.total_amount:.2f} ({order.order_ref}).",
-                        link=f"/organizers/events/{event.id}/ticketing"
-                    )
-                    session.add(organizer_notif)
-                    session.commit()
-            except Exception as notif_err:
-                logger.warning(f"Could not create in-app notification for organizer: {notif_err}")
-
-            # Fire email tasks
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(
-                        resend_email_service.send_ticket_order_confirmation(
-                            to_email=order.buyer_email,
-                            order_ref=order.order_ref,
-                            event_title=event_title,
-                            event_date_str=event_date_str,
-                            venue_info=venue_info,
-                            buyer_name=order.buyer_name,
-                            total_amount=order.total_amount,
-                            ticket_summary=ticket_summary
-                        )
-                    )
-
-                    organizer_user = session.get(User, event.organizer_id) if event and event.organizer_id else None
-                    organizer_email = organizer_user.email if organizer_user else None
-                    if not organizer_email and event and event.organizer_profile:
-                        organizer_email = event.organizer_profile.contact_email
-
-                    if organizer_email:
-                        organizer_name = organizer_user.username if organizer_user else "Organizer"
-                        loop.create_task(
-                            resend_email_service.send_organizer_ticket_sale_notification(
-                                organizer_email=organizer_email,
-                                organizer_name=organizer_name,
-                                event_title=event_title,
-                                event_id=event.id,
-                                order_ref=order.order_ref,
-                                buyer_name=order.buyer_name,
-                                buyer_email=order.buyer_email,
-                                tickets_breakdown=ticket_summary,
-                                total_amount=order.total_amount,
-                                platform_fee=order.platform_fee_amount,
-                                net_amount=order.total_amount - order.platform_fee_amount
-                            )
-                        )
-            except Exception as task_err:
-                logger.warning(f"Could not queue async email task: {task_err}")
-        except Exception as email_err:
-            logger.warning(f"Failed to prepare ticket confirmation email: {email_err}")
-
         return order
     except Exception as e:
         session.rollback()
         logger.error(f"FulfillCheckoutSession failed for {cs_id}: {e}")
         return None
+
+
+async def dispatch_order_confirmation_emails(
+    order_or_id: Union[Order, str],
+    session: Optional[Session] = None
+) -> bool:
+    """
+    Asynchronously sends booking confirmation email to buyer (including event title,
+    date/time, venue, ticket tier name, amount paid, and digital ticket link) and sale notification
+    to organizer, and creates in-app notification for the organizer.
+    """
+    from app.core.database import engine
+    from sqlmodel import Session as DbSession
+    from app.models.event import Event
+    from app.models.ticket import Ticket
+    from app.models.ticket_tier import TicketTier
+    from app.models.user import User
+    from app.services.resend_email import resend_email_service
+
+    def _execute(db_session: Session) -> Tuple[Optional[Order], Optional[Event], List[Ticket], Dict[str, Dict[str, Any]], Optional[str], Optional[str], Optional[str]]:
+        if isinstance(order_or_id, str):
+            ord_obj = db_session.get(Order, order_or_id)
+        else:
+            ord_obj = db_session.get(Order, order_or_id.id) if order_or_id else None
+
+        if not ord_obj:
+            return None, None, [], {}, None, None, None
+
+        evt = db_session.get(Event, ord_obj.event_id)
+        tix = db_session.exec(select(Ticket).where(Ticket.order_id == ord_obj.id)).all()
+        t_counts: Dict[str, Dict[str, Any]] = {}
+        for t in tix:
+            tier = db_session.get(TicketTier, t.tier_id) if t.tier_id else None
+            t_name = tier.name if tier else "General Admission"
+            t_price = tier.price if tier else 0.0
+            if t_name not in t_counts:
+                t_counts[t_name] = {"name": t_name, "qty": 0, "price": t_price, "qr_tokens": []}
+            t_counts[t_name]["qty"] += 1
+            if t.qr_token:
+                t_counts[t_name]["qr_tokens"].append(t.qr_token)
+
+        # Organizer lookup
+        org_user = db_session.get(User, evt.organizer_id) if evt and evt.organizer_id else None
+        org_email = org_user.email if org_user else None
+        if not org_email and evt and evt.organizer_profile:
+            org_email = evt.organizer_profile.contact_email
+        org_name = org_user.username if org_user else "Organizer"
+
+        return ord_obj, evt, tix, t_counts, org_email, org_name, getattr(evt, "title", None)
+
+    try:
+        if session is None:
+            with DbSession(engine) as fresh_session:
+                order, event, tickets, tier_counts, organizer_email, organizer_name, event_title = _execute(fresh_session)
+        else:
+            order, event, tickets, tier_counts, organizer_email, organizer_name, event_title = _execute(session)
+
+        if not order:
+            logger.warning("dispatch_order_confirmation_emails: Order not found")
+            return False
+
+        event_title = event_title or "Highland Event"
+        event_date_str = event.date_start.strftime("%A, %d %B %Y at %H:%M") if event and event.date_start else ""
+
+        venue_info = ""
+        if event:
+            if event.venue:
+                venue_info = f"{event.venue.name}, {getattr(event.venue, 'address', '')}".strip(", ")
+            elif event.location_name:
+                venue_info = f"{event.location_name}, {getattr(event, 'location_town', '') or ''}".strip(", ")
+
+        ticket_summary = list(tier_counts.values())
+        if not ticket_summary:
+            ticket_summary = [{"name": "General Admission", "qty": len(tickets) or 1, "price": order.total_amount}]
+
+        # 1. Send confirmation email to buyer
+        if order.buyer_email:
+            logger.info(f"Dispatching ticket order confirmation email to buyer {order.buyer_email} for order {order.order_ref}")
+            await resend_email_service.send_ticket_order_confirmation(
+                to_email=order.buyer_email,
+                order_ref=order.order_ref,
+                event_title=event_title,
+                event_date_str=event_date_str,
+                venue_info=venue_info,
+                buyer_name=order.buyer_name,
+                total_amount=order.total_amount,
+                ticket_summary=ticket_summary
+            )
+
+        # 2. In-app notification for organizer
+        try:
+            if event and event.organizer_id and session:
+                from app.models.notification import Notification, NotificationType
+                n_type = getattr(NotificationType, "TICKET_PURCHASED", NotificationType.SYSTEM)
+                total_tickets = sum(item["qty"] for item in ticket_summary)
+                tiers_label = ", ".join(f"{item['qty']}x {item['name']}" for item in ticket_summary)
+                organizer_notif = Notification(
+                    user_id=event.organizer_id,
+                    type=n_type,
+                    title=f"🎟️ New Ticket Sale: {event.title}",
+                    message=f"{order.buyer_name} purchased {total_tickets} ticket(s) ({tiers_label}) for £{order.total_amount:.2f} ({order.order_ref}).",
+                    link=f"/organizers/events/{event.id}/ticketing"
+                )
+                session.add(organizer_notif)
+                session.commit()
+        except Exception as notif_err:
+            logger.warning(f"Could not create in-app notification for organizer: {notif_err}")
+
+        # 3. Email notification to organizer
+        if organizer_email:
+            logger.info(f"Dispatching ticket sale notification email to organizer {organizer_email} for order {order.order_ref}")
+            await resend_email_service.send_organizer_ticket_sale_notification(
+                organizer_email=organizer_email,
+                organizer_name=organizer_name or "Organizer",
+                event_title=event_title,
+                event_id=event.id if event else "",
+                order_ref=order.order_ref,
+                buyer_name=order.buyer_name,
+                buyer_email=order.buyer_email,
+                tickets_breakdown=ticket_summary,
+                total_amount=order.total_amount,
+                platform_fee=order.platform_fee_amount,
+                net_amount=order.total_amount - order.platform_fee_amount
+            )
+
+        return True
+    except Exception as e:
+        logger.error(f"Failed to dispatch order confirmation emails: {e}", exc_info=True)
+        return False
+
+
+def trigger_order_confirmation_emails(order: Union[Order, str], session: Optional[Session] = None) -> None:
+    """
+    Safely triggers dispatch_order_confirmation_emails from synchronous or asynchronous execution contexts.
+    """
+    import asyncio
+    import threading
+
+    order_id = str(order.id if hasattr(order, "id") else order)
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        loop.create_task(dispatch_order_confirmation_emails(order_id, session))
+    else:
+        def run_in_thread():
+            asyncio.run(dispatch_order_confirmation_emails(order_id, None))
+
+        t = threading.Thread(target=run_in_thread, daemon=True)
+        t.start()

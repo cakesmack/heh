@@ -1354,11 +1354,16 @@ class ResendEmailService:
             qty = item.get("quantity") or item.get("qty") or 1
             price = item.get("price", 0.0)
             price_str = f"£{price:.2f}" if price > 0 else "Free"
+            qr_tokens = item.get("qr_tokens") or []
+            qr_info_html = ""
+            if qr_tokens:
+                qr_info_html = f'<div style="font-size: 12px; color: #059669; margin-top: 4px; font-weight: 500;">✓ {len(qr_tokens)} digital QR check-in token(s) issued</div>'
+
             tickets_rows += f"""
             <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #374151; font-size: 14px;"><strong>{name}</strong></td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 14px;">{qty}</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #111827; font-weight: 600; font-size: 14px;">{price_str}</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #374151; font-size: 14px;"><strong>{name}</strong>{qr_info_html}</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 14px;">{qty}</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #111827; font-weight: 600; font-size: 14px;">{price_str}</td>
             </tr>
             """
 
@@ -1426,7 +1431,7 @@ class ResendEmailService:
                                 <a href="{tickets_url}" style="display: inline-block; background-color: #059669; color: #ffffff; padding: 16px 36px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; letter-spacing: 0.01em; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">View & Download Tickets 🎟️</a>
                             </div>
 
-                            <p style="margin: 0; font-size: 13px; color: #6b7280; text-align: center; line-height: 1.5;">You can present the digital QR code directly on your phone or print a physical copy at home.</p>
+                            <p style="margin: 0; font-size: 13px; color: #6b7280; text-align: center; line-height: 1.5;">You can present the digital QR code directly on your phone or print a physical copy at home by clicking the link above or going to <a href="{tickets_url}" style="color: #059669; text-decoration: underline;">{tickets_url}</a>.</p>
                         </td>
                     </tr>
 
@@ -1447,7 +1452,7 @@ class ResendEmailService:
 
         from app.services.email_service import EmailType
         return await smart_email_service.send_smart_email(
-            email_type=EmailType.WELCOME,
+            email_type=EmailType.TICKETING,
             to=to_email,
             subject=subject,
             html_content=html_content
@@ -1579,7 +1584,7 @@ class ResendEmailService:
 
         from app.services.email_service import EmailType
         return await smart_email_service.send_smart_email(
-            email_type=EmailType.WELCOME,
+            email_type=EmailType.TICKETING,
             to=organizer_email,
             subject=subject,
             html_content=html_content
