@@ -174,7 +174,7 @@ def get_location_feed(
         select(Event)
         .options(selectinload(Event.category_rel), selectinload(Event.venue))
         .outerjoin(Venue, Event.venue_id == Venue.id)
-        .where(Event.status == "published")
+        .where(Event.status == "published", Event.is_cancelled == False)
         .where(
             or_(
                 Event.location_name.ilike(term),

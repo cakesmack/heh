@@ -139,6 +139,10 @@ def get_order(order_ref: str, session: Session = Depends(get_session)):
         "event_title": event.title if event else "Event",
         "event_start": event.date_start if event else None,
         "event_end": event.date_end if event else None,
+        "is_cancelled": getattr(event, "is_cancelled", False) if event else False,
+        "cancellation_reason": getattr(event, "cancellation_reason", None) if event else None,
+        "cancelled_at": event.cancelled_at.isoformat() if (event and getattr(event, "cancelled_at", None)) else None,
+        "previous_date_start": event.previous_date_start.isoformat() if (event and getattr(event, "previous_date_start", None)) else None,
         "venue_name": venue_name,
         "venue_address": venue_address,
         "venue_town": venue_town,
@@ -254,7 +258,8 @@ def create_payment_intent(
         if tier.sale_start and now < tier.sale_start:
             raise HTTPException(status_code=400, detail=f"Sales for {tier.name} have not started.")
             
-        if tier.sale_end and now > tier.sale_end:
+        cutoff_time = tier.sale_end if tier.sale_end is not None else event.date_start
+        if cutoff_time and now > cutoff_time:
             raise HTTPException(status_code=400, detail=f"Sales for {tier.name} have ended.")
             
         # Target tier promo validation

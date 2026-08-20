@@ -17,6 +17,10 @@ interface Order {
   event_title: string;
   event_start: string | null;
   event_end: string | null;
+  is_cancelled?: boolean;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+  previous_date_start?: string | null;
   venue_name?: string;
   venue_town?: string;
   venue_address?: string;
@@ -138,48 +142,66 @@ export default function MyTicketsPage() {
               >
                 <div className="p-6 border-b border-stone-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md ${
-                        order.status === 'completed' ? 'bg-emerald-100 text-emerald-800' :
-                        order.status === 'refunded' ? 'bg-red-100 text-red-800' :
-                        'bg-stone-100 text-stone-800'
-                      }`}>
-                        {order.status}
-                      </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {order.is_cancelled || order.status === 'refunded' ? (
+                        <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md bg-red-100 text-red-800 border border-red-200">
+                          🚫 Event Cancelled & Refunded
+                        </span>
+                      ) : order.status === 'completed' ? (
+                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md bg-stone-100 text-stone-800">
+                          {order.status}
+                        </span>
+                      )}
+
+                      {order.previous_date_start && !order.is_cancelled && (
+                        <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-200">
+                          📅 Rescheduled
+                        </span>
+                      )}
+
                       <span className="text-xs font-mono text-stone-400">Ref: {order.order_ref}</span>
                     </div>
-                    <h2 className="text-xl font-bold text-stone-900 leading-snug">{order.event_title}</h2>
+                    <h2 className={`text-xl font-bold text-stone-900 leading-snug ${order.is_cancelled ? 'line-through opacity-75' : ''}`}>
+                      {order.event_title}
+                    </h2>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600 pt-1">
                       <span>📅 {formatEventDate(order.event_start)}</span>
                       {locationString && <span>📍 {locationString}</span>}
                     </div>
+                    {order.cancellation_reason && (
+                      <p className="text-xs text-red-700 italic mt-1 bg-red-50 p-2 rounded-lg border border-red-100">
+                        Reason: "{order.cancellation_reason}"
+                      </p>
+                    )}
                   </div>
                   
                   <div className="sm:text-right shrink-0 flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
                     <p className="font-extrabold text-xl text-stone-900">£{order.total_amount.toFixed(2)}</p>
                     
-                    {order.status === 'completed' && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <Link 
-                          href={`/orders/${order.order_ref}`}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5"
+                    <div className="flex items-center gap-2 mt-2">
+                      <Link 
+                        href={`/orders/${order.order_ref}`}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5"
+                      >
+                        <span>View Order Details 🎟️</span>
+                      </Link>
+                      
+                      {!order.is_cancelled && order.status === 'completed' && !isPastEvent && refundable && (
+                        <button
+                          type="button"
+                          onClick={() => handleRefund(order.order_id)}
+                          disabled={refunding === order.order_id}
+                          title="Request a full refund for this order"
+                          className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
                         >
-                          <span>View & Print Tickets 🎟️</span>
-                        </Link>
-                        
-                        {!isPastEvent && refundable && (
-                          <button
-                            type="button"
-                            onClick={() => handleRefund(order.order_id)}
-                            disabled={refunding === order.order_id}
-                            title="Request a full refund for this order"
-                            className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
-                          >
-                            {refunding === order.order_id ? 'Processing...' : 'Refund'}
-                          </button>
-                        )}
-                      </div>
-                    )}
+                          {refunding === order.order_id ? 'Processing...' : 'Refund'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 

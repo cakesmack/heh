@@ -55,14 +55,14 @@ def validate_key(request: KeyValidationRequest, session: Session = Depends(get_s
     event = _validate_scanner_key(request.event_id, request.token, session)
     
     # Calculate stats
-    # For speed, we just count orders/tickets
-    # Since checking in modifies Ticket status to checked_in, we can count that.
     total_sold = session.exec(select(Ticket).join(Order).where(Order.event_id == event.id)).all()
     checked_in_count = len([t for t in total_sold if t.status == "checked_in"])
     
     return {
         "valid": True,
         "event_title": event.title,
+        "is_cancelled": getattr(event, "is_cancelled", False),
+        "cancellation_reason": getattr(event, "cancellation_reason", None),
         "total_sold": len(total_sold),
         "total_checked_in": checked_in_count
     }
@@ -70,6 +70,13 @@ def validate_key(request: KeyValidationRequest, session: Session = Depends(get_s
 @router.post("/validate-ticket")
 def validate_ticket(request: TicketValidationRequest, session: Session = Depends(get_session)):
     event = _validate_scanner_key(request.event_id, request.token, session)
+
+    if getattr(event, "is_cancelled", False):
+        return {
+            "status": "invalid",
+            "error": "EVENT_CANCELLED",
+            "message": f"EVENT CANCELLED: This event was cancelled. All tickets are void and refunded."
+        }
     
     clean_token = (request.qr_token or "").strip()
     if not clean_token:
@@ -97,6 +104,13 @@ def validate_ticket(request: TicketValidationRequest, session: Session = Depends
 
     if not ticket or ticket.order.event_id != event.id:
         return {"status": "invalid", "message": "Ticket not recognized for this event"}
+
+    if ticket.status in ["refunded", "cancelled"]:
+        return {
+            "status": "invalid",
+            "error": "TICKET_REFUNDED",
+            "message": f"TICKET VOID: This ticket has been {ticket.status}."
+        }
         
     if ticket.status == "checked_in":
         return {
@@ -162,12 +176,26 @@ def get_guest_list(
 
 @router.post("/manual-check-in")
 def manual_check_in(request: ManualCheckInRequest, session: Session = Depends(get_session)):
-    _validate_scanner_key(request.event_id, request.token, session)
+    event = _validate_scanner_key(request.event_id, request.token, session)
     
+    if getattr(event, "is_cancelled", False):
+        return {
+            "status": "invalid",
+            "error": "EVENT_CANCELLED",
+            "message": "EVENT CANCELLED: All tickets are void."
+        }
+
     ticket = session.exec(select(Ticket).where(Ticket.id == request.ticket_id).with_for_update()).first()
     if not ticket or ticket.order.event_id != request.event_id:
         raise HTTPException(status_code=404, detail="Ticket not found.")
         
+    if ticket.status in ["refunded", "cancelled"]:
+        return {
+            "status": "invalid",
+            "error": "TICKET_REFUNDED",
+            "message": f"TICKET VOID: This ticket has been {ticket.status}."
+        }
+
     if ticket.status == "checked_in":
         return {"status": "already_used"}
         
@@ -182,6 +210,9 @@ def manual_check_in(request: ManualCheckInRequest, session: Session = Depends(ge
 @router.post("/cash-walk-up")
 def cash_walk_up(request: CashWalkUpRequest, session: Session = Depends(get_session)):
     event = _validate_scanner_key(request.event_id, request.token, session)
+
+    if getattr(event, "is_cancelled", False):
+        raise HTTPException(status_code=400, detail="Cannot process walk-ups for a cancelled event.")
     
     if request.quantity <= 0:
         raise HTTPException(status_code=400, detail="Invalid quantity")

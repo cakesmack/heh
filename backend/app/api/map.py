@@ -22,6 +22,7 @@ def list_map_venues(
         select(Event.venue_id, func.count(Event.id).label("upcoming_count"))
         .where(Event.date_end >= today)
         .where(Event.status == "published")
+        .where(Event.is_cancelled == False)
         .group_by(Event.venue_id)
         .subquery()
     )

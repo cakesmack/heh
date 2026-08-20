@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field, BeforeValidator, model_validator
 from typing import Annotated
 
 from app.schemas.category import CategoryResponse
-from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
 from app.schemas.venue import VenueResponse
 from app.schemas.organizer import OrganizerResponse
@@ -174,6 +173,9 @@ class EventUpdate(BaseModel):
     is_ticketing_enabled: Optional[bool] = None
     pass_fees_to_buyer: Optional[bool] = None
     ticket_tiers: Optional[List[TicketTierCreate]] = None
+    # Cancellation
+    is_cancelled: Optional[bool] = None
+    cancellation_reason: Optional[str] = None
     # SEO Overrides
     seo_title: Optional[str] = Field(None, max_length=120)
     seo_description: Optional[str] = Field(None, max_length=500)
@@ -227,6 +229,12 @@ class EventResponse(BaseModel):
     address_full: Optional[str] = None
     is_ticketing_enabled: bool = False
     pass_fees_to_buyer: bool = False
+
+    # Cancellation & Rescheduling
+    is_cancelled: bool = False
+    cancellation_reason: Optional[str] = None
+    cancelled_at: Optional[datetime] = None
+    previous_date_start: Optional[datetime] = None
     
     # Phase 2.3 additions
     organizer_profile_id: Optional[UUID] = None

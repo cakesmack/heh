@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 class OnboardRequest(BaseModel):
     organizer_id: Optional[str] = None
+    return_url: Optional[str] = None
+    refresh_url: Optional[str] = None
 
 @router.post("/request-access")
 @router.post("/request-access/")
@@ -25,29 +27,38 @@ def request_seller_access(
     session: Session = Depends(get_session)
 ):
     """
-    Request access to become an event seller.
+    Request access to become an event seller. Immediately auto-approves the user for seller capability.
     """
-    if current_user.seller_tier == 2 or current_user.seller_status == "approved":
-        return {"message": "You are already an approved seller."}
-        
-    if current_user.seller_status == "requested":
-        return {"message": "Your request is already pending review."}
-        
-    current_user.seller_status = "requested"
+    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Native ticketing is currently in private testing."
+        )
+
+    current_user.seller_tier = 2
+    if current_user.seller_status not in ["frozen", "rejected"]:
+        current_user.seller_status = "approved"
     session.add(current_user)
     session.commit()
-    return {"message": "Seller access requested successfully."}
+    session.refresh(current_user)
+    return {
+        "message": "Seller access activated successfully.",
+        "seller_tier": current_user.seller_tier,
+        "seller_status": current_user.seller_status
+    }
 
 @router.get("/status")
 @router.get("/status/")
 @router.get("/stripe-connect/status")
 @router.get("/stripe-connect/status/")
 def get_seller_status(
+    organizer_id: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ) -> Dict[str, Any]:
     """
     Get the current user's seller tier, approval status, and linked Stripe account status.
+    If organizer_id is provided, targets that specific Organizer/Group profile.
     Automatically syncs live status with Stripe if an account exists.
     """
     organizers = session.exec(select(Organizer).where(Organizer.user_id == current_user.id)).all()
@@ -62,13 +73,23 @@ def get_seller_status(
                 
     session.refresh(current_user)
     
-    primary_organizer = organizers[0] if organizers else None
+    # Target entity selection
+    target_organizer: Optional[Organizer] = None
+    if organizer_id:
+        target_organizer = next((o for o in organizers if o.id == organizer_id), None)
+        if not target_organizer:
+            target_organizer = session.get(Organizer, organizer_id)
+            if target_organizer and target_organizer.user_id != current_user.id and not current_user.is_admin:
+                target_organizer = None
+    else:
+        target_organizer = organizers[0] if organizers else None
+        
     stripe_info = None
-    if primary_organizer and primary_organizer.stripe_account:
+    if target_organizer and target_organizer.stripe_account:
         stripe_info = {
-            "stripe_account_id": primary_organizer.stripe_account.stripe_account_id,
-            "charges_enabled": primary_organizer.stripe_account.charges_enabled,
-            "payouts_enabled": primary_organizer.stripe_account.payouts_enabled
+            "stripe_account_id": target_organizer.stripe_account.stripe_account_id,
+            "charges_enabled": target_organizer.stripe_account.charges_enabled,
+            "payouts_enabled": target_organizer.stripe_account.payouts_enabled
         }
         
     charges_enabled = bool(stripe_info and stripe_info.get("charges_enabled"))
@@ -81,8 +102,8 @@ def get_seller_status(
         "is_connected": is_connected,
         "charges_enabled": charges_enabled,
         "payouts_enabled": payouts_enabled,
-        "organizer_id": primary_organizer.id if primary_organizer else None,
-        "organizer_name": primary_organizer.name if primary_organizer else None,
+        "organizer_id": target_organizer.id if target_organizer else (organizer_id or None),
+        "organizer_name": target_organizer.name if target_organizer else None,
         "stripe_account": stripe_info,
         "organizers": [
             {
@@ -103,15 +124,26 @@ def get_seller_status(
 @router.post("/stripe-connect/onboard/")
 def onboard_stripe_connect(
     organizer_id: Optional[str] = Query(None),
+    return_url: Optional[str] = Query(None),
+    refresh_url: Optional[str] = Query(None),
     body: Optional[OnboardRequest] = None,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
     """
     Create a Stripe Connect account (if needed) and return the onboarding link.
+    Supports targeting a group via organizer_id and customizing return/refresh URLs.
     """
     target_organizer_id = organizer_id or (body.organizer_id if body else None)
+    custom_return = return_url or (body.return_url if body else None)
+    custom_refresh = refresh_url or (body.refresh_url if body else None)
     
+    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Native ticketing is currently in private testing."
+        )
+
     # Auto-approve seller tier if initiating Stripe Connect onboarding
     if current_user.seller_tier < 2 or current_user.seller_status != "approved":
         current_user.seller_tier = 2
@@ -123,7 +155,7 @@ def onboard_stripe_connect(
     # Find or auto-create organizer profile
     if target_organizer_id:
         organizer = session.get(Organizer, target_organizer_id)
-        if not organizer or organizer.user_id != current_user.id:
+        if not organizer or (organizer.user_id != current_user.id and not current_user.is_admin):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Organizer profile not found or not owned by you."
@@ -161,14 +193,14 @@ def onboard_stripe_connect(
             
     # Generate Onboarding Link
     base_url = settings.FRONTEND_URL.rstrip("/")
-    refresh_url = f"{base_url}/organizers/payouts"
-    return_url = f"{base_url}/organizers/payouts"
+    resolved_refresh = custom_refresh or f"{base_url}/organizers/payouts"
+    resolved_return = custom_return or f"{base_url}/organizers/payouts"
     
     try:
         onboarding_url = stripe_service.create_account_onboarding_link(
             stripe_account_id=stripe_account.stripe_account_id,
-            refresh_url=refresh_url,
-            return_url=return_url
+            refresh_url=resolved_refresh,
+            return_url=resolved_return
         )
         return {"url": onboarding_url}
     except Exception as e:

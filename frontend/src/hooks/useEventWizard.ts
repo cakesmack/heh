@@ -270,7 +270,7 @@ export function clearDraft(): void {
 
 // ─── API Payload Builder ───────────────────────────────────
 // Transforms wizard state into the exact JSON the backend expects.
-export function buildEventPayload(data: WizardFormData) {
+export function buildEventPayload(data: WizardFormData, isAdmin: boolean = true) {
   // Calculate dates for multi-session events
   let calculatedDateStart = data.date_start;
   let calculatedDateEnd = data.date_end;
@@ -294,6 +294,8 @@ export function buildEventPayload(data: WizardFormData) {
     }
   }
 
+  const ticketingAllowed = Boolean(isAdmin && data.is_ticketing_enabled);
+
   return {
     title: data.title,
     description: data.description || undefined,
@@ -306,9 +308,9 @@ export function buildEventPayload(data: WizardFormData) {
     date_end: calculatedDateEnd,
     price: data.price,
     image_url: data.image_url || undefined,
-    is_ticketing_enabled: data.is_ticketing_enabled,
-    pass_fees_to_buyer: data.pass_fees_to_buyer,
-    ticket_tiers: data.is_ticketing_enabled ? data.ticket_tiers : undefined,
+    is_ticketing_enabled: ticketingAllowed,
+    pass_fees_to_buyer: ticketingAllowed ? data.pass_fees_to_buyer : false,
+    ticket_tiers: ticketingAllowed ? data.ticket_tiers : undefined,
     ticket_url: data.ticket_url || undefined,
     website_url: data.website_url || undefined,
     is_all_day: data.is_all_day,
@@ -429,6 +431,7 @@ export function parseInitialEventData(data: any): WizardFormData {
 export interface UseEventWizardOptions {
   initialData?: any;
   isEditMode?: boolean;
+  isAdmin?: boolean;
 }
 
 export interface UseEventWizardReturn {
@@ -449,7 +452,7 @@ export interface UseEventWizardReturn {
 }
 
 export function useEventWizard(options: UseEventWizardOptions = {}): UseEventWizardReturn {
-  const { initialData, isEditMode = false } = options;
+  const { initialData, isEditMode = false, isAdmin = false } = options;
 
   const getInitialValues = useCallback(() => {
     if (isEditMode && initialData) {
@@ -509,7 +512,7 @@ export function useEventWizard(options: UseEventWizardOptions = {}): UseEventWiz
     }
   }, [isEditMode, currentStep]);
 
-  const isTicketingEnabled = watch('is_ticketing_enabled');
+  const isTicketingEnabled = Boolean(isAdmin && watch('is_ticketing_enabled'));
   const steps = getWizardSteps(isTicketingEnabled);
 
   const validateCurrentStep = useCallback((): Record<string, string> | null => {

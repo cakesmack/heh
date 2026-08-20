@@ -41,6 +41,7 @@ def test_seller_status_and_onboarding_flow(test_db: Session):
         username="highlandorg",
         seller_tier=1,
         seller_status="none",
+        is_admin=True,
     )
     test_db.add(user)
     test_db.commit()

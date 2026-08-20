@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Union, Tuple
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field as PydanticField
+from pydantic import BaseModel, EmailStr, Field as PydanticField
 from sqlmodel import Session, select, or_
 from app.core.database import get_session
 from app.api.auth import get_current_user
@@ -26,12 +26,13 @@ def verify_admin(user: User):
 def search_orders(q: str = Query(..., min_length=2), current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     verify_admin(current_user)
     
-    # Search by email, name, or order_ref
+    # Search by email, name, order_ref, or payment intent id / last4
     statement = select(Order).where(
         or_(
             Order.buyer_email.ilike(f"%{q}%"),
             Order.buyer_name.ilike(f"%{q}%"),
-            Order.order_ref.ilike(f"%{q}%")
+            Order.order_ref.ilike(f"%{q}%"),
+            Order.stripe_payment_intent_id.ilike(f"%{q}%")
         )
     ).limit(50)
     
@@ -130,6 +131,50 @@ def force_refund(order_id: str, current_user: User = Depends(get_current_user), 
     session.commit()
     
     return {"status": "success", "message": "Force refund processed successfully."}
+
+class UpdateBuyerEmailRequest(BaseModel):
+    new_email: EmailStr
+
+@router.put("/orders/{order_id}/update-email")
+async def update_buyer_email(
+    order_id: str,
+    payload: UpdateBuyerEmailRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    verify_admin(current_user)
+    
+    order = session.exec(select(Order).where(Order.id == order_id).with_for_update()).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    old_email = order.buyer_email
+    new_email_clean = payload.new_email.strip().lower()
+    order.buyer_email = new_email_clean
+    order.updated_at = datetime.utcnow()
+    
+    # Associate user account if matching user exists
+    matching_user = session.exec(select(User).where(func.lower(User.email) == new_email_clean)).first()
+    if matching_user:
+        order.buyer_user_id = matching_user.id
+        
+    session.add(order)
+    session.commit()
+    session.refresh(order)
+    
+    # Trigger a fresh ticket confirmation email with valid QR tokens
+    from app.services.stripe_service import dispatch_order_confirmation_emails
+    email_dispatched = await dispatch_order_confirmation_emails(order, session)
+    
+    return {
+        "status": "success",
+        "order_id": order.id,
+        "order_ref": order.order_ref,
+        "old_email": old_email,
+        "new_email": order.buyer_email,
+        "email_dispatched": email_dispatched,
+        "message": f"Buyer email updated to {order.buyer_email} and confirmation email re-dispatched."
+    }
 
 @router.get("/events/ticketed")
 def get_ticketed_events(current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):

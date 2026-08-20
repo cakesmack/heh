@@ -1871,6 +1871,22 @@ export const api = {
     },
   },
 
+  sellers: {
+    getStatus: async (organizerId?: string | null): Promise<SellerStatusResponse> => {
+      const query = organizerId ? `?organizer_id=${encodeURIComponent(organizerId)}` : '';
+      return apiFetch<SellerStatusResponse>(`/api/sellers/status${query}`);
+    },
+    onboard: async (organizerId?: string | null, returnUrl?: string): Promise<{ url: string }> => {
+      return apiFetch<{ url: string }>('/api/sellers/stripe-connect/onboard', {
+        method: 'POST',
+        body: JSON.stringify({
+          organizer_id: organizerId || undefined,
+          return_url: returnUrl || undefined,
+        }),
+      });
+    },
+  },
+
   // Generic methods
   get: async <T>(endpoint: string): Promise<T> => {
     return apiFetch<T>(endpoint);
@@ -1882,6 +1898,33 @@ export const api = {
     });
   },
 };
+
+export interface SellerStatusResponse {
+  seller_tier: number;
+  seller_status: string;
+  is_connected: boolean;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  organizer_id: string | null;
+  organizer_name: string | null;
+  stripe_account?: {
+    stripe_account_id: string;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+  } | null;
+  organizers?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    stripe_account?: {
+      stripe_account_id: string;
+      charges_enabled: boolean;
+      payouts_enabled: boolean;
+    } | null;
+  }>;
+}
+
+export const sellersAPI = api.sellers;
 
 export default api;
 // ============================================================

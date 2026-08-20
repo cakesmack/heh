@@ -63,7 +63,11 @@ def get_organizer_dashboard(event_id: str, current_user: User = Depends(get_curr
         })
         
     return {
+        "event_id": event.id,
         "event_title": event.title,
+        "is_cancelled": getattr(event, "is_cancelled", False),
+        "cancellation_reason": getattr(event, "cancellation_reason", None),
+        "cancelled_at": event.cancelled_at.isoformat() if getattr(event, "cancelled_at", None) else None,
         "gross_revenue": gross_revenue,
         "platform_fees": platform_fees,
         "net_payout": net_payout,
@@ -545,5 +549,31 @@ def get_single_invoice_detail(
             "currency": "GBP"
         }
     }
+
+
+@router.post("/events/{event_id}/cancel")
+@router.post("/events/{event_id}/cancel/")
+def cancel_ticketing_event(
+    event_id: str,
+    reason: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Cancels an event, stops ticket sales, automatically issues face-value refunds for all paid orders,
+    cancels free RSVPs, and dispatches email notifications to buyers.
+    """
+    event = verify_organizer_access(event_id, current_user, session)
+    if event.is_cancelled:
+        return {
+            "success": True,
+            "message": "Event is already cancelled",
+            "event_id": event.id,
+            "is_cancelled": True
+        }
+
+    from app.services.stripe_service import process_event_cancellation_and_refunds
+    result = process_event_cancellation_and_refunds(str(event.id), reason=reason, session=session)
+    return result
 
 

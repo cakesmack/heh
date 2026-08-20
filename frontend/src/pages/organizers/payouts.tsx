@@ -70,8 +70,6 @@ function PayoutsContent() {
     if (!authLoading) {
       if (!isAuthenticated) {
         router.replace('/login?redirect=/organizers/payouts');
-      } else if (!isApprovedSeller(user)) {
-        router.replace('/403');
       } else {
         fetchStatus();
       }

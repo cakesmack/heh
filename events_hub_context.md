@@ -326,3 +326,17 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
 3. **The map dynamically imports `GoogleMapView`** with `ssr: false`. Do not attempt to server-render it.
 4. **Coordinate safety:** All events are filtered for valid `latitude`/`longitude` before being passed to the map to prevent render crashes.
 5. **Mobile vs Desktop divergence:** Mobile shows a bottom-card modal on marker tap; Desktop scrolls the sidebar list. Both paths must be maintained.
+
+---
+
+## 6. Event Publishing & Moderation Architecture
+
+- **Instant Self-Serve Publishing**: Registered users can publish events immediately without manual probation gate delays or 5-event thresholds. Clean submissions are assigned `status = 'published'` instantly and appear in public feeds, search, and maps.
+- **Automated Content & Moderation Filter**: All event submissions undergo automated content and profanity checks (`check_content_with_reason` on title, description, location, tags) and duplicate risk detection. Flagged submissions are quarantined in `status = 'pending_review'` with a detailed `moderation_reason`.
+- **Asynchronous Admin Email Notifications**:
+  - **Published Event Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` with event title, date/time, venue/location, organizer name, creator email, live link, and admin management link.
+  - **Quarantine Moderation Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` detailing flagged keywords, reason, event ID, organizer name, creator email, and direct link to the admin moderation queue.
+- **Native Ticketing Engine (Admin-Only Private Beta)**:
+  - Feature flag `TICKETING_PUBLIC_ENABLED` (default `False` in `backend/app/core/config.py`).
+  - Native ticketing creation, seller onboarding, and ticket tier management are restricted to platform administrators (`user.is_admin == True`) while in private testing. Public ticket purchases and checkout intents for admin-ticketed events remain fully operational.
+

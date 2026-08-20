@@ -10,14 +10,12 @@ import { useRouter } from 'next/router';
 import { toast } from 'react-hot-toast';
 import { api } from '@/lib/api';
 /**
- * Check if a user is an approved Tier 2 seller or Admin
+ * Check if a user is eligible to sell.
+ * Native ticketing engine is currently in Admin-Only Private Beta.
  */
 export function isApprovedSeller(user?: User | null): boolean {
   if (!user) return false;
-  if (user.is_admin) return true;
-  return (user.seller_tier !== undefined && user.seller_tier >= 2) || 
-         user.seller_status === 'active' || 
-         user.seller_status === 'approved';
+  return Boolean(user.is_admin || (user as any).role === 'admin');
 }
 
 interface AuthContextType {

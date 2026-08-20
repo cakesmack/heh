@@ -652,8 +652,17 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                     <span className="text-7xl">🎉</span>
                   </div>
                 )}
+                {/* Cancelled Badge */}
+                {event.is_cancelled && (
+                  <div className="absolute top-4 left-4 z-30">
+                    <div className="px-3.5 py-1.5 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-2xl flex items-center gap-1.5 border border-red-400/30 animate-pulse">
+                      <span>⚠️</span>
+                      EVENT CANCELLED
+                    </div>
+                  </div>
+                )}
                 {/* Featured Badge */}
-                {event.featured && (
+                {event.featured && !event.is_cancelled && (
                   <div className="absolute top-4 left-4 z-20">
                     <div className="px-3 py-1 bg-amber-400 text-amber-950 text-xs font-bold uppercase tracking-widest rounded-full shadow-lg flex items-center gap-1.5">
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -668,10 +677,28 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
 
             {/* ─── Right Column: Title, Logistics, Conversion Box ─── */}
             <div className="w-full lg:w-[60%] flex flex-col">
+              {/* Event Cancelled Banner Above Title */}
+              {event.is_cancelled && (
+                <div className="mb-3 inline-flex items-center gap-2 px-3 py-1 bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-black uppercase tracking-wider rounded-lg w-fit">
+                  <span>🚫</span>
+                  <span>Event Cancelled</span>
+                </div>
+              )}
+
               {/* H1 Title */}
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight break-words">
+              <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight break-words ${event.is_cancelled ? 'line-through opacity-80' : ''}`}>
                 {event.title}
               </h1>
+
+              {/* Cancellation Reason Box */}
+              {event.is_cancelled && (
+                <div className="mt-4 p-4 rounded-xl bg-red-950/40 border border-red-500/30 text-sm">
+                  <p className="font-bold text-red-200 uppercase text-xs tracking-wider mb-1">Cancellation Notice</p>
+                  <p className="text-slate-300 leading-relaxed">
+                    {event.cancellation_reason ? `"${event.cancellation_reason}"` : "This event has been cancelled by the organizer. All ticket holders have received automated refunds."}
+                  </p>
+                </div>
+              )}
 
               {/* Organizer Info (Moved up) */}
               {event.organizer_profile && (
@@ -846,7 +873,12 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 </div>
 
                 {/* Primary CTA */}
-                {!isPastEvent && (
+                {event.is_cancelled ? (
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 font-bold text-sm">
+                    <span>🚫</span>
+                    <span>Ticket sales are closed. This event has been cancelled.</span>
+                  </div>
+                ) : !isPastEvent ? (
                   <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3">
                     {event.is_ticketing_enabled ? (
                       <button
@@ -879,7 +911,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       </a>
                     )}
                   </div>
-                )}
+                ) : null}
 
                 {isPastEvent && (
                   <p className="text-sm text-red-400 font-semibold mt-1">This event has ended.</p>
@@ -1380,6 +1412,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
             <TicketTierSelector 
               eventId={event.id}
               tiers={event.ticket_tiers || []}
+              eventDateStart={event.date_start}
               passFeesToBuyer={Boolean(event.pass_fees_to_buyer)}
               onProceed={(items, promoCode, total, breakdown) => {
                 setCheckoutItems(items);

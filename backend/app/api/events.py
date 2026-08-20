@@ -30,9 +30,6 @@ from app.schemas.event import (
     EventUpdate,
     EventResponse,
     EventListResponse,
-    EventResponse,
-    EventListResponse,
-    EventListResponse,
     EventFilter,
     OrganizerProfileResponse,
     MapEventResponse,
@@ -41,8 +38,6 @@ from app.schemas.event import (
 from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
 from app.schemas.venue import VenueResponse
-from app.schemas.tag import TagResponse
-from app.schemas.tag import TagResponse
 from app.services.geolocation import calculate_geohash, haversine_distance, get_bounding_box
 from app.utils.price_age_parser import parse_price_input, parse_age_input
 from app.services.notifications import notification_service
@@ -54,6 +49,8 @@ from app.utils.validators import append_skiddle_affiliate
 import logging
 
 logger = logging.getLogger(__name__)
+from app.core.config import settings
+from app.schemas.ticketing import TicketTierCreate, TicketTierUpdate, TicketTierResponse
 from app.models.organizer import Organizer
 from app.models.group_member import GroupMember, GroupRole
 from app.models.event_claim import EventClaim
@@ -439,7 +436,7 @@ def list_events_map(
     )
     
     # 2. Status Filter
-    query = query.where(Event.status == "published")
+    query = query.where(Event.status == "published", Event.is_cancelled == False)
     
     # 3. Date Filter (Simplified: Overlap logic)
     if not date_from:
@@ -642,8 +639,8 @@ def list_events(
         query = query.where(Event.status.in_(["published", "pending", "rejected", "draft", "pending_moderation", "archived"]))
     else:
         # Public / Guest / Other Users
-        # STRICTLY PUBLISHED
-        query = query.where(Event.status == "published")
+        # STRICTLY PUBLISHED & NOT CANCELLED
+        query = query.where(Event.status == "published", Event.is_cancelled == False)
 
     # Explicit Status Filter (requested via param)
     if status:
@@ -811,7 +808,7 @@ def list_events(
         
         # Apply Status Filter first
         if not is_admin:
-             query = query.where(Event.status == "published")
+             query = query.where(Event.status == "published", Event.is_cancelled == False)
 
         # Join Venue strictly for filtering
         query = query.outerjoin(Venue, Event.venue_id == Venue.id)
@@ -1458,6 +1455,13 @@ async def create_event(
                 until_str = event_data.recurrence_end_date.strftime("%Y%m%dT%H%M%SZ")
                 recurrence_rule += f";UNTIL={until_str}"
     
+    # Gating check: Native Ticketing Private Beta
+    if (event_data.is_ticketing_enabled or (event_data.ticket_tiers and len(event_data.ticket_tiers) > 0)) and not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Native ticketing is currently in private testing."
+        )
+
     # Parse price and age inputs
     price_display, min_price = parse_price_input(event_data.price)
     age_restriction_str, min_age = parse_age_input(event_data.age_restriction)
@@ -1517,40 +1521,37 @@ async def create_event(
 
     # --- 2. Content Moderation (Profanity) ---
     content_to_check = f"{event_data.title or ''} {event_data.description or ''}"
+    # --- 1. Duplicate Detection ---
+    from app.services.duplicate_detection import check_duplicate_risk
+    from app.models.report import Report
+    import json
+    
+    risk_score, meta = check_duplicate_risk(new_event, session)
+    is_duplicate_risk = risk_score >= 75
+    if is_duplicate_risk:
+        logger.info(f"[DUPLICATE_DETECT] High Risk ({risk_score}%) detected for '{new_event.title}'")
+
+    # --- 2. Content Moderation (Profanity / Offensive Language) ---
+    content_to_check = f"{event_data.title or ''} {event_data.description or ''}"
     if event_data.tags:
         content_to_check += " " + " ".join(event_data.tags)
+    if event_data.location_name:
+        content_to_check += f" {event_data.location_name}"
     
     moderation_result = check_content_with_reason(content_to_check)
     is_offensive = moderation_result["flagged"]
     moderation_reason = moderation_result["reason"]
-    
-    # --- 3. Link Warden ---
-    import re
-    link_pattern = re.compile(
-        r'(https?://|www\.|\.com|\.co\.uk|\.org|\.net|\.io|\.info|\.biz)',
-        re.IGNORECASE
-    )
-    content_for_link_check = f"{event_data.title or ''} {event_data.description or ''}"
-    contains_link = bool(link_pattern.search(content_for_link_check))
-    
-    # --- 4. Auto-Approval Check ---
-    is_auto_approved = (
-        current_user.is_admin or
-        current_user.is_trusted_organizer or
-        current_user.trust_level >= 5
-    )
 
-    # --- Status Decision Tree ---
-    # PRIORITY 1: Content Moderation (Offensive/Illegal)
+    # --- Status Decision Tree: Instant Self-Serve with Automated Moderation Filter ---
+    # PRIORITY 1: Content Moderation / Profanity (Quarantined in pending_review)
     if is_offensive:
-        new_event.status = "pending" # Keep as pending for admin to review/reject? Or rejected?
-        # Original code said "pending" with reason.
+        new_event.status = "pending_review"
         new_event.moderation_reason = moderation_reason
-        logger.info(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged: {moderation_reason}")
+        logger.info(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged for moderation: {moderation_reason}")
         
-    # PRIORITY 2: Duplicate Detection (CRITICAL UPDATE)
+    # PRIORITY 2: Duplicate Detection (Quarantined in pending_review)
     elif is_duplicate_risk:
-        new_event.status = "pending_moderation"
+        new_event.status = "pending_review"
         new_event.moderation_reason = "Potential Duplicate"
         
         # Create Moderation Report
@@ -1563,23 +1564,13 @@ async def create_event(
             reporter_id="system" 
         )
         session.add(report)
-        logger.info(f"[DUPLICATE_DETECT] Event '{new_event.title}' flagged as duplicate. FORCE STATUS: pending_moderation")
-
-    # PRIORITY 3: External Links (Anti-Spam)
-    elif contains_link and not current_user.is_admin and not current_user.is_trusted_organizer:
-        new_event.status = "pending"
-        new_event.moderation_reason = "Contains External Link"
-        logger.info(f"[LINK_WARDEN] Event '{new_event.title}' pending (link detected)")
+        logger.info(f"[DUPLICATE_DETECT] Event '{new_event.title}' flagged as duplicate. FORCE STATUS: pending_review")
         
-    # PRIORITY 4: Auto-Approval (Trusted Users)
-    elif is_auto_approved:
-        new_event.status = "published"
-        logger.info(f"[AUTO_APPROVE] Event '{new_event.title}' auto-approved.")
-        
-    # Default: Standard Review
+    # PRIORITY 3: Clean Submission -> Instantly Published!
     else:
-        new_event.status = "pending"
-        logger.info(f"[MODERATION] Event '{new_event.title}' pending (standard review).")
+        new_event.status = "published"
+        new_event.moderation_reason = None
+        logger.info(f"[AUTO_PUBLISH] Event '{new_event.title}' passed moderation checks and is published live.")
     session.add(new_event)
     try:
         session.flush()  # Get the event ID
@@ -1647,11 +1638,6 @@ async def create_event(
     # If no custom map point is set, calculating centroid of all participating venues
     if new_event.map_display_lat is None or new_event.map_display_lng is None:
         if event_data.participating_venue_ids:
-            # We have IDs, fetch the venues to get coords
-            # Optimization: We can fetch them in one batch query instead of loop above, 
-            # but usually this list is small (<20).
-            # We can re-fetch or use session cache.
-            # Let's query venues by ID list
             p_venue_uuids = [normalize_uuid(vid) for vid in event_data.participating_venue_ids]
             p_venues = session.exec(select(Venue).where(Venue.id.in_(p_venue_uuids))).all()
             
@@ -1703,8 +1689,6 @@ async def create_event(
 
     # Generate recurring event instances based on weekdays selection
     if new_event.is_recurring:
-        # Use centralized recurrence service
-        # Fallback to defaults if weekdays not provided (service handles it)
         from app.services.recurrence import generate_recurring_instances
         
         generate_recurring_instances(
@@ -1714,26 +1698,33 @@ async def create_event(
             recurrence_end_date=event_data.recurrence_end_date
         )
     elif new_event.is_recurring and new_event.recurrence_rule:
-        # Fallback to old RRULE-based generation if weekdays not provided
         try:
             generate_recurring_instances(session, new_event, window_days=90)
         except Exception as e:
-            print(f"Error generating instances for {new_event.id}: {e}")
+            logger.error(f"Error generating instances for {new_event.id}: {e}")
 
-    # Send appropriate notifications based on approval status
-    if current_user.email:
-        try:
-            # BUG FIX: Check actual status, not just user permission flag.
-            # Even trusted users can be flagged for moderation (content/duplicates).
-            if new_event.status == 'published':
-                # Get venue name for notification
-                v_name = new_event.location_name
-                if new_event.venue_id:
-                    v = session.get(Venue, new_event.venue_id)
-                    if v:
-                        v_name = v.name
+    # Send appropriate notifications based on approval / moderation status
+    v_name = new_event.location_name
+    if new_event.venue_id:
+        v = session.get(Venue, new_event.venue_id)
+        if v:
+            v_name = v.name
 
-                # Send auto-approval email via Resend
+    organizer_display_name = (
+        (new_event.organizer_profile.name if new_event.organizer_profile else None) or
+        getattr(current_user, "display_name", None) or
+        getattr(current_user, "username", None) or
+        getattr(current_user, "email", None) or
+        "Organizer"
+    )
+    date_display_str = new_event.date_start.strftime("%d %b %Y, %H:%M") if new_event.date_start else "TBD"
+    venue_display_str = v_name or "TBD"
+    user_email_str = current_user.email or "N/A"
+
+    if new_event.status == "published":
+        # 1. User Confirmation Email
+        if current_user.email:
+            try:
                 await resend_email_service.send_event_approved(
                     to_email=current_user.email,
                     event_title=new_event.title,
@@ -1742,38 +1733,63 @@ async def create_event(
                     is_auto_approved=True
                 )
                 logger.info(f"Auto-approval email sent to {mask_email(current_user.email)} for event {new_event.id}")
-                
-                # Send EMAIL alert to ADMIN_EMAIL (New Event Posted)
-                background_tasks.add_task(
-                    resend_email_service.send_new_event_notification,
-                    new_event.title,
-                    str(new_event.id),
-                    v_name
+            except Exception as e:
+                logger.error(f"Error sending event approval email: {e}")
+        
+        # 2. Admin Alert: New Event Published
+        if background_tasks:
+            background_tasks.add_task(
+                resend_email_service.send_new_event_notification,
+                event_title=new_event.title,
+                event_id=str(new_event.id),
+                organizer_name=organizer_display_name,
+                date_time_str=date_display_str,
+                venue_name=venue_display_str,
+                user_email=user_email_str
+            )
+        else:
+            try:
+                await resend_email_service.send_new_event_notification(
+                    event_title=new_event.title,
+                    event_id=str(new_event.id),
+                    organizer_name=organizer_display_name,
+                    date_time_str=date_display_str,
+                    venue_name=venue_display_str,
+                    user_email=user_email_str
                 )
-            else:
-                # Notify user their event is under review (fallback to notification_service)
-                notification_service.notify_event_submission(current_user.email, new_event.title)
+            except Exception as e:
+                logger.error(f"Error sending new event admin notification: {e}")
 
-                # Notify admins about new pending event
-                admin_users = session.exec(select(User).where(User.is_admin == True)).all()
-                admin_emails = [u.email for u in admin_users if u.email]
-                if admin_emails:
-                    notification_service.notify_admin_new_pending_event(
-                        admin_emails,
-                        new_event.title,
-                        current_user.email
-                    )
-                
-                # Send EMAIL alert to ADMIN_EMAIL (New Event Posted)
-                background_tasks.add_task(
-                    resend_email_service.send_new_event_notification,
-                    new_event.title,
-                    str(new_event.id),
-                    current_user.username or current_user.email
+    else:
+        # Event is Quarantined for Moderation (status == 'pending_review')
+        if current_user.email:
+            try:
+                notification_service.notify_event_submission(current_user.email, new_event.title)
+            except Exception as e:
+                logger.error(f"Error sending submission pending notification: {e}")
+
+        # Admin Alert: ⚠️ Event Flagged for Moderation
+        quarantine_reason = new_event.moderation_reason or "Flagged by automated moderation filter"
+        if background_tasks:
+            background_tasks.add_task(
+                resend_email_service.send_event_quarantined_alert,
+                event_title=new_event.title,
+                event_id=str(new_event.id),
+                reason=quarantine_reason,
+                organizer_name=organizer_display_name,
+                user_email=user_email_str
+            )
+        else:
+            try:
+                await resend_email_service.send_event_quarantined_alert(
+                    event_title=new_event.title,
+                    event_id=str(new_event.id),
+                    reason=quarantine_reason,
+                    organizer_name=organizer_display_name,
+                    user_email=user_email_str
                 )
-        except Exception as e:
-            # Log error but don't fail the request - event creation succeeded
-            logger.error(f"Failed to send notification email for event {new_event.id}: {e}")
+            except Exception as e:
+                logger.error(f"Error sending quarantined event admin notification: {e}")
 
     return build_event_response(new_event, session, current_user=current_user)
 
@@ -2004,6 +2020,13 @@ async def update_event(
             detail="Not authorized to update this event"
         )
 
+    # Gating check: Native Ticketing Private Beta
+    if (event_data.is_ticketing_enabled or (event_data.ticket_tiers is not None and len(event_data.ticket_tiers) > 0)) and not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Native ticketing is currently in private testing."
+        )
+
     # Update fields (exclude tags, participating_venue_ids, showtimes, and explicit dates for special handling)
     update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring", "ticket_tiers"})
 
@@ -2018,9 +2041,15 @@ async def update_event(
     logger.info(f"[UPDATE_EVENT] Received update_data keys: {list(update_data.keys())}")
 
     # 1. Priority Update: Always update dates if provided
+    original_start_date = event.date_start
+    date_rescheduled = False
+
     if event_data.date_start is not None:
         local_start = to_london_naive(event_data.date_start)
         logger.info(f"[UPDATE_EVENT] explicit date_start: {event_data.date_start} -> local_naive: {local_start}")
+        if original_start_date and local_start != original_start_date:
+            date_rescheduled = True
+            event.previous_date_start = original_start_date
         event.date_start = local_start
     
     if event_data.date_end is not None:
@@ -2498,6 +2527,14 @@ async def update_event(
     except Exception as e:
         logger.error(f"Failed to send event status update emails: {e}")
 
+    # Trigger reschedule notifications if date changed
+    if date_rescheduled:
+        try:
+            from app.services.stripe_service import trigger_rescheduled_notification_emails
+            trigger_rescheduled_notification_emails(str(event.id), original_start_date, event.date_start, session)
+        except Exception as resched_err:
+            logger.error(f"Failed to trigger rescheduled emails for event {event.id}: {resched_err}")
+
     return build_event_response(event, session, current_user=current_user)
 
 
@@ -2737,4 +2774,147 @@ def events_global_search(
     """
     from app.api.search import global_search
     return global_search(q=q, limit=limit, session=session)
+
+
+# -------------------------------------------------------------
+# Ticket Tier Management Endpoints (Admin-Only Private Beta)
+# -------------------------------------------------------------
+@router.post("/{event_id}/tiers", response_model=TicketTierResponse, status_code=status.HTTP_201_CREATED)
+def create_event_ticket_tier(
+    event_id: str,
+    tier_data: TicketTierCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Create a new ticket tier for an event. Gated to admins during private beta testing.
+    """
+    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Native ticketing is currently in private testing."
+        )
+
+    event = session.exec(select(Event).where(Event.slug == event_id)).first()
+    if not event:
+        event = session.get(Event, normalize_uuid(event_id))
+    if not event:
+        event = session.get(Event, event_id)
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    user_id_str = str(current_user.id).replace("-", "")
+    organizer_id_str = str(event.organizer_id).replace("-", "") if event.organizer_id else ""
+    if organizer_id_str != user_id_str and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
+
+    tier_id = tier_data.id or normalize_uuid(uuid4())
+    new_tier = TicketTier(
+        id=tier_id,
+        event_id=event.id,
+        name=tier_data.name,
+        price=tier_data.price,
+        quantity_available=tier_data.quantity_available,
+        max_per_order=tier_data.max_per_order,
+        sale_start=tier_data.sale_start,
+        sale_end=tier_data.sale_end,
+        is_hidden=tier_data.is_hidden
+    )
+    event.is_ticketing_enabled = True
+    session.add(new_tier)
+    session.add(event)
+    session.commit()
+    session.refresh(new_tier)
+    return new_tier
+
+
+@router.put("/{event_id}/tiers/{tier_id}", response_model=TicketTierResponse)
+def update_event_ticket_tier(
+    event_id: str,
+    tier_id: str,
+    tier_data: TicketTierUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Update a ticket tier for an event. Gated to admins during private beta testing.
+    """
+    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Native ticketing is currently in private testing."
+        )
+
+    event = session.exec(select(Event).where(Event.slug == event_id)).first()
+    if not event:
+        event = session.get(Event, normalize_uuid(event_id))
+    if not event:
+        event = session.get(Event, event_id)
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    user_id_str = str(current_user.id).replace("-", "")
+    organizer_id_str = str(event.organizer_id).replace("-", "") if event.organizer_id else ""
+    if organizer_id_str != user_id_str and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
+
+    tier = session.get(TicketTier, tier_id)
+    if not tier or tier.event_id != event.id:
+        raise HTTPException(status_code=404, detail="Ticket tier not found for this event")
+
+    update_dict = tier_data.model_dump(exclude_unset=True)
+    for field, val in update_dict.items():
+        setattr(tier, field, val)
+
+    tier.updated_at = datetime.utcnow()
+    session.add(tier)
+    session.commit()
+    session.refresh(tier)
+    return tier
+
+
+@router.delete("/{event_id}/tiers/{tier_id}", status_code=status.HTTP_200_OK)
+def delete_event_ticket_tier(
+    event_id: str,
+    tier_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Delete or hide a ticket tier. Gated to admins during private beta testing.
+    """
+    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Native ticketing is currently in private testing."
+        )
+
+    event = session.exec(select(Event).where(Event.slug == event_id)).first()
+    if not event:
+        event = session.get(Event, normalize_uuid(event_id))
+    if not event:
+        event = session.get(Event, event_id)
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    user_id_str = str(current_user.id).replace("-", "")
+    organizer_id_str = str(event.organizer_id).replace("-", "") if event.organizer_id else ""
+    if organizer_id_str != user_id_str and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
+
+    tier = session.get(TicketTier, tier_id)
+    if not tier or tier.event_id != event.id:
+        raise HTTPException(status_code=404, detail="Ticket tier not found for this event")
+
+    if tier.quantity_sold > 0:
+        tier.is_hidden = True
+        session.add(tier)
+    else:
+        session.delete(tier)
+
+    session.commit()
+    return {"message": "Ticket tier removed successfully"}
 

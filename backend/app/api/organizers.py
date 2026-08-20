@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel
 from sqlmodel import Session, select, func
 
 from app.core.database import get_session
@@ -40,7 +41,8 @@ def list_organizers(
             Event,
             (Event.organizer_profile_id == Organizer.id) &
             (Event.date_end >= datetime.utcnow()) &
-            (Event.status == "published")
+            (Event.status == "published") &
+            (Event.is_cancelled == False)
         )
     )
     
@@ -140,7 +142,8 @@ def get_organizer_by_slug(
         select(func.count(func.distinct(Event.title))).select_from(Event).where(
             Event.organizer_profile_id == organizer.id,
             Event.date_end >= datetime.utcnow(),
-            Event.status == "published"
+            Event.status == "published",
+            Event.is_cancelled == False
         )
     ).one() or 0
     
@@ -325,6 +328,9 @@ def get_organizer_events(
             "venue_name": venue_name,
             "image_url": ev.image_url,
             "sales_frozen": ev.sales_frozen,
+            "is_cancelled": getattr(ev, "is_cancelled", False),
+            "cancellation_reason": getattr(ev, "cancellation_reason", None),
+            "cancelled_at": ev.cancelled_at.isoformat() if getattr(ev, "cancelled_at", None) else None,
             "is_scanner_active": is_active,
             "scanner_access_key": ev.scanner_access_key,
             "scanner_url": scanner_url,
@@ -333,6 +339,67 @@ def get_organizer_events(
         })
 
     return {"events": results}
+
+
+class EventCancellationRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+@router.post("/events/{event_id}/cancel")
+@router.post("/events/{event_id}/cancel/")
+def cancel_organizer_event(
+    event_id: str,
+    request_data: Optional[EventCancellationRequest] = None,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Cancels an event, stops ticket sales, automatically issues face-value refunds for all paid orders,
+    cancels free RSVPs, and dispatches email notifications to buyers.
+    """
+    from app.models.organizer import Organizer
+    from app.models.group_member import GroupMember
+
+    event = session.get(Event, normalize_uuid(event_id)) or session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    user_id_str = str(current_user.id).replace('-', '')
+    organizer_id_str = str(event.organizer_id).replace('-', '') if event.organizer_id else ''
+    
+    # Check if user is organizer, venue owner, group admin/member, or platform admin
+    is_owner = user_id_str == organizer_id_str
+    if not is_owner and event.venue_id:
+        from app.models.venue import Venue
+        venue = session.get(Venue, event.venue_id)
+        if venue and str(getattr(venue, "owner_id", "")).replace('-', '') == user_id_str:
+            is_owner = True
+
+    if not is_owner and event.organizer_profile_id:
+        member = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == event.organizer_profile_id,
+                GroupMember.user_id == current_user.id
+            )
+        ).first()
+        if member:
+            is_owner = True
+
+    if not is_owner and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to cancel this event")
+
+    if event.is_cancelled:
+        return {
+            "success": True,
+            "message": "Event is already cancelled",
+            "event_id": event.id,
+            "is_cancelled": True
+        }
+
+    reason = request_data.reason if request_data else None
+    from app.services.stripe_service import process_event_cancellation_and_refunds
+    result = process_event_cancellation_and_refunds(str(event.id), reason=reason, session=session)
+    return result
 
 
 @router.get("/invoices")

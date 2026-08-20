@@ -3,7 +3,7 @@
  * Organizer, Title (with duplicate detection), Category, Price, Venue
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { WizardFormData } from '@/hooks/useEventWizard';
 import { Input } from '@/components/common/Input';
@@ -11,8 +11,9 @@ import { UnifiedVenueSelect } from '@/components/venues/UnifiedVenueSelect';
 import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import OrganizerSelector from '@/components/events/OrganizerSelector';
 import { Category, Organizer, VenueResponse } from '@/types';
-import { eventsAPI } from '@/lib/api';
-import { isApprovedSeller } from '@/hooks/useAuth';
+import { eventsAPI, api, SellerStatusResponse } from '@/lib/api';
+import { Spinner } from '@/components/common/Spinner';
+import { toast } from 'react-hot-toast';
 
 interface StepBasicsProps {
   form: UseFormReturn<WizardFormData>;
@@ -39,6 +40,11 @@ export default function StepBasics({
   const { watch, setValue, getValues } = form;
   const formData = watch();
   const errors = stepErrors || {};
+
+  // Host Stripe seller status
+  const [hostStatus, setHostStatus] = useState<SellerStatusResponse | null>(null);
+  const [isLoadingHostStatus, setIsLoadingHostStatus] = useState(false);
+  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
 
   // Duplicate detection
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -105,6 +111,93 @@ export default function StepBasics({
       Object.keys(updater).forEach((key) => {
         setValue(key as keyof WizardFormData, updater[key]);
       });
+    }
+  };
+
+  // Current host calculation
+  const currentHostId = formData.selectedOrganizer ?? formData.organizer_profile_id ?? '';
+  const selectedHostOrg = organizers.find((o) => o.id === currentHostId);
+  const hostDisplayName = selectedHostOrg
+    ? selectedHostOrg.name
+    : (user?.display_name || user?.username || user?.email?.split('@')[0] || 'Personal Profile');
+
+  // Query seller status when ticketing is toggled or when host changes
+  const fetchStatus = useCallback(async (showToast = false) => {
+    if (!formData.is_ticketing_enabled || !user) return;
+    setIsLoadingHostStatus(true);
+    try {
+      const status = await api.sellers.getStatus(currentHostId || null);
+      setHostStatus(status);
+      if (showToast) {
+        if (status.charges_enabled) {
+          toast.success(`Stripe payouts are active for ${hostDisplayName}!`);
+        } else {
+          toast.error(`Stripe account for ${hostDisplayName} is not yet activated.`);
+        }
+      }
+      if (status.charges_enabled && isConnectingStripe) {
+        setIsConnectingStripe(false);
+      }
+    } catch (err) {
+      console.error('Failed to fetch host seller status:', err);
+    } finally {
+      setIsLoadingHostStatus(false);
+    }
+  }, [formData.is_ticketing_enabled, user, currentHostId, hostDisplayName, isConnectingStripe]);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  // Window focus & visibility change listener to auto-refresh on return from Stripe
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchStatus();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStatus();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchStatus]);
+
+  // Auto-polling when user initiates Stripe onboarding in another tab
+  useEffect(() => {
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    if (isConnectingStripe && !hostStatus?.charges_enabled) {
+      pollTimer = setInterval(() => {
+        fetchStatus();
+      }, 4000);
+    }
+    return () => {
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [isConnectingStripe, hostStatus?.charges_enabled, fetchStatus]);
+
+  // Direct onboarding trigger
+  const handleConnectStripe = async () => {
+    setIsConnectingStripe(true);
+    try {
+      const returnUrl = typeof window !== 'undefined' ? window.location.href : undefined;
+      const response = await api.sellers.onboard(currentHostId || null, returnUrl);
+      if (response.url) {
+        // Open onboarding in new tab to preserve event typed progress on the form
+        window.open(response.url, '_blank', 'noopener,noreferrer');
+        toast.success('Stripe onboarding opened in a new tab. Complete setup and return here!');
+      } else {
+        toast.error('Could not generate Stripe onboarding link.');
+        setIsConnectingStripe(false);
+      }
+    } catch (err: any) {
+      console.error('Stripe connect error in StepBasics:', err);
+      toast.error(err.message || 'Failed to initiate Stripe onboarding.');
+      setIsConnectingStripe(false);
     }
   };
 
@@ -208,14 +301,15 @@ export default function StepBasics({
         </div>
       </div>
 
-      {/* ─── Native Ticketing (Tier 2 / Approved Sellers Only) ─── */}
-      {isApprovedSeller(user) && (
-        <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-5 shadow-xs transition-all">
+      {/* ─── Native Ticketing (Admin Private Beta) ─── */}
+      {Boolean(user?.is_admin || (user as any)?.role === 'admin') && (
+        <div className="bg-emerald-50/70 border-2 border-emerald-400 rounded-2xl p-5 shadow-xs transition-all">
           <div className="flex items-start justify-between">
             <div className="pr-4">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">🎟️</span>
                 <h3 className="text-base font-bold text-emerald-950">Sell Tickets on Highland Events Hub</h3>
+                <span className="text-[10px] uppercase font-extrabold bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded">Admin Beta</span>
               </div>
               <p className="text-sm text-emerald-900/80 mt-1">
                 Enable our native ticketing engine to sell tickets directly. Manage inventory, live door scanning, and self-service refunds.
@@ -231,6 +325,76 @@ export default function StepBasics({
               <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
             </label>
           </div>
+
+          {formData.is_ticketing_enabled && (
+            <div className="mt-4 pt-4 border-t border-emerald-200/60">
+              {isLoadingHostStatus ? (
+                <div className="flex items-center gap-2 text-xs text-emerald-800 animate-pulse">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span>Checking Stripe connection status for {hostDisplayName}...</span>
+                </div>
+              ) : hostStatus?.charges_enabled ? (
+                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-3 py-2 rounded-lg border border-emerald-200">
+                  <span>✓</span>
+                  <span><strong>{hostDisplayName}</strong> is connected to Stripe and ready to configure tickets.</span>
+                </div>
+              ) : (
+                <div className="p-4 bg-amber-50/90 rounded-xl border border-amber-200 text-amber-950 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl shrink-0">🏦</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900">
+                        Stripe Payouts Connection Required
+                      </p>
+                      <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">
+                        To sell tickets under <strong>{hostDisplayName}</strong>, you must connect a bank account to receive direct ticket payouts.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleConnectStripe}
+                      disabled={isConnectingStripe}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm hover:shadow transition-all text-xs cursor-pointer disabled:opacity-50"
+                    >
+                      {isConnectingStripe ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Opening Stripe...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>🔗</span>
+                          <span>Connect Stripe Account</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fetchStatus(true)}
+                      disabled={isLoadingHostStatus}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <svg className={`w-3.5 h-3.5 ${isLoadingHostStatus ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>{isLoadingHostStatus ? 'Checking...' : 'Refresh Status'}</span>
+                    </button>
+                  </div>
+
+                  {isConnectingStripe && (
+                    <div className="p-2.5 bg-white/90 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-center gap-2">
+                      <span className="animate-pulse">⏳</span>
+                      <span>Stripe onboarding opened in a new tab. Complete setup and return here — status will update automatically.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

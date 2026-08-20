@@ -148,6 +148,12 @@ class Event(SQLModel, table=True):
     scanner_access_key: Optional[str] = Field(default=None, max_length=64, index=True)
     checkout_questions: Optional[list] = Field(default=None, sa_column=Column(JSONB))
 
+    # Cancellation & Rescheduling
+    is_cancelled: bool = Field(default=False, index=True)
+    cancellation_reason: Optional[str] = Field(default=None, max_length=2000)
+    cancelled_at: Optional[datetime] = Field(default=None)
+    previous_date_start: Optional[datetime] = Field(default=None)
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

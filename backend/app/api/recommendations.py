@@ -89,7 +89,7 @@ def get_recommendations(
         tag_events_query = (
             select(Event)
             .join(EventTag, EventTag.event_id == Event.id)
-            .where(Event.status == "published")
+            .where(Event.status == "published", Event.is_cancelled == False)
             .where(Event.date_start >= now)
             .where(col(EventTag.tag_id).in_(preferred_tag_ids))
         )
@@ -124,7 +124,7 @@ def get_recommendations(
             from sqlalchemy import or_
             follow_events_query = (
                 select(Event)
-                .where(Event.status == "published")
+                .where(Event.status == "published", Event.is_cancelled == False)
                 .where(Event.date_start >= now)
                 .where(or_(*conditions) if conditions else True)
             )
@@ -162,7 +162,7 @@ def get_recommendations(
         if preferred_categories:
             cat_events_query = (
                 select(Event)
-                .where(Event.status == "published")
+                .where(Event.status == "published", Event.is_cancelled == False)
                 .where(Event.date_start >= now)
                 .where(col(Event.category_id).in_(preferred_categories))
             )
@@ -180,7 +180,7 @@ def get_recommendations(
     if len(recommendations) < limit:
         fallback_query = (
             select(Event)
-            .where(Event.status == "published")
+            .where(Event.status == "published", Event.is_cancelled == False)
             .where(Event.date_start >= now)
         )
         fallback_events = deduplicate_recurring_events_simple(
@@ -232,7 +232,7 @@ def get_similar_events(
     if event.category_id:
         category_query = (
             select(Event)
-            .where(Event.status == "published")
+            .where(Event.status == "published", Event.is_cancelled == False)
             .where(Event.date_start >= now)
             .where(Event.category_id == event.category_id)
         )
@@ -260,7 +260,7 @@ def get_similar_events(
             tag_events_query = (
                 select(Event)
                 .join(EventTag, EventTag.event_id == Event.id)
-                .where(Event.status == "published")
+                .where(Event.status == "published", Event.is_cancelled == False)
                 .where(Event.date_start >= now)
                 .where(col(EventTag.tag_id).in_(source_tag_ids))
             )
@@ -279,7 +279,7 @@ def get_similar_events(
         remaining = limit - len(similar_events)
         venue_query = (
             select(Event)
-            .where(Event.status == "published")
+            .where(Event.status == "published", Event.is_cancelled == False)
             .where(Event.date_start >= now)
             .where(Event.venue_id == event.venue_id)
         )
@@ -298,7 +298,7 @@ def get_similar_events(
         remaining = limit - len(similar_events)
         fallback_query = (
             select(Event)
-            .where(Event.status == "published")
+            .where(Event.status == "published", Event.is_cancelled == False)
             .where(Event.date_start >= now)
         )
         fallback_events = deduplicate_recurring_events_simple(

@@ -15,6 +15,9 @@ interface TicketedEventItem {
   date_start: string;
   date_end: string | null;
   venue_name: string;
+  is_cancelled?: boolean;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
   is_scanner_active: boolean;
   scanner_access_key: string | null;
   scanner_url: string;
@@ -301,7 +304,7 @@ export default function OrganizerHubPage() {
       });
   };
 
-  if (authLoading || !isAuthenticated || !isApprovedSeller(user)) {
+  if (authLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
@@ -462,10 +465,16 @@ export default function OrganizerHubPage() {
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5">
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-                              Ticketed Event
-                            </span>
-                            {ev.is_scanner_active && (
+                            {ev.is_cancelled ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-red-100 text-red-800 border border-red-200">
+                                🚫 Cancelled
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                                Ticketed Event
+                              </span>
+                            )}
+                            {ev.is_scanner_active && !ev.is_cancelled && (
                               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
                                 Door Active

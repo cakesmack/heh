@@ -3,10 +3,11 @@ import stripe
 import json
 import secrets
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union, Tuple
 from sqlmodel import Session, select, or_
 from app.core.config import settings
-from app.models import OrganizerStripeAccount, User, Order, TicketTier, Ticket, PromoCode
+from app.models import OrganizerStripeAccount, User, Order, TicketTier, Ticket, PromoCode, Event
 
 logger = logging.getLogger(__name__)
 
@@ -62,22 +63,29 @@ def sync_account_status(stripe_account_id: str, session: Session) -> OrganizerSt
         raise ValueError(f"OrganizerStripeAccount not found for stripe_account_id: {stripe_account_id}")
         
     # Update status flags
-    db_account.charges_enabled = stripe_account.charges_enabled
-    db_account.payouts_enabled = stripe_account.payouts_enabled
+    db_account.charges_enabled = bool(getattr(stripe_account, "charges_enabled", False))
+    db_account.payouts_enabled = bool(getattr(stripe_account, "payouts_enabled", False))
     
     session.add(db_account)
     
-    # If charges are enabled, ensure the user is fully approved if they were pending
-    if stripe_account.charges_enabled:
-        organizer = db_account.organizer
-        if organizer and organizer.user:
-            user = organizer.user
-            if user.seller_tier == 2 and user.seller_status == "approved":
-                pass
-            else:
-                user.seller_tier = 2
+    # Auto-verify organizer and user when Stripe connection is active
+    is_active = (
+        db_account.charges_enabled or 
+        db_account.payouts_enabled or 
+        bool(getattr(stripe_account, "details_submitted", False))
+    )
+    
+    organizer = db_account.organizer or session.get(Organizer, db_account.organizer_profile_id)
+    if organizer and is_active:
+        organizer.is_verified = True
+        session.add(organizer)
+        
+        user = organizer.user or session.get(User, organizer.user_id)
+        if user:
+            user.seller_tier = 2
+            if user.seller_status not in ["frozen", "rejected"]:
                 user.seller_status = "approved"
-                session.add(user)
+            session.add(user)
     
     session.commit()
     session.refresh(db_account)
@@ -311,159 +319,6 @@ def fulfill_payment_intent(
         return None
 
 
-def fulfill_checkout_session(session_or_id: Any, session: Session) -> Optional[Order]:
-    """
-    Fulfills a completed Stripe Checkout session (checkout.session.completed) on a connected account.
-    Extracts ticket/order details from the session metadata, locks inventory, creates order and tickets,
-    and dispatches buyer/organizer confirmation emails.
-    """
-    if isinstance(session_or_id, str):
-        if not settings.STRIPE_SECRET_KEY:
-            return None
-        stripe.api_key = settings.STRIPE_SECRET_KEY
-        try:
-            checkout_session = stripe.checkout.Session.retrieve(session_or_id)
-        except Exception as e:
-            logger.error(f"Error retrieving Checkout session {session_or_id}: {e}")
-            return None
-    else:
-        checkout_session = session_or_id
-
-    if not checkout_session:
-        return None
-
-    cs_id = getattr(checkout_session, "id", "")
-    payment_intent_id = getattr(checkout_session, "payment_intent", None) or cs_id
-    payment_status = getattr(checkout_session, "payment_status", "")
-
-    if payment_status != "paid":
-        logger.info(f"CheckoutSession {cs_id} payment_status is '{payment_status}', skipping fulfillment.")
-        return None
-
-    # Idempotency check: check if order already exists by payment_intent_id or session id
-    existing_order = session.exec(
-        select(Order).where(
-            or_(
-                Order.stripe_payment_intent_id == payment_intent_id,
-                Order.stripe_payment_intent_id == cs_id
-            )
-        )
-    ).first()
-    if existing_order:
-        logger.info(f"CheckoutSession {cs_id} already fulfilled (order {existing_order.order_ref}).")
-        return existing_order
-
-    metadata = getattr(checkout_session, "metadata", {}) or {}
-    if hasattr(metadata, "to_dict"):
-        metadata = metadata.to_dict()
-    elif not isinstance(metadata, dict):
-        try:
-            metadata = dict(metadata)
-        except Exception:
-            metadata = {}
-
-    event_id = metadata.get("event_id")
-    if not event_id:
-        logger.warning(f"CheckoutSession {cs_id} missing event_id in metadata.")
-        return None
-
-    try:
-        items_payload = json.loads(metadata.get("items_json", "[]"))
-        promo_code = metadata.get("promo_code")
-
-        # 1. Lock and decrement inventory
-        tier_ids = [item.get("tier_id") for item in items_payload if item.get("tier_id")]
-        tiers = session.exec(select(TicketTier).where(TicketTier.id.in_(tier_ids)).with_for_update()).all()
-        tier_map = {t.id: t for t in tiers}
-
-        tier_items = []
-        for item in items_payload:
-            tier = tier_map.get(item["tier_id"])
-            if not tier:
-                continue
-            qty = item.get("quantity", 1)
-            tier.quantity_sold += qty
-            session.add(tier)
-            tier_items.append((tier, qty))
-
-        # 2. Promo Code usage
-        if promo_code:
-            promo = session.exec(
-                select(PromoCode).where(PromoCode.event_id == event_id, PromoCode.code_text == promo_code).with_for_update()
-            ).first()
-            if promo:
-                promo.usage_count += 1
-                session.add(promo)
-
-        # 3. Generate Order Ref
-        def generate_order_ref():
-            return "HEH-" + secrets.token_hex(3).upper()
-
-        order_ref = generate_order_ref()
-        while session.exec(select(Order).where(Order.order_ref == order_ref)).first():
-            order_ref = generate_order_ref()
-
-        total_amount = float(getattr(checkout_session, "amount_total", 0) or 0) / 100.0
-        platform_fee_amount = float(metadata.get("platform_fee_amount", 0) or 0)
-
-        customer_details = getattr(checkout_session, "customer_details", None)
-        buyer_email = metadata.get("buyer_email") or (getattr(customer_details, "email", None) if customer_details else "") or ""
-        buyer_name = metadata.get("buyer_name") or (getattr(customer_details, "name", None) if customer_details else "") or "Ticket Buyer"
-        buyer_phone = metadata.get("buyer_phone") or (getattr(customer_details, "phone", None) if customer_details else None)
-
-        buyer_email_clean = buyer_email.strip().lower()
-        buyer_user_id = metadata.get("buyer_user_id") or None
-        if not buyer_user_id and buyer_email_clean:
-            from sqlalchemy import func
-            matching_user = session.exec(select(User).where(func.lower(User.email) == buyer_email_clean)).first()
-            if matching_user:
-                buyer_user_id = matching_user.id
-
-        attendee_responses = {}
-        if metadata.get("attendee_responses"):
-            try:
-                attendee_responses = json.loads(metadata.get("attendee_responses"))
-            except Exception:
-                attendee_responses = {}
-
-        order = Order(
-            order_ref=order_ref,
-            event_id=event_id,
-            buyer_user_id=buyer_user_id,
-            buyer_email=buyer_email,
-            buyer_name=buyer_name,
-            buyer_phone=buyer_phone,
-            total_amount=total_amount,
-            platform_fee_amount=platform_fee_amount,
-            stripe_payment_intent_id=payment_intent_id or cs_id,
-            status="completed",
-            attendee_responses=attendee_responses
-        )
-        session.add(order)
-        session.flush()
-
-        # 4. Generate Tickets
-        for tier, qty in tier_items:
-            for _ in range(qty):
-                ticket = Ticket(
-                    order_id=order.id,
-                    tier_id=tier.id,
-                    qr_token=secrets.token_urlsafe(48),
-                    status="valid"
-                )
-                session.add(ticket)
-
-        session.commit()
-        session.refresh(order)
-        logger.info(f"FulfillCheckoutSession: Successfully created order {order_ref} for {cs_id}")
-
-        return order
-    except Exception as e:
-        session.rollback()
-        logger.error(f"FulfillCheckoutSession failed for {cs_id}: {e}")
-        return None
-
-
 async def dispatch_order_confirmation_emails(
     order_or_id: Union[Order, str],
     session: Optional[Session] = None
@@ -615,3 +470,271 @@ def trigger_order_confirmation_emails(order: Union[Order, str], session: Optiona
 
         t = threading.Thread(target=run_in_thread, daemon=True)
         t.start()
+
+
+async def dispatch_rescheduled_notification_emails(
+    event_id: str,
+    previous_date: datetime,
+    new_date: datetime,
+    session: Optional[Session] = None
+) -> bool:
+    """
+    Queries all completed orders for an event and sends reschedule notification emails to buyers.
+    """
+    from app.core.database import engine, get_session
+    from sqlmodel import Session as DbSession
+    from app.services.resend_email import resend_email_service
+    from app.core.utils import normalize_uuid
+
+    def _fetch_data(db_session: Session):
+        evt = db_session.get(Event, normalize_uuid(event_id)) or db_session.get(Event, event_id)
+        if not evt:
+            return None, []
+        orders = db_session.exec(
+            select(Order).where(Order.event_id == evt.id, Order.status == "completed")
+        ).all()
+        return evt, orders
+
+    try:
+        if session is None:
+            with DbSession(engine) as fresh_session:
+                event, orders = _fetch_data(fresh_session)
+        else:
+            event, orders = _fetch_data(session)
+
+        if not event or not orders:
+            logger.info(f"No active orders found to notify for rescheduled event {event_id}")
+            return True
+
+        prev_date_str = previous_date.strftime("%A, %d %B %Y at %H:%M") if previous_date else "Original Date"
+        new_date_str = new_date.strftime("%A, %d %B %Y at %H:%M") if new_date else "Updated Date"
+
+        venue_info = ""
+        if event.venue:
+            venue_info = f"{event.venue.name}, {getattr(event.venue, 'address', '')}".strip(", ")
+        elif event.location_name:
+            venue_info = f"{event.location_name}, {getattr(event, 'location_town', '') or ''}".strip(", ")
+
+        for order in orders:
+            if order.buyer_email:
+                try:
+                    await resend_email_service.send_event_rescheduled_notification(
+                        to_email=order.buyer_email,
+                        buyer_name=order.buyer_name,
+                        event_title=event.title,
+                        previous_date_str=prev_date_str,
+                        new_date_str=new_date_str,
+                        venue_info=venue_info,
+                        order_ref=order.order_ref,
+                        event_id=event.id
+                    )
+                except Exception as email_err:
+                    logger.error(f"Failed to send reschedule email to {order.buyer_email} for order {order.order_ref}: {email_err}")
+
+        return True
+    except Exception as e:
+        logger.error(f"Failed to dispatch reschedule notification emails for event {event_id}: {e}", exc_info=True)
+        return False
+
+
+def trigger_rescheduled_notification_emails(
+    event_id: str,
+    previous_date: datetime,
+    new_date: datetime,
+    session: Optional[Session] = None
+) -> None:
+    """
+    Safely triggers dispatch_rescheduled_notification_emails from sync or async contexts.
+    """
+    import asyncio
+    import threading
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        loop.create_task(dispatch_rescheduled_notification_emails(event_id, previous_date, new_date, session))
+    else:
+        def run_in_thread():
+            asyncio.run(dispatch_rescheduled_notification_emails(event_id, previous_date, new_date, None))
+
+        t = threading.Thread(target=run_in_thread, daemon=True)
+        t.start()
+
+
+def process_event_cancellation_and_refunds(
+    event_id: str,
+    reason: Optional[str] = None,
+    session: Optional[Session] = None
+) -> Dict[str, Any]:
+    """
+    Executes complete event cancellation workflow:
+    1. Sets event.is_cancelled = True, sales_frozen = True, records cancellation_reason and cancelled_at timestamp.
+    2. Deactivates active promotions and featured ad bookings for this event.
+    3. Refunds face value of all paid completed orders via Stripe (retains platform booking fee).
+    4. Marks free orders and all tickets as cancelled / refunded.
+    5. Dispatches cancellation notification emails to all buyers.
+    """
+    from app.core.database import engine
+    from sqlmodel import Session as DbSession
+    from app.services.resend_email import resend_email_service
+    from app.core.utils import normalize_uuid
+    from app.models.promotion import Promotion
+    from app.models.featured_booking import FeaturedBooking
+    from app.models.organizer_stripe_account import OrganizerStripeAccount
+    from app.models.organizer import Organizer
+    import asyncio
+    import threading
+
+    db = session or DbSession(engine)
+    should_close = session is None
+
+    try:
+        event = db.get(Event, normalize_uuid(event_id)) or db.get(Event, event_id)
+        if not event:
+            raise ValueError(f"Event not found: {event_id}")
+
+        now = datetime.utcnow()
+        event.is_cancelled = True
+        event.sales_frozen = True
+        event.cancelled_at = now
+        event.cancellation_reason = reason
+        db.add(event)
+
+        # 2. Deactivate any active promotions or featured ads for this event
+        try:
+            bookings = db.exec(select(FeaturedBooking).where(FeaturedBooking.event_id == event.id)).all()
+            for b in bookings:
+                b.status = "cancelled"
+                db.add(b)
+        except Exception as promo_err:
+            logger.warning(f"Could not deactivate promotions for cancelled event {event.id}: {promo_err}")
+
+        # 3. Resolve Connected Stripe Account if available
+        stripe_account_id = None
+        if event.organizer_profile and event.organizer_profile.stripe_account:
+            stripe_account_id = event.organizer_profile.stripe_account.stripe_account_id
+        elif event.organizer_id:
+            stmt = (
+                select(OrganizerStripeAccount)
+                .join(Organizer, OrganizerStripeAccount.organizer_profile_id == Organizer.id)
+                .where(Organizer.user_id == event.organizer_id)
+            )
+            acc = db.exec(stmt).first()
+            if acc:
+                stripe_account_id = acc.stripe_account_id
+
+        # 4. Fetch all orders for this event
+        orders = db.exec(select(Order).where(Order.event_id == event.id)).all()
+        refunded_orders_count = 0
+        cancelled_orders_count = 0
+
+        notifications_to_send = []
+
+        for order in orders:
+            # We only process completed orders (or cash orders)
+            if order.status not in ["completed", "cash_door_sale"]:
+                continue
+
+            is_free = order.total_amount <= 0 or not order.stripe_payment_intent_id
+
+            if not is_free and order.stripe_payment_intent_id:
+                # Calculate face-value refund (gross total minus platform booking fee)
+                face_value = max(0.0, order.total_amount - order.platform_fee_amount)
+                face_value_pence = int(round(face_value * 100))
+
+                if face_value_pence > 0 and settings.STRIPE_SECRET_KEY:
+                    try:
+                        stripe.api_key = settings.STRIPE_SECRET_KEY
+                        refund_kwargs: Dict[str, Any] = {
+                            "payment_intent": order.stripe_payment_intent_id,
+                            "amount": face_value_pence,
+                            "reason": "requested_by_customer"
+                        }
+                        if stripe_account_id:
+                            refund_kwargs["stripe_account"] = stripe_account_id
+                        else:
+                            refund_kwargs["reverse_transfer"] = True
+                        stripe.Refund.create(**refund_kwargs)
+                        logger.info(f"Stripe refund of £{face_value:.2f} processed for order {order.order_ref}")
+                    except Exception as refund_err:
+                        logger.error(f"Stripe refund failed for order {order.order_ref} (PI: {order.stripe_payment_intent_id}): {refund_err}")
+
+                order.status = "refunded"
+                order.updated_at = now
+                db.add(order)
+
+                for ticket in order.tickets:
+                    ticket.status = "refunded"
+                    ticket.updated_at = now
+                    db.add(ticket)
+
+                refunded_orders_count += 1
+                notifications_to_send.append({
+                    "to_email": order.buyer_email,
+                    "buyer_name": order.buyer_name,
+                    "event_title": event.title,
+                    "cancellation_reason": reason,
+                    "order_ref": order.order_ref,
+                    "refund_amount": face_value,
+                    "is_free_order": False
+                })
+            else:
+                order.status = "cancelled"
+                order.updated_at = now
+                db.add(order)
+
+                for ticket in order.tickets:
+                    ticket.status = "cancelled"
+                    ticket.updated_at = now
+                    db.add(ticket)
+
+                cancelled_orders_count += 1
+                notifications_to_send.append({
+                    "to_email": order.buyer_email,
+                    "buyer_name": order.buyer_name,
+                    "event_title": event.title,
+                    "cancellation_reason": reason,
+                    "order_ref": order.order_ref,
+                    "refund_amount": 0.0,
+                    "is_free_order": True
+                })
+
+        db.commit()
+
+        # 5. Dispatch cancellation & refund notification emails in background
+        async def _dispatch_all_emails(items):
+            for item in items:
+                try:
+                    await resend_email_service.send_event_cancellation_refund_notification(**item)
+                except Exception as e:
+                    logger.error(f"Failed to send cancellation email to {item.get('to_email')}: {e}")
+
+        if notifications_to_send:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                loop.create_task(_dispatch_all_emails(notifications_to_send))
+            else:
+                def run_emails_thread():
+                    asyncio.run(_dispatch_all_emails(notifications_to_send))
+                t = threading.Thread(target=run_emails_thread, daemon=True)
+                t.start()
+
+        return {
+            "success": True,
+            "event_id": event.id,
+            "is_cancelled": True,
+            "refunded_orders": refunded_orders_count,
+            "cancelled_orders": cancelled_orders_count,
+            "total_orders_affected": refunded_orders_count + cancelled_orders_count
+        }
+    finally:
+        if should_close:
+            db.close()
+

@@ -14,7 +14,11 @@ interface InventoryItem {
 }
 
 interface DashboardMetrics {
+  event_id?: string;
   event_title: string;
+  is_cancelled?: boolean;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
   gross_revenue: number;
   platform_fees: number;
   net_payout: number;
@@ -29,6 +33,12 @@ export default function OrganizerTicketingDashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Cancellation Modal State
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState('');
 
   useEffect(() => {
     if (!authLoading) {
@@ -50,6 +60,24 @@ export default function OrganizerTicketingDashboard() {
       }
     }
   }, [id, isAuthenticated, authLoading, user, router]);
+
+  const handleCancelEvent = async () => {
+    if (!id || isCancelling) return;
+    setIsCancelling(true);
+    try {
+      const res = await apiFetch<any>(`/api/organizers/events/${id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: cancellationReason || undefined })
+      });
+      setCancelSuccessMsg('Event successfully cancelled. Ticket sales have stopped and refunds have been dispatched.');
+      setCancelModalOpen(false);
+      setMetrics(m => m ? ({ ...m, is_cancelled: true, cancellation_reason: cancellationReason }) : null);
+    } catch (err: any) {
+      alert('Failed to cancel event: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const handleExport = () => {
     // We can just open the API URL to trigger a download since we pass the token in cookies, 
@@ -124,8 +152,46 @@ export default function OrganizerTicketingDashboard() {
             >
               Export Guests (CSV)
             </button>
+
+            {!metrics.is_cancelled ? (
+              <button
+                onClick={() => setCancelModalOpen(true)}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition text-sm flex items-center gap-1.5"
+              >
+                <span>🚫 Cancel Event</span>
+              </button>
+            ) : (
+              <span className="px-3.5 py-1.5 bg-red-100 text-red-800 text-xs font-black uppercase tracking-wider rounded-lg border border-red-200">
+                Event Cancelled
+              </span>
+            )}
           </div>
         </div>
+
+        {/* Cancellation Notice Banner */}
+        {metrics.is_cancelled && (
+          <div className="p-6 bg-red-50 border-2 border-red-200 rounded-2xl flex items-start gap-4 animate-in fade-in">
+            <div className="text-3xl">⚠️</div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-red-900">Event Cancelled & Sales Frozen</h2>
+              <p className="text-sm text-red-700 mt-1">
+                This event has been officially cancelled. Ticket sales are disabled, existing tickets have been voided from door scanners, and face-value refunds have been automatically dispatched to ticket holders via Stripe.
+              </p>
+              {metrics.cancellation_reason && (
+                <p className="text-xs text-red-800 font-semibold mt-2 italic">
+                  Organizer note to buyers: "{metrics.cancellation_reason}"
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {cancelSuccessMsg && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm font-semibold flex items-center justify-between">
+            <span>✓ {cancelSuccessMsg}</span>
+            <button onClick={() => setCancelSuccessMsg('')} className="text-emerald-900 hover:text-emerald-950">✕</button>
+          </div>
+        )}
         
         {/* Financial Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -188,6 +254,77 @@ export default function OrganizerTicketingDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Cancellation Confirmation Modal */}
+      {cancelModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-2xl mb-4 font-bold">
+              ⚠️
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">Cancel "{metrics.event_title}"?</h3>
+            <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+              Cancelling this event is a permanent action with the following automated operations:
+            </p>
+
+            <ul className="mt-3 space-y-2 text-xs text-gray-700 bg-red-50/70 p-4 rounded-xl border border-red-200">
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold">✓</span>
+                <span><strong>Stops Sales:</strong> Ticket sales are immediately frozen and public event listings are marked Cancelled.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold">✓</span>
+                <span><strong>Automatic Refunds:</strong> Ticket face value is automatically refunded via Stripe to all buyers' payment cards.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold">✓</span>
+                <span><strong>Email Notifications:</strong> All ticket buyers receive an official cancellation email notification.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold">✓</span>
+                <span><strong>Door Lock:</strong> Existing QR barcode passes are invalidated across all check-in scanners.</span>
+              </li>
+            </ul>
+
+            <div className="mt-4">
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                Reason for cancellation (included in buyer email):
+              </label>
+              <textarea
+                value={cancellationReason}
+                onChange={e => setCancellationReason(e.target.value)}
+                placeholder="e.g. Due to unforeseen venue maintenance / performer illness..."
+                rows={3}
+                className="w-full text-sm rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 p-3"
+              />
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setCancelModalOpen(false)}
+                disabled={isCancelling}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition"
+              >
+                Keep Event Active
+              </button>
+              <button
+                onClick={handleCancelEvent}
+                disabled={isCancelling}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold bg-red-600 hover:bg-red-700 text-white transition shadow-sm flex items-center gap-2"
+              >
+                {isCancelling ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Processing Refunds...</span>
+                  </>
+                ) : (
+                  <span>Confirm Cancellation & Refund Buyers</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

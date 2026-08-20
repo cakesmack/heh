@@ -143,7 +143,7 @@ function PostSubmitModal({
   formData,
   categories,
 }: {
-  eventStatus: 'published' | 'pending' | 'pending_moderation';
+  eventStatus: 'published' | 'pending_review' | 'pending' | 'pending_moderation';
   newEventId: string;
   newEventUrl: string;
   onClose: (navigateTo: string) => void;
@@ -172,138 +172,128 @@ function PostSubmitModal({
   const price = formData?.price;
   const dateStart = formData?.date_start ? localFormatDate(formData.date_start) : 'Upcoming Date';
 
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(newEventUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+      toast.success('Event link copied to clipboard!');
+    } catch {
+      toast.error('Could not copy link');
+    }
+  };
+
+  const isLive = eventStatus === 'published';
+
+  const shareText = `Check out ${title} on Highland Events Hub!`;
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${newEventUrl}`)}`;
+  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(newEventUrl)}`;
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(newEventUrl)}`;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={() => onClose(eventStatus === 'published' ? `/events/${newEventId}` : '/account')}
+      onClick={() => onClose(isLive ? `/events/${newEventId}` : '/account')}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+        className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 text-center"
         onClick={(e) => e.stopPropagation()}
       >
-        {eventStatus === 'published' ? (
+        {isLive ? (
           <>
             <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">Your event is live!</h2>
-            <p className="text-gray-600 mb-6 text-sm">Get more eyes on your listing. Feature it at the top of the homepage from just £3 a day.</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">Your event is live!</h2>
+            <p className="text-gray-600 mb-5 text-sm">
+              Your event is published and visible across maps, searches, and feeds.
+            </p>
 
-            {/* 16:9 Mockup Card */}
-            <div className="mb-6 border border-stone-200 rounded-2xl overflow-hidden shadow-sm aspect-[16/9] relative bg-stone-100">
-              {imageUrl ? (
-                <img
-                  src={imageUrl}
-                  alt={title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 to-teal-950" />
-              )}
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/30 to-transparent" />
-
-              {/* Badge */}
-              <div className="absolute top-3 left-3 z-10">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-400 text-stone-950 uppercase tracking-wider shadow-sm animate-pulse">
-                  ⚡ Promoted Mockup
-                </span>
-              </div>
-
-              {/* Card Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 text-left text-white">
-                {category && (
-                  <span
-                    className="text-[9px] font-bold uppercase tracking-wider mb-1 inline-block px-1.5 py-0.5 rounded bg-white/10 backdrop-blur-sm"
-                    style={{ color: category.gradient_color || '#10b981' }}
-                  >
-                    {category.name}
-                  </span>
-                )}
-                <h3 className="text-sm sm:text-base font-bold line-clamp-1 leading-snug">
-                  {title}
-                </h3>
-                <div className="flex items-center justify-between mt-1 text-[10px] text-stone-300">
-                  <div>📅 {dateStart}</div>
-                  <div className="font-bold text-amber-300">
-                    {price === '0' || !price ? 'Free' : `£${parseFloat(price).toFixed(2)}`}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <Link
-                href={`/events/${newEventId}/promote`}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-600 text-stone-950 rounded-xl font-bold transition-colors min-h-[48px] shadow-sm"
-              >
-                🚀 Promote Your Event
-              </Link>
-
+            {/* Public Link Box with Copy Button */}
+            <div className="mb-5 p-3 bg-gray-50 rounded-2xl border border-gray-200 text-left flex items-center justify-between gap-2">
+              <span className="text-xs text-gray-600 font-mono truncate flex-1 select-all">
+                {newEventUrl}
+              </span>
               <button
-                onClick={async () => {
-                  try {
-                    if (navigator.share) {
-                      await navigator.share({ title: title, url: newEventUrl });
-                    } else {
-                      await navigator.clipboard.writeText(newEventUrl);
-                      setShareCopied(true);
-                      setTimeout(() => setShareCopied(false), 2500);
-                    }
-                  } catch (err: any) {
-                    if (err?.name !== 'AbortError') {
-                      await navigator.clipboard.writeText(newEventUrl);
-                      setShareCopied(true);
-                      setTimeout(() => setShareCopied(false), 2500);
-                    }
-                  }
-                }}
-                className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-200 min-h-[48px] border border-stone-200 ${
-                  shareCopied ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 hover:bg-stone-50'
+                type="button"
+                onClick={handleCopyLink}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                  shareCopied ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
                 }`}
               >
-                {shareCopied ? (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Link Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
-                    Share Event Link
-                  </>
-                )}
+                {shareCopied ? '✓ Copied' : '📋 Copy Link'}
               </button>
             </div>
 
-            <button
-              onClick={() => onClose(`/events/${newEventId}`)}
-              className="text-sm text-gray-500 hover:text-emerald-600 transition-colors"
-            >
-              Skip and view my event page &rarr;
-            </button>
+            {/* Social Share Links */}
+            <div className="mb-6">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Share on Social Media</p>
+              <div className="grid grid-cols-3 gap-2">
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 transition-colors"
+                >
+                  <span>💬 WhatsApp</span>
+                </a>
+                <a
+                  href={facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold border border-blue-200 transition-colors"
+                >
+                  <span>📘 Facebook</span>
+                </a>
+                <a
+                  href={twitterUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-900 text-xs font-bold border border-stone-200 transition-colors"
+                >
+                  <span>𝕏 Post</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => onClose(`/events/${newEventId}`)}
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors min-h-[48px] shadow-sm cursor-pointer"
+              >
+                <span>View Live Event Page &rarr;</span>
+              </button>
+
+              <Link
+                href={`/events/${newEventId}/promote`}
+                className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 rounded-xl font-semibold text-xs transition-colors"
+              >
+                <span>🚀 Boost Visibility: Feature at Top of Page</span>
+              </Link>
+            </div>
           </>
         ) : (
           <>
-            <div className="w-16 h-16 mx-auto mb-5 bg-amber-100 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Event submitted for review.</h2>
-            <p className="text-gray-600 mb-8">
-              Your event is currently pending approval by our moderation team. You will receive an email the moment it goes live.
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">Event Submitted for Review</h2>
+            <p className="text-gray-700 text-sm mb-4 leading-relaxed font-medium">
+              Your event has been submitted and is currently being reviewed by our moderation team.
+            </p>
+            <p className="text-xs text-gray-500 mb-6">
+              You will receive an email confirmation the moment your listing is approved and goes live.
             </p>
             <button
+              type="button"
               onClick={() => onClose('/account')}
-              className="w-full px-5 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium min-h-[48px]"
+              className="w-full px-5 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-bold min-h-[48px] cursor-pointer"
             >
               Got it, take me to my dashboard
             </button>
@@ -324,7 +314,8 @@ export default function EventWizardForm({
 }: EventWizardFormProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const wizard = useEventWizard({ initialData, isEditMode });
+  const isAdmin = Boolean(user?.is_admin || (user as any)?.role === 'admin');
+  const wizard = useEventWizard({ initialData, isEditMode, isAdmin });
 
   const {
     form,
@@ -356,7 +347,7 @@ export default function EventWizardForm({
   const [showPostSubmitModal, setShowPostSubmitModal] = useState(false);
   const [newEventUrl, setNewEventUrl] = useState('');
   const [newEventId, setNewEventId] = useState('');
-  const [eventStatus, setEventStatus] = useState<'published' | 'pending' | 'pending_moderation'>('pending');
+  const [eventStatus, setEventStatus] = useState<'published' | 'pending_review' | 'pending' | 'pending_moderation'>('pending');
 
   // Load categories and organizers on mount
   useEffect(() => {
@@ -398,13 +389,6 @@ export default function EventWizardForm({
     fetchData();
   }, [user, isEditMode]);
 
-  // Security Shield: Ensure standard non-sellers cannot have native ticketing enabled
-  useEffect(() => {
-    if (user && !isApprovedSeller(user) && form.getValues('is_ticketing_enabled')) {
-      form.setValue('is_ticketing_enabled', false);
-    }
-  }, [user, form]);
-
   // Handle URL parameters for organizer profile ID if creating
   useEffect(() => {
     if (!isEditMode && router.isReady && router.query.organizer_profile_id) {
@@ -416,7 +400,7 @@ export default function EventWizardForm({
 
   // ─── Final Submission (POST or PUT Branching) ──────────────
   const handleSubmit = useCallback(async () => {
-    // Run final validation on Step 4
+    // Run final validation on Step 4/5
     const errors = wizard.validateCurrentStep();
     if (errors) return;
 
@@ -425,7 +409,7 @@ export default function EventWizardForm({
     setFieldErrors({});
 
     try {
-      const payload = buildEventPayload(form.getValues());
+      const payload = buildEventPayload(form.getValues(), isAdmin);
 
       if (isEditMode && (eventId || initialData?.id)) {
         const targetId = eventId || initialData.id;
@@ -443,16 +427,13 @@ export default function EventWizardForm({
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const publicUrl = `${origin}/events/${newEvent.id}`;
 
-        if (newEvent.status === 'published') {
-          router.push(`/events/${newEvent.id}/promote-preview`);
-          return;
-        }
-
         clearDraft();
         setNewEventId(newEvent.id);
         setNewEventUrl(publicUrl);
         setEventStatus(
-          newEvent.status === 'pending_moderation' ? 'pending_moderation' : 'pending'
+          newEvent.status === 'published'
+            ? 'published'
+            : (newEvent.status === 'pending_review' || newEvent.status === 'pending_moderation' ? 'pending_review' : 'pending')
         );
         setShowPostSubmitModal(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -518,6 +499,8 @@ export default function EventWizardForm({
         return (
           <StepTicketsComponent
             form={form}
+            user={user}
+            organizers={organizers}
             stepErrors={stepErrors}
           />
         );

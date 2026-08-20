@@ -96,6 +96,42 @@ function OrdersTab() {
   const [eventToFreeze, setEventToFreeze] = useState('');
   const [freezeStatus, setFreezeStatus] = useState('');
   const [inspectOrder, setInspectOrder] = useState<OrderResult | null>(null);
+  const [editableEmail, setEditableEmail] = useState('');
+  const [updatingEmail, setUpdatingEmail] = useState(false);
+  const [updateEmailMessage, setUpdateEmailMessage] = useState('');
+
+  useEffect(() => {
+    if (inspectOrder) {
+      setEditableEmail(inspectOrder.buyer_email || '');
+      setUpdateEmailMessage('');
+    }
+  }, [inspectOrder]);
+
+  const handleUpdateEmailAndResend = async () => {
+    if (!inspectOrder || !editableEmail.trim()) return;
+    setUpdatingEmail(true);
+    setUpdateEmailMessage('');
+    try {
+      const res = await apiFetch<{ status: string; new_email: string; message: string }>(
+        `/api/admin/ticketing/orders/${inspectOrder.order_id}/update-email`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ new_email: editableEmail.trim() }),
+        }
+      );
+      setUpdateEmailMessage(res.message || 'Email updated and tickets resent successfully!');
+      setInspectOrder((prev) => (prev ? { ...prev, buyer_email: res.new_email } : null));
+      setOrders((prev) =>
+        prev.map((ord) =>
+          ord.order_id === inspectOrder.order_id ? { ...ord, buyer_email: res.new_email } : ord
+        )
+      );
+    } catch (err: any) {
+      setUpdateEmailMessage(`Error: ${err.message || 'Failed to update email'}`);
+    } finally {
+      setUpdatingEmail(false);
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,13 +212,13 @@ function OrdersTab() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">Global Order Search</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Look up any order by email, name, or order reference.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Look up any order by email address, buyer name, order reference, or payment intent / last 4 digits.</p>
         </div>
         <div className="p-6">
           <form onSubmit={handleSearch} className="flex gap-3 mb-6">
             <input
               type="text"
-              placeholder="Search by Email, Name, or Order Ref"
+              placeholder="Search by Email, Name, Order Ref (HEH-XXXX), or Last 4 Digits"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm"
@@ -272,6 +308,50 @@ function OrdersTab() {
                 <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Stripe Intent</p>
                 <p className="font-mono text-xs text-gray-600 break-all">{inspectOrder.stripe_payment_intent_id || 'N/A'}</p>
               </div>
+            </div>
+
+            {/* Customer Support: Edit Buyer Email & Resend Tickets */}
+            <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl mb-6">
+              <div className="flex items-center gap-2 mb-1.5">
+                <svg className="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Customer Support Typo Fixer & Resend</h4>
+              </div>
+              <p className="text-xs text-emerald-800 mb-3">
+                Correct buyer email typos and immediately re-dispatch official ticket passes with active QR check-in codes.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="email"
+                  value={editableEmail}
+                  onChange={(e) => setEditableEmail(e.target.value)}
+                  placeholder="buyer@example.com"
+                  className="flex-1 px-3.5 py-2 border border-emerald-300 rounded-lg text-sm bg-white text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleUpdateEmailAndResend}
+                  disabled={updatingEmail || !editableEmail.trim() || editableEmail.trim() === inspectOrder.buyer_email}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  {updatingEmail ? (
+                    <span>Updating & Sending…</span>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      <span>Update & Resend Tickets</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              {updateEmailMessage && (
+                <p className={`text-xs mt-2.5 font-semibold ${updateEmailMessage.startsWith('Error') ? 'text-red-700' : 'text-emerald-800'}`}>
+                  {updateEmailMessage}
+                </p>
+              )}
             </div>
 
             <h3 className="text-base font-bold text-gray-900 mb-3">Ticket Scan Statuses</h3>

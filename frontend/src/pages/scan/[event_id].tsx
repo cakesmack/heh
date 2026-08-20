@@ -8,6 +8,7 @@ import { API_BASE_URL } from '@/lib/api';
 
 interface ScanFeedback {
   status: 'valid' | 'already_used' | 'invalid' | null;
+  error?: string;
   message?: string;
   ticket_id?: string;
   buyer_name?: string;
@@ -22,7 +23,7 @@ export default function DoorScannerPage() {
   const { event_id, token } = router.query;
   const [activeTab, setActiveTab] = useState<'scan' | 'manual' | 'guestlist'>('scan');
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
-  const [stats, setStats] = useState({ total_sold: 0, checked_in: 0, title: '' });
+  const [stats, setStats] = useState({ total_sold: 0, checked_in: 0, title: '', is_cancelled: false, cancellation_reason: '' });
   
   const [feedback, setFeedback] = useState<ScanFeedback>({ status: null });
   const [isProcessing, setIsProcessing] = useState(false);
@@ -71,7 +72,9 @@ export default function DoorScannerPage() {
         setStats({
           total_sold: res.data.total_sold,
           checked_in: res.data.total_checked_in,
-          title: res.data.event_title
+          title: res.data.event_title,
+          is_cancelled: Boolean(res.data.is_cancelled),
+          cancellation_reason: res.data.cancellation_reason || ''
         });
       })
       .catch(() => {
@@ -226,6 +229,13 @@ export default function DoorScannerPage() {
           </Link>
         </div>
       </div>
+
+      {stats.is_cancelled && (
+        <div className="bg-red-600 border-b border-red-700 text-white px-4 py-2.5 text-center text-xs sm:text-sm font-bold flex items-center justify-center gap-2">
+          <span>⚠️</span>
+          <span>EVENT CANCELLED: All admissions are void and locked down.</span>
+        </div>
+      )}
       
       {/* Tabs */}
       <div className="flex bg-stone-900 border-b border-stone-800 text-xs font-black tracking-wider">
@@ -284,13 +294,26 @@ export default function DoorScannerPage() {
           </div>
         )}
         
-        {feedback.status === 'invalid' && (
+        {feedback.status === 'invalid' && (feedback.error === 'EVENT_CANCELLED' || feedback.error === 'TICKET_REFUNDED') ? (
+          <div className="absolute inset-0 z-40 bg-red-700 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-150">
+            <div className="text-7xl mb-3">🚫</div>
+            <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 uppercase tracking-wide">
+              {feedback.error === 'EVENT_CANCELLED' ? 'EVENT CANCELLED / TICKET VOID' : 'TICKET VOID & REFUNDED'}
+            </h2>
+            <p className="text-red-100 text-sm max-w-sm font-semibold mb-4 leading-relaxed">
+              {feedback.message || 'This event was cancelled. Tickets are void and cannot be admitted.'}
+            </p>
+            <div className="px-4 py-2 bg-red-900/90 rounded-xl border border-red-400/40 text-xs font-mono font-bold text-white tracking-widest uppercase">
+              DO NOT ADMIT ATTENDEE
+            </div>
+          </div>
+        ) : feedback.status === 'invalid' ? (
           <div className="absolute inset-0 z-40 bg-stone-900 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-150">
             <div className="text-7xl mb-3 text-stone-500">❓</div>
             <h2 className="text-2xl font-black text-red-400 mb-2">INVALID TICKET</h2>
             <p className="text-stone-300 text-sm max-w-xs">{feedback.message || 'Ticket code not found for this event.'}</p>
           </div>
-        )}
+        ) : null}
 
         {/* Camera Scan Tab */}
         {activeTab === 'scan' && (

@@ -127,9 +127,10 @@ def global_search(
 
     search_term = f"%{q.strip()}%"
 
-    # Query events
+    # Query events (exclude cancelled)
     events_query = select(Event).where(
         (Event.status == "published") &
+        (Event.is_cancelled == False) &
         (
             (Event.title.ilike(search_term)) |
             (Event.description.ilike(search_term)) |

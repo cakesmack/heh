@@ -9,12 +9,15 @@ export interface TicketTier {
   quantity_available: number;
   quantity_sold: number;
   max_per_order: number;
+  sale_start?: string | null;
+  sale_end?: string | null;
   is_hidden: boolean;
 }
 
 interface TicketTierSelectorProps {
   eventId: string;
   tiers: TicketTier[];
+  eventDateStart?: string | null;
   passFeesToBuyer?: boolean;
   onProceed: (
     items: { tier_id: string; quantity: number }[],
@@ -27,6 +30,7 @@ interface TicketTierSelectorProps {
 export const TicketTierSelector: React.FC<TicketTierSelectorProps> = ({
   eventId,
   tiers,
+  eventDateStart,
   passFeesToBuyer = false,
   onProceed,
 }) => {
@@ -133,6 +137,10 @@ export const TicketTierSelector: React.FC<TicketTierSelectorProps> = ({
           const remaining = tier.quantity_available - tier.quantity_sold;
           const current = quantities[tier.id] || 0;
           const isSoldOut = remaining <= 0;
+          
+          const cutoff = tier.sale_end || eventDateStart;
+          const isSalesClosed = cutoff ? new Date(cutoff).getTime() < Date.now() : false;
+          const isSalesNotStarted = tier.sale_start ? new Date(tier.sale_start).getTime() > Date.now() : false;
 
           return (
             <div key={tier.id} className="flex justify-between items-center border-b border-gray-100 pb-4">
@@ -146,13 +154,17 @@ export const TicketTierSelector: React.FC<TicketTierSelectorProps> = ({
                     <span className="text-[11px] text-emerald-600 font-medium">(+ fee)</span>
                   )}
                 </div>
-                {remaining < 10 && !isSoldOut && (
+                {remaining < 10 && !isSoldOut && !isSalesClosed && !isSalesNotStarted && (
                   <p className="text-amber-600 text-xs mt-1 font-medium">Only {remaining} left!</p>
                 )}
               </div>
 
               <div className="flex items-center space-x-3">
-                {isSoldOut ? (
+                {isSalesClosed ? (
+                  <span className="text-red-700 font-bold bg-red-50 border border-red-200 px-2.5 py-1 rounded text-xs uppercase tracking-wider">Sales Closed</span>
+                ) : isSalesNotStarted ? (
+                  <span className="text-stone-600 font-semibold bg-stone-100 px-3 py-1 rounded text-xs">Coming Soon</span>
+                ) : isSoldOut ? (
                   <span className="text-red-600 font-semibold bg-red-50 px-3 py-1 rounded text-xs">Sold Out</span>
                 ) : (
                   <>

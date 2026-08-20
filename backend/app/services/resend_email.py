@@ -1075,36 +1075,85 @@ class ResendEmailService:
             html_content=html_content
         )
 
-    async def send_new_event_notification(self, event_title: str, event_id: str, organizer_name: str) -> bool:
-        """Notify admin about a new event submission."""
-        if not settings.ADMIN_EMAIL:
-            return True
+    async def send_new_event_notification(
+        self,
+        event_title: str,
+        event_id: str,
+        organizer_name: str,
+        date_time_str: Optional[str] = "TBD",
+        venue_name: Optional[str] = "TBD",
+        user_email: Optional[str] = "N/A"
+    ) -> bool:
+        """Notify admin about a newly published event."""
+        admin_target = settings.ADMIN_EMAIL or "contact@highlandeventshub.co.uk"
+        subject = f"New Event Published: {event_title}"
+        live_url = f"{settings.FRONTEND_URL.rstrip('/')}/events/{event_id}"
+        admin_edit_url = f"{settings.FRONTEND_URL.rstrip('/')}/admin/events?search={event_id}"
 
-        subject = f"New Event Submission: {event_title}"
         html_content = f"""
-        <div style="font-family: sans-serif; padding: 20px;">
-            <h2>New Event Submission</h2>
-            <p>A new event has been submitted by <strong>{organizer_name}</strong>:</p>
-            <ul>
-                <li><strong>Title:</strong> {event_title}</li>
-                <li><strong>Event ID:</strong> {event_id}</li>
-            </ul>
-            <p><a href="{settings.FRONTEND_URL}/events/{event_id}">View Event</a></p>
-            <p><a href="{settings.FRONTEND_URL}/admin/events">View Moderation Queue</a></p>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1f2937; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; rounded: 12px;">
+            <h2 style="color: #065f46; margin-top: 0;">🎉 New Event Published</h2>
+            <p>A new event has been published live to the platform:</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Title:</td><td style="padding: 6px 0;">{event_title}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Date/Time:</td><td style="padding: 6px 0;">{date_time_str}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Venue / Location:</td><td style="padding: 6px 0;">{venue_name}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Organizer Name:</td><td style="padding: 6px 0;">{organizer_name}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">User Email:</td><td style="padding: 6px 0;">{user_email}</td></tr>
+            </table>
+            <div style="margin-top: 20px; display: flex; gap: 12px;">
+                <a href="{live_url}" style="display: inline-block; background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-right: 10px;">View Live Event</a>
+                <a href="{admin_edit_url}" style="display: inline-block; background: #374151; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600;">Admin Edit / Nuke</a>
+            </div>
         </div>
         """
         return await smart_email_service.send_smart_email(
             email_type=EmailType.MODERATION,
-            to=settings.ADMIN_EMAIL,
+            to=admin_target,
+            subject=subject,
+            html_content=html_content
+        )
+
+    async def send_event_quarantined_alert(
+        self,
+        event_title: str,
+        event_id: str,
+        reason: str,
+        organizer_name: Optional[str] = "N/A",
+        user_email: Optional[str] = "N/A"
+    ) -> bool:
+        """Notify admin when an event triggers moderation filters and is quarantined in pending_review."""
+        admin_target = settings.ADMIN_EMAIL or "contact@highlandeventshub.co.uk"
+        subject = f"⚠️ Event Flagged for Moderation: {event_title}"
+        review_url = f"{settings.FRONTEND_URL.rstrip('/')}/admin/moderation"
+
+        html_content = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1f2937; max-width: 600px; margin: 0 auto; border: 1px solid #fee2e2; border-left: 6px solid #ef4444; border-radius: 12px; background: #fffaf0;">
+            <h2 style="color: #991b1b; margin-top: 0;">⚠️ Event Flagged for Moderation</h2>
+            <p>The event <strong>{event_title}</strong> has triggered the automated content filter and is currently held in <code>pending_review</code> quarantine.</p>
+            <div style="background: #fee2e2; border-radius: 8px; padding: 12px; margin: 16px 0;">
+                <p style="margin: 0; color: #991b1b;"><strong>Flagged Reason / Keywords:</strong> {reason}</p>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Event ID:</td><td style="padding: 6px 0; font-family: monospace;">{event_id}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Organizer Name:</td><td style="padding: 6px 0;">{organizer_name}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">User Email:</td><td style="padding: 6px 0;">{user_email}</td></tr>
+            </table>
+            <div style="margin-top: 20px;">
+                <a href="{review_url}" style="display: inline-block; background: #dc2626; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600;">Open Moderation Queue</a>
+            </div>
+        </div>
+        """
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.MODERATION,
+            to=admin_target,
             subject=subject,
             html_content=html_content
         )
 
     async def send_new_venue_notification(self, venue_name: str, venue_id: str, creator_email: str) -> bool:
         """Notify admin about a new venue submission."""
-        if not settings.ADMIN_EMAIL:
-            return True
-
+        admin_target = settings.ADMIN_EMAIL or "contact@highlandeventshub.co.uk"
         subject = f"New Venue Created: {venue_name}"
         html_content = f"""
         <div style="font-family: sans-serif; padding: 20px;">
@@ -1120,7 +1169,7 @@ class ResendEmailService:
         """
         return await smart_email_service.send_smart_email(
             email_type=EmailType.MODERATION,
-            to=settings.ADMIN_EMAIL,
+            to=admin_target,
             subject=subject,
             html_content=html_content
         )
@@ -1150,10 +1199,8 @@ class ResendEmailService:
 
     async def send_moderation_required_notification(self, event_title: str, reason: str) -> bool:
         """Notify admin when an event is flagged for moderation."""
-        if not settings.ADMIN_EMAIL:
-            return True
-
-        subject = f"Moderation Required: {event_title}"
+        admin_target = settings.ADMIN_EMAIL or "contact@highlandeventshub.co.uk"
+        subject = f"⚠️ Event Flagged for Moderation: {event_title}"
         html_content = f"""
         <div style="font-family: sans-serif; padding: 20px;">
             <h2>Event Flagged for Moderation</h2>
@@ -1166,7 +1213,7 @@ class ResendEmailService:
         """
         return await smart_email_service.send_smart_email(
             email_type=EmailType.MODERATION,
-            to=settings.ADMIN_EMAIL,
+            to=admin_target,
             subject=subject,
             html_content=html_content
         )
@@ -1586,6 +1633,239 @@ class ResendEmailService:
         return await smart_email_service.send_smart_email(
             email_type=EmailType.TICKETING,
             to=organizer_email,
+            subject=subject,
+            html_content=html_content
+        )
+
+    async def send_event_rescheduled_notification(
+        self,
+        to_email: str,
+        buyer_name: str,
+        event_title: str,
+        previous_date_str: str,
+        new_date_str: str,
+        venue_info: str,
+        order_ref: str,
+        event_id: str
+    ) -> bool:
+        """
+        Send notification email to ticket holders when an event's date/time is rescheduled.
+        """
+        subject = f"📅 Event Rescheduled: {event_title}"
+        tickets_url = f"{settings.FRONTEND_URL}/orders/{order_ref}"
+        event_url = f"{settings.FRONTEND_URL}/events/{event_id}"
+
+        html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Event Rescheduled</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f6f8; padding: 32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 32px; text-align: center;">
+                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">📅 Date Rescheduled</h1>
+                            <p style="margin: 0; color: #bfdbfe; font-size: 15px; font-weight: 500;">{event_title}</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 32px;">
+                            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #1f2937;">
+                                Hi {buyer_name or 'there'},
+                            </p>
+                            <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
+                                The organizer of <strong>{event_title}</strong> has rescheduled the date for this event. Please take note of the updated schedule below.
+                            </p>
+
+                            <!-- Reschedule Details Card -->
+                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td style="padding: 6px 0; font-size: 14px; color: #64748b;">
+                                            ⏮️ <strong>Previous Date:</strong> <span style="text-decoration: line-through; color: #94a3b8;">{previous_date_str}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 6px 0; font-size: 15px; color: #1e3a8a; font-weight: 700;">
+                                            🗓️ <strong>New Date & Time:</strong> {new_date_str}
+                                        </td>
+                                    </tr>
+                                    {f'<tr><td style="padding: 6px 0; font-size: 14px; color: #334155;">📍 <strong>Venue:</strong> {venue_info}</td></tr>' if venue_info else ''}
+                                    <tr>
+                                        <td style="padding: 6px 0; font-size: 13px; color: #64748b;">
+                                            🎟️ <strong>Booking Reference:</strong> <span style="font-family: monospace; font-weight: 700; color: #0f172a;">{order_ref}</span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- QR Ticket Validity Notice -->
+                            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 16px 18px; margin-bottom: 28px;">
+                                <div style="display: flex; align-items: flex-start;">
+                                    <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #065f46; font-weight: 600;">
+                                        ✨ Your existing QR tickets remain 100% valid for the new date. No rebooking or ticket exchange is necessary.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 32px 0 20px 0;">
+                                <a href="{tickets_url}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 15px 32px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 2px 8px rgba(37,99,235,0.3);">View Your Tickets 🎟️</a>
+                            </div>
+
+                            <p style="margin: 0; font-size: 13px; color: #64748b; text-align: center; line-height: 1.5;">
+                                If you are unable to attend on the new date, please contact the event organizer or visit the <a href="{event_url}" style="color: #2563eb; text-decoration: underline;">event page</a> for support.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 24px 32px; text-align: center;">
+                            <p style="margin: 0 0 6px 0; font-size: 13px; color: #6b7280; font-weight: 600;">Highland Events Hub</p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">Discover what's on across the Scottish Highlands • <a href="{settings.FRONTEND_URL}/account/tickets" style="color: #2563eb; text-decoration: underline;">My Tickets</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        from app.services.email_service import EmailType
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.TICKETING,
+            to=to_email,
+            subject=subject,
+            html_content=html_content
+        )
+
+    async def send_event_cancellation_refund_notification(
+        self,
+        to_email: str,
+        buyer_name: str,
+        event_title: str,
+        cancellation_reason: Optional[str],
+        order_ref: str,
+        refund_amount: float,
+        is_free_order: bool = False
+    ) -> bool:
+        """
+        Send notification email to ticket holders when an event is cancelled and refunded.
+        """
+        subject = f"⚠️ Event Cancelled: {event_title} ({order_ref})"
+
+        refund_section = ""
+        if not is_free_order and refund_amount > 0:
+            refund_section = f"""
+            <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="font-size: 13px; color: #991b1b; text-transform: uppercase; font-weight: 700;">Face-Value Refund Issued</td>
+                        <td style="text-align: right; font-size: 18px; font-weight: 800; color: #b91c1c;">£{refund_amount:.2f}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="padding-top: 8px; font-size: 13px; color: #7f1d1d; line-height: 1.5;">
+                            A full face-value refund of <strong>£{refund_amount:.2f}</strong> has been initiated via Stripe back to your original payment method. Funds typically appear in your account within 5–10 business days.
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            """
+        else:
+            refund_section = f"""
+            <div style="background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 14px; color: #374151; line-height: 1.5;">
+                    Your RSVP reservation (Ref: <strong>{order_ref}</strong>) has been cancelled. No payment was charged.
+                </p>
+            </div>
+            """
+
+        reason_html = ""
+        if cancellation_reason:
+            reason_html = f"""
+            <div style="background-color: #f8fafc; border-left: 4px solid #94a3b8; padding: 14px 18px; margin-bottom: 24px; border-radius: 4px;">
+                <p style="margin: 0 0 4px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; color: #64748b;">Message from Organizer</p>
+                <p style="margin: 0; font-size: 14px; color: #1e293b; font-style: italic; line-height: 1.5;">"{cancellation_reason}"</p>
+            </div>
+            """
+
+        html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Event Cancelled</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f6f8; padding: 32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%); padding: 32px; text-align: center;">
+                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">⚠️ Event Cancelled</h1>
+                            <p style="margin: 0; color: #fecaca; font-size: 15px; font-weight: 500;">{event_title}</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 32px;">
+                            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #1f2937;">
+                                Hi {buyer_name or 'there'},
+                            </p>
+                            <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
+                                We regret to inform you that <strong>{event_title}</strong> has been cancelled by the event organizer and will no longer take place.
+                            </p>
+
+                            {reason_html}
+
+                            {refund_section}
+
+                            <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 18px; margin-bottom: 28px;">
+                                <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5;">
+                                    Booking Reference: <strong style="color: #111827; font-family: monospace;">{order_ref}</strong> • All tickets associated with this booking have been marked void.
+                                </p>
+                            </div>
+
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 28px 0 20px 0;">
+                                <a href="{settings.FRONTEND_URL}/events" style="display: inline-block; background-color: #1f2937; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px;">Browse Other Highland Events →</a>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 24px 32px; text-align: center;">
+                            <p style="margin: 0 0 6px 0; font-size: 13px; color: #6b7280; font-weight: 600;">Highland Events Hub Customer Care</p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">Discover what's on across the Scottish Highlands • <a href="{settings.FRONTEND_URL}" style="color: #b91c1c; text-decoration: underline;">highlandeventshub.co.uk</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        from app.services.email_service import EmailType
+        return await smart_email_service.send_smart_email(
+            email_type=EmailType.TICKETING,
+            to=to_email,
             subject=subject,
             html_content=html_content
         )

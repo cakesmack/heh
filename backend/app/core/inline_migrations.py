@@ -92,15 +92,15 @@ def run_inline_migrations(session: Session) -> None:
     except Exception as e:
         logger.warning(f"Organizer migration skipped: {e}")
 
-    # --- notificationtype enum update ---
+    # --- Event cancellation & reschedule tracking ---
     try:
-        session.commit()
-        connection = session.connection()
-        autocommit_conn = connection.execution_options(isolation_level="AUTOCOMMIT")
-        autocommit_conn.execute(text("ALTER TYPE notificationtype ADD VALUE 'NEW_CLAIM';"))
+        session.exec(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS is_cancelled BOOLEAN DEFAULT FALSE;"))
+        session.exec(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;"))
+        session.exec(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITHOUT TIME ZONE;"))
+        session.exec(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS previous_date_start TIMESTAMP WITHOUT TIME ZONE;"))
+        session.exec(text("CREATE INDEX IF NOT EXISTS ix_events_is_cancelled ON events (is_cancelled);"))
     except Exception as e:
-        if "already exists" not in str(e).lower():
-            logger.warning("Could not add NEW_CLAIM to notificationtype enum: %s", e)
+        logger.warning(f"Event cancellation migration skipped: {e}")
 
     session.commit()
     logger.info("Inline migrations complete")
