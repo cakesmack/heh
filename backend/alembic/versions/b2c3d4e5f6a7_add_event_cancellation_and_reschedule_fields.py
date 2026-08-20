@@ -29,7 +29,7 @@ def upgrade() -> None:
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITHOUT TIME ZONE;"
     )
     op.execute(
-        "ALDER TABLE events ADD COLUMN IF NOT EXISTS previous_date_start TIMESTAMO WITHOUT TIME ZONE;"
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS previous_date_start TIMESTAMP WITHOUT TIME ZONE;"
     )
     op.execute(
         "CREATE INDEX IF NOT EXISTS ix_events_is_cancelled ON events (is_cancelled);"
