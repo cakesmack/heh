@@ -340,3 +340,17 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - Feature flag `TICKETING_PUBLIC_ENABLED` (default `False` in `backend/app/core/config.py`).
   - Native ticketing creation, seller onboarding, and ticket tier management are restricted to platform administrators (`user.is_admin == True`) while in private testing. Public ticket purchases and checkout intents for admin-ticketed events remain fully operational.
 
+---
+
+## 7. Mobile Navigation & Filter Architecture
+
+- **Mobile Header (`Header.tsx`)**:
+  - Contains site title, notification bell, and Profile/Account avatar/link adjacent to the bell.
+  - Retains scroll-linked sticky reveal/hide animation (`translate-y-0` on scroll-up, `-translate-y-full` on scroll-down).
+- **Mobile Bottom Navigation (`BottomNavBar.tsx`)**:
+  - 5-item bottom bar ordered left-to-right: Home (`/`) | Events (`/events`) | Create (`/submit-event` elevated primary button) | Map (`/map`) | Discover (`/venues` with Compass icon).
+- **Condensed Mobile Filters & Internal Links**:
+  - Category and location pills use horizontal touch-scrolling (`flex-nowrap md:flex-wrap overflow-x-auto whitespace-nowrap scrollbar-hide snap-x`) and compact padding (`px-3 py-1.5 md:px-5 md:py-2.5 text-xs md:text-sm`).
+  - All location pills in `PopularLocations.tsx` render as hard Next.js `<Link>` components routing directly to `/locations/${location.slug}` for optimal SEO crawlability.
+
+

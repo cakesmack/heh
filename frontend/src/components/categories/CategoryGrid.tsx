@@ -31,11 +31,11 @@ export default function CategoryGrid({ activeCategory, onSelectCategory, initial
 
   if (loading) {
     return (
-      <section className="py-3 bg-white">
+      <section className="py-1.5 md:py-3 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
+          <div className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible whitespace-nowrap scrollbar-hide snap-x gap-2 md:gap-3 pb-1 pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-10 w-28 rounded-full bg-gray-100 animate-pulse flex-shrink-0" />
+              <div key={i} className="h-8 md:h-10 w-20 md:w-28 rounded-full bg-gray-100 animate-pulse flex-shrink-0 snap-start" />
             ))}
           </div>
         </div>
@@ -46,9 +46,9 @@ export default function CategoryGrid({ activeCategory, onSelectCategory, initial
   if (categories.length === 0) return null;
 
   return (
-    <section className="py-3 bg-white">
+    <section className="py-1.5 md:py-3 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-row flex-nowrap overflow-x-auto whitespace-nowrap hide-scrollbar gap-3 pb-1">
+        <div className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible whitespace-nowrap scrollbar-hide snap-x gap-2 md:gap-3 pb-1 pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {categories.map((category) => (
             <CategoryCard
               key={category.id}

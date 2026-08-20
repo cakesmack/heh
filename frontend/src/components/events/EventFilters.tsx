@@ -304,19 +304,19 @@ export function EventFilters({ onFilterChange, userLocation, initialFilters, isC
                 Categories
               </label>
               {loadingCategories ? (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 overflow-x-auto whitespace-nowrap flex-nowrap md:flex-wrap pb-1 pr-4 scrollbar-hide snap-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-8 w-20 bg-gray-200 animate-pulse rounded-full" />
+                    <div key={i} className="h-8 w-20 bg-gray-200 animate-pulse rounded-full flex-shrink-0 snap-start" />
                   ))}
                 </div>
               ) : (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 overflow-x-auto whitespace-nowrap flex-nowrap md:flex-wrap pb-1 pr-4 scrollbar-hide snap-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
                       type="button"
                       onClick={() => handleCategoryToggle(cat.id)}
-                      className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${selectedCategories.includes(cat.id)
+                      className={`px-2.5 py-1 text-xs md:px-3 md:py-1.5 md:text-sm rounded-full border transition-colors flex-shrink-0 snap-start ${selectedCategories.includes(cat.id)
                         ? 'bg-emerald-100 border-emerald-500 text-emerald-800'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-400'
                         }`}

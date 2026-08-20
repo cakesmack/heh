@@ -10,14 +10,12 @@ import OptimizedImage from '@/components/ui/OptimizedImage';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useSearch } from '@/context/SearchContext';
 import { NotificationCenter } from './NotificationCenter';
 import { apiFetch } from '@/lib/api';
 
 export function Header() {
   const pathname = usePathname();
   const { user, isAuthenticated, isSeller, logout } = useAuth();
-  const { openMobileSearch } = useSearch();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -207,21 +205,31 @@ export function Header() {
           </nav>
 
           {/* Mobile Right Side Icons */}
-          <div className="md:hidden flex items-center gap-2">
-            {/* Search Icon */}
-            <button
-              onClick={openMobileSearch}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-              aria-label="Search events"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
+          <div className="md:hidden flex items-center gap-2.5">
             {/* Notification Bell */}
             {isAuthenticated && (
               <NotificationCenter pendingCount={pendingCount} />
+            )}
+
+            {/* Profile / Account Access */}
+            {isAuthenticated ? (
+              <Link
+                href="/account"
+                className="w-8 h-8 rounded-full bg-emerald-600 border-2 border-warm-white/40 flex items-center justify-center text-white text-xs font-bold shadow-sm hover:border-golden-heather active:scale-95 transition-all flex-shrink-0"
+                aria-label="My Account"
+              >
+                {(user?.username || user?.email)?.[0]?.toUpperCase() || 'U'}
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="p-1 text-warm-white/90 hover:text-golden-heather hover:bg-white/10 rounded-full transition-colors flex items-center justify-center"
+                aria-label="Sign In"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </Link>
             )}
           </div>
         </div>

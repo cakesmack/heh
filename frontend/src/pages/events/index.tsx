@@ -168,20 +168,18 @@ export default function EventsPage() {
   const hasMore = displayedEvents.length < total;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 pb-24">
+    <div className="min-h-screen bg-gray-50 py-4 md:py-8 pb-20 md:pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Events</h1>
-          <p className="text-gray-600">
+        <div className="mb-3 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">Events</h1>
+          <p className="text-xs md:text-sm text-gray-600">
             Discover events happening across the Scottish Highlands
           </p>
         </div>
 
-
-
         {/* Search Bar */}
-        <div className="mb-8">
+        <div className="mb-3 md:mb-8">
           <DiscoveryBar
             onSearch={handleSearch}
             isLoading={isLoading}
@@ -193,7 +191,7 @@ export default function EventsPage() {
         </div>
 
         {/* Category & Location scrolling pills */}
-        <div className="space-y-4 mb-8">
+        <div className="space-y-1.5 md:space-y-4 mb-3 md:mb-8">
           <CategoryGrid
             activeCategory={currentFilters.category}
             onSelectCategory={(slug) => {
@@ -203,17 +201,6 @@ export default function EventsPage() {
           />
           <PopularLocations
             activeLocation={currentFilters.location}
-            onSelectLocation={(name) => {
-              const newLocation = currentFilters.location === name ? undefined : name;
-              // Reset GPS parameters when location pill is selected
-              handleSearch({
-                ...currentFilters,
-                location: newLocation,
-                latitude: undefined,
-                longitude: undefined,
-                radius: undefined
-              });
-            }}
             categorySlug={currentFilters.category}
           />
         </div>

@@ -53,17 +53,17 @@ export function FilterBar({
     };
 
     return (
-        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-200 py-3 mb-6 shadow-sm">
+        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-200 py-1.5 md:py-3 mb-3 md:mb-6 shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-row items-center gap-2 sm:gap-3 overflow-x-auto flex-nowrap whitespace-nowrap md:flex-wrap md:overflow-x-visible md:whitespace-normal [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-1 scroll-smooth">
+                <div className="flex flex-row items-center gap-2 sm:gap-3 overflow-x-auto flex-nowrap whitespace-nowrap md:flex-wrap md:overflow-x-visible md:whitespace-normal scrollbar-hide snap-x pr-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-0.5 md:py-1 scroll-smooth">
                     
                     {/* Date Pill Dropdown */}
-                    <div className="relative flex-shrink-0">
+                    <div className="relative flex-shrink-0 snap-start">
                         <select
                             aria-label="Filter by Date"
                             value={activeDate}
                             onChange={(e) => handleDateChange(e.target.value)}
-                            className={`appearance-none cursor-pointer text-sm font-medium px-4 py-2 pr-8 rounded-full border transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                            className={`appearance-none cursor-pointer text-xs md:text-sm font-medium px-3 py-1.5 md:px-4 md:py-2 pr-7 md:pr-8 rounded-full border transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                                 activeDate
                                     ? 'bg-emerald-600 text-white border-emerald-600 font-semibold shadow-md'
                                     : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400 hover:bg-gray-50'
@@ -75,20 +75,20 @@ export function FilterBar({
                                 </option>
                             ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5">
-                            <svg className={`w-3.5 h-3.5 ${activeDate ? 'text-white' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 md:px-2.5">
+                            <svg className={`w-3 h-3 md:w-3.5 md:h-3.5 ${activeDate ? 'text-white' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                         </div>
                     </div>
 
                     {/* Distance Pill Dropdown */}
-                    <div className="relative flex-shrink-0">
+                    <div className="relative flex-shrink-0 snap-start">
                         <select
                             aria-label="Filter by Distance"
                             value={activeRadius}
                             onChange={(e) => handleRadiusChange(e.target.value)}
-                            className={`appearance-none cursor-pointer text-sm font-medium px-4 py-2 pr-8 rounded-full border transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                            className={`appearance-none cursor-pointer text-xs md:text-sm font-medium px-3 py-1.5 md:px-4 md:py-2 pr-7 md:pr-8 rounded-full border transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                                 activeRadius
                                     ? 'bg-emerald-600 text-white border-emerald-600 font-semibold shadow-md'
                                     : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400 hover:bg-gray-50'
@@ -100,8 +100,8 @@ export function FilterBar({
                                 </option>
                             ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5">
-                            <svg className={`w-3.5 h-3.5 ${activeRadius ? 'text-white' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 md:px-2.5">
+                            <svg className={`w-3 h-3 md:w-3.5 md:h-3.5 ${activeRadius ? 'text-white' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                         </div>

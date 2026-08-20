@@ -182,7 +182,7 @@ export default function DiscoveryBar({
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Search events, towns, or venues..."
-                    className={`w-full bg-transparent py-3 px-2 text-base sm:text-lg focus:outline-none focus:ring-0 border-none [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:shadow-[0_0_0px_1000px_rgba(0,0,0,0)_inset] ${
+                    className={`w-full bg-transparent py-1.5 sm:py-3 px-2 text-sm sm:text-lg focus:outline-none focus:ring-0 border-none [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:shadow-[0_0_0px_1000px_rgba(0,0,0,0)_inset] ${
                         variant === 'dark'
                             ? 'text-white placeholder-gray-300 [&:-webkit-autofill]:[-webkit-text-fill-color:white]'
                             : 'text-gray-900 placeholder-gray-500 [&:-webkit-autofill]:[-webkit-text-fill-color:black]'
@@ -195,14 +195,14 @@ export default function DiscoveryBar({
                     <button
                         type="button"
                         onClick={handleClear}
-                        className={`p-2 rounded-full transition-colors flex-shrink-0 mr-1 ${
+                        className={`p-1.5 sm:p-2 rounded-full transition-colors flex-shrink-0 mr-1 ${
                             variant === 'dark'
                                 ? 'text-white/60 hover:text-white'
                                 : 'text-gray-400 hover:text-gray-600'
                         }`}
                         title="Clear search"
                     >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
@@ -213,7 +213,7 @@ export default function DiscoveryBar({
                     type="button"
                     onClick={() => handleSearch()}
                     disabled={isLoading}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-full px-6 py-3 sm:px-8 sm:py-3.5 flex items-center justify-center gap-2 transition-all flex-shrink-0 shadow-md active:scale-95 disabled:opacity-50"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-full px-4 py-1.5 sm:px-8 sm:py-3.5 text-xs sm:text-base flex items-center justify-center gap-2 transition-all flex-shrink-0 shadow-md active:scale-95 disabled:opacity-50"
                 >
                     {isLoading ? (
                         <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
