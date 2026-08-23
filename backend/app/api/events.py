@@ -1462,6 +1462,22 @@ async def create_event(
             detail="Native ticketing is currently in private testing."
         )
 
+    # 36-Hour Single-Session Constraint for Native Ticketing
+    if event_data.is_ticketing_enabled:
+        if event_data.is_recurring or event_data.recurrence_rule or event_data.frequency or (event_data.showtimes and len(event_data.showtimes) > 0):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Native ticketing is currently restricted to single-session events up to 36 hours."
+            )
+        if event_data.date_start and event_data.date_end:
+            start_dt = to_london_naive(event_data.date_start)
+            end_dt = to_london_naive(event_data.date_end)
+            if start_dt and end_dt and (end_dt - start_dt).total_seconds() > 36 * 3600:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Native ticketing is currently restricted to single-session events up to 36 hours."
+                )
+
     # Parse price and age inputs
     price_display, min_price = parse_price_input(event_data.price)
     age_restriction_str, min_age = parse_age_input(event_data.age_restriction)
@@ -2026,6 +2042,26 @@ async def update_event(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Native ticketing is currently in private testing."
         )
+
+    # 36-Hour Single-Session Constraint for Native Ticketing
+    effective_ticketing = event_data.is_ticketing_enabled if event_data.is_ticketing_enabled is not None else event.is_ticketing_enabled
+    if effective_ticketing:
+        effective_recurring = event_data.is_recurring if event_data.is_recurring is not None else event.is_recurring
+        effective_rrule = event_data.recurrence_rule if event_data.recurrence_rule is not None else event.recurrence_rule
+        effective_freq = event_data.frequency if event_data.frequency is not None else getattr(event, 'frequency', None)
+        effective_showtimes = event_data.showtimes if event_data.showtimes is not None else []
+        if effective_recurring or effective_rrule or effective_freq or len(effective_showtimes) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Native ticketing is currently restricted to single-session events up to 36 hours."
+            )
+        effective_start = to_london_naive(event_data.date_start) if event_data.date_start is not None else event.date_start
+        effective_end = to_london_naive(event_data.date_end) if event_data.date_end is not None else event.date_end
+        if effective_start and effective_end and (effective_end - effective_start).total_seconds() > 36 * 3600:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Native ticketing is currently restricted to single-session events up to 36 hours."
+            )
 
     # Update fields (exclude tags, participating_venue_ids, showtimes, and explicit dates for special handling)
     update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring", "ticket_tiers"})

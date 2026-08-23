@@ -529,6 +529,17 @@ export default function EventWizardForm({
 
   const cancelPath = isEditMode && (eventId || initialData?.id) ? `/events/${eventId || initialData.id}` : '/events';
 
+  const currentStepDef = steps.find(s => s.id === currentStep);
+  const isTimelineStep = currentStepDef?.label === 'Timeline';
+  const currentFormData = form.watch();
+  const isOver36Hours = Boolean(
+    currentFormData.is_ticketing_enabled &&
+    currentFormData.date_start &&
+    currentFormData.date_end &&
+    !currentFormData.noEndTime &&
+    ((new Date(currentFormData.date_end).getTime() - new Date(currentFormData.date_start).getTime()) / 3600000 > 36)
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* ─── Progress Bar (Sticky) ──────────────────────── */}
@@ -651,7 +662,7 @@ export default function EventWizardForm({
                   type="button"
                   variant="primary"
                   size="lg"
-                  disabled={isAnimating}
+                  disabled={isAnimating || (isTimelineStep && isOver36Hours)}
                   onClick={goNext}
                   className="min-w-[120px] min-h-[48px] !rounded-xl"
                 >

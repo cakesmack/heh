@@ -9,8 +9,10 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.core.database import get_session
 from app.api.auth import get_current_user
+from app.core.security import get_current_user as core_get_current_user
 from app.models.user import User
 from app.models.event import Event
+from app.models.category import Category
 from app.models.organizer import Organizer
 from app.models.organizer_stripe_account import OrganizerStripeAccount
 from app.models.ticket_tier import TicketTier
@@ -330,3 +332,96 @@ def test_admin_order_search_and_email_typo_fixer(client: TestClient, test_db: Se
     # Verify updated in DB
     refreshed_order = test_db.get(Order, order.id)
     assert refreshed_order.buyer_email == 'gregor.correct@gmail.com'
+
+
+def test_native_ticketing_single_session_and_duration_validation(client: TestClient, test_db: Session):
+    admin_user = User(
+        id=normalize_uuid(str(uuid4())),
+        email='admin_limits@heh.com',
+        username='admin_limits',
+        is_admin=True
+    )
+    test_db.add(admin_user)
+
+    cat = Category(
+        id=normalize_uuid(str(uuid4())),
+        name='Live Music',
+        slug='live-music'
+    )
+    test_db.add(cat)
+    test_db.commit()
+
+    def get_admin_override():
+        return admin_user
+
+    app.dependency_overrides[get_current_user] = get_admin_override
+    app.dependency_overrides[core_get_current_user] = get_admin_override
+
+    start_time = (datetime.utcnow() + timedelta(days=7)).replace(hour=20, minute=0, second=0, microsecond=0)
+
+    # 1. Valid Ticketed Event (Overnight gig: 8:00 PM to 2:00 AM next day -> 6 hours)
+    valid_payload = {
+        'title': 'Overnight Acoustic Session',
+        'category_id': cat.id,
+        'location_name': 'Strathpeffer Pavilion',
+        'date_start': start_time.isoformat(),
+        'date_end': (start_time + timedelta(hours=6)).isoformat(),
+        'is_ticketing_enabled': True,
+        'ticket_tiers': [
+            {'name': 'General Admission', 'price': 15.0, 'quantity_available': 50, 'max_per_order': 6}
+        ]
+    }
+    res_valid = client.post('/api/events', json=valid_payload)
+    assert res_valid.status_code == 201
+    created_id = res_valid.json()['id']
+    assert res_valid.json()['is_ticketing_enabled'] is True
+
+    # 2. Invalid Ticketed Event: Duration > 36 hours (e.g. 48 hours) -> 400
+    invalid_duration_payload = {
+        'title': 'Weekend Multi-Day Festival',
+        'category_id': cat.id,
+        'location_name': 'Strathpeffer Pavilion',
+        'date_start': start_time.isoformat(),
+        'date_end': (start_time + timedelta(hours=48)).isoformat(),
+        'is_ticketing_enabled': True,
+        'ticket_tiers': [
+            {'name': 'Weekend Pass', 'price': 80.0, 'quantity_available': 100, 'max_per_order': 4}
+        ]
+    }
+    res_invalid_dur = client.post('/api/events', json=invalid_duration_payload)
+    assert res_invalid_dur.status_code == 400
+    assert 'Native ticketing is currently restricted to single-session events up to 36 hours.' in res_invalid_dur.json()['detail']
+
+    # 3. Invalid Ticketed Event: Recurring Event -> 400
+    invalid_recurring_payload = {
+        'title': 'Weekly Highland Ceilidh Class',
+        'category_id': cat.id,
+        'location_name': 'Strathpeffer Pavilion',
+        'date_start': start_time.isoformat(),
+        'date_end': (start_time + timedelta(hours=2)).isoformat(),
+        'is_ticketing_enabled': True,
+        'is_recurring': True,
+        'frequency': 'WEEKLY',
+        'ticket_tiers': [
+            {'name': 'Class Entry', 'price': 10.0, 'quantity_available': 30, 'max_per_order': 2}
+        ]
+    }
+    res_invalid_rec = client.post('/api/events', json=invalid_recurring_payload)
+    assert res_invalid_rec.status_code == 400
+    assert 'Native ticketing is currently restricted to single-session events up to 36 hours.' in res_invalid_rec.json()['detail']
+
+    # 4. Invalid Update: Updating valid ticketed event to > 36 hours -> 400
+    res_update_dur = client.put(f'/api/events/{created_id}', json={
+        'date_end': (start_time + timedelta(hours=40)).isoformat()
+    })
+    assert res_update_dur.status_code == 400
+    assert 'Native ticketing is currently restricted to single-session events up to 36 hours.' in res_update_dur.json()['detail']
+
+    # 5. Invalid Update: Updating valid ticketed event to recurring -> 400
+    res_update_rec = client.put(f'/api/events/{created_id}', json={
+        'is_recurring': True,
+        'frequency': 'WEEKLY'
+    })
+    assert res_update_rec.status_code == 400
+    assert 'Native ticketing is currently restricted to single-session events up to 36 hours.' in res_update_rec.json()['detail']
+

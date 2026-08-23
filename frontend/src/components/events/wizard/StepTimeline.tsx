@@ -8,11 +8,12 @@
  *  • Multi-Session / Multiple Showings
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { WizardFormData } from '@/hooks/useEventWizard';
 import EventScheduleSection from '@/components/events/form-sections/EventScheduleSection';
 import { ShowtimeCreate } from '@/types';
+import { toast } from 'react-hot-toast';
 
 type EventPattern = 'one-off' | 'recurring' | 'multi-session';
 
@@ -72,8 +73,11 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
   const formData = watch();
   const errors = stepErrors || {};
 
+  const isTicketing = Boolean(formData.is_ticketing_enabled);
+
   // ─── Derive initial pattern from formData (no circular ref) ─
   const derivePattern = (): EventPattern | null => {
+    if (isTicketing) return 'one-off';
     if (formData.isMultiSession) return 'multi-session';
     if (formData.is_recurring) return 'recurring';
     // If a date is already set, the user was previously on one-off
@@ -82,6 +86,47 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
   };
 
   const [selectedPattern, setSelectedPatternState] = useState<EventPattern | null>(derivePattern);
+
+  const selectPattern = useCallback((pattern: EventPattern) => {
+    setSelectedPatternState(pattern);
+
+    switch (pattern) {
+      case 'one-off':
+        setValue('is_recurring', false);
+        setValue('isMultiSession', false);
+        setValue('showtimes', []);
+        break;
+      case 'recurring':
+        setValue('is_recurring', true);
+        setValue('isMultiSession', false);
+        setValue('showtimes', []);
+        break;
+      case 'multi-session':
+        setValue('is_recurring', false);
+        setValue('isMultiSession', true);
+        break;
+    }
+  }, [setValue]);
+
+  // Lock to one-off when native ticketing is enabled
+  useEffect(() => {
+    if (isTicketing && selectedPattern !== 'one-off') {
+      selectPattern('one-off');
+    }
+  }, [isTicketing, selectedPattern, selectPattern]);
+
+  // 36-Hour Duration Calculation for Native Ticketing
+  let isOver36Hours = false;
+  if (isTicketing && formData.date_start && formData.date_end && !formData.noEndTime) {
+    const startMs = new Date(formData.date_start).getTime();
+    const endMs = new Date(formData.date_end).getTime();
+    if (!isNaN(startMs) && !isNaN(endMs)) {
+      const durationHours = (endMs - startMs) / 3600000;
+      if (durationHours > 36) {
+        isOver36Hours = true;
+      }
+    }
+  }
 
   // Synchronize top-level date_start and date_end for Multiple Showings (multi-session)
   React.useEffect(() => {
@@ -149,27 +194,6 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
     }
   }, [formData.showtimes, formData.isMultiSession, setValue]);
 
-  const selectPattern = useCallback((pattern: EventPattern) => {
-    setSelectedPatternState(pattern);
-
-    switch (pattern) {
-      case 'one-off':
-        setValue('is_recurring', false);
-        setValue('isMultiSession', false);
-        setValue('showtimes', []);
-        break;
-      case 'recurring':
-        setValue('is_recurring', true);
-        setValue('isMultiSession', false);
-        setValue('showtimes', []);
-        break;
-      case 'multi-session':
-        setValue('is_recurring', false);
-        setValue('isMultiSession', true);
-        break;
-    }
-  }, [setValue]);
-
   // ─── Adapter for EventScheduleSection ──────────────────
   // The existing component expects setFormData(fn) and handleChange(e).
   // We bridge it to react-hook-form here.
@@ -225,22 +249,34 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {PATTERN_OPTIONS.map(option => {
             const isSelected = selectedPattern === option.id;
+            const isOptionDisabled = isTicketing && option.id !== 'one-off';
+
             return (
               <button
                 key={option.id}
                 type="button"
-                onClick={() => selectPattern(option.id)}
+                onClick={() => {
+                  if (isOptionDisabled) {
+                    toast('Recurring and multi-session events require external ticketing for now.', {
+                      icon: 'ℹ️',
+                    });
+                    return;
+                  }
+                  selectPattern(option.id);
+                }}
                 className={`
                   relative group text-left p-5 rounded-2xl border-2 transition-all duration-200 min-h-[140px]
                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500
-                  ${isSelected
+                  ${isOptionDisabled
+                    ? 'border-gray-200 bg-gray-50/80 opacity-50 cursor-not-allowed'
+                    : isSelected
                     ? 'border-emerald-500 bg-emerald-50/50 shadow-md shadow-emerald-100'
                     : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
                   }
                 `}
               >
                 {/* Selected tick */}
-                {isSelected && (
+                {isSelected && !isOptionDisabled && (
                   <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -249,12 +285,12 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
                 )}
 
                 {/* Icon */}
-                <div className={`mb-3 ${isSelected ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-600'} transition-colors`}>
+                <div className={`mb-3 ${isSelected && !isOptionDisabled ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-600'} transition-colors`}>
                   {option.icon}
                 </div>
 
                 {/* Text */}
-                <h4 className={`font-semibold text-base mb-1 ${isSelected ? 'text-emerald-800' : 'text-gray-800'}`}>
+                <h4 className={`font-semibold text-base mb-1 ${isSelected && !isOptionDisabled ? 'text-emerald-800' : 'text-gray-800'}`}>
                   {option.title}
                 </h4>
                 <p className="text-sm text-gray-500 leading-snug">
@@ -263,6 +299,14 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
                 <p className="text-xs text-gray-400 mt-1.5 italic">
                   {option.example}
                 </p>
+
+                {isOptionDisabled && (
+                  <div className="mt-2">
+                    <span className="inline-block text-[11px] font-semibold text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
+                      Unavailable with Native Ticketing
+                    </span>
+                  </div>
+                )}
               </button>
             );
           })}
@@ -289,6 +333,17 @@ export default function StepTimeline({ form, stepErrors }: StepTimelineProps) {
             setIsAllDay={setIsAllDayAdapter}
             fieldErrors={errors}
           />
+
+          {/* 36-Hour Duration Warning for Native Ticketing */}
+          {isOver36Hours && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm flex items-start gap-3 animate-fadeIn">
+              <span className="text-lg leading-none shrink-0 mt-0.5">⚠️</span>
+              <div>
+                <p className="font-semibold">Single event ticketing cannot exceed 36 hours.</p>
+                <p className="text-xs text-red-700 mt-0.5">Please adjust end date or disable native ticketing.</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

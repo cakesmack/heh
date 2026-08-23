@@ -339,6 +339,9 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
 - **Native Ticketing Engine (Admin-Only Private Beta)**:
   - Feature flag `TICKETING_PUBLIC_ENABLED` (default `False` in `backend/app/core/config.py`).
   - Native ticketing creation, seller onboarding, and ticket tier management are restricted to platform administrators (`user.is_admin == True`) while in private testing. Public ticket purchases and checkout intents for admin-ticketed events remain fully operational.
+  - **Single-Session / 36-Hour Constraint (V1 Safeguard)**:
+    - **Frontend Event Wizard**: Step 1 displays micro-copy note outlining the single-event / overnight limit. Step 2 automatically locks pattern selection to "One-Off Event", greys out and disables "Recurring Event" and "Various Dates & Times" with an "Unavailable with Native Ticketing" badge and informative toast, shows an inline duration warning, and disables the "Next" button if duration exceeds 36 hours.
+    - **Backend API**: `POST /api/events` and `PUT /api/events/{id}` strictly validate that any ticketed event is non-recurring (`is_recurring == False`, `recurrence_rule == None`, `frequency == None`, and empty `showtimes`) and that duration `(date_end - date_start) <= 36 hours` (allowing overnight sessions up to 36 hours), raising HTTP 400 otherwise.
 
 ---
 

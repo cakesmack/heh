@@ -312,7 +312,10 @@ export default function StepBasics({
                 <span className="text-[10px] uppercase font-extrabold bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded">Admin Beta</span>
               </div>
               <p className="text-sm text-emerald-900/80 mt-1">
-                Enable our native ticketing engine to sell tickets directly. Manage inventory, live door scanning, and self-service refunds.
+                Enable the native ticketing engine to sell tickets directly. Manage inventory, live door scanning, and self-service refunds.
+              </p>
+              <p className="text-xs text-emerald-800/90 mt-2 bg-emerald-100/60 rounded-lg px-2.5 py-1.5 border border-emerald-200/50">
+                💡 Native ticketing currently supports single events and overnight gigs (up to 36 hours). For recurring classes or multi-day festivals, please use an external ticket link.
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">

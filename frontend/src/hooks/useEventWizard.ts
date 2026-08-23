@@ -193,6 +193,24 @@ const validateStep2: StepValidator = (data) => {
       errors.date_end = 'End date must be after start date.';
     }
   }
+
+  // 36-Hour and Single-Session Constraint for Native Ticketing
+  if (data.is_ticketing_enabled) {
+    if (data.is_recurring || data.isMultiSession) {
+      errors.pattern = 'Native ticketing is currently restricted to one-off single events.';
+    }
+    if (data.date_start && data.date_end && !data.noEndTime) {
+      const startMs = new Date(data.date_start).getTime();
+      const endMs = new Date(data.date_end).getTime();
+      if (!isNaN(startMs) && !isNaN(endMs)) {
+        const durationHours = (endMs - startMs) / (1000 * 60 * 60);
+        if (durationHours > 36) {
+          errors.date_end = 'Single event ticketing cannot exceed 36 hours. Please adjust end date or disable native ticketing.';
+        }
+      }
+    }
+  }
+
   if (data.isMultiSession && data.showtimes.length === 0) {
     errors.showtimes = 'Please add at least one showtime.';
   }
