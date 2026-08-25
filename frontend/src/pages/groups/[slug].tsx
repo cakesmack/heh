@@ -118,19 +118,21 @@ export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPa
     const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     const handleSendInvite = async () => {
-        if (!organizer?.id) return;
+        if (!organizer?.id || !inviteEmail.trim()) return;
 
         setIsInviting(true);
         setInviteMessage(null);
 
         try {
-            await api.groups.createInvite(organizer.id, inviteEmail);
-            setInviteMessage({ type: 'success', text: `Invitation sent to ${inviteEmail}` });
+            await api.groups.createInvite(organizer.id, inviteEmail.trim());
+            setInviteMessage({ type: 'success', text: `Invitation sent to ${inviteEmail.trim()}` });
             setInviteEmail('');
-            // Close after delay? Or let user see success message
-        } catch (err) {
+            toast.success(`Invitation sent to ${inviteEmail.trim()}`);
+        } catch (err: any) {
             console.error('Failed to send invite:', err);
-            setInviteMessage({ type: 'error', text: 'Failed to send invitation. Please try again.' });
+            const msg = err?.message || 'Failed to send invitation. Please try again.';
+            setInviteMessage({ type: 'error', text: msg });
+            toast.error(msg);
         } finally {
             setIsInviting(false);
         }
@@ -210,39 +212,32 @@ export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPa
                 // 1. Owner check
                 const isOwner = user.id === organizer.user_id;
                 // 2. Global Admin check
-                const isGlobalAdmin = user.is_admin;
+                const isGlobalAdmin = Boolean(user.is_admin);
 
-                // Determine if user is a member (for visibility of Members tab)
-                if (isOwner) {
-                    setIsMember(true);
-                }
+                let isAuthorized = isOwner || isGlobalAdmin;
+                let userIsMember = isOwner || isGlobalAdmin;
 
-                if (isOwner || isGlobalAdmin) {
-                    setCanEdit(true);
-                }
-
-                // 3. Group Member role check (Admin or Editor)
+                // 3. Group Member role check (Admin, Owner, Editor)
                 try {
                     const membership = await api.groups.checkMembership(organizer.id);
-                    // Case-insensitive role check
                     const role = membership?.role?.toLowerCase() || '';
 
                     if (membership && membership.is_member) {
-                        setIsMember(true);
+                        userIsMember = true;
                     }
 
                     if (membership && ['admin', 'editor', 'owner'].includes(role)) {
-                        setCanEdit(true);
-                    } else if (!isOwner && !isGlobalAdmin) {
-                        setCanEdit(false);
+                        isAuthorized = true;
                     }
                 } catch (err) {
-                    // Not a member or error
-                    setCanEdit(false);
-                    if (!isOwner) setIsMember(false);
+                    console.error('Membership check failed:', err);
                 }
+
+                setIsMember(userIsMember);
+                setCanEdit(isAuthorized);
             } else {
                 setCanEdit(false);
+                setIsMember(false);
             }
         };
 
@@ -425,6 +420,17 @@ export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPa
                                                 <PencilIcon className="w-3.5 h-3.5 mr-1.5" />
                                                 Edit Details
                                             </Link>
+                                            <button
+                                                onClick={() => {
+                                                    setInviteMessage(null);
+                                                    setInviteEmail('');
+                                                    setIsInviteModalOpen(true);
+                                                }}
+                                                className="flex items-center text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-full transition-colors shrink-0 cursor-pointer"
+                                            >
+                                                <UsersIcon className="w-3.5 h-3.5 mr-1.5" />
+                                                Invite User
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -520,7 +526,26 @@ export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPa
                     </div>
 
                     {activeTab === 'team' ? (
-                        <div className="bg-white rounded-3xl p-8 border border-gray-100">
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-xs">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900">Team Members</h3>
+                                    <p className="text-sm text-gray-500 mt-1">Manage collaborators and team permissions for {organizer.name}.</p>
+                                </div>
+                                {canEdit && (
+                                    <button
+                                        onClick={() => {
+                                            setInviteMessage(null);
+                                            setInviteEmail('');
+                                            setIsInviteModalOpen(true);
+                                        }}
+                                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all shadow-sm shrink-0 cursor-pointer"
+                                    >
+                                        <UsersIcon className="w-4 h-4" />
+                                        <span>+ Invite User</span>
+                                    </button>
+                                )}
+                            </div>
                             <GroupTeamList organizerId={organizer.id} />
                         </div>
                     ) : (
@@ -556,7 +581,7 @@ export default function OrganizerProfilePage({ initialOrganizer }: GroupDetailPa
                                     <p className="text-gray-500 max-w-sm mx-auto font-medium">
                                         {activeTab === 'upcoming'
                                             ? 'This organizer hasn\'t scheduled any future events. Check back soon for updates!'
-                                            : 'We couldn\'t find any past event history for this profile.'}
+                                            : 'No past event history was found for this profile.'}
                                     </p>
                                 </div>
                             )}
