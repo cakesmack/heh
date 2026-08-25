@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, API_BASE_URL } from '@/lib/api';
 
 interface InventoryItem {
   tier_id: string;
@@ -79,17 +79,35 @@ export default function OrganizerTicketingDashboard() {
     }
   };
 
-  const handleExport = () => {
-    // We can just open the API URL to trigger a download since we pass the token in cookies, 
-    // or if we use Bearer token, we must fetch and blob it.
-    // Assuming apiFetch handles headers, we fetch as blob.
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/ticketing/organizer/events/${id}/export-guests`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}` // If using local storage
+  const handleExport = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') || localStorage.getItem('token')) : '';
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-    })
-    .then(res => res.blob())
-    .then(blob => {
+
+      const res = await fetch(`${API_BASE_URL}/api/ticketing/organizer/events/${id}/export-attendees`, {
+        headers
+      });
+
+      if (!res.ok) {
+        let errorDetail = `HTTP ${res.status}: ${res.statusText}`;
+        try {
+          const errData = await res.json();
+          if (errData?.detail) {
+            errorDetail = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } catch {
+          try {
+            const errText = await res.text();
+            if (errText) errorDetail = errText;
+          } catch {}
+        }
+        throw new Error(errorDetail);
+      }
+
+      const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
@@ -97,9 +115,11 @@ export default function OrganizerTicketingDashboard() {
       a.download = `guest_list_${id}.csv`;
       document.body.appendChild(a);
       a.click();
+      a.remove();
       window.URL.revokeObjectURL(url);
-    })
-    .catch(() => alert('Failed to export guests'));
+    } catch (err: any) {
+      alert('Failed to export guests: ' + (err?.message || 'Unknown error'));
+    }
   };
 
   if (authLoading || !isAuthenticated || !isApprovedSeller(user) || loading) {

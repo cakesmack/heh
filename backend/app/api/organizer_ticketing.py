@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, Union, Tuple
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session, select
 from app.core.database import get_session
 from app.api.auth import get_current_user
@@ -26,7 +26,7 @@ def verify_organizer_access(event_id: str, user: User, session: Session) -> Even
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    if user.seller_tier < 2:
+    if user.seller_tier < 2 and not user.is_admin:
         raise HTTPException(status_code=403, detail="You do not have active seller permissions.")
         
     # Check if user is the organizer of the event
@@ -75,6 +75,7 @@ def get_organizer_dashboard(event_id: str, current_user: User = Depends(get_curr
         "inventory": inventory
     }
 
+@router.get("/events/{event_id}/export-attendees")
 @router.get("/events/{event_id}/export-guests")
 def export_guest_list(event_id: str, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     event = verify_organizer_access(event_id, current_user, session)
@@ -111,13 +112,15 @@ def export_guest_list(event_id: str, current_user: User = Depends(get_current_us
         ])
         
     output.seek(0)
+    csv_data = output.getvalue()
     
-    return StreamingResponse(
-        iter([output.getvalue()]), 
+    return Response(
+        content=csv_data, 
         media_type="text/csv", 
-        headers={"Content-Disposition": f"attachment; filename=guest_list_{event_id}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=attendees_{event_id}.csv"}
     )
 
+@router.get("/events")
 @router.get("/scanner/events")
 def get_organizer_scanner_events(
     current_user: User = Depends(get_current_user),
@@ -164,13 +167,17 @@ def get_organizer_scanner_events(
         scanner_url = f"/scan/{ev.id}?token={ev.scanner_access_key}" if is_active else None
 
         results.append({
+            "id": ev.id,
             "event_id": ev.id,
             "title": ev.title,
-            "date_start": ev.date_start,
-            "date_end": ev.date_end,
+            "date_start": ev.date_start.isoformat() if ev.date_start else None,
+            "date_end": ev.date_end.isoformat() if ev.date_end else None,
             "venue_name": venue_name,
             "image_url": ev.image_url,
             "sales_frozen": ev.sales_frozen,
+            "is_cancelled": getattr(ev, "is_cancelled", False),
+            "cancellation_reason": getattr(ev, "cancellation_reason", None),
+            "cancelled_at": ev.cancelled_at.isoformat() if getattr(ev, "cancelled_at", None) else None,
             "is_scanner_active": is_active,
             "scanner_access_key": ev.scanner_access_key,
             "scanner_url": scanner_url,

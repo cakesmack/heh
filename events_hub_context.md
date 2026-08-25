@@ -356,4 +356,15 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - Category and location pills use horizontal touch-scrolling (`flex-nowrap md:flex-wrap overflow-x-auto whitespace-nowrap scrollbar-hide snap-x`) and compact padding (`px-3 py-1.5 md:px-5 md:py-2.5 text-xs md:text-sm`).
   - All location pills in `PopularLocations.tsx` render as hard Next.js `<Link>` components routing directly to `/locations/${location.slug}` for optimal SEO crawlability.
 
+---
+
+## 8. Organizer Hub & Ticketing Management Architecture
+
+- **Unified Hub Endpoints (`/organizers/hub`)**:
+  - `GET /api/organizers/events` & `GET /api/ticketing/organizer/events`: Returns ticketed events owned by the user or organizer profiles, check-in stats, scanning URLs, and cancellation metadata.
+  - `GET /api/organizers/invoices` & `GET /api/ticketing/organizer/invoices`: Returns consolidated order line items, UK tax year breakdowns, platform fee statements, and net payouts.
+- **Authenticated CSV Attendee & Tax Export**:
+  - `GET /api/ticketing/organizer/events/{event_id}/export-attendees` (with backward-compatible `/export-guests` alias): Requires authenticated seller credentials (`Bearer <token>`) and returns dynamic CSV streaming with `Content-Disposition: attachment; filename=attendees_{event_id}.csv`.
+  - Frontend utilizes authenticated blob fetching with error parsing and automatic object URL cleanup.
+
 

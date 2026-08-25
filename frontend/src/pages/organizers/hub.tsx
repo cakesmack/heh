@@ -255,53 +255,93 @@ export default function OrganizerHubPage() {
   };
 
   // Download Attendee List CSV
-  const handleDownloadAttendees = async (eventId: string, eventTitle: string) => {
+  const handleDownloadAttendees = async (eventId: string, eventTitle?: string) => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : '';
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') || localStorage.getItem('token')) : '';
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/ticketing/organizer/events/${eventId}/export-attendees`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers
       });
-      if (!res.ok) throw new Error('Download failed');
+
+      if (!res.ok) {
+        let errorDetail = `HTTP ${res.status}: ${res.statusText}`;
+        try {
+          const errData = await res.json();
+          if (errData?.detail) {
+            errorDetail = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } catch {
+          try {
+            const errText = await res.text();
+            if (errText) errorDetail = errText;
+          } catch {}
+        }
+        throw new Error(errorDetail);
+      }
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
-      a.download = `attendees_${eventTitle.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
+      a.download = `guest_list_${eventId}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert('Could not export attendees: ' + err.message);
+      alert('Could not export attendees: ' + (err?.message || 'Unknown error'));
     }
   };
 
   // Download Tax Invoices CSV
-  const handleDownloadTaxCsv = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : '';
-    const params = new URLSearchParams();
-    if (selectedTaxYear) params.append('tax_year', selectedTaxYear);
-    const exportUrl = `${API_BASE_URL}/api/ticketing/organizer/invoices/export?${params.toString()}`;
+  const handleDownloadTaxCsv = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') || localStorage.getItem('token')) : '';
+      const params = new URLSearchParams();
+      if (selectedTaxYear) params.append('tax_year', selectedTaxYear);
+      const exportUrl = `${API_BASE_URL}/api/ticketing/organizer/invoices/export?${params.toString()}`;
 
-    fetch(exportUrl, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Download failed');
-        return res.blob();
-      })
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const yearTag = selectedTaxYear ? selectedTaxYear.replace('/', '_') : 'all_years';
-        a.download = `tax_invoices_${yearTag}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      })
-      .catch(err => {
-        alert('Could not download CSV export: ' + err.message);
-      });
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(exportUrl, { headers });
+      if (!res.ok) {
+        let errorDetail = `HTTP ${res.status}: ${res.statusText}`;
+        try {
+          const errData = await res.json();
+          if (errData?.detail) {
+            errorDetail = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } catch {
+          try {
+            const errText = await res.text();
+            if (errText) errorDetail = errText;
+          } catch {}
+        }
+        throw new Error(errorDetail);
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      const yearTag = selectedTaxYear ? selectedTaxYear.replace('/', '_') : 'all_years';
+      a.download = `tax_invoices_${yearTag}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('Could not download CSV export: ' + (err?.message || 'Unknown error'));
+    }
   };
 
   if (authLoading || !isAuthenticated) {

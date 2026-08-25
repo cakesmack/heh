@@ -156,3 +156,107 @@ def test_organizer_invoices_and_tax_export(client: TestClient, test_db: Session)
 
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_organizer_hub_events_and_attendees_export(client: TestClient, test_db: Session):
+    organizer = User(
+        id="org_hub_user_1",
+        email="hub_org@highland.com",
+        username="hub_organizer",
+        seller_tier=2,
+    )
+    test_db.add(organizer)
+
+    event = Event(
+        id="hub_event_1",
+        title="Highland Gathering Ceilidh",
+        date_start=datetime(2026, 8, 20, 19, 0),
+        date_end=datetime(2026, 8, 20, 23, 0),
+        organizer_id=organizer.id,
+        is_ticketing_enabled=True,
+        scanner_access_key="test_scan_key_123"
+    )
+    test_db.add(event)
+
+    tier = TicketTier(
+        id="hub_tier_1",
+        event_id=event.id,
+        name="VIP Entry",
+        price=35.0,
+        quantity_available=100,
+        quantity_sold=1,
+    )
+    test_db.add(tier)
+
+    order = Order(
+        id="hub_order_1",
+        order_ref="HEH-ATTEND1",
+        event_id=event.id,
+        buyer_name="Hamish MacLeod",
+        buyer_email="hamish@highland.scot",
+        total_amount=35.0,
+        platform_fee_amount=2.50,
+        status="completed",
+        created_at=datetime(2026, 8, 1, 10, 0)
+    )
+    test_db.add(order)
+
+    ticket = Ticket(
+        id="ticket_hub_1",
+        order_id=order.id,
+        tier_id=tier.id,
+        qr_token="token_hub_1",
+        status="checked_in",
+        checked_in_at=datetime(2026, 8, 20, 19, 30)
+    )
+    test_db.add(ticket)
+    test_db.commit()
+
+    app.dependency_overrides[get_current_user] = lambda: organizer
+    try:
+        # 1. Test GET /api/organizers/events
+        res_org_events = client.get("/api/organizers/events")
+        assert res_org_events.status_code == 200, res_org_events.text
+        events_data = res_org_events.json()
+        assert "events" in events_data
+        assert len(events_data["events"]) == 1
+        ev_item = events_data["events"][0]
+        assert ev_item["id"] == "hub_event_1"
+        assert ev_item["event_id"] == "hub_event_1"
+        assert ev_item["title"] == "Highland Gathering Ceilidh"
+        assert ev_item["total_tickets_sold"] == 1
+        assert ev_item["total_checked_in"] == 1
+        assert ev_item["is_scanner_active"] is True
+
+        # 2. Test GET /api/organizers/invoices
+        res_org_inv = client.get("/api/organizers/invoices")
+        assert res_org_inv.status_code == 200, res_org_inv.text
+        inv_data = res_org_inv.json()
+        assert inv_data["summary"]["total_gross"] == 35.0
+        assert len(inv_data["invoices"]) == 1
+
+        # 3. Test GET /api/ticketing/organizer/events
+        res_ticketing_events = client.get("/api/ticketing/organizer/events")
+        assert res_ticketing_events.status_code == 200, res_ticketing_events.text
+        assert len(res_ticketing_events.json()["events"]) == 1
+
+        # 4. Test GET /api/ticketing/organizer/events/{event_id}/export-attendees
+        res_csv = client.get(f"/api/ticketing/organizer/events/{event.id}/export-attendees")
+        assert res_csv.status_code == 200, res_csv.text
+        assert "text/csv" in res_csv.headers.get("content-type", "")
+        assert f"attendees_{event.id}.csv" in res_csv.headers.get("content-disposition", "")
+        csv_text = res_csv.text
+        assert "Attendee Name,Email,Ticket Tier,Order Ref,Ticket ID,Status,Checked In At" in csv_text
+        assert "Hamish MacLeod" in csv_text
+        assert "hamish@highland.scot" in csv_text
+        assert "VIP Entry" in csv_text
+        assert "HEH-ATTEND1" in csv_text
+        assert "checked_in" in csv_text
+
+        # 5. Test GET /api/ticketing/organizer/events/{event_id}/export-guests backward compatibility
+        res_guests_csv = client.get(f"/api/ticketing/organizer/events/{event.id}/export-guests")
+        assert res_guests_csv.status_code == 200, res_guests_csv.text
+        assert "Hamish MacLeod" in res_guests_csv.text
+
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

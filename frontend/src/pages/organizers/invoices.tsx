@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, API_BASE_URL } from '@/lib/api';
 
 interface InvoiceSummary {
   gross_sales: number;
@@ -87,39 +87,51 @@ export default function OrganizerInvoicesPage() {
     }
   }, [isAuthenticated, selectedEventId, selectedTaxYear]);
 
-  const handleDownloadCsv = () => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-    const params = new URLSearchParams();
-    if (selectedEventId) params.append('event_id', selectedEventId);
-    if (selectedTaxYear) params.append('tax_year', selectedTaxYear);
+  const handleDownloadCsv = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedEventId) params.append('event_id', selectedEventId);
+      if (selectedTaxYear) params.append('tax_year', selectedTaxYear);
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-    // Use window.open or fetch with bearer token to download
-    const exportUrl = `${baseUrl}/ticketing/organizer/invoices/export?${params.toString()}`;
-    
-    // Trigger download via fetch to include authorization header
-    fetch(exportUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') || localStorage.getItem('token')) : '';
+      const exportUrl = `${API_BASE_URL}/api/ticketing/organizer/invoices/export?${params.toString()}`;
+      
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Download failed');
-        return res.blob();
-      })
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const yearTag = selectedTaxYear ? selectedTaxYear.replace('/', '_') : 'all_years';
-        a.download = `tax_invoices_${yearTag}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      })
-      .catch(err => {
-        alert('Could not download CSV export: ' + err.message);
-      });
+
+      const res = await fetch(exportUrl, { headers });
+      if (!res.ok) {
+        let errorDetail = `HTTP ${res.status}: ${res.statusText}`;
+        try {
+          const errData = await res.json();
+          if (errData?.detail) {
+            errorDetail = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } catch {
+          try {
+            const errText = await res.text();
+            if (errText) errorDetail = errText;
+          } catch {}
+        }
+        throw new Error(errorDetail);
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      const yearTag = selectedTaxYear ? selectedTaxYear.replace('/', '_') : 'all_years';
+      a.download = `tax_invoices_${yearTag}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('Could not download CSV export: ' + (err?.message || 'Unknown error'));
+    }
   };
 
   const filteredInvoices = invoices.filter(inv => {

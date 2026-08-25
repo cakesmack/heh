@@ -122,6 +122,30 @@ def create_organizer(
     
     return new_organizer
 
+@router.get("/events")
+def get_organizer_events(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Returns ticketed events for the current organizer with check-in and sales metrics.
+    """
+    from app.api.organizer_ticketing import get_organizer_scanner_events
+    return get_organizer_scanner_events(current_user=current_user, session=session)
+
+@router.get("/invoices")
+def get_organizer_invoices_endpoint(
+    event_id: Optional[str] = None,
+    tax_year: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Returns invoice history and tax statements for events managed by the organizer.
+    """
+    from app.api.organizer_ticketing import get_organizer_invoices
+    return get_organizer_invoices(event_id=event_id, tax_year=tax_year, current_user=current_user, session=session)
+
 @router.get("/slug/{slug}", response_model=OrganizerResponse)
 def get_organizer_by_slug(
     slug: str,
