@@ -95,8 +95,78 @@ export default function OrganizerHubPage() {
   // Tab 1 & 4: Events & Scanner Data
   const [events, setEvents] = useState<TicketedEventItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventFilter, setEventFilter] = useState<'upcoming' | 'past' | 'cancelled' | 'all'>('upcoming');
   const [activeStaffQrEvent, setActiveStaffQrEvent] = useState<TicketedEventItem | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Helper & sorting functions for Tab 1
+  const isEventCancelled = (ev: TicketedEventItem): boolean => {
+    return Boolean(ev.is_cancelled || (ev as any).status === 'cancelled');
+  };
+
+  const getEventStartDate = (ev: TicketedEventItem): Date => {
+    if (ev.date_start) {
+      const d = new Date(ev.date_start);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date(0);
+  };
+
+  const getEventEffectiveEndDate = (ev: TicketedEventItem): Date => {
+    if (ev.date_end) {
+      const d = new Date(ev.date_end);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return getEventStartDate(ev);
+  };
+
+  const isEventUpcoming = (ev: TicketedEventItem, now: Date): boolean => {
+    if (isEventCancelled(ev)) return false;
+    return getEventEffectiveEndDate(ev).getTime() >= now.getTime();
+  };
+
+  const isEventPast = (ev: TicketedEventItem, now: Date): boolean => {
+    if (isEventCancelled(ev)) return false;
+    return getEventEffectiveEndDate(ev).getTime() < now.getTime();
+  };
+
+  const now = new Date();
+  const upcomingCount = events.filter(e => isEventUpcoming(e, now)).length;
+  const pastCount = events.filter(e => isEventPast(e, now)).length;
+  const cancelledCount = events.filter(e => isEventCancelled(e)).length;
+  const allCount = events.length;
+
+  const filteredAndSortedEvents = React.useMemo(() => {
+    const currentDate = new Date();
+    let list = [...events];
+
+    if (eventFilter === 'upcoming') {
+      list = list.filter(e => isEventUpcoming(e, currentDate));
+      list.sort((a, b) => getEventStartDate(a).getTime() - getEventStartDate(b).getTime());
+    } else if (eventFilter === 'past') {
+      list = list.filter(e => isEventPast(e, currentDate));
+      list.sort((a, b) => getEventStartDate(b).getTime() - getEventStartDate(a).getTime());
+    } else if (eventFilter === 'cancelled') {
+      list = list.filter(e => isEventCancelled(e));
+      list.sort((a, b) => getEventStartDate(b).getTime() - getEventStartDate(a).getTime());
+    } else {
+      list.sort((a, b) => getEventStartDate(b).getTime() - getEventStartDate(a).getTime());
+    }
+
+    return list;
+  }, [events, eventFilter]);
+
+  // Scanner Eligible Events (Exclude cancelled, include upcoming and ended within 12h, sorted ascending)
+  const scannerEligibleEvents = React.useMemo(() => {
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+    return events
+      .filter(ev => {
+        if (isEventCancelled(ev)) return false;
+        const effectiveEnd = getEventEffectiveEndDate(ev);
+        return effectiveEnd.getTime() >= twelveHoursAgo.getTime();
+      })
+      .sort((a, b) => getEventStartDate(a).getTime() - getEventStartDate(b).getTime());
+  }, [events]);
 
   // Tab 2: Payouts & Stripe Connect Data
   const [sellerStatus, setSellerStatus] = useState<SellerStatus>(DEFAULT_SELLER_STATUS);
@@ -108,7 +178,54 @@ export default function OrganizerHubPage() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [taxYears, setTaxYears] = useState<string[]>([]);
   const [selectedTaxYear, setSelectedTaxYear] = useState<string>('');
+  const [selectedInvoiceEventId, setSelectedInvoiceEventId] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  // Tab 3: Dynamic Invoices Filtering & Derived Summary
+  const uniqueInvoiceEvents = React.useMemo(() => {
+    const map = new Map<string, string>();
+    invoices.forEach(inv => {
+      if (inv.event_id && inv.event_title) {
+        map.set(inv.event_id, inv.event_title);
+      }
+    });
+    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+  }, [invoices]);
+
+  const filteredInvoices = React.useMemo(() => {
+    return invoices.filter(inv => {
+      const matchesEvent = !selectedInvoiceEventId || selectedInvoiceEventId === 'all' || inv.event_id === selectedInvoiceEventId;
+      const invDate = new Date(inv.created_at);
+      const matchesStart = !startDate || invDate >= new Date(startDate);
+      const matchesEnd = !endDate || invDate <= new Date(endDate + 'T23:59:59');
+      const matchesTaxYear = !selectedTaxYear || inv.tax_year === selectedTaxYear;
+      return matchesEvent && matchesStart && matchesEnd && matchesTaxYear;
+    });
+  }, [invoices, selectedInvoiceEventId, startDate, endDate, selectedTaxYear]);
+
+  const computedInvoiceSummary = React.useMemo(() => {
+    const total_gross = filteredInvoices.reduce((acc, inv) => acc + (inv.total_gross || 0), 0);
+    const total_fees = filteredInvoices.reduce((acc, inv) => acc + (inv.platform_fee || 0), 0);
+    const total_net = filteredInvoices.reduce((acc, inv) => acc + (inv.net_payout || 0), 0);
+    const total_invoices = filteredInvoices.length;
+    const total_tickets = filteredInvoices.reduce((acc, inv) => acc + ((inv as any).total_tickets || 1), 0);
+    return {
+      total_gross,
+      total_fees,
+      total_net,
+      total_invoices,
+      total_tickets,
+    };
+  }, [filteredInvoices]);
+
+  const handleResetInvoiceFilters = () => {
+    setSelectedInvoiceEventId('all');
+    setSelectedTaxYear('');
+    setStartDate('');
+    setEndDate('');
+  };
 
   // Sync tab with URL query parameter
   useEffect(() => {
@@ -301,39 +418,43 @@ export default function OrganizerHubPage() {
   // Download Tax Invoices CSV
   const handleDownloadTaxCsv = async () => {
     try {
-      const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') || localStorage.getItem('token')) : '';
-      const params = new URLSearchParams();
-      if (selectedTaxYear) params.append('tax_year', selectedTaxYear);
-      const exportUrl = `${API_BASE_URL}/api/ticketing/organizer/invoices/export?${params.toString()}`;
-
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (filteredInvoices.length === 0) {
+        alert('No invoice records match the selected filters to export.');
+        return;
       }
 
-      const res = await fetch(exportUrl, { headers });
-      if (!res.ok) {
-        let errorDetail = `HTTP ${res.status}: ${res.statusText}`;
-        try {
-          const errData = await res.json();
-          if (errData?.detail) {
-            errorDetail = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
-          }
-        } catch {
-          try {
-            const errText = await res.text();
-            if (errText) errorDetail = errText;
-          } catch {}
-        }
-        throw new Error(errorDetail);
-      }
+      // Generate standard UK Tax Invoice CSV format based on active filters
+      const headers = [
+        'Invoice Reference',
+        'Issue Date',
+        'Tax Year (UK)',
+        'Event Title',
+        'Customer Name',
+        'Order Reference',
+        'Gross Sales (GBP)',
+        'Platform Fee (GBP)',
+        'Net Payout (GBP)'
+      ];
 
-      const blob = await res.blob();
+      const rows = filteredInvoices.map(inv => [
+        `"${inv.invoice_ref || ''}"`,
+        `"${inv.created_at ? new Date(inv.created_at).toISOString().split('T')[0] : ''}"`,
+        `"${inv.tax_year || ''}"`,
+        `"${(inv.event_title || '').replace(/"/g, '""')}"`,
+        `"${(inv.buyer_name || '').replace(/"/g, '""')}"`,
+        `"${inv.order_ref || ''}"`,
+        inv.total_gross?.toFixed(2) || '0.00',
+        inv.platform_fee?.toFixed(2) || '0.00',
+        inv.net_payout?.toFixed(2) || '0.00'
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      const yearTag = selectedTaxYear ? selectedTaxYear.replace('/', '_') : 'all_years';
+      const yearTag = selectedTaxYear ? selectedTaxYear.replace('/', '_') : 'custom_period';
       a.download = `tax_invoices_${yearTag}.csv`;
       document.body.appendChild(a);
       a.click();
@@ -437,9 +558,9 @@ export default function OrganizerHubPage() {
             >
               <span>🧾</span>
               <span>Invoices & Billing</span>
-              {invoiceSummary.total_invoices > 0 && (
+              {computedInvoiceSummary.total_invoices > 0 && (
                 <span className="text-xs bg-stone-200 text-stone-800 px-2 py-0.5 rounded-full font-bold">
-                  {invoiceSummary.total_invoices}
+                  {computedInvoiceSummary.total_invoices}
                 </span>
               )}
             </button>
@@ -454,7 +575,7 @@ export default function OrganizerHubPage() {
             >
               <span>📷</span>
               <span>Door Scanner</span>
-              {events.some(e => e.is_scanner_active) && (
+              {scannerEligibleEvents.some(e => e.is_scanner_active) && (
                 <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
                   Live
                 </span>
@@ -465,6 +586,91 @@ export default function OrganizerHubPage() {
           {/* TAB 1: EVENTS & SALES */}
           {activeTab === 'events' && (
             <div className="space-y-6">
+              {/* Filter Pills */}
+              {!eventsLoading && events.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setEventFilter('upcoming')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all ${
+                      eventFilter === 'upcoming'
+                        ? 'bg-[#0B3B2C] text-white shadow-sm font-bold border border-[#0B3B2C]'
+                        : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 font-medium'
+                    }`}
+                  >
+                    <span>Upcoming</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                        eventFilter === 'upcoming'
+                          ? 'bg-emerald-900/50 text-emerald-100'
+                          : 'bg-stone-100 text-stone-600'
+                      }`}
+                    >
+                      {upcomingCount}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setEventFilter('past')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all ${
+                      eventFilter === 'past'
+                        ? 'bg-[#0B3B2C] text-white shadow-sm font-bold border border-[#0B3B2C]'
+                        : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 font-medium'
+                    }`}
+                  >
+                    <span>Past</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                        eventFilter === 'past'
+                          ? 'bg-emerald-900/50 text-emerald-100'
+                          : 'bg-stone-100 text-stone-600'
+                      }`}
+                    >
+                      {pastCount}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setEventFilter('cancelled')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all ${
+                      eventFilter === 'cancelled'
+                        ? 'bg-[#0B3B2C] text-white shadow-sm font-bold border border-[#0B3B2C]'
+                        : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 font-medium'
+                    }`}
+                  >
+                    <span>Cancelled</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                        eventFilter === 'cancelled'
+                          ? 'bg-emerald-900/50 text-emerald-100'
+                          : 'bg-stone-100 text-stone-600'
+                      }`}
+                    >
+                      {cancelledCount}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setEventFilter('all')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all ${
+                      eventFilter === 'all'
+                        ? 'bg-[#0B3B2C] text-white shadow-sm font-bold border border-[#0B3B2C]'
+                        : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 font-medium'
+                    }`}
+                  >
+                    <span>All</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                        eventFilter === 'all'
+                          ? 'bg-emerald-900/50 text-emerald-100'
+                          : 'bg-stone-100 text-stone-600'
+                      }`}
+                    >
+                      {allCount}
+                    </span>
+                  </button>
+                </div>
+              )}
+
               {eventsLoading ? (
                 <div className="py-20 text-center text-gray-500">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent mb-3" />
@@ -484,9 +690,41 @@ export default function OrganizerHubPage() {
                     + Create a Ticketed Event
                   </Link>
                 </div>
+              ) : filteredAndSortedEvents.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-stone-200 p-12 text-center shadow-sm">
+                  <span className="text-4xl block mb-2">
+                    {eventFilter === 'upcoming' ? '📅' : eventFilter === 'past' ? '🕰️' : eventFilter === 'cancelled' ? '🚫' : '🎟️'}
+                  </span>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {eventFilter === 'upcoming'
+                      ? 'No Upcoming Events'
+                      : eventFilter === 'past'
+                      ? 'No Past Events'
+                      : eventFilter === 'cancelled'
+                      ? 'No Cancelled Events'
+                      : 'No Events Found'}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+                    {eventFilter === 'upcoming'
+                      ? "No upcoming events scheduled. Click 'Create New Event' above to get started."
+                      : eventFilter === 'past'
+                      ? 'No completed past events were found in your archive.'
+                      : eventFilter === 'cancelled'
+                      ? 'You have no cancelled events.'
+                      : 'No events match the selected filter.'}
+                  </p>
+                  {eventFilter === 'upcoming' && (
+                    <Link
+                      href="/submit-event"
+                      className="mt-5 inline-flex items-center px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm transition-all shadow-sm"
+                    >
+                      + Create New Event
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6">
-                  {events.map((ev) => {
+                  {filteredAndSortedEvents.map((ev) => {
                     const dateFormatted = ev.date_start ? new Date(ev.date_start).toLocaleDateString('en-GB', {
                       weekday: 'short',
                       day: 'numeric',
@@ -667,43 +905,89 @@ export default function OrganizerHubPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
                   <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Gross Sales</div>
-                  <div className="text-3xl font-black text-gray-900">£{invoiceSummary.total_gross.toFixed(2)}</div>
-                  <div className="text-xs text-gray-500 mt-2">{invoiceSummary.total_tickets} tickets across {invoiceSummary.total_invoices} orders</div>
+                  <div className="text-3xl font-black text-gray-900">£{computedInvoiceSummary.total_gross.toFixed(2)}</div>
+                  <div className="text-xs text-gray-500 mt-2">{computedInvoiceSummary.total_tickets} tickets across {computedInvoiceSummary.total_invoices} orders</div>
                 </div>
 
                 <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
                   <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Platform Fees Deducted</div>
-                  <div className="text-3xl font-black text-amber-700">£{invoiceSummary.total_fees.toFixed(2)}</div>
+                  <div className="text-3xl font-black text-amber-700">£{computedInvoiceSummary.total_fees.toFixed(2)}</div>
                   <div className="text-xs text-gray-500 mt-2">Deductible service receipts</div>
                 </div>
 
                 <div className="bg-white rounded-2xl p-6 border border-emerald-100 bg-emerald-50/30 shadow-sm">
                   <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">Net Payouts Received</div>
-                  <div className="text-3xl font-black text-emerald-700">£{invoiceSummary.total_net.toFixed(2)}</div>
+                  <div className="text-3xl font-black text-emerald-700">£{computedInvoiceSummary.total_net.toFixed(2)}</div>
                   <div className="text-xs text-emerald-600 mt-2">Direct bank payouts</div>
                 </div>
 
                 <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
                   <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Total Invoices</div>
-                  <div className="text-3xl font-black text-gray-900">{invoiceSummary.total_invoices}</div>
+                  <div className="text-3xl font-black text-gray-900">{computedInvoiceSummary.total_invoices}</div>
                   <div className="text-xs text-gray-500 mt-2">Itemized receipts on record</div>
                 </div>
               </div>
 
               {/* Action and Filter Bar */}
-              <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
+              <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Event Selector */}
+                  <select
+                    value={selectedInvoiceEventId}
+                    onChange={(e) => setSelectedInvoiceEventId(e.target.value)}
+                    className="py-2 px-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium max-w-xs truncate"
+                  >
+                    <option value="all">All Events</option>
+                    {uniqueInvoiceEvents.map(ev => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.title}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Tax Year Preset Selector */}
                   {taxYears.length > 0 && (
                     <select
                       value={selectedTaxYear}
                       onChange={(e) => setSelectedTaxYear(e.target.value)}
-                      className="py-2 px-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="py-2 px-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                     >
                       <option value="">All UK Tax Years</option>
                       {taxYears.map(yr => (
                         <option key={yr} value={yr}>Tax Year: {yr}</option>
                       ))}
                     </select>
+                  )}
+
+                  {/* Custom Date Range Pickers */}
+                  <div className="flex items-center gap-1.5 text-xs text-stone-500">
+                    <span className="font-semibold text-stone-600">From:</span>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="py-1.5 px-2.5 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-stone-800"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs text-stone-500">
+                    <span className="font-semibold text-stone-600">To:</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="py-1.5 px-2.5 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-stone-800"
+                    />
+                  </div>
+
+                  {/* Reset Filters */}
+                  {(selectedInvoiceEventId !== 'all' || selectedTaxYear !== '' || startDate !== '' || endDate !== '') && (
+                    <button
+                      onClick={handleResetInvoiceFilters}
+                      className="py-1.5 px-3 text-xs font-bold text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-xl transition"
+                    >
+                      Reset Filters ↺
+                    </button>
                   )}
                 </div>
 
@@ -715,7 +999,7 @@ export default function OrganizerHubPage() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    <span>Download Full Tax CSV</span>
+                    <span>Download CSV ({filteredInvoices.length})</span>
                   </button>
 
                   <Link
@@ -734,11 +1018,19 @@ export default function OrganizerHubPage() {
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent mb-3" />
                     <p>Loading invoice records...</p>
                   </div>
-                ) : invoices.length === 0 ? (
+                ) : filteredInvoices.length === 0 ? (
                   <div className="py-12 text-center text-gray-500">
                     <span className="text-4xl block mb-2">🧾</span>
-                    <p className="font-bold text-gray-800">No Invoices Generated Yet</p>
-                    <p className="text-xs text-gray-500 mt-1">Receipts are generated automatically when customer orders complete.</p>
+                    <p className="font-bold text-gray-800">No Invoices Match the Filters</p>
+                    <p className="text-xs text-gray-500 mt-1">Try resetting the filters or selecting a different date range or event.</p>
+                    {(selectedInvoiceEventId !== 'all' || selectedTaxYear !== '' || startDate !== '' || endDate !== '') && (
+                      <button
+                        onClick={handleResetInvoiceFilters}
+                        className="mt-4 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition shadow-sm inline-block"
+                      >
+                        Reset Filters
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -756,7 +1048,7 @@ export default function OrganizerHubPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-stone-100">
-                        {invoices.slice(0, 10).map((inv) => (
+                        {filteredInvoices.slice(0, 10).map((inv) => (
                           <tr key={inv.order_id} className="hover:bg-stone-50/70">
                             <td className="py-3 px-4 font-mono font-bold text-emerald-800">{inv.invoice_ref}</td>
                             <td className="py-3 px-4 text-xs">{new Date(inv.created_at).toLocaleDateString('en-GB')}</td>
@@ -791,15 +1083,23 @@ export default function OrganizerHubPage() {
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent mb-3" />
                   <p>Loading scanner passes...</p>
                 </div>
-              ) : events.length === 0 ? (
+              ) : scannerEligibleEvents.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-stone-200 p-12 text-center shadow-sm">
                   <span className="text-5xl block mb-3">📷</span>
-                  <h3 className="text-xl font-bold text-gray-900">No Events for Scanning</h3>
-                  <p className="text-sm text-gray-500 mt-2">When you create ticketed events, you can activate the door scanner here.</p>
+                  <h3 className="text-xl font-bold text-gray-900">No Active Events for Scanning</h3>
+                  <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+                    No active or upcoming events available for door scanning. Past events older than 12 hours and cancelled events are excluded.
+                  </p>
+                  <Link
+                    href="/submit-event"
+                    className="mt-6 inline-flex items-center px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm transition-all shadow-sm"
+                  >
+                    + Create New Event
+                  </Link>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6">
-                  {events.map((ev) => {
+                  {scannerEligibleEvents.map((ev) => {
                     const eventId = ev.id || ev.event_id || '';
                     return (
                       <div

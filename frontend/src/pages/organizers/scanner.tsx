@@ -122,9 +122,24 @@ export default function OrganizerScannerHubPage() {
     );
   }
 
-  const activeCount = events.filter(e => e.is_scanner_active).length;
-  const totalSold = events.reduce((acc, e) => acc + e.total_tickets_sold, 0);
-  const totalCheckedIn = events.reduce((acc, e) => acc + e.total_checked_in, 0);
+  const scannerEligibleEvents = React.useMemo(() => {
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+    return events
+      .filter(ev => {
+        if ((ev as any).is_cancelled || (ev as any).status === 'cancelled') return false;
+        const endDate = ev.date_end ? new Date(ev.date_end) : (ev.date_start ? new Date(ev.date_start) : new Date(0));
+        return endDate.getTime() >= twelveHoursAgo.getTime();
+      })
+      .sort((a, b) => {
+        const aDate = a.date_start ? new Date(a.date_start).getTime() : 0;
+        const bDate = b.date_start ? new Date(b.date_start).getTime() : 0;
+        return aDate - bDate;
+      });
+  }, [events]);
+
+  const activeCount = scannerEligibleEvents.filter(e => e.is_scanner_active).length;
+  const totalSold = scannerEligibleEvents.reduce((acc, e) => acc + e.total_tickets_sold, 0);
+  const totalCheckedIn = scannerEligibleEvents.reduce((acc, e) => acc + e.total_checked_in, 0);
 
   return (
     <div className="min-h-screen bg-stone-50 py-10 px-4">
@@ -168,8 +183,8 @@ export default function OrganizerScannerHubPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white p-5 rounded-2xl shadow-xs border border-stone-200">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Total Ticketed Events</span>
-            <p className="text-2xl font-black text-stone-900 mt-1">{events.length}</p>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Active / Upcoming Events</span>
+            <p className="text-2xl font-black text-stone-900 mt-1">{scannerEligibleEvents.length}</p>
           </div>
           <div className="bg-white p-5 rounded-2xl shadow-xs border border-stone-200">
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Active Scanners</span>
@@ -188,7 +203,22 @@ export default function OrganizerScannerHubPage() {
 
         {/* Events List */}
         <div className="space-y-6">
-          {events.map(event => {
+          {scannerEligibleEvents.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-stone-200 p-12 text-center shadow-sm">
+              <span className="text-5xl block mb-3">📷</span>
+              <h3 className="text-xl font-bold text-gray-900">No Events for Scanning</h3>
+              <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+                No active or upcoming events available for door scanning. Past events older than 12 hours and cancelled events are excluded.
+              </p>
+              <Link
+                href="/submit-event"
+                className="mt-6 inline-flex items-center px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm transition-all shadow-sm"
+              >
+                + Create New Event
+              </Link>
+            </div>
+          ) : (
+            scannerEligibleEvents.map(event => {
             const isProcessing = actionLoading === event.event_id;
             const percent = event.total_tickets_sold > 0 
               ? Math.min(100, Math.round((event.total_checked_in / event.total_tickets_sold) * 100))
@@ -315,25 +345,7 @@ export default function OrganizerScannerHubPage() {
                 </div>
               </div>
             );
-          })}
-
-          {events.length === 0 && (
-            <div className="text-center py-16 bg-white rounded-2xl shadow-sm border border-stone-200 p-8">
-              <div className="w-16 h-16 bg-stone-100 text-stone-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
-                📷
-              </div>
-              <h2 className="text-2xl font-bold text-stone-900 mb-2">No Ticketed Events Found</h2>
-              <p className="text-stone-500 text-sm max-w-md mx-auto mb-6">
-                You do not have any published events with ticketing enabled yet. Create or edit an event and enable ticketing to start scanning tickets.
-              </p>
-              <Link
-                href="/submit-event"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl text-sm shadow-sm transition inline-block"
-              >
-                Create Ticketed Event
-              </Link>
-            </div>
-          )}
+          }))}
         </div>
       </div>
 
