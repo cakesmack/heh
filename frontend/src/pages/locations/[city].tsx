@@ -34,10 +34,17 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
     const { city, timeframe } = context.params as { city: string; timeframe?: string };
     const slug = String(city).toLowerCase().trim();
 
+    // Revalidation caching headers to ensure immediate freshness for newly added or updated location hubs
+    if (context.res) {
+        context.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    }
+
     try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
         const timeframeParam = timeframe ? `/${timeframe}` : '';
-        const res = await fetch(`${apiUrl}/api/locations/feed/${slug}${timeframeParam}`);
+        const res = await fetch(`${apiUrl}/api/locations/feed/${slug}${timeframeParam}`, {
+            headers: { 'Cache-Control': 'no-cache' }
+        });
 
         if (res.ok) {
             const feed = await res.json();
@@ -122,14 +129,28 @@ export default function LocationPage({
         return ids.size;
     }, [events]);
 
-    if (events.length > 0 && typeof window !== 'undefined') {
-        console.log("DEBUG Location Event Payload [0]:", events[0]);
-    }
-
     // Canonical URL with sub-route support
     const canonicalUrl = timeframe && timeframe !== 'all'
         ? `${SITE_URL}/locations/${citySlug}/${timeframe}`
         : `${SITE_URL}/locations/${citySlug}`;
+
+    // Absolute Open Graph Image Resolution
+    const defaultOgImage = `${SITE_URL}/images/defaults/category_festivals.jpg`;
+    let ogImageUrl = defaultOgImage;
+
+    if (heroImageUrl) {
+        if (heroImageUrl.startsWith('http://') || heroImageUrl.startsWith('https://')) {
+            ogImageUrl = heroImageUrl;
+        } else {
+            const cleanPath = heroImageUrl.startsWith('/') ? heroImageUrl : `/${heroImageUrl}`;
+            ogImageUrl = `${SITE_URL}${cleanPath}`;
+        }
+    } else if (events.length > 0 && events[0].image_url) {
+        const firstEventImg = events[0].image_url;
+        ogImageUrl = firstEventImg.startsWith('http')
+            ? firstEventImg
+            : `${SITE_URL}${firstEventImg.startsWith('/') ? firstEventImg : `/${firstEventImg}`}`;
+    }
 
     // JSON-LD ItemList
     const jsonLd = hasEvents ? {
@@ -138,6 +159,7 @@ export default function LocationPage({
         "name": h1Heading,
         "description": metaDescription,
         "url": canonicalUrl,
+        "image": ogImageUrl,
         "numberOfItems": events.length,
         "itemListElement": events.slice(0, 10).map((event, index) => ({
             "@type": "ListItem",
@@ -151,18 +173,28 @@ export default function LocationPage({
         <div className="min-h-screen bg-gray-50 pb-20">
             <Head>
                 <title>{metaTitle}</title>
-                <meta name="description" content={metaDescription} />
-                <link rel="canonical" href={canonicalUrl} />
+                <meta name="description" content={metaDescription} key="description" />
+                <link rel="canonical" href={canonicalUrl} key="canonical" />
+
                 {/* Open Graph */}
-                <meta property="og:title" content={metaTitle} />
-                <meta property="og:description" content={metaDescription} />
-                <meta property="og:url" content={canonicalUrl} />
-                <meta property="og:type" content="website" />
-                <meta property="og:site_name" content="Highland Events Hub" />
+                <meta property="og:type" content="website" key="og-type" />
+                <meta property="og:url" content={canonicalUrl} key="og-url" />
+                <meta property="og:title" content={metaTitle} key="og-title" />
+                <meta property="og:description" content={metaDescription} key="og-description" />
+                <meta property="og:image" content={ogImageUrl} key="og-image" />
+                <meta property="og:image:width" content="1200" key="og-image-width" />
+                <meta property="og:image:height" content="630" key="og-image-height" />
+                <meta property="og:image:alt" content={metaTitle} key="og-image-alt" />
+                <meta property="og:site_name" content="Highland Events Hub" key="og-site-name" />
+
                 {/* Twitter */}
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={metaTitle} />
-                <meta name="twitter:description" content={metaDescription} />
+                <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
+                <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
+                <meta name="twitter:title" content={metaTitle} key="twitter-title" />
+                <meta name="twitter:description" content={metaDescription} key="twitter-description" />
+                <meta name="twitter:image" content={ogImageUrl} key="twitter-image" />
+                <meta name="twitter:image:alt" content={metaTitle} key="twitter-image-alt" />
+
                 {/* JSON-LD */}
                 {jsonLd && (
                     <script
