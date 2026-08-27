@@ -1102,7 +1102,22 @@ export interface GeographicHub {
   updated_at: string;
 }
 
+export interface GeographicHubCreate {
+  name: string;
+  slug?: string;
+  seo_meta_title?: string;
+  seo_meta_description?: string;
+  seo_anchor_text?: string;
+  hero_image_url?: string;
+  featured_event_id?: string;
+  partner_logo?: string;
+  partner_name?: string;
+  partner_url?: string;
+}
+
 export interface GeographicHubUpdate {
+  name?: string;
+  slug?: string;
   seo_meta_title?: string;
   seo_meta_description?: string;
   seo_anchor_text?: string;

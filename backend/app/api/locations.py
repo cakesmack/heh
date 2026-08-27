@@ -11,6 +11,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlalchemy.orm import selectinload
 
+import re
 from app.core.database import get_session
 from app.core.security import get_current_user
 from app.models.user import User
@@ -20,6 +21,11 @@ from app.models.venue import Venue
 from app.schemas.event import EventResponse
 
 router = APIRouter(tags=["Locations"])
+
+
+def slugify(text: str) -> str:
+    cleaned = re.sub(r'[^a-zA-Z0-9\s-]', '', text).strip().lower()
+    return re.sub(r'[\s_-]+', '-', cleaned)
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
@@ -55,7 +61,22 @@ class LocationResponse(BaseModel):
         from_attributes = True
 
 
+class LocationCreate(BaseModel):
+    name: str
+    slug: Optional[str] = None
+    seo_meta_title: Optional[str] = None
+    seo_meta_description: Optional[str] = None
+    seo_anchor_text: Optional[str] = None
+    hero_image_url: Optional[str] = None
+    featured_event_id: Optional[str] = None
+    partner_logo: Optional[str] = None
+    partner_url: Optional[str] = None
+    partner_name: Optional[str] = None
+
+
 class LocationUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
     seo_meta_title: Optional[str] = None
     seo_meta_description: Optional[str] = None
     seo_anchor_text: Optional[str] = None
@@ -230,6 +251,56 @@ def get_location_feed(
     )
 
 
+@router.post("", response_model=LocationResponse, status_code=status.HTTP_201_CREATED)
+def create_location(
+    data: LocationCreate,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Create a new geographic location hub. Admin-only."""
+    if not data.name or not data.name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Location name is required"
+        )
+
+    raw_slug = data.slug.strip() if data.slug and data.slug.strip() else data.name.strip()
+    slug = slugify(raw_slug)
+
+    if not slug:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Valid location slug is required"
+        )
+
+    # Check for slug conflict
+    existing = session.exec(select(Location).where(Location.slug == slug)).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"A location with slug '{slug}' already exists."
+        )
+
+    location = Location(
+        name=data.name.strip(),
+        slug=slug,
+        seo_meta_title=data.seo_meta_title or None,
+        seo_meta_description=data.seo_meta_description or None,
+        seo_anchor_text=data.seo_anchor_text or None,
+        hero_image_url=data.hero_image_url or None,
+        featured_event_id=data.featured_event_id or None,
+        partner_logo=data.partner_logo or None,
+        partner_url=data.partner_url or None,
+        partner_name=data.partner_name or None,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    session.add(location)
+    session.commit()
+    session.refresh(location)
+    return location
+
+
 @router.get("/{location_id}", response_model=LocationResponse)
 def get_location(
     location_id: int,
@@ -252,7 +323,7 @@ def update_location(
     admin: User = Depends(require_admin),
     session: Session = Depends(get_session)
 ):
-    """Update a geographic hub's SEO/hero fields. Admin-only."""
+    """Update a geographic hub's fields. Admin-only."""
     location = session.get(Location, location_id)
     if not location:
         raise HTTPException(
@@ -261,8 +332,28 @@ def update_location(
         )
 
     update_data = data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(location, field, value)
+
+    if "name" in update_data and update_data["name"]:
+        location.name = update_data["name"].strip()
+
+    if "slug" in update_data and update_data["slug"]:
+        new_slug = slugify(update_data["slug"].strip())
+        if new_slug and new_slug != location.slug:
+            existing = session.exec(select(Location).where(Location.slug == new_slug, Location.id != location_id)).first()
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"A location with slug '{new_slug}' already exists."
+                )
+            location.slug = new_slug
+
+    for field in [
+        "seo_meta_title", "seo_meta_description", "seo_anchor_text",
+        "hero_image_url", "featured_event_id", "partner_logo",
+        "partner_url", "partner_name"
+    ]:
+        if field in update_data:
+            setattr(location, field, update_data[field])
 
     location.updated_at = datetime.utcnow()
     session.add(location)
@@ -270,3 +361,22 @@ def update_location(
     session.refresh(location)
 
     return location
+
+
+@router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_location(
+    location_id: int,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_session)
+):
+    """Delete a geographic location hub. Admin-only."""
+    location = session.get(Location, location_id)
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Location not found"
+        )
+
+    session.delete(location)
+    session.commit()
+    return None

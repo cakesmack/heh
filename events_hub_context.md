@@ -367,4 +367,19 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - `GET /api/ticketing/organizer/events/{event_id}/export-attendees` (with backward-compatible `/export-guests` alias): Requires authenticated seller credentials (`Bearer <token>`) and returns dynamic CSV streaming with `Content-Disposition: attachment; filename=attendees_{event_id}.csv`.
   - Frontend utilizes authenticated blob fetching with error parsing and automatic object URL cleanup.
 
+---
+
+## 9. Geographic Hubs & SEO Management Architecture
+
+- **Geographic Hubs Management (`/admin/curated?tab=hubs`)**:
+  - Full CRUD functionality for geographic location hubs (e.g. Inverness, Aviemore, Dornoch, etc.).
+  - Admin creation interface with auto-slug generation, manual slug overrides, SEO title/description metadata, hero banner image uploads via Cloudflare Images, featured event pickers, and official partner branding/links.
+- **Backend Endpoints (`/api/locations`)**:
+  - `POST /api/locations`: Admin-only creation with slug conflict validation and sanitization.
+  - `PUT /api/locations/{id}`: Admin-only update for name, slug, SEO metadata, hero image, and partner details.
+  - `DELETE /api/locations/{id}`: Admin-only deletion of location hub records.
+  - `GET /api/locations`: Public list of all geographic hubs.
+  - `GET /api/locations/feed/{slug}/{timeframe?}`: Public feed supporting `/locations/[city]` and timeframe sub-routes.
+
+
 

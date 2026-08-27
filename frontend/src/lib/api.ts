@@ -2124,12 +2124,31 @@ export const locationsAPI = {
   },
 
   /**
+   * Create a new geographic hub (admin-only)
+   */
+  create: async (data: Record<string, any>): Promise<any> => {
+    return apiFetch<any>('/api/locations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
    * Update a geographic hub (admin-only)
    */
   update: async (id: number, data: Record<string, any>): Promise<any> => {
     return apiFetch<any>(`/api/locations/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete a geographic hub (admin-only)
+   */
+  delete: async (id: number): Promise<void> => {
+    return apiFetch<void>(`/api/locations/${id}`, {
+      method: 'DELETE',
     });
   },
 };
