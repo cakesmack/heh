@@ -8,6 +8,7 @@ import { LocationHeroBanner } from '@/components/locations/LocationHeroBanner';
 import { LeadGenBlock } from '@/components/locations/LeadGenBlock';
 import { EventCard } from '@/components/events/EventCard';
 import CategoryGrid from '@/components/categories/CategoryGrid';
+import { optimizeImage } from '@/utils/imageOptimizer';
 
 export interface LocationPageProps {
     city: string;
@@ -24,75 +25,116 @@ export interface LocationPageProps {
     partnerLogo?: string | null;
     partnerName?: string | null;
     partnerUrl?: string | null;
+    meta: {
+        title: string;
+        description: string;
+        image: string;
+        url: string;
+        type: string;
+    };
 }
 
 const DENSITY_THRESHOLD = 20;
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
 
+/**
+ * Ensures Open Graph and Twitter images are valid, absolute URLs.
+ */
+function resolveAbsoluteOgImage(imageUrl?: string | null): string {
+    const defaultOgImage = `${SITE_URL}/images/defaults/category_festivals.jpg`;
+    if (!imageUrl) return defaultOgImage;
+
+    const optimized = optimizeImage(imageUrl, 'hero') || imageUrl;
+    if (optimized.startsWith('http://') || optimized.startsWith('https://')) {
+        return optimized;
+    }
+    const cleanPath = optimized.startsWith('/') ? optimized : `/${optimized}`;
+    return `${SITE_URL}${cleanPath}`;
+}
+
 // Dynamic SEO & Data Fetching (Server Side)
 export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (context) => {
     const { city, timeframe } = context.params as { city: string; timeframe?: string };
-    const slug = String(city).toLowerCase().trim();
+    const rawCity = String(city || '').trim();
+    const slug = rawCity.toLowerCase().replace(/\/+$/, '');
 
     // Revalidation caching headers to ensure immediate freshness for newly added or updated location hubs
     if (context.res) {
         context.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
     }
 
+    const canonicalUrl = timeframe && timeframe !== 'all'
+        ? `${SITE_URL}/locations/${slug}/${timeframe}`
+        : `${SITE_URL}/locations/${slug}`;
+
     try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
-        const timeframeParam = timeframe ? `/${timeframe}` : '';
-        const res = await fetch(`${apiUrl}/api/locations/feed/${slug}${timeframeParam}`, {
-            headers: { 'Cache-Control': 'no-cache' }
-        });
+        const feed = await locationsAPI.getFeed(slug, timeframe);
 
-        if (res.ok) {
-            const feed = await res.json();
-            return {
-                props: {
-                    city: feed.location_name,
-                    citySlug: feed.location_slug,
-                    timeframe: feed.timeframe || 'all',
-                    metaTitle: feed.meta_title,
-                    metaDescription: feed.meta_description,
-                    h1Heading: feed.h1_heading,
-                    isFallback: feed.is_fallback || false,
-                    fallbackNotice: feed.fallback_notice || null,
-                    events: feed.events || [],
-                    heroImageUrl: feed.hero_image_url || null,
-                    anchorText: feed.seo_anchor_text || null,
-                    partnerLogo: feed.partner_logo || null,
-                    partnerName: feed.partner_name || null,
-                    partnerUrl: feed.partner_url || null,
-                }
-            };
-        }
+        const ogImageUrl = resolveAbsoluteOgImage(
+            feed.hero_image_url || (feed.events && feed.events.length > 0 ? feed.events[0].image_url : null)
+        );
+
+        return {
+            props: {
+                city: feed.location_name,
+                citySlug: feed.location_slug,
+                timeframe: feed.timeframe || 'all',
+                metaTitle: feed.meta_title,
+                metaDescription: feed.meta_description,
+                h1Heading: feed.h1_heading,
+                isFallback: feed.is_fallback || false,
+                fallbackNotice: feed.fallback_notice || null,
+                events: feed.events || [],
+                heroImageUrl: feed.hero_image_url || null,
+                anchorText: feed.seo_anchor_text || null,
+                partnerLogo: feed.partner_logo || null,
+                partnerName: feed.partner_name || null,
+                partnerUrl: feed.partner_url || null,
+                meta: {
+                    title: feed.meta_title,
+                    description: feed.meta_description,
+                    image: ogImageUrl,
+                    url: canonicalUrl,
+                    type: 'website',
+                },
+            }
+        };
     } catch (error) {
-        console.error('Error fetching location feed:', error);
+        console.error(`[getServerSideProps Error - locations/${slug}]:`, error);
+
+        // Fallback if API request failed
+        const cityFilter = decodeURIComponent(slug).replace(/-/g, ' ');
+        const formattedCity = cityFilter.replace(/\b\w/g, c => c.toUpperCase());
+        const defaultTitle = `Events in ${formattedCity} | Highland Events Hub`;
+        const defaultDesc = `Discover upcoming events in ${formattedCity}, Scottish Highlands.`;
+        const defaultImage = `${SITE_URL}/images/defaults/category_festivals.jpg`;
+
+        return {
+            props: {
+                city: formattedCity,
+                citySlug: slug,
+                timeframe: timeframe || 'all',
+                metaTitle: defaultTitle,
+                metaDescription: defaultDesc,
+                h1Heading: `Events in ${formattedCity}`,
+                isFallback: false,
+                fallbackNotice: null,
+                heroImageUrl: null,
+                anchorText: null,
+                partnerLogo: null,
+                partnerName: null,
+                partnerUrl: null,
+                events: [],
+                meta: {
+                    title: defaultTitle,
+                    description: defaultDesc,
+                    image: defaultImage,
+                    url: canonicalUrl,
+                    type: 'website',
+                },
+            }
+        };
     }
-
-    // Fallback if API request failed
-    const cityFilter = decodeURIComponent(slug).replace(/-/g, ' ');
-    const formattedCity = cityFilter.replace(/\b\w/g, c => c.toUpperCase());
-
-    return {
-        props: {
-            city: formattedCity,
-            citySlug: slug,
-            timeframe: timeframe || 'all',
-            metaTitle: `Events in ${formattedCity} | Highland Events Hub`,
-            metaDescription: `Discover upcoming events in ${formattedCity}, Scottish Highlands.`,
-            h1Heading: `Events in ${formattedCity}`,
-            isFallback: false,
-            fallbackNotice: null,
-            heroImageUrl: null,
-            anchorText: null,
-            partnerLogo: null,
-            partnerName: null,
-            partnerUrl: null,
-            events: [],
-        }
-    };
 };
 
 export default function LocationPage({
@@ -109,7 +151,8 @@ export default function LocationPage({
     anchorText,
     partnerLogo,
     partnerName,
-    partnerUrl
+    partnerUrl,
+    meta
 }: LocationPageProps) {
     const formattedCity = city || citySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const hasEvents = events.length > 0;
@@ -135,22 +178,9 @@ export default function LocationPage({
         : `${SITE_URL}/locations/${citySlug}`;
 
     // Absolute Open Graph Image Resolution
-    const defaultOgImage = `${SITE_URL}/images/defaults/category_festivals.jpg`;
-    let ogImageUrl = defaultOgImage;
-
-    if (heroImageUrl) {
-        if (heroImageUrl.startsWith('http://') || heroImageUrl.startsWith('https://')) {
-            ogImageUrl = heroImageUrl;
-        } else {
-            const cleanPath = heroImageUrl.startsWith('/') ? heroImageUrl : `/${heroImageUrl}`;
-            ogImageUrl = `${SITE_URL}${cleanPath}`;
-        }
-    } else if (events.length > 0 && events[0].image_url) {
-        const firstEventImg = events[0].image_url;
-        ogImageUrl = firstEventImg.startsWith('http')
-            ? firstEventImg
-            : `${SITE_URL}${firstEventImg.startsWith('/') ? firstEventImg : `/${firstEventImg}`}`;
-    }
+    const ogImageUrl = meta?.image || resolveAbsoluteOgImage(
+        heroImageUrl || (events.length > 0 ? events[0].image_url : null)
+    );
 
     // JSON-LD ItemList
     const jsonLd = hasEvents ? {

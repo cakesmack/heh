@@ -133,7 +133,7 @@ def get_location_feed(
     - /this-weekend (Friday 16:00 to Sunday 23:59:59 window)
     Includes SEO metadata and thin content / empty state fallback handling.
     """
-    slug = location_slug.lower().strip()
+    slug = location_slug.lower().strip().strip('/')
     city_name = slug.replace("-", " ")
     formatted_name = city_name.title()
 
