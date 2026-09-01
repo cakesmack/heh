@@ -1758,7 +1758,8 @@ async def create_event(
                 organizer_name=organizer_display_name,
                 date_time_str=date_display_str,
                 venue_name=venue_display_str,
-                user_email=user_email_str
+                user_email=user_email_str,
+                is_ticketing_enabled=bool(new_event.is_ticketing_enabled)
             )
         else:
             try:
@@ -1768,7 +1769,8 @@ async def create_event(
                     organizer_name=organizer_display_name,
                     date_time_str=date_display_str,
                     venue_name=venue_display_str,
-                    user_email=user_email_str
+                    user_email=user_email_str,
+                    is_ticketing_enabled=bool(new_event.is_ticketing_enabled)
                 )
             except Exception as e:
                 logger.error(f"Error sending new event admin notification: {e}")

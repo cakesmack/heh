@@ -1082,11 +1082,14 @@ class ResendEmailService:
         organizer_name: str,
         date_time_str: Optional[str] = "TBD",
         venue_name: Optional[str] = "TBD",
-        user_email: Optional[str] = "N/A"
+        user_email: Optional[str] = "N/A",
+        is_ticketing_enabled: bool = False
     ) -> bool:
         """Notify admin about a newly published event."""
         admin_target = settings.ADMIN_EMAIL or "contact@highlandeventshub.co.uk"
-        subject = f"New Event Published: {event_title}"
+        subject_prefix = "[🎟️ TICKETED] " if is_ticketing_enabled else ""
+        subject = f"{subject_prefix}New Event Published: {event_title}"
+        ticketed_str = "Yes (Native Ticketing)" if is_ticketing_enabled else "No"
         live_url = f"{settings.FRONTEND_URL.rstrip('/')}/events/{event_id}"
         admin_edit_url = f"{settings.FRONTEND_URL.rstrip('/')}/admin/events?search={event_id}"
 
@@ -1100,6 +1103,7 @@ class ResendEmailService:
                 <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Venue / Location:</td><td style="padding: 6px 0;">{venue_name}</td></tr>
                 <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Organizer Name:</td><td style="padding: 6px 0;">{organizer_name}</td></tr>
                 <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">User Email:</td><td style="padding: 6px 0;">{user_email}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold; color: #4b5563;">Ticketed:</td><td style="padding: 6px 0;">{ticketed_str}</td></tr>
             </table>
             <div style="margin-top: 20px; display: flex; gap: 12px;">
                 <a href="{live_url}" style="display: inline-block; background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-right: 10px;">View Live Event</a>

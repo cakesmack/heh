@@ -158,3 +158,53 @@ def test_profanity_event_quarantine_in_pending_review(client: TestClient, test_d
 
     # Check quarantine alert notification
     assert mock_send_quarantined.called
+
+
+@pytest.mark.asyncio
+async def test_admin_new_event_notification_ticketed_and_standard_templates():
+    from app.services.resend_email import resend_email_service
+    from app.services.email_service import smart_email_service
+
+    captured_emails = []
+
+    async def mock_smart_email(email_type, to, subject, html_content, **kwargs):
+        captured_emails.append({
+            "email_type": email_type,
+            "to": to,
+            "subject": subject,
+            "html_content": html_content
+        })
+        return True
+
+    with patch.object(smart_email_service, "send_smart_email", side_effect=mock_smart_email):
+        # 1. Standard (non-ticketed) event
+        await resend_email_service.send_new_event_notification(
+            event_title="Community Book Club",
+            event_id="evt_standard_123",
+            organizer_name="Highland Library",
+            date_time_str="12 Sep 2026 18:00",
+            venue_name="Inverness Library",
+            user_email="lib@highland.scot",
+            is_ticketing_enabled=False
+        )
+
+        assert len(captured_emails) == 1
+        std_email = captured_emails[0]
+        assert std_email["subject"] == "New Event Published: Community Book Club"
+        assert "Ticketed:</td><td style=\"padding: 6px 0;\">No</td>" in std_email["html_content"]
+
+        # 2. Native ticketed event
+        await resend_email_service.send_new_event_notification(
+            event_title="Highland Ceilidh Extravaganza",
+            event_id="evt_ticketed_456",
+            organizer_name="Trad Music Scotland",
+            date_time_str="18 Sep 2026 19:30",
+            venue_name="Strathpeffer Pavilion",
+            user_email="ceilidh@highland.scot",
+            is_ticketing_enabled=True
+        )
+
+        assert len(captured_emails) == 2
+        tkt_email = captured_emails[1]
+        assert tkt_email["subject"] == "[🎟️ TICKETED] New Event Published: Highland Ceilidh Extravaganza"
+        assert "Ticketed:</td><td style=\"padding: 6px 0;\">Yes (Native Ticketing)</td>" in tkt_email["html_content"]

@@ -334,7 +334,7 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
 - **Instant Self-Serve Publishing**: Registered users can publish events immediately without manual probation gate delays or 5-event thresholds. Clean submissions are assigned `status = 'published'` instantly and appear in public feeds, search, and maps.
 - **Automated Content & Moderation Filter**: All event submissions undergo automated content and profanity checks (`check_content_with_reason` on title, description, location, tags) and duplicate risk detection. Flagged submissions are quarantined in `status = 'pending_review'` with a detailed `moderation_reason`.
 - **Asynchronous Admin Email Notifications**:
-  - **Published Event Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` with event title, date/time, venue/location, organizer name, creator email, live link, and admin management link.
+  - **Published Event Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` with event title, date/time, venue/location, organizer name, creator email, ticketed status (`Yes (Native Ticketing)` or `No`), subject badge (`[🎟️ TICKETED]` when native ticketing is enabled), live link, and admin management link.
   - **Quarantine Moderation Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` detailing flagged keywords, reason, event ID, organizer name, creator email, and direct link to the admin moderation queue.
 - **Native Ticketing Engine (General Availability - GA)**:
   - Feature flag `TICKETING_PUBLIC_ENABLED` enabled by default (`True` in `backend/app/core/config.py`).
