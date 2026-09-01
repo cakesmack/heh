@@ -312,7 +312,7 @@ export function buildEventPayload(data: WizardFormData, isAdmin: boolean = true)
     }
   }
 
-  const ticketingAllowed = Boolean(isAdmin && data.is_ticketing_enabled);
+  const ticketingAllowed = Boolean(data.is_ticketing_enabled);
 
   return {
     title: data.title,
@@ -530,7 +530,7 @@ export function useEventWizard(options: UseEventWizardOptions = {}): UseEventWiz
     }
   }, [isEditMode, currentStep]);
 
-  const isTicketingEnabled = Boolean(isAdmin && watch('is_ticketing_enabled'));
+  const isTicketingEnabled = Boolean(watch('is_ticketing_enabled'));
   const steps = getWizardSteps(isTicketingEnabled);
 
   const validateCurrentStep = useCallback((): Record<string, string> | null => {

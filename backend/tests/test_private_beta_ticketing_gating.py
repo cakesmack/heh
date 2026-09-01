@@ -43,7 +43,7 @@ def client_fixture(test_db: Session):
     yield client
     app.dependency_overrides.clear()
 
-def test_non_admin_blocked_from_stripe_onboarding(client: TestClient, test_db: Session):
+def test_non_admin_allowed_stripe_onboarding(client: TestClient, test_db: Session):
     user = User(
         id=str(uuid4()).replace('-', ''),
         email='regular.organizer@highland.scot',
@@ -56,11 +56,14 @@ def test_non_admin_blocked_from_stripe_onboarding(client: TestClient, test_db: S
 
     app.dependency_overrides[get_current_user] = lambda: user
 
-    res = client.post('/api/sellers/stripe-connect/onboard')
-    assert res.status_code == 403, res.text
-    assert 'Native ticketing is currently in private testing' in res.json()['detail']
+    with patch('app.services.stripe_service.create_connect_account', return_value='acct_ga_mock_123'), \
+         patch('app.services.stripe_service.create_account_onboarding_link', return_value='https://connect.stripe.com/setup/s/ga_mock_token'):
+        res = client.post('/api/sellers/stripe-connect/onboard')
+        assert res.status_code == 200, res.text
+        data = res.json()
+        assert data['url'] == 'https://connect.stripe.com/setup/s/ga_mock_token'
 
-def test_non_admin_blocked_from_seller_request_access(client: TestClient, test_db: Session):
+def test_non_admin_allowed_seller_request_access(client: TestClient, test_db: Session):
     user = User(
         id=str(uuid4()).replace('-', ''),
         email='regular.user@highland.scot',
@@ -73,10 +76,12 @@ def test_non_admin_blocked_from_seller_request_access(client: TestClient, test_d
     app.dependency_overrides[get_current_user] = lambda: user
 
     res = client.post('/api/sellers/request-access')
-    assert res.status_code == 403, res.text
-    assert 'Native ticketing is currently in private testing' in res.json()['detail']
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data['seller_status'] == 'approved'
+    assert data['seller_tier'] == 2
 
-def test_non_admin_blocked_from_creating_event_with_ticket_tiers(client: TestClient, test_db: Session):
+def test_non_admin_allowed_creating_event_with_ticket_tiers(client: TestClient, test_db: Session):
     user = User(
         id=str(uuid4()).replace('-', ''),
         email='regular.creator@highland.scot',
@@ -121,10 +126,13 @@ def test_non_admin_blocked_from_creating_event_with_ticket_tiers(client: TestCli
     }
 
     res = client.post('/api/events', json=event_payload)
-    assert res.status_code == 403, res.text
-    assert 'Native ticketing is currently in private testing' in res.json()['detail']
+    assert res.status_code == 201, res.text
+    data = res.json()
+    assert data['is_ticketing_enabled'] is True
+    assert len(data['ticket_tiers']) == 1
+    assert data['ticket_tiers'][0]['name'] == 'General Admission'
 
-def test_non_admin_blocked_from_direct_tier_management(client: TestClient, test_db: Session):
+def test_non_admin_allowed_direct_tier_management_for_own_event(client: TestClient, test_db: Session):
     user = User(
         id=str(uuid4()).replace('-', ''),
         email='regular.editor@highland.scot',
@@ -156,29 +164,70 @@ def test_non_admin_blocked_from_direct_tier_management(client: TestClient, test_
     }
 
     res = client.post(f'/api/events/{event.id}/tiers', json=tier_payload)
-    assert res.status_code == 403, res.text
-    assert 'Native ticketing is currently in private testing' in res.json()['detail']
+    assert res.status_code == 201, res.text
+    data = res.json()
+    assert data['name'] == 'VIP Tier'
+    assert data['price'] == 25.00
 
-def test_admin_allowed_full_native_ticketing_access(client: TestClient, test_db: Session):
-    admin_user = User(
+def test_non_admin_blocked_from_managing_other_users_event_tiers(client: TestClient, test_db: Session):
+    owner = User(
         id=str(uuid4()).replace('-', ''),
-        email='admin@highlandeventshub.co.uk',
-        username='hub_admin',
-        is_admin=True,
-        seller_tier=2,
-        seller_status='approved'
+        email='owner@highland.scot',
+        username='owner_user',
+        is_admin=False,
     )
-    test_db.add(admin_user)
+    attacker = User(
+        id=str(uuid4()).replace('-', ''),
+        email='attacker@highland.scot',
+        username='attacker_user',
+        is_admin=False,
+    )
+    test_db.add(owner)
+    test_db.add(attacker)
 
-    cat = Category(id=str(uuid4()).replace('-', ''), name='Concerts', slug='concerts')
+    event = Event(
+        id=str(uuid4()).replace('-', ''),
+        title='Owner Event',
+        organizer_id=owner.id,
+        date_start=datetime(2026, 11, 1, 19, 0),
+        date_end=datetime(2026, 11, 1, 21, 0),
+        status='published'
+    )
+    test_db.add(event)
+    test_db.commit()
+
+    app.dependency_overrides[get_session] = lambda: test_db
+    app.dependency_overrides[get_current_user] = lambda: attacker
+
+    tier_payload = {
+        'name': 'Hacked Tier',
+        'price': 1.00,
+        'quantity_available': 10,
+        'max_per_order': 1
+    }
+
+    res = client.post(f'/api/events/{event.id}/tiers', json=tier_payload)
+    assert res.status_code == 403, res.text
+    assert 'Not authorized' in res.json()['detail']
+
+def test_single_session_and_36h_constraint_enforced_for_standard_users(client: TestClient, test_db: Session):
+    user = User(
+        id=str(uuid4()).replace('-', ''),
+        email='user@highland.scot',
+        username='user1',
+        is_admin=False,
+    )
+    test_db.add(user)
+
+    cat = Category(id=str(uuid4()).replace('-', ''), name='Festivals', slug='festivals')
     test_db.add(cat)
 
     venue = Venue(
         id=str(uuid4()).replace('-', ''),
-        name='Ironworks Inverness',
-        address='Academy St',
+        name='Highland Grounds',
+        address='Inverness',
         city='Inverness',
-        postcode='IV1 1LX',
+        postcode='IV1 1AA',
         latitude=57.4778,
         longitude=-4.2247,
         geohash='gfh1',
@@ -186,42 +235,19 @@ def test_admin_allowed_full_native_ticketing_access(client: TestClient, test_db:
     test_db.add(venue)
     test_db.commit()
 
-    app.dependency_overrides[get_current_user] = lambda: admin_user
-    app.dependency_overrides[get_session] = lambda: test_db
+    app.dependency_overrides[get_current_user] = lambda: user
 
-    event_payload = {
-        'title': 'Admin Hosted Rock Gala',
+    # Event > 36 hours
+    long_event_payload = {
+        'title': '3 Day Festival',
         'category_id': str(cat.id),
         'venue_id': str(venue.id),
-        'date_start': '2026-12-05T20:00:00Z',
-        'date_end': '2026-12-05T23:00:00Z',
-       'is_ticketing_enabled': True,
-        'ticket_tiers': [
-            {
-                'name': 'Early Bird Ticket',
-                'price': 15.00,
-                'quantity_available': 100,
-                'max_per_order': 6
-            }
-        ]
+        'date_start': '2026-10-01T09:00:00Z',
+        'date_end': '2026-10-04T23:00:00Z',
+        'is_ticketing_enabled': True,
+        'ticket_tiers': [{'name': 'Weekend Pass', 'price': 80.0, 'quantity_available': 100, 'max_per_order': 2}]
     }
 
-    res = client.post('/api/events', json=event_payload)
-    assert res.status_code == 201, res.text
-    data = res.json()
-    assert data['is_ticketing_enabled'] is True
-    assert len(data['ticket_tiers']) == 1
-    assert data['ticket_tiers'][0]['name'] == 'Early Bird Ticket'
-
-
-    new_tier_payload = {
-        'name': 'VIP Pass',
-        'price': 35.00,
-        'quantity_available': 20,
-        'max_per_order': 2
-    }
-    tier_res = client.post(f'/api/events/{data["id"]}/tiers', json=new_tier_payload)
-    assert tier_res.status_code == 201, tier_res.text
-    tier_data = tier_res.json()
-    assert tier_data['name'] == 'VIP Pass'
-    assert tier_data['price'] == 35.00
+    res = client.post('/api/events', json=long_event_payload)
+    assert res.status_code == 400, res.text
+    assert '36 hours' in res.json()['detail']

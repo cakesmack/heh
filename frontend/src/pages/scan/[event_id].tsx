@@ -27,6 +27,7 @@ export default function DoorScannerPage() {
   
   const [feedback, setFeedback] = useState<ScanFeedback>({ status: null });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cameraDenied, setCameraDenied] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   // Manual code input
@@ -120,38 +121,95 @@ export default function DoorScannerPage() {
     }
   };
 
-  // Setup HTML5 Scanner
+  // Setup HTML5 Scanner with Camera Permission Handling
   useEffect(() => {
-    if (isAuthorized && activeTab === 'scan' && !scannerRef.current) {
-      const scanner = new Html5QrcodeScanner(
-        "reader", 
-        { 
-          fps: 10, 
-          qrbox: { width: 250, height: 250 }, 
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
-        }, 
-        false
-      );
-      
-      scannerRef.current = scanner;
-      
-      scanner.render(
-        (decodedText) => {
-          processTicketScan(decodedText);
-        },
-        () => {
-          // Continuous scan frame callback
+    let isCancelled = false;
+
+    if (isAuthorized && activeTab === 'scan') {
+      if (navigator?.mediaDevices?.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+          .then((stream) => {
+            if (isCancelled) {
+              stream.getTracks().forEach(t => t.stop());
+              return;
+            }
+            stream.getTracks().forEach(t => t.stop());
+            setCameraDenied(false);
+
+            if (!scannerRef.current) {
+              const scanner = new Html5QrcodeScanner(
+                "reader", 
+                { 
+                  fps: 10, 
+                  qrbox: { width: 250, height: 250 }, 
+                  supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
+                }, 
+                false
+              );
+              
+              scannerRef.current = scanner;
+              scanner.render(
+                (decodedText) => {
+                  processTicketScan(decodedText);
+                },
+                () => {
+                  // Continuous scan frame callback
+                }
+              );
+            }
+          })
+          .catch((err) => {
+            if (isCancelled) return;
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || String(err).toLowerCase().includes('permission') || String(err).toLowerCase().includes('denied')) {
+              setCameraDenied(true);
+            } else {
+              // Fallback to Html5QrcodeScanner
+              if (!scannerRef.current) {
+                const scanner = new Html5QrcodeScanner(
+                  "reader", 
+                  { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 250 }, 
+                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
+                  }, 
+                  false
+                );
+                scannerRef.current = scanner;
+                scanner.render(
+                  (decodedText) => processTicketScan(decodedText),
+                  () => {}
+                );
+              }
+            }
+          });
+      } else {
+        if (!scannerRef.current) {
+          const scanner = new Html5QrcodeScanner(
+            "reader", 
+            { 
+              fps: 10, 
+              qrbox: { width: 250, height: 250 }, 
+              supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
+            }, 
+            false
+          );
+          scannerRef.current = scanner;
+          scanner.render(
+            (decodedText) => processTicketScan(decodedText),
+            () => {}
+          );
         }
-      );
+      }
     }
     
     return () => {
+      isCancelled = true;
       if (scannerRef.current) {
         scannerRef.current.clear().catch(() => {});
         scannerRef.current = null;
       }
     };
-  }, [isAuthorized, activeTab, isProcessing, event_id, token]);
+  }, [isAuthorized, activeTab, cameraDenied, event_id, token]);
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,12 +376,46 @@ export default function DoorScannerPage() {
         {/* Camera Scan Tab */}
         {activeTab === 'scan' && (
           <div className="flex-1 flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-sm overflow-hidden rounded-2xl border-2 border-stone-800 shadow-2xl bg-black">
-              <div id="reader" className="w-full min-h-[300px]"></div>
-            </div>
-            <p className="text-stone-400 text-xs text-center mt-4 max-w-xs">
-              Point your camera at an attendee's digital QR pass or printed physical ticket.
-            </p>
+            {cameraDenied ? (
+              <div className="w-full max-w-sm p-6 bg-stone-900 border border-stone-800 rounded-3xl text-center space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                <div className="text-4xl">📷🚫</div>
+                <h3 className="text-base font-bold text-stone-100">Camera Access Required</h3>
+                <p className="text-xs text-stone-300 leading-relaxed">
+                  Camera access is required to scan tickets. Please enable camera permissions in your browser settings.
+                </p>
+                <div className="pt-2 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCameraDenied(false);
+                      if (scannerRef.current) {
+                        scannerRef.current.clear().catch(() => {});
+                        scannerRef.current = null;
+                      }
+                    }}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('manual')}
+                    className="w-full bg-stone-800 hover:bg-stone-700 text-stone-300 font-medium py-2 rounded-xl text-xs transition cursor-pointer"
+                  >
+                    Use Manual Code Entry
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="w-full max-w-sm overflow-hidden rounded-2xl border-2 border-stone-800 shadow-2xl bg-black">
+                  <div id="reader" className="w-full min-h-[300px]"></div>
+                </div>
+                <p className="text-stone-400 text-xs text-center mt-4 max-w-xs">
+                  Point your camera at an attendee's digital QR pass or printed physical ticket.
+                </p>
+              </>
+            )}
           </div>
         )}
 

@@ -26,8 +26,8 @@ def verify_organizer_access(event_id: str, user: User, session: Session) -> Even
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    if user.seller_tier < 2 and not user.is_admin:
-        raise HTTPException(status_code=403, detail="You do not have active seller permissions.")
+    if user.seller_status in ["frozen", "rejected"] and not user.is_admin:
+        raise HTTPException(status_code=403, detail="Your organizer selling access has been suspended.")
         
     # Check if user is the organizer of the event
     is_owner = (
@@ -129,8 +129,8 @@ def get_organizer_scanner_events(
     """
     Returns all ticketed events for the current organizer with scanning activation status and check-in stats.
     """
-    if current_user.seller_tier < 2 and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Active seller or organizer access required.")
+    if current_user.seller_status in ["frozen", "rejected"] and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Your organizer selling access has been suspended.")
 
     # Get events owned by user
     organizer_profile_ids = [p.id for p in (getattr(current_user, "organizer_profiles", []) or [])]
@@ -256,8 +256,8 @@ def get_organizer_invoices(
     Returns full list of customer ticket purchase invoices, platform fee statements,
     and tax breakdown for events managed by the organizer.
     """
-    if current_user.seller_tier < 2 and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Active seller or organizer access required.")
+    if current_user.seller_status in ["frozen", "rejected"] and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Your organizer selling access has been suspended.")
 
     # 1. Fetch organizer's events
     organizer_profile_ids = [p.id for p in (getattr(current_user, "organizer_profiles", []) or [])]
@@ -373,8 +373,8 @@ def export_organizer_invoices_csv(
     """
     Downloads full history of invoices and platform fee statements as a tax-compliant CSV file.
     """
-    if current_user.seller_tier < 2 and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Active seller or organizer access required.")
+    if current_user.seller_status in ["frozen", "rejected"] and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Your organizer selling access has been suspended.")
 
     # 1. Fetch organizer's events
     organizer_profile_ids = [p.id for p in (getattr(current_user, "organizer_profiles", []) or [])]

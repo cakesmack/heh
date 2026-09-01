@@ -1454,13 +1454,6 @@ async def create_event(
                 # Format: YYYYMMDDTHHMMSSZ
                 until_str = event_data.recurrence_end_date.strftime("%Y%m%dT%H%M%SZ")
                 recurrence_rule += f";UNTIL={until_str}"
-    
-    # Gating check: Native Ticketing Private Beta
-    if (event_data.is_ticketing_enabled or (event_data.ticket_tiers and len(event_data.ticket_tiers) > 0)) and not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Native ticketing is currently in private testing."
-        )
 
     # 36-Hour Single-Session Constraint for Native Ticketing
     if event_data.is_ticketing_enabled:
@@ -2034,13 +2027,6 @@ async def update_event(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this event"
-        )
-
-    # Gating check: Native Ticketing Private Beta
-    if (event_data.is_ticketing_enabled or (event_data.ticket_tiers is not None and len(event_data.ticket_tiers) > 0)) and not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Native ticketing is currently in private testing."
         )
 
     # 36-Hour Single-Session Constraint for Native Ticketing
@@ -2813,7 +2799,7 @@ def events_global_search(
 
 
 # -------------------------------------------------------------
-# Ticket Tier Management Endpoints (Admin-Only Private Beta)
+# Ticket Tier Management Endpoints
 # -------------------------------------------------------------
 @router.post("/{event_id}/tiers", response_model=TicketTierResponse, status_code=status.HTTP_201_CREATED)
 def create_event_ticket_tier(
@@ -2823,14 +2809,8 @@ def create_event_ticket_tier(
     session: Session = Depends(get_session)
 ):
     """
-    Create a new ticket tier for an event. Gated to admins during private beta testing.
+    Create a new ticket tier for an event.
     """
-    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Native ticketing is currently in private testing."
-        )
-
     event = session.exec(select(Event).where(Event.slug == event_id)).first()
     if not event:
         event = session.get(Event, normalize_uuid(event_id))
@@ -2842,7 +2822,15 @@ def create_event_ticket_tier(
 
     user_id_str = str(current_user.id).replace("-", "")
     organizer_id_str = str(event.organizer_id).replace("-", "") if event.organizer_id else ""
-    if organizer_id_str != user_id_str and not current_user.is_admin:
+    user_org_ids = [str(p.id).replace("-", "") for p in (getattr(current_user, "organizer_profiles", []) or [])]
+    event_org_prof_id = str(event.organizer_profile_id).replace("-", "") if event.organizer_profile_id else ""
+
+    is_owner = (
+        organizer_id_str == user_id_str or
+        (event_org_prof_id and event_org_prof_id in user_org_ids) or
+        current_user.is_admin
+    )
+    if not is_owner:
         raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
 
     tier_id = tier_data.id or normalize_uuid(uuid4())
@@ -2874,14 +2862,8 @@ def update_event_ticket_tier(
     session: Session = Depends(get_session)
 ):
     """
-    Update a ticket tier for an event. Gated to admins during private beta testing.
+    Update a ticket tier for an event.
     """
-    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Native ticketing is currently in private testing."
-        )
-
     event = session.exec(select(Event).where(Event.slug == event_id)).first()
     if not event:
         event = session.get(Event, normalize_uuid(event_id))
@@ -2893,7 +2875,15 @@ def update_event_ticket_tier(
 
     user_id_str = str(current_user.id).replace("-", "")
     organizer_id_str = str(event.organizer_id).replace("-", "") if event.organizer_id else ""
-    if organizer_id_str != user_id_str and not current_user.is_admin:
+    user_org_ids = [str(p.id).replace("-", "") for p in (getattr(current_user, "organizer_profiles", []) or [])]
+    event_org_prof_id = str(event.organizer_profile_id).replace("-", "") if event.organizer_profile_id else ""
+
+    is_owner = (
+        organizer_id_str == user_id_str or
+        (event_org_prof_id and event_org_prof_id in user_org_ids) or
+        current_user.is_admin
+    )
+    if not is_owner:
         raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
 
     tier = session.get(TicketTier, tier_id)
@@ -2919,14 +2909,8 @@ def delete_event_ticket_tier(
     session: Session = Depends(get_session)
 ):
     """
-    Delete or hide a ticket tier. Gated to admins during private beta testing.
+    Delete or hide a ticket tier.
     """
-    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Native ticketing is currently in private testing."
-        )
-
     event = session.exec(select(Event).where(Event.slug == event_id)).first()
     if not event:
         event = session.get(Event, normalize_uuid(event_id))
@@ -2938,7 +2922,15 @@ def delete_event_ticket_tier(
 
     user_id_str = str(current_user.id).replace("-", "")
     organizer_id_str = str(event.organizer_id).replace("-", "") if event.organizer_id else ""
-    if organizer_id_str != user_id_str and not current_user.is_admin:
+    user_org_ids = [str(p.id).replace("-", "") for p in (getattr(current_user, "organizer_profiles", []) or [])]
+    event_org_prof_id = str(event.organizer_profile_id).replace("-", "") if event.organizer_profile_id else ""
+
+    is_owner = (
+        organizer_id_str == user_id_str or
+        (event_org_prof_id and event_org_prof_id in user_org_ids) or
+        current_user.is_admin
+    )
+    if not is_owner:
         raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
 
     tier = session.get(TicketTier, tier_id)

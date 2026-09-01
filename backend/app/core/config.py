@@ -118,7 +118,7 @@ class Settings(BaseSettings):
     HIGHLANDS_LON_MAX: float = -3.0
 
     # Feature Flags
-    TICKETING_PUBLIC_ENABLED: bool = False
+    TICKETING_PUBLIC_ENABLED: bool = True
 
     class Config:
         env_file = ".env"

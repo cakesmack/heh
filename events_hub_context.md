@@ -336,10 +336,13 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
 - **Asynchronous Admin Email Notifications**:
   - **Published Event Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` with event title, date/time, venue/location, organizer name, creator email, live link, and admin management link.
   - **Quarantine Moderation Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` detailing flagged keywords, reason, event ID, organizer name, creator email, and direct link to the admin moderation queue.
-- **Native Ticketing Engine (Admin-Only Private Beta)**:
-  - Feature flag `TICKETING_PUBLIC_ENABLED` (default `False` in `backend/app/core/config.py`).
-  - Native ticketing creation, seller onboarding, and ticket tier management are restricted to platform administrators (`user.is_admin == True`) while in private testing. Public ticket purchases and checkout intents for admin-ticketed events remain fully operational.
-  - **Single-Session / 36-Hour Constraint (V1 Safeguard)**:
+- **Native Ticketing Engine (General Availability - GA)**:
+  - Feature flag `TICKETING_PUBLIC_ENABLED` enabled by default (`True` in `backend/app/core/config.py`).
+  - Native ticketing creation, Stripe Connect onboarding (`/api/sellers/stripe-connect/onboard`), seller status checks, and ticket tier management are accessible to all authenticated registered users.
+  - Event Wizard Step 1 toggle and ticket tier configurations are open to all registered users without Admin Beta gating badges.
+  - User header dropdown renders the "Organizer Hub" link for all authenticated accounts.
+  - Door Scanner (`/scan/[event_id]`) includes a helpful fallback state if browser camera access is denied (*"Camera access is required to scan tickets. Please enable camera permissions in your browser settings."*).
+  - **Single-Session / 36-Hour Constraint (Permanent Platform Safeguard)**:
     - **Frontend Event Wizard**: Step 1 displays micro-copy note outlining the single-event / overnight limit. Step 2 automatically locks pattern selection to "One-Off Event", greys out and disables "Recurring Event" and "Various Dates & Times" with an "Unavailable with Native Ticketing" badge and informative toast, shows an inline duration warning, and disables the "Next" button if duration exceeds 36 hours.
     - **Backend API**: `POST /api/events` and `PUT /api/events/{id}` strictly validate that any ticketed event is non-recurring (`is_recurring == False`, `recurrence_rule == None`, `frequency == None`, and empty `showtimes`) and that duration `(date_end - date_start) <= 36 hours` (allowing overnight sessions up to 36 hours), raising HTTP 400 otherwise.
 

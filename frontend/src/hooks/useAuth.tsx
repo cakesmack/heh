@@ -10,12 +10,12 @@ import { useRouter } from 'next/router';
 import { toast } from 'react-hot-toast';
 import { api } from '@/lib/api';
 /**
- * Check if a user is eligible to sell.
- * Native ticketing engine is currently in Admin-Only Private Beta.
+ * Check if a user is eligible to sell and access Organizer tools.
+ * Native ticketing engine is generally available for all registered users.
  */
 export function isApprovedSeller(user?: User | null): boolean {
   if (!user) return false;
-  return Boolean(user.is_admin || (user as any).role === 'admin');
+  return user.seller_status !== 'frozen' && user.seller_status !== 'rejected';
 }
 
 interface AuthContextType {

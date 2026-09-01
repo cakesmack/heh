@@ -301,105 +301,102 @@ export default function StepBasics({
         </div>
       </div>
 
-      {/* ─── Native Ticketing (Admin Private Beta) ─── */}
-      {Boolean(user?.is_admin || (user as any)?.role === 'admin') && (
-        <div className="bg-emerald-50/70 border-2 border-emerald-400 rounded-2xl p-5 shadow-xs transition-all">
-          <div className="flex items-start justify-between">
-            <div className="pr-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg">🎟️</span>
-                <h3 className="text-base font-bold text-emerald-950">Sell Tickets on Highland Events Hub</h3>
-                <span className="text-[10px] uppercase font-extrabold bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded">Admin Beta</span>
-              </div>
-              <p className="text-sm text-emerald-900/80 mt-1">
-                Enable the native ticketing engine to sell tickets directly. Manage inventory, live door scanning, and self-service refunds.
-              </p>
-              <p className="text-xs text-emerald-800/90 mt-2 bg-emerald-100/60 rounded-lg px-2.5 py-1.5 border border-emerald-200/50">
-                💡 Native ticketing currently supports single events and overnight gigs (up to 36 hours). For recurring classes or multi-day festivals, please use an external ticket link.
-              </p>
+      {/* ─── Native Ticketing ─── */}
+      <div className="bg-emerald-50/70 border-2 border-emerald-400 rounded-2xl p-5 shadow-xs transition-all">
+        <div className="flex items-start justify-between">
+          <div className="pr-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">🎟️</span>
+              <h3 className="text-base font-bold text-emerald-950">Sell Tickets on Highland Events Hub</h3>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={formData.is_ticketing_enabled || false}
-                onChange={(e) => setValue('is_ticketing_enabled', e.target.checked)}
-              />
-              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-            </label>
+            <p className="text-sm text-emerald-900/80 mt-1">
+              Enable the native ticketing engine to sell tickets directly. Manage inventory, live door scanning, and self-service refunds.
+            </p>
+            <p className="text-xs text-emerald-800/90 mt-2 bg-emerald-100/60 rounded-lg px-2.5 py-1.5 border border-emerald-200/50">
+              💡 Native ticketing currently supports single events and overnight gigs (up to 36 hours). For recurring classes or multi-day festivals, please use an external ticket link.
+            </p>
           </div>
-
-          {formData.is_ticketing_enabled && (
-            <div className="mt-4 pt-4 border-t border-emerald-200/60">
-              {isLoadingHostStatus ? (
-                <div className="flex items-center gap-2 text-xs text-emerald-800 animate-pulse">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span>Checking Stripe connection status for {hostDisplayName}...</span>
-                </div>
-              ) : hostStatus?.charges_enabled ? (
-                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-3 py-2 rounded-lg border border-emerald-200">
-                  <span>✓</span>
-                  <span><strong>{hostDisplayName}</strong> is connected to Stripe and ready to configure tickets.</span>
-                </div>
-              ) : (
-                <div className="p-4 bg-amber-50/90 rounded-xl border border-amber-200 text-amber-950 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl shrink-0">🏦</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                        Stripe Payouts Connection Required
-                      </p>
-                      <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">
-                        To sell tickets under <strong>{hostDisplayName}</strong>, you must connect a bank account to receive direct ticket payouts.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleConnectStripe}
-                      disabled={isConnectingStripe}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm hover:shadow transition-all text-xs cursor-pointer disabled:opacity-50"
-                    >
-                      {isConnectingStripe ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Opening Stripe...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>🔗</span>
-                          <span>Connect Stripe Account</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => fetchStatus(true)}
-                      disabled={isLoadingHostStatus}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <svg className={`w-3.5 h-3.5 ${isLoadingHostStatus ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span>{isLoadingHostStatus ? 'Checking...' : 'Refresh Status'}</span>
-                    </button>
-                  </div>
-
-                  {isConnectingStripe && (
-                    <div className="p-2.5 bg-white/90 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-center gap-2">
-                      <span className="animate-pulse">⏳</span>
-                      <span>Stripe onboarding opened in a new tab. Complete setup and return here — status will update automatically.</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={formData.is_ticketing_enabled || false}
+              onChange={(e) => setValue('is_ticketing_enabled', e.target.checked)}
+            />
+            <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
         </div>
-      )}
+
+        {formData.is_ticketing_enabled && (
+          <div className="mt-4 pt-4 border-t border-emerald-200/60">
+            {isLoadingHostStatus ? (
+              <div className="flex items-center gap-2 text-xs text-emerald-800 animate-pulse">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span>Checking Stripe connection status for {hostDisplayName}...</span>
+              </div>
+            ) : hostStatus?.charges_enabled ? (
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-3 py-2 rounded-lg border border-emerald-200">
+                <span>✓</span>
+                <span><strong>{hostDisplayName}</strong> is connected to Stripe and ready to configure tickets.</span>
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50/90 rounded-xl border border-amber-200 text-amber-950 space-y-3">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl shrink-0">🏦</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900">
+                      Stripe Payouts Connection Required
+                    </p>
+                    <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">
+                      To sell tickets under <strong>{hostDisplayName}</strong>, you must connect a bank account to receive direct ticket payouts.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleConnectStripe}
+                    disabled={isConnectingStripe}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm hover:shadow transition-all text-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isConnectingStripe ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Opening Stripe...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🔗</span>
+                        <span>Connect Stripe Account</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fetchStatus(true)}
+                    disabled={isLoadingHostStatus}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <svg className={`w-3.5 h-3.5 ${isLoadingHostStatus ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>{isLoadingHostStatus ? 'Checking...' : 'Refresh Status'}</span>
+                  </button>
+                </div>
+
+                {isConnectingStripe && (
+                  <div className="p-2.5 bg-white/90 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-center gap-2">
+                    <span className="animate-pulse">⏳</span>
+                    <span>Stripe onboarding opened in a new tab. Complete setup and return here — status will update automatically.</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ─── Location Section ────────────────────────────── */}
       <div className="space-y-4">

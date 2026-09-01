@@ -29,12 +29,6 @@ def request_seller_access(
     """
     Request access to become an event seller. Immediately auto-approves the user for seller capability.
     """
-    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Native ticketing is currently in private testing."
-        )
-
     current_user.seller_tier = 2
     if current_user.seller_status not in ["frozen", "rejected"]:
         current_user.seller_status = "approved"
@@ -137,12 +131,6 @@ def onboard_stripe_connect(
     target_organizer_id = organizer_id or (body.organizer_id if body else None)
     custom_return = return_url or (body.return_url if body else None)
     custom_refresh = refresh_url or (body.refresh_url if body else None)
-    
-    if not current_user.is_admin and not settings.TICKETING_PUBLIC_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Native ticketing is currently in private testing."
-        )
 
     # Auto-approve seller tier if initiating Stripe Connect onboarding
     if current_user.seller_tier < 2 or current_user.seller_status != "approved":
