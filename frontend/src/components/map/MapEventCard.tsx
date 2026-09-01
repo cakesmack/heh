@@ -1,6 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { EventResponse } from '@/types';
+import { formatEventPrice } from '@/lib/formatPrice';
 
 interface MapEventCardProps {
     event: EventResponse;
@@ -80,11 +81,9 @@ export default function MapEventCard({
 
                 {/* Footer Actions */}
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                    {event.ticket_url ? (
-                        <span className="text-[10px] font-medium text-gray-400">
-                            Tickets Available
-                        </span>
-                    ) : (<span></span>)}
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                        {formatEventPrice(event)}
+                    </span>
 
                     <div className="flex items-center gap-3">
                         {/* Map Focus Button */}

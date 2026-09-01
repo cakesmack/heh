@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { VenueResponse, ShowtimeCreate, Category, Organizer } from '@/types';
+import { deriveEventPriceFromTiers } from '@/lib/formatPrice';
 
 // ─── Storage Key ───────────────────────────────────────────
 const STORAGE_KEY = 'heh_event_wizard_draft';
@@ -313,6 +314,10 @@ export function buildEventPayload(data: WizardFormData, isAdmin: boolean = true)
   }
 
   const ticketingAllowed = Boolean(data.is_ticketing_enabled);
+  let finalPrice = data.price;
+  if (ticketingAllowed && data.ticket_tiers && data.ticket_tiers.length > 0) {
+    finalPrice = deriveEventPriceFromTiers(data.ticket_tiers, Boolean(data.pass_fees_to_buyer));
+  }
 
   return {
     title: data.title,
@@ -324,7 +329,7 @@ export function buildEventPayload(data: WizardFormData, isAdmin: boolean = true)
     longitude: (data.locationTab === 'main' && data.locationMode === 'custom') ? data.longitude : null,
     date_start: calculatedDateStart,
     date_end: calculatedDateEnd,
-    price: data.price,
+    price: finalPrice,
     image_url: data.image_url || undefined,
     is_ticketing_enabled: ticketingAllowed,
     pass_fees_to_buyer: ticketingAllowed ? data.pass_fees_to_buyer : false,

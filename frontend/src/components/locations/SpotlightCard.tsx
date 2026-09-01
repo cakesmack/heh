@@ -4,6 +4,7 @@ import OptimizedImage from '@/components/ui/OptimizedImage';
 import { EventResponse } from '@/types';
 import { Badge } from '@/components/common/Badge';
 import { stripHtml } from '@/lib/stringUtils';
+import { formatEventPrice } from '@/lib/formatPrice';
 
 interface SpotlightCardProps {
   event: EventResponse;
@@ -137,7 +138,7 @@ export function SpotlightCard({ event, label }: SpotlightCardProps) {
                 View Event →
               </span>
               <span className="text-sm font-medium text-gray-700">
-                {event.price_display || (event.price === 0 ? 'Free' : `£${event.price?.toFixed(2)}`)}
+                {formatEventPrice(event)}
               </span>
             </div>
           </div>

@@ -39,7 +39,7 @@ from app.schemas.category import CategoryResponse
 from app.schemas.tag import TagResponse
 from app.schemas.venue import VenueResponse
 from app.services.geolocation import calculate_geohash, haversine_distance, get_bounding_box
-from app.utils.price_age_parser import parse_price_input, parse_age_input
+from app.utils.price_age_parser import parse_price_input, parse_age_input, derive_event_price_from_tiers
 from app.services.notifications import notification_service
 from app.services.resend_email import resend_email_service
 from app.services.recurrence import generate_recurring_instances
@@ -1473,6 +1473,10 @@ async def create_event(
 
     # Parse price and age inputs
     price_display, min_price = parse_price_input(event_data.price)
+    if event_data.is_ticketing_enabled and event_data.ticket_tiers:
+        pass_fees = bool(getattr(event_data, "pass_fees_to_buyer", False))
+        price_display, min_price = derive_event_price_from_tiers(event_data.ticket_tiers, pass_fees)
+
     age_restriction_str, min_age = parse_age_input(event_data.age_restriction)
     
     # Create event
@@ -2188,6 +2192,15 @@ async def update_event(
         update_data["price"] = min_price  # Keep legacy field as float
         update_data["price_display"] = price_display
         update_data["min_price"] = min_price
+
+    # If native ticketing is enabled and tiers are provided, synchronize price from tiers
+    is_ticketing_effective = update_data.get("is_ticketing_enabled", event.is_ticketing_enabled)
+    pass_fees_effective = update_data.get("pass_fees_to_buyer", getattr(event, "pass_fees_to_buyer", False))
+    if is_ticketing_effective and event_data.ticket_tiers:
+        price_display, min_price = derive_event_price_from_tiers(event_data.ticket_tiers, pass_fees_effective)
+        update_data["price"] = min_price
+        update_data["price_display"] = price_display
+        update_data["min_price"] = min_price
     
     # Parse age_restriction if being updated
     if "age_restriction" in update_data:
@@ -2847,6 +2860,15 @@ def create_event_ticket_tier(
     )
     event.is_ticketing_enabled = True
     session.add(new_tier)
+    session.flush()
+
+    all_tiers = session.exec(select(TicketTier).where(TicketTier.event_id == event.id, TicketTier.is_hidden == False)).all()
+    if all_tiers:
+        p_display, p_min = derive_event_price_from_tiers(all_tiers, getattr(event, "pass_fees_to_buyer", False))
+        event.price = p_min
+        event.min_price = p_min
+        event.price_display = p_display
+
     session.add(event)
     session.commit()
     session.refresh(new_tier)
@@ -2896,6 +2918,16 @@ def update_event_ticket_tier(
 
     tier.updated_at = datetime.utcnow()
     session.add(tier)
+    session.flush()
+
+    all_tiers = session.exec(select(TicketTier).where(TicketTier.event_id == event.id, TicketTier.is_hidden == False)).all()
+    if all_tiers:
+        p_display, p_min = derive_event_price_from_tiers(all_tiers, getattr(event, "pass_fees_to_buyer", False))
+        event.price = p_min
+        event.min_price = p_min
+        event.price_display = p_display
+    session.add(event)
+
     session.commit()
     session.refresh(tier)
     return tier
@@ -2942,6 +2974,15 @@ def delete_event_ticket_tier(
         session.add(tier)
     else:
         session.delete(tier)
+
+    session.flush()
+    all_tiers = session.exec(select(TicketTier).where(TicketTier.event_id == event.id, TicketTier.is_hidden == False)).all()
+    if all_tiers:
+        p_display, p_min = derive_event_price_from_tiers(all_tiers, getattr(event, "pass_fees_to_buyer", False))
+        event.price = p_min
+        event.min_price = p_min
+        event.price_display = p_display
+    session.add(event)
 
     session.commit()
     return {"message": "Ticket tier removed successfully"}

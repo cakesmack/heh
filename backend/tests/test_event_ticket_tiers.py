@@ -205,9 +205,78 @@ def test_create_and_update_event_ticket_tiers(session: Session):
 
     # 3. Test build_event_response includes ticket_tiers for public page
     from app.api.events import build_event_response
+    from app.utils.price_age_parser import parse_price_input, derive_event_price_from_tiers
+
     resp = build_event_response(event, session)
     assert resp.is_ticketing_enabled is True
     assert len(resp.ticket_tiers) == 2
     resp_tier_names = {t.name for t in resp.ticket_tiers}
     assert "Early Bird Discount" in resp_tier_names
     assert "VIP Pass" in resp_tier_names
+
+
+def test_parse_price_input_standard_events():
+    from app.utils.price_age_parser import parse_price_input
+
+    # Free variants
+    assert parse_price_input("0") == ("Free", 0.0)
+    assert parse_price_input("0.00") == ("Free", 0.0)
+    assert parse_price_input("Free") == ("Free", 0.0)
+    assert parse_price_input("FREE") == ("Free", 0.0)
+    assert parse_price_input(0) == ("Free", 0.0)
+    assert parse_price_input(None) == ("Free", 0.0)
+    assert parse_price_input("") == ("Free", 0.0)
+
+    # Numeric inputs without symbol -> automatically prepend £
+    assert parse_price_input("15") == ("£15", 15.0)
+    assert parse_price_input("15.50") == ("£15.50", 15.50)
+    assert parse_price_input("12") == ("£12", 12.0)
+    assert parse_price_input(15.5) == ("£15.50", 15.5)
+
+    # Pre-formatted or custom text
+    assert parse_price_input("£10") == ("£10", 10.0)
+    assert parse_price_input("£10 - £15") == ("£10 - £15", 10.0)
+    assert parse_price_input("Donation") == ("Donation", 0.0)
+    assert parse_price_input("Pay what you can") == ("Pay what you can", 0.0)
+
+
+def test_derive_event_price_from_tiers():
+    from app.utils.price_age_parser import derive_event_price_from_tiers
+
+    # 1. Single free tier
+    tiers = [{"name": "Free Entry", "price": 0.0}]
+    display, min_p = derive_event_price_from_tiers(tiers, pass_fees_to_buyer=True)
+    assert display == "Free"
+    assert min_p == 0.0
+
+    # 2. Single paid tier with pass-through fees (3.5% + £0.30)
+    # £10.00 -> fee = £0.35 + £0.30 = £0.65 -> Total = £10.65
+    tiers = [{"name": "Standard", "price": 10.0}]
+    display, min_p = derive_event_price_from_tiers(tiers, pass_fees_to_buyer=True)
+    assert display == "£10.65"
+    assert min_p == 10.65
+
+    # 3. Single paid tier with absorbed fees
+    display, min_p = derive_event_price_from_tiers(tiers, pass_fees_to_buyer=False)
+    assert display == "£10.00"
+    assert min_p == 10.0
+
+    # 4. Multiple tiers with pass-through fees (£10.00 and £25.00)
+    # £10.00 -> £10.65, £25.00 -> fee = £0.875 + £0.30 = £1.18 -> Total = £26.18
+    multi_tiers = [
+        {"name": "Standard", "price": 10.0},
+        {"name": "VIP", "price": 25.0},
+    ]
+    display, min_p = derive_event_price_from_tiers(multi_tiers, pass_fees_to_buyer=True)
+    assert display == "From £10.65"
+    assert min_p == 10.65
+
+    # 5. Multiple tiers with free and paid
+    free_and_paid = [
+        {"name": "General Free", "price": 0.0},
+        {"name": "VIP", "price": 20.0},
+    ]
+    display, min_p = derive_event_price_from_tiers(free_and_paid, pass_fees_to_buyer=True)
+    assert display == "From Free"
+    assert min_p == 0.0
+

@@ -293,10 +293,23 @@ export default function StepBasics({
             name="price"
             label="Price"
             type="text"
-            value={formData.price}
+            disabled={Boolean(formData.is_ticketing_enabled)}
+            value={
+              formData.is_ticketing_enabled
+                ? (formData.price && formData.price !== '0' ? formData.price : '')
+                : formData.price
+            }
             onChange={(e) => setValue('price', e.target.value)}
-            placeholder='e.g., Free, £5, £5-£10'
-            helperText='Enter "Free", or any price format.'
+            placeholder={
+              formData.is_ticketing_enabled
+                ? 'Auto-calculated from ticket tiers (incl. fees)'
+                : 'e.g., Free, £5, £5-£10'
+            }
+            helperText={
+              formData.is_ticketing_enabled
+                ? '🎟️ Auto-calculated from ticket tiers (incl. fees)'
+                : 'Enter "Free", or any price format.'
+            }
           />
         </div>
       </div>

@@ -5,6 +5,7 @@ import { Organizer } from '@/types';
 import { api, SellerStatusResponse } from '@/lib/api';
 import { Spinner } from '@/components/common/Spinner';
 import { toast } from 'react-hot-toast';
+import { deriveEventPriceFromTiers } from '@/lib/formatPrice';
 
 interface StepTicketsProps {
   form: UseFormReturn<WizardFormData>;
@@ -138,6 +139,14 @@ export default function StepTickets({
       append({ name: 'General Admission', price: 0, quantity_available: 100, max_per_order: 10 });
     }
   }, [sellerStatus?.charges_enabled, fields.length, append]);
+
+  // Synchronize derived display price into the form price field
+  useEffect(() => {
+    if (watch('is_ticketing_enabled') && watchedTiers.length > 0) {
+      const derivedPrice = deriveEventPriceFromTiers(watchedTiers, Boolean(passFeesToBuyer));
+      setValue('price', derivedPrice, { shouldDirty: true });
+    }
+  }, [watchedTiers, passFeesToBuyer, setValue, watch]);
 
   // Calculate dynamic helper text based on entered tier price
   const firstPaidTier = watchedTiers.find((t) => Number(t.price) > 0);

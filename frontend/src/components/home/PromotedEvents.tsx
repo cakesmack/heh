@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import { EventResponse } from '@/types';
+import { formatEventPrice } from '@/lib/formatPrice';
 
 interface PromotedEventsProps {
     events: EventResponse[];
@@ -128,7 +129,7 @@ export default function PromotedEvents({ events, isLoading }: PromotedEventsProp
                                             </div>
                                         )}
                                         <div className="ml-auto font-bold text-amber-300 text-sm">
-                                            {event.price_display || (event.price === 0 ? 'Free' : `£${event.price.toFixed(2)}`)}
+                                            {formatEventPrice(event)}
                                         </div>
                                     </div>
                                 </div>

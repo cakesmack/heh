@@ -37,6 +37,7 @@ import SidebarPerformances from '@/components/events/SidebarPerformances';
 import { EventCard } from '@/components/events/EventCard';
 import { TicketTierSelector } from '@/components/ticketing/TicketTierSelector';
 import { CheckoutModal } from '@/components/ticketing/CheckoutModal';
+import { formatEventPrice } from '@/lib/formatPrice';
 
 // Dynamic import for GoogleMiniMap to avoid SSR issues
 const GoogleMiniMap = dynamic(() => import('@/components/maps/GoogleMiniMap'), { ssr: false });
@@ -863,7 +864,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-slate-400 uppercase tracking-widest">Price:</span>
                   <span className="text-lg font-bold text-white">
-                    {event.price_display || (event.price && event.price > 0 ? `£${event.price.toFixed(2)}` : 'Free Entry')}
+                    {formatEventPrice(event)}
                   </span>
                   {event.is_ticketing_enabled && event.pass_fees_to_buyer && (event.price > 0 || (event.ticket_tiers && event.ticket_tiers.some((t: any) => t.price > 0))) && (
                     <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">

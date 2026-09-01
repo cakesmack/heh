@@ -7,6 +7,7 @@ import { EventResponse } from '@/types';
 import { BookmarkButton } from '@/components/events/BookmarkButton';
 import { Badge } from '@/components/common/Badge';
 import { toast } from 'react-hot-toast';
+import { formatEventPrice } from '@/lib/formatPrice';
 
 interface EventCardProps {
   event: EventResponse;
@@ -147,16 +148,21 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
             </h3>
           </div>
 
-          {/* Venue */}
-          {(event.venue_name || event.venue?.name) && (
-            <div className="flex items-center text-gray-300 text-xs mt-1">
-              <svg className="w-3 h-3 mr-1 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="truncate opacity-80">{event.venue_name || event.venue?.name}</span>
-            </div>
-          )}
+          {/* Venue & Price */}
+          <div className="flex items-center justify-between text-xs mt-1 text-gray-300 gap-2">
+            {(event.venue_name || event.venue?.name) ? (
+              <div className="flex items-center min-w-0 truncate">
+                <svg className="w-3 h-3 mr-1 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="truncate opacity-80">{event.venue_name || event.venue?.name}</span>
+              </div>
+            ) : <span />}
+            <span className="font-semibold text-emerald-300 shrink-0 text-[11px] bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/20">
+              {formatEventPrice(event)}
+            </span>
+          </div>
         </div>
       </div>
     </Link>

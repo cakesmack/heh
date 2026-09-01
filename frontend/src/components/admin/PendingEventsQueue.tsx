@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '@/lib/api';
 import { PendingEvent } from '@/types';
 import { Check, X, ExternalLink, Calendar, MapPin, RefreshCw, Trash2, CheckCheck, Eye, Clock } from 'lucide-react';
+import { formatEventPrice } from '@/lib/formatPrice';
 
 interface PendingEventsQueueProps {
   onCountChange?: (count: number) => void;
@@ -263,11 +264,9 @@ export default function PendingEventsQueue({ onCountChange }: PendingEventsQueue
                             {event.category_name}
                           </span>
                         )}
-                        {event.price_display && (
-                          <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-amber-50 text-amber-800">
-                            {event.price_display}
-                          </span>
-                        )}
+                        <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-amber-50 text-amber-800">
+                          {formatEventPrice(event as any)}
+                        </span>
                       </div>
 
                       <h3 className="text-base font-bold text-gray-900 leading-snug truncate" title={event.title}>
