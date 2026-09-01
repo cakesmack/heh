@@ -408,39 +408,65 @@ async def dispatch_order_confirmation_emails(
 
         # 2. In-app notification for organizer
         try:
-            if event and event.organizer_id and session:
+            target_user_id = event.organizer_id if event and event.organizer_id else None
+            if not target_user_id and event and event.organizer_profile_id:
+                from app.models.organizer import Organizer
+                target_sess = session or (DbSession(engine) if 'fresh_session' not in locals() else fresh_session)
+                org_prof = target_sess.get(Organizer, event.organizer_profile_id)
+                if org_prof:
+                    target_user_id = org_prof.user_id
+
+            if target_user_id:
                 from app.models.notification import Notification, NotificationType
                 n_type = getattr(NotificationType, "TICKET_PURCHASED", NotificationType.SYSTEM)
-                total_tickets = sum(item["qty"] for item in ticket_summary)
                 tiers_label = ", ".join(f"{item['qty']}x {item['name']}" for item in ticket_summary)
-                organizer_notif = Notification(
-                    user_id=event.organizer_id,
-                    type=n_type,
-                    title=f"🎟️ New Ticket Sale: {event.title}",
-                    message=f"{order.buyer_name} purchased {total_tickets} ticket(s) ({tiers_label}) for £{order.total_amount:.2f} ({order.order_ref}).",
-                    link=f"/organizers/events/{event.id}/ticketing"
-                )
-                session.add(organizer_notif)
-                session.commit()
+                notif_msg = f"{tiers_label} sold for {event_title} (£{order.total_amount:.2f})"
+                
+                if session is None:
+                    with DbSession(engine) as notif_sess_fresh:
+                        organizer_notif = Notification(
+                            user_id=target_user_id,
+                            type=n_type,
+                            title="New Ticket Sale!",
+                            message=notif_msg,
+                            link="/organizers/hub",
+                            is_read=False
+                        )
+                        notif_sess_fresh.add(organizer_notif)
+                        notif_sess_fresh.commit()
+                else:
+                    organizer_notif = Notification(
+                        user_id=target_user_id,
+                        type=n_type,
+                        title="New Ticket Sale!",
+                        message=notif_msg,
+                        link="/organizers/hub",
+                        is_read=False
+                    )
+                    session.add(organizer_notif)
+                    session.commit()
         except Exception as notif_err:
             logger.warning(f"Could not create in-app notification for organizer: {notif_err}")
 
         # 3. Email notification to organizer
         if organizer_email:
-            logger.info(f"Dispatching ticket sale notification email to organizer {organizer_email} for order {order.order_ref}")
-            await resend_email_service.send_organizer_ticket_sale_notification(
-                organizer_email=organizer_email,
-                organizer_name=organizer_name or "Organizer",
-                event_title=event_title,
-                event_id=event.id if event else "",
-                order_ref=order.order_ref,
-                buyer_name=order.buyer_name,
-                buyer_email=order.buyer_email,
-                tickets_breakdown=ticket_summary,
-                total_amount=order.total_amount,
-                platform_fee=order.platform_fee_amount,
-                net_amount=order.total_amount - order.platform_fee_amount
-            )
+            try:
+                logger.info(f"Dispatching ticket sale notification email to organizer {organizer_email} for order {order.order_ref}")
+                await resend_email_service.send_organizer_ticket_sale_notification(
+                    organizer_email=organizer_email,
+                    organizer_name=organizer_name or "Organizer",
+                    event_title=event_title,
+                    event_id=event.id if event else "",
+                    order_ref=order.order_ref,
+                    buyer_name=order.buyer_name,
+                    buyer_email=order.buyer_email,
+                    tickets_breakdown=ticket_summary,
+                    total_amount=order.total_amount,
+                    platform_fee=order.platform_fee_amount,
+                    net_amount=order.total_amount - order.platform_fee_amount
+                )
+            except Exception as email_err:
+                logger.error(f"Failed to dispatch organizer ticket sale notification email: {email_err}", exc_info=True)
 
         return True
     except Exception as e:

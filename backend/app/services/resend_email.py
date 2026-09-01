@@ -1522,7 +1522,12 @@ class ResendEmailService:
         """
         Send notification to event organizer when a ticket is purchased for their event.
         """
-        subject = f"🎟️ New Ticket Sale: {event_title} ({order_ref})"
+        if not self.enabled:
+            logger.info(f"[DRY RUN] Would send organizer ticket sale notification to {mask_email(organizer_email)} for {order_ref}")
+            return True
+
+        subject = f"🎟️ Ticket Sold: {event_title} - Order #{order_ref}"
+        hub_url = f"{settings.FRONTEND_URL}/organizers/hub"
         dashboard_url = f"{settings.FRONTEND_URL}/organizers/events/{event_id}/ticketing"
         invoices_url = f"{settings.FRONTEND_URL}/organizers/invoices"
 
@@ -1544,7 +1549,7 @@ class ResendEmailService:
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>New Ticket Sale</title>
+    <title>Ticket Sold</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f6f8; padding: 32px 16px;">
@@ -1554,7 +1559,7 @@ class ResendEmailService:
                     <!-- Header -->
                     <tr>
                         <td style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 32px; text-align: center;">
-                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">🎉 New Ticket Sale!</h1>
+                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">🎟️ Ticket Sold!</h1>
                             <p style="margin: 0; color: #a7f3d0; font-size: 15px; font-weight: 500;">{event_title}</p>
                         </td>
                     </tr>
@@ -1566,7 +1571,7 @@ class ResendEmailService:
                                 Hi {organizer_name or 'Organizer'},
                             </p>
                             <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.5; color: #4b5563;">
-                                Great news! A new booking has just been confirmed for your event.
+                                Great news! A new ticket booking has just been confirmed for <strong>{event_title}</strong>.
                             </p>
 
                             <!-- Buyer Info Card -->
@@ -1608,7 +1613,7 @@ class ResendEmailService:
 
                             <!-- CTA Buttons -->
                             <div style="text-align: center; margin: 32px 0 16px 0;">
-                                <a href="{dashboard_url}" style="display: inline-block; background-color: #059669; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; margin: 0 6px 10px 6px; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">View Event Dashboard & Guest List</a>
+                                <a href="{hub_url}" style="display: inline-block; background-color: #059669; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; margin: 0 6px 10px 6px; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">Go to Organizer Hub</a>
                                 <a href="{invoices_url}" style="display: inline-block; background-color: #f3f4f6; color: #374151; padding: 14px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 0 6px 10px 6px; border: 1px solid #d1d5db;">Tax Invoices & Statement</a>
                             </div>
                         </td>
@@ -1618,7 +1623,7 @@ class ResendEmailService:
                     <tr>
                         <td style="background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 24px 32px; text-align: center;">
                             <p style="margin: 0 0 6px 0; font-size: 13px; color: #6b7280; font-weight: 600;">Highland Events Hub Organizer Services</p>
-                            <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">Access all your event ticketing stats, scanner passes, and payouts at <a href="{settings.FRONTEND_URL}/account" style="color: #059669; text-decoration: underline;">My Account</a></p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">Access all your event ticketing stats, scanner passes, and payouts at <a href="{hub_url}" style="color: #059669; text-decoration: underline;">Organizer Hub</a></p>
                         </td>
                     </tr>
                 </table>

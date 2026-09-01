@@ -381,5 +381,21 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - `GET /api/locations`: Public list of all geographic hubs.
   - `GET /api/locations/feed/{slug}/{timeframe?}`: Public feed supporting `/locations/[city]` and timeframe sub-routes.
 
+---
+
+## 10. Door Scanner & Organizer Ticket Sale Notifications Architecture
+
+- **Door Scanner Page & Hub (`/organizers/scanner` & `/scan/[event_id]`):**
+  - All React hooks (`useState`, `useEffect`, `useMemo`, `useCallback`) are unconditionally evaluated at the top of functional components prior to loading and auth gating returns, preventing React Hook Order crashes (Error #310).
+  - Gate check-in camera, manual code entry (`HEH-XXXXXX` / Ticket ID), and live guest list search validate ticket QR tokens with audio/visual feedback.
+- **Organizer Ticket Sale Email Alerts:**
+  - On Stripe payment completion (`webhooks.py` / `stripe_service.py`), after issuing the buyer booking confirmation receipt, the system resolves the event organizer (`event.organizer.email` or `event.organizer_profile.contact_email` or `event.ticket_support_email`).
+  - Dispatches an automated email alert with subject `🎟️ Ticket Sold: [Event Title] - Order #[order_ref]`, sale details (tier purchased, quantity, gross total, buyer name/email), and direct CTA links to the Organizer Hub (`/organizers/hub`).
+  - Wrapped in safe `try/except` handlers to ensure payment fulfillment and webhook response status remain unaffected by external email transport delays.
+- **In-App Notification Records (`NotificationType.TICKET_PURCHASED`):**
+  - Creates a persistent database notification (`title = "New Ticket Sale!"`, `message = "${qty}x ${tier_name} sold for ${event.title} (£${order.total_amount:.2f})"`, `link = "/organizers/hub"`, `is_read = False`) targeting the organizer user.
+  - Dynamically increments the header notification bell unread badge and routes directly to `/organizers/hub` on click.
+
+
 
 

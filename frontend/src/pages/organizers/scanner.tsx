@@ -113,15 +113,6 @@ export default function OrganizerScannerHubPage() {
     });
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-[65vh] flex flex-col items-center justify-center p-12 text-center">
-        <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-stone-600 font-medium">Loading Scanner Hub...</p>
-      </div>
-    );
-  }
-
   const scannerEligibleEvents = React.useMemo(() => {
     const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
     return events
@@ -140,6 +131,15 @@ export default function OrganizerScannerHubPage() {
   const activeCount = scannerEligibleEvents.filter(e => e.is_scanner_active).length;
   const totalSold = scannerEligibleEvents.reduce((acc, e) => acc + e.total_tickets_sold, 0);
   const totalCheckedIn = scannerEligibleEvents.reduce((acc, e) => acc + e.total_checked_in, 0);
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-[65vh] flex flex-col items-center justify-center p-12 text-center">
+        <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-stone-600 font-medium">Loading Scanner Hub...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 py-10 px-4">

@@ -157,3 +157,97 @@ def test_standard_stripe_webhook_coexists(client: TestClient):
         assert response.status_code == 200
         assert response.json() == {"status": "success"}
         mock_handle.assert_called_once()
+
+
+def test_stripe_connect_webhook_organizer_notifications_and_email(client: TestClient, test_db: Session):
+    from app.models.notification import Notification
+
+    # Create Organizer User
+    organizer_user = User(
+        id="usr_org_456",
+        email="organizer@highlandevents.co.uk",
+        username="cairngorm_events",
+        seller_status="approved",
+        seller_tier=2
+    )
+    test_db.add(organizer_user)
+
+    # Setup test event linked to organizer
+    event = Event(
+        id="evt-connect-org-1",
+        title="Cairngorm Ceilidh Night",
+        description="A great highland evening",
+        date_start=datetime.now(timezone.utc) + timedelta(days=5),
+        date_end=datetime.now(timezone.utc) + timedelta(days=5, hours=4),
+        location_name="Aviemore Centre",
+        is_ticketing_enabled=True,
+        organizer_id=organizer_user.id
+    )
+    tier = TicketTier(
+        id="tier-ceilidh-1",
+        event_id=event.id,
+        name="VIP Admission",
+        price=30.0,
+        quantity_available=50,
+        quantity_sold=0,
+        max_per_order=5
+    )
+    test_db.add(event)
+    test_db.add(tier)
+    test_db.commit()
+
+    fake_intent_data = MagicMock()
+    fake_intent_data.id = "pi_test_org_alert_789"
+    fake_intent_data.status = "succeeded"
+    fake_intent_data.amount = 6000  # £60.00
+    fake_intent_data.application_fee_amount = 300  # £3.00
+    fake_intent_data.metadata = {
+        "event_id": "evt-connect-org-1",
+        "buyer_name": "Fiona MacPherson",
+        "buyer_email": "fiona@example.com",
+        "platform_fee_amount": "3.00",
+        "items_json": json.dumps([{"tier_id": "tier-ceilidh-1", "quantity": 2}])
+    }
+    fake_intent_data.charges = MagicMock(data=[])
+
+    fake_stripe_event = MagicMock()
+    fake_stripe_event.type = "payment_intent.succeeded"
+    fake_stripe_event.data.object = fake_intent_data
+
+    with patch.object(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_test_connect_secret"), \
+         patch("stripe.Webhook.construct_event", return_value=fake_stripe_event), \
+         patch("app.services.resend_email.resend_email_service.send_ticket_order_confirmation") as mock_buyer_email, \
+         patch("app.services.resend_email.resend_email_service.send_organizer_ticket_sale_notification") as mock_org_email:
+
+        response = client.post(
+            "/api/webhooks/stripe-connect",
+            content=b'{"id":"evt_org_alert_123"}',
+            headers={"stripe-signature": "t=123,v1=signature"}
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "success"}
+
+    # Verify Buyer Email was called
+    mock_buyer_email.assert_called_once()
+    assert mock_buyer_email.call_args.kwargs["to_email"] == "fiona@example.com"
+
+    # Verify Organizer Sale Email was called
+    mock_org_email.assert_called_once()
+    org_kwargs = mock_org_email.call_args.kwargs
+    assert org_kwargs["organizer_email"] == "organizer@highlandevents.co.uk"
+    assert org_kwargs["event_title"] == "Cairngorm Ceilidh Night"
+    assert org_kwargs["buyer_name"] == "Fiona MacPherson"
+    assert org_kwargs["total_amount"] == 60.0
+
+    # Verify In-App Notification was generated in database
+    notif = test_db.exec(
+        select(Notification).where(Notification.user_id == organizer_user.id)
+    ).first()
+    assert notif is not None
+    assert notif.title == "New Ticket Sale!"
+    assert "VIP Admission" in notif.message
+    assert "£60.00" in notif.message
+    assert notif.link == "/organizers/hub"
+    assert notif.is_read is False
+
