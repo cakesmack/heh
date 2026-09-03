@@ -367,6 +367,7 @@ def test_native_ticketing_single_session_and_duration_validation(client: TestCli
         'date_start': start_time.isoformat(),
         'date_end': (start_time + timedelta(hours=6)).isoformat(),
         'is_ticketing_enabled': True,
+        'terms_accepted': True,
         'ticket_tiers': [
             {'name': 'General Admission', 'price': 15.0, 'quantity_available': 50, 'max_per_order': 6}
         ]
@@ -384,6 +385,7 @@ def test_native_ticketing_single_session_and_duration_validation(client: TestCli
         'date_start': start_time.isoformat(),
         'date_end': (start_time + timedelta(hours=48)).isoformat(),
         'is_ticketing_enabled': True,
+        'terms_accepted': True,
         'ticket_tiers': [
             {'name': 'Weekend Pass', 'price': 80.0, 'quantity_available': 100, 'max_per_order': 4}
         ]
@@ -400,6 +402,7 @@ def test_native_ticketing_single_session_and_duration_validation(client: TestCli
         'date_start': start_time.isoformat(),
         'date_end': (start_time + timedelta(hours=2)).isoformat(),
         'is_ticketing_enabled': True,
+        'terms_accepted': True,
         'is_recurring': True,
         'frequency': 'WEEKLY',
         'ticket_tiers': [

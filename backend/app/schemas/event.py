@@ -120,6 +120,7 @@ class EventCreate(BaseModel):
     is_ticketing_enabled: Optional[bool] = False
     pass_fees_to_buyer: Optional[bool] = False
     ticket_tiers: Optional[List[TicketTierCreate]] = None
+    terms_accepted: Optional[bool] = Field(None, description="Must be True if is_ticketing_enabled is True")
     # SEO Overrides
     seo_title: Optional[str] = Field(None, max_length=120)
     seo_description: Optional[str] = Field(None, max_length=500)
@@ -173,6 +174,7 @@ class EventUpdate(BaseModel):
     is_ticketing_enabled: Optional[bool] = None
     pass_fees_to_buyer: Optional[bool] = None
     ticket_tiers: Optional[List[TicketTierCreate]] = None
+    terms_accepted: Optional[bool] = Field(None, description="Must be True if is_ticketing_enabled is True")
     # Cancellation
     is_cancelled: Optional[bool] = None
     cancellation_reason: Optional[str] = None

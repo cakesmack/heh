@@ -1455,8 +1455,13 @@ async def create_event(
                 until_str = event_data.recurrence_end_date.strftime("%Y%m%dT%H%M%SZ")
                 recurrence_rule += f";UNTIL={until_str}"
 
-    # 36-Hour Single-Session Constraint for Native Ticketing
+    # 36-Hour Single-Session Constraint & Terms Validation for Native Ticketing
     if event_data.is_ticketing_enabled:
+        if not bool(getattr(event_data, "terms_accepted", False)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You must agree to the Organiser Terms of Service to enable ticketing for this event."
+            )
         if event_data.is_recurring or event_data.recurrence_rule or event_data.frequency or (event_data.showtimes and len(event_data.showtimes) > 0):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -2035,9 +2040,15 @@ async def update_event(
             detail="Not authorized to update this event"
         )
 
-    # 36-Hour Single-Session Constraint for Native Ticketing
+    # 36-Hour Single-Session Constraint & Terms Validation for Native Ticketing
     effective_ticketing = event_data.is_ticketing_enabled if event_data.is_ticketing_enabled is not None else event.is_ticketing_enabled
     if effective_ticketing:
+        if event_data.is_ticketing_enabled is True and not event.is_ticketing_enabled:
+            if not bool(getattr(event_data, "terms_accepted", False)):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="You must agree to the Organiser Terms of Service to enable ticketing for this event."
+                )
         effective_recurring = event_data.is_recurring if event_data.is_recurring is not None else event.is_recurring
         effective_rrule = event_data.recurrence_rule if event_data.recurrence_rule is not None else event.recurrence_rule
         effective_freq = event_data.frequency if event_data.frequency is not None else getattr(event, 'frequency', None)
@@ -2055,8 +2066,8 @@ async def update_event(
                 detail="Native ticketing is currently restricted to single-session events up to 36 hours."
             )
 
-    # Update fields (exclude tags, participating_venue_ids, showtimes, and explicit dates for special handling)
-    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring", "ticket_tiers"})
+    # Update fields (exclude tags, participating_venue_ids, showtimes, explicit dates, and validation flags for special handling)
+    update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring", "ticket_tiers", "terms_accepted"})
 
     # Prevent destructive scraper wipes for venue_id
     if "venue_id" in update_data and update_data["venue_id"] is None:

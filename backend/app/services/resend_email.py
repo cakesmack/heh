@@ -1201,18 +1201,26 @@ class ResendEmailService:
             html_content=html_content
         )
 
-    async def send_moderation_required_notification(self, event_title: str, reason: str) -> bool:
+    async def send_moderation_required_notification(self, event_title: str, event_id_or_reason: str, reason: Optional[str] = None) -> bool:
         """Notify admin when an event is flagged for moderation."""
+        if reason is not None:
+            actual_reason = reason
+            event_id = event_id_or_reason
+        else:
+            actual_reason = event_id_or_reason
+            event_id = None
+
         admin_target = settings.ADMIN_EMAIL or "contact@highlandeventshub.co.uk"
         subject = f"⚠️ Event Flagged for Moderation: {event_title}"
+        queue_link = f"{settings.FRONTEND_URL}/admin/events" + (f"?id={event_id}" if event_id else "")
         html_content = f"""
         <div style="font-family: sans-serif; padding: 20px;">
             <h2>Event Flagged for Moderation</h2>
             <p>The event <strong>{event_title}</strong> has been flagged for review:</p>
             <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 15px 0;">
-                <strong>Reason:</strong> {reason}
+                <strong>Reason:</strong> {actual_reason}
             </div>
-            <p><a href="{settings.FRONTEND_URL}/admin/events">View Moderation Queue</a></p>
+            <p><a href="{queue_link}">View Moderation Queue</a></p>
         </div>
         """
         return await smart_email_service.send_smart_email(

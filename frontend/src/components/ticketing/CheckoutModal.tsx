@@ -186,6 +186,28 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
       )}
 
       <div className="pt-2 space-y-2">
+        <p className="text-xs text-neutral-500 text-center leading-relaxed px-1">
+          By completing this purchase, you agree to our{' '}
+          <a
+            href="/terms#ticketing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-emerald-700 hover:text-emerald-800 underline font-medium"
+          >
+            Terms of Sale
+          </a>{' '}
+          and{' '}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-emerald-700 hover:text-emerald-800 underline font-medium"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
+
         <button
           type="submit"
           disabled={!stripe || !elements || !elementLoaded || isProcessing}
@@ -401,11 +423,33 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span className="text-emerald-700">£{total.toFixed(2)}</span>
                 </div>
 
+                <p className="text-xs text-neutral-500 text-center leading-relaxed pt-2 px-1">
+                  By completing this purchase, you agree to our{' '}
+                  <a
+                    href="/terms#ticketing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-700 hover:text-emerald-800 underline font-medium"
+                  >
+                    Terms of Sale
+                  </a>{' '}
+                  and{' '}
+                  <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-700 hover:text-emerald-800 underline font-medium"
+                  >
+                    Privacy Policy
+                  </a>
+                  .
+                </p>
+
                 <button
                   type="button"
                   onClick={initializeCheckout}
                   disabled={isInitializing || !buyerName.trim() || !buyerEmail.trim()}
-                  className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold text-base shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold text-base shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
                   {isInitializing ? (
                     <>

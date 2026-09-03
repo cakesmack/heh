@@ -356,7 +356,21 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
       - Transparent Platform Comparison Table comparing Highland Events Hub against Eventbrite, Skiddle, and Ticketmaster across platform fees (4.5%–5% + 30p), direct Stripe payouts, 100% Highland discovery focus, smartphone door scanner, and free community event listing.
       - Interactive Organiser FAQ covering automatic payouts, equipment-free door scanning, fee pass-through transparency, and refund management.
       - High-converting launch incentive CTA offering guaranteed regional homepage feature placement for the first 5 ticketed events.
-    - **Route Alias (`pages/create-event.tsx`)**: Alias route rendering `submit-event.tsx` in creation mode for seamless URL routing.
+  - **Legal Consent & Terms Acceptance Architecture**:
+    - **Organiser Clickwrap Agreement (`StepReview.tsx` / `useEventWizard.ts`)**:
+      - Renders conditionally on the final Review step of the Event Submission & Edit Wizard only when `is_ticketing_enabled` is active.
+      - Mandates an explicit, unchecked-by-default checkbox: *"I agree to the [Organiser Terms of Service](/terms#organiser) and confirm that I am responsible for hosting this event and issuing refunds if the event is cancelled or rescheduled."*
+      - Opens terms in a separate tab (`target="_blank" rel="noopener noreferrer"`) preserving in-progress form state.
+      - Frontend validation blocks form submission with an inline error if unticked.
+      - Backend schemas (`EventCreate`, `EventUpdate`) and API endpoints (`POST /api/events`, `PUT /api/events/{id}`) strictly validate `terms_accepted == True` when enabling native ticketing, returning HTTP 400 otherwise.
+      - Standard non-ticketed (free) events are not blocked and display the standard platform terms disclosure.
+    - **Attendee Ticket Checkout Disclosure (`CheckoutModal.tsx`)**:
+      - Frictionless legal consent notice positioned immediately above the primary payment trigger buttons (*"Pay £X.XX"* and *"Claim Free Tickets"*).
+      - Text: *"By completing this purchase, you agree to our [Terms of Sale](/terms#ticketing) and [Privacy Policy](/privacy)."*
+      - Both links open in a new tab (`target="_blank" rel="noopener noreferrer"`) with readable secondary styling (`text-xs text-neutral-500`).
+    - **Terms Page Anchors (`pages/terms.tsx`)**:
+      - Section 3 ("Terms for Event Organizers (Sellers)") assigned anchor `id="organiser"`.
+      - Section 1-2 ("Ticketing, Refunds, and Organizer Terms") assigned anchor `id="ticketing"`.
   - **Single-Session / 36-Hour Constraint (Permanent Platform Safeguard)**:
     - **Frontend Event Wizard**: Step 1 displays micro-copy note outlining the single-event / overnight limit. Step 2 automatically locks pattern selection to "One-Off Event", greys out and disables "Recurring Event" and "Various Dates & Times" with an "Unavailable with Native Ticketing" badge and informative toast, shows an inline duration warning, and disables the "Next" button if duration exceeds 36 hours.
     - **Backend API**: `POST /api/events` and `PUT /api/events/{id}` strictly validate that any ticketed event is non-recurring (`is_recurring == False`, `recurrence_rule == None`, `frequency == None`, and empty `showtimes`) and that duration `(date_end - date_start) <= 36 hours` (allowing overnight sessions up to 36 hours), raising HTTP 400 otherwise.

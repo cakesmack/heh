@@ -72,7 +72,7 @@ export default function TermsPage() {
 
                 {/* Ticketing, Refunds, and Organizer Terms */}
                 <div className="mt-12 pt-8 border-t border-gray-200">
-                    <section id="ticketing-terms">
+                    <section id="ticketing" className="scroll-mt-12">
                         <h2 className="text-2xl font-bold text-gray-900 mb-6">Ticketing, Refunds, and Organizer Terms</h2>
 
                         <div className="prose prose-gray max-w-none space-y-6">
@@ -101,7 +101,7 @@ export default function TermsPage() {
                                 </ul>
                             </div>
 
-                            <div>
+                            <div id="organiser" className="scroll-mt-12 pt-2">
                                 <h3 className="text-lg font-semibold text-gray-800 mb-2">3. Terms for Event Organizers (Sellers)</h3>
                                 <p className="text-gray-600 mb-2">
                                     By creating a ticketed event on Highland Events Hub, Organizers agree to the following:

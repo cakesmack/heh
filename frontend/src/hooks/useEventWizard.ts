@@ -92,6 +92,7 @@ export interface WizardFormData {
   is_ticketing_enabled: boolean;
   pass_fees_to_buyer: boolean;
   ticket_tiers: TicketTierCreate[];
+  terms_accepted?: boolean;
 
   // Step 4/5: Details & Review
   description: string;
@@ -143,6 +144,7 @@ export const WIZARD_DEFAULTS: WizardFormData = {
   is_ticketing_enabled: false,
   pass_fees_to_buyer: false,
   ticket_tiers: [],
+  terms_accepted: false,
 
   // Step 4/5
   description: '',
@@ -237,9 +239,12 @@ const validateTickets: StepValidator = (data) => {
   return Object.keys(errors).length > 0 ? errors : null;
 };
 
-const validateReview: StepValidator = () => {
-  // Description and links are optional
-  return null;
+const validateReview: StepValidator = (data) => {
+  const errors: Record<string, string> = {};
+  if (data.is_ticketing_enabled && !data.terms_accepted) {
+    errors.terms_accepted = 'You must agree to the Organiser Terms of Service to publish a ticketed event.';
+  }
+  return Object.keys(errors).length > 0 ? errors : null;
 };
 
 export const getStepValidator = (stepId: number, isTicketingEnabled: boolean): StepValidator => {
@@ -334,6 +339,7 @@ export function buildEventPayload(data: WizardFormData, isAdmin: boolean = true)
     is_ticketing_enabled: ticketingAllowed,
     pass_fees_to_buyer: ticketingAllowed ? data.pass_fees_to_buyer : false,
     ticket_tiers: ticketingAllowed ? data.ticket_tiers : undefined,
+    terms_accepted: ticketingAllowed ? Boolean(data.terms_accepted) : undefined,
     ticket_url: data.ticket_url || undefined,
     website_url: data.website_url || undefined,
     is_all_day: data.is_all_day,
@@ -441,6 +447,7 @@ export function parseInitialEventData(data: any): WizardFormData {
     is_ticketing_enabled: Boolean(data.is_ticketing_enabled),
     pass_fees_to_buyer: Boolean(data.pass_fees_to_buyer),
     ticket_tiers: data.ticket_tiers || [],
+    terms_accepted: Boolean(data.is_ticketing_enabled),
 
     description: data.description || '',
     ticket_url: data.ticket_url || '',

@@ -115,6 +115,7 @@ def test_non_admin_allowed_creating_event_with_ticket_tiers(client: TestClient, 
         'date_start': '2026-10-01T19:00:00Z',
         'date_end': '2026-10-01T21:00:00Z',
         'is_ticketing_enabled': True,
+        'terms_accepted': True,
         'ticket_tiers': [
             {
                 'name': 'General Admission',
@@ -245,6 +246,7 @@ def test_single_session_and_36h_constraint_enforced_for_standard_users(client: T
         'date_start': '2026-10-01T09:00:00Z',
         'date_end': '2026-10-04T23:00:00Z',
         'is_ticketing_enabled': True,
+        'terms_accepted': True,
         'ticket_tiers': [{'name': 'Weekend Pass', 'price': 80.0, 'quantity_available': 100, 'max_per_order': 2}]
     }
 
