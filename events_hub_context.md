@@ -368,9 +368,19 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
       - Frictionless legal consent notice positioned immediately above the primary payment trigger buttons (*"Pay £X.XX"* and *"Claim Free Tickets"*).
       - Text: *"By completing this purchase, you agree to our [Terms of Sale](/terms#ticketing) and [Privacy Policy](/privacy)."*
       - Both links open in a new tab (`target="_blank" rel="noopener noreferrer"`) with readable secondary styling (`text-xs text-neutral-500`).
-    - **Terms Page Anchors (`pages/terms.tsx`)**:
-      - Section 3 ("Terms for Event Organizers (Sellers)") assigned anchor `id="organiser"`.
-      - Section 1-2 ("Ticketing, Refunds, and Organizer Terms") assigned anchor `id="ticketing"`.
+    - **Terms Page Architecture (`pages/terms.tsx`)**:
+      - Responsive 2-column layout on desktop (`lg:grid lg:grid-cols-12`) with a sticky Table of Contents sidebar (`sticky top-24`) featuring `IntersectionObserver`-linked active section highlighting.
+      - Mobile sticky horizontal quick-jump pill bar (`lg:hidden sticky top-16`) for smooth scrolling.
+      - All section headers use `scroll-mt-28` to guarantee clean visual offset below the sticky navigation and announcement bars.
+      - 8 comprehensive legal sections governed under Scots law:
+        1. `id="general"`: General Website Terms (Acceptance, platform intermediary role, "as is" availability).
+        2. `id="content"`: User-Generated Content & Submissions (Accuracy, IP warranty, third-party copyright indemnification, non-exclusive platform license, content moderation).
+        3. `id="ticketing"`: Attendee Ticket Purchase Terms (Contract of sale direct with organiser, all sales final / non-refundable, cancellation refunds from organiser, non-refundable booking fees, QR code entry conditions).
+        4. `id="organiser"`: Event Organiser Terms & Merchant Agreement (Stripe Connect direct payouts, platform service fees, Consumer Rights Act compliance, 100% organiser chargeback/dispute liability & £15 dispute fees, account enforcement).
+        5. `id="featured"`: Featured Listings Advertising Terms (Immediate consumption of digital ads, review & automatic pre-publication refunds, no post-publication refunds).
+        6. `id="liability"`: Limitation of Liability & Cap (Exclusion of consequential damages, liability cap limited to 12-month platform fees or £100).
+        7. `id="governing-law"`: Governing Law & Jurisdiction (Scots law, exclusive jurisdiction of Scottish courts).
+        8. `id="contact"`: Contact Information (`contact@highlandeventshub.co.uk`).
   - **Single-Session / 36-Hour Constraint (Permanent Platform Safeguard)**:
     - **Frontend Event Wizard**: Step 1 displays micro-copy note outlining the single-event / overnight limit. Step 2 automatically locks pattern selection to "One-Off Event", greys out and disables "Recurring Event" and "Various Dates & Times" with an "Unavailable with Native Ticketing" badge and informative toast, shows an inline duration warning, and disables the "Next" button if duration exceeds 36 hours.
     - **Backend API**: `POST /api/events` and `PUT /api/events/{id}` strictly validate that any ticketed event is non-recurring (`is_recurring == False`, `recurrence_rule == None`, `frequency == None`, and empty `showtimes`) and that duration `(date_end - date_start) <= 36 hours` (allowing overnight sessions up to 36 hours), raising HTTP 400 otherwise.
