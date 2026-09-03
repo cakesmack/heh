@@ -65,6 +65,11 @@ export function Footer() {
                   Community Groups
                 </Link>
               </li>
+              <li>
+                <Link href="/sell-tickets" className="text-amber-300/90 hover:text-amber-300 transition-colors text-xs sm:text-sm font-medium">
+                  🎟️ Sell Tickets
+                </Link>
+              </li>
             </ul>
           </div>
 

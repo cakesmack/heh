@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { NotificationCenter } from './NotificationCenter';
 import { UserDropdown } from './UserDropdown';
+import { TicketingAnnouncementBanner } from './TicketingAnnouncementBanner';
 import { apiFetch } from '@/lib/api';
 
 export function Header() {
@@ -53,6 +54,7 @@ export function Header() {
 
   return (
     <header className={`bg-highland-green border-b border-stone-dark/20 sticky top-0 z-50 shadow-soft transition-transform duration-300 print:hidden ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+      <TicketingAnnouncementBanner />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo + Title (grouped) */}

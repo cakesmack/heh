@@ -365,22 +365,30 @@ export default function HomePage() {
           }}
         />
         {/* Green Overlay */}
-        <div className="absolute inset-0 bg-emerald-700/90" />
+        <div className="absolute inset-0 bg-emerald-800/90 backdrop-blur-[2px]" />
 
         {/* Content */}
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-            Fill Your Venue. Find Your Crowd.
+        <div className="relative z-10 max-w-3xl mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 tracking-tight">
+            Fill Your Venue. Sell Your Tickets.
           </h2>
           <p className="text-emerald-100 mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-            Stop hoping the Facebook algorithm works. List your event on the Highlands' dedicated discovery platform and get seen by people actively looking for things to do.
+            Reach local audiences across the Highlands without getting buried by social media algorithms. List free community events at no charge, or switch on native ticketing to handle advance sales, door entry, and direct bank payouts with lower fees.
           </p>
-          <a
-            href="/submit-event"
-            className="inline-block bg-white text-emerald-700 font-bold py-4 px-10 rounded-full hover:bg-emerald-50 transition-colors shadow-xl text-lg"
-          >
-            List an Event for Free
-          </a>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/submit-event"
+              className="w-full sm:w-auto inline-block bg-white text-emerald-900 font-bold py-4 px-10 rounded-full hover:bg-emerald-50 transition-all shadow-xl text-lg text-center transform hover:-translate-y-0.5"
+            >
+              List an Event
+            </Link>
+            <Link
+              href="/sell-tickets"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-emerald-900/80 hover:bg-emerald-900 border border-emerald-400/40 text-emerald-100 hover:text-white font-medium py-4 px-8 rounded-full transition-all text-base text-center backdrop-blur-sm shadow-lg hover:border-emerald-300"
+            >
+              See ticketing fees and features →
+            </Link>
+          </div>
         </div>
       </section>
     </div>
