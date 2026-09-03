@@ -381,6 +381,18 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
         6. `id="liability"`: Limitation of Liability & Cap (Exclusion of consequential damages, liability cap limited to 12-month platform fees or £100).
         7. `id="governing-law"`: Governing Law & Jurisdiction (Scots law, exclusive jurisdiction of Scottish courts).
         8. `id="contact"`: Contact Information (`contact@highlandeventshub.co.uk`).
+    - **Privacy Policy Architecture (`pages/privacy.tsx`)**:
+      - Responsive 2-column layout on desktop (`lg:grid lg:grid-cols-12`) with a sticky Table of Contents sidebar (`sticky top-24`) featuring `IntersectionObserver`-linked active section tracking.
+      - Mobile sticky horizontal quick-jump pill bar (`lg:hidden sticky top-16`) for smooth scrolling.
+      - All section headers use `scroll-mt-28` to guarantee clean visual offset below sticky navigation and announcement bars.
+      - Compliant with UK GDPR and Data Protection Act 2018 across 7 key sections:
+        1. `id="data-collected"`: Data Collected (Organisers, Ticket Buyers [clarifying full card details and CVVs are tokenized directly by Stripe and never stored or accessible by platform], Technical Data).
+        2. `id="lawful-basis"`: Lawful Basis for Processing (UK GDPR Article 6: Contractual performance for ticket issuance/payouts, legal compliance for HMRC records, legitimate interests for security/fraud detection).
+        3. `id="data-sharing"`: How Data is Shared (Directly with Event Organisers for door admission/emergency notices as independent controllers; with Stripe Payments Europe, Ltd. for payment processing/KYC; zero commercial selling to third parties or brokers).
+        4. `id="retention"`: Data Retention Schedule (6 full financial years for statutory HMRC accounting/audit; user account duration; 90-day technical log cycle).
+        5. `id="cookies"`: Cookies & Local Storage (Zero third-party tracking cookies; strictly functional storage for banner dismissal and auth tokens).
+        6. `id="your-rights"`: Your Rights Under UK GDPR (Access, rectification, erasure subject to HMRC retention, objection, ICO complaint rights at `ico.org.uk`).
+        7. `id="contact"`: Contact Details (`contact@highlandeventshub.co.uk`, Inverness, Scottish Highlands).
   - **Single-Session / 36-Hour Constraint (Permanent Platform Safeguard)**:
     - **Frontend Event Wizard**: Step 1 displays micro-copy note outlining the single-event / overnight limit. Step 2 automatically locks pattern selection to "One-Off Event", greys out and disables "Recurring Event" and "Various Dates & Times" with an "Unavailable with Native Ticketing" badge and informative toast, shows an inline duration warning, and disables the "Next" button if duration exceeds 36 hours.
     - **Backend API**: `POST /api/events` and `PUT /api/events/{id}` strictly validate that any ticketed event is non-recurring (`is_recurring == False`, `recurrence_rule == None`, `frequency == None`, and empty `showtimes`) and that duration `(date_end - date_start) <= 36 hours` (allowing overnight sessions up to 36 hours), raising HTTP 400 otherwise.
