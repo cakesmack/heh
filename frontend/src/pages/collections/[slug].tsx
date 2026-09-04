@@ -132,9 +132,13 @@ export default function CollectionPage() {
     const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all'); // 'all', 'today', 'weekend'
     const [selectedVenue, setSelectedVenue] = useState<string | 'all'>('all');
 
-    // Extract alphabetized unique venue names from loaded events if enabled on the collection
+    // Extract alphabetized unique venue names for the collection dropdown.
+    // Uses pre-aggregated collection.venues if available, falling back to loaded events.
     const uniqueVenues = useMemo(() => {
         if (!collection?.enable_venue_filter) return [];
+        if (collection.venues && collection.venues.length > 0) {
+            return collection.venues.map(v => v.name).filter(Boolean);
+        }
         const venuesSet = new Set<string>();
         events.forEach(event => {
             const venueName = event.venue_name || event.venue?.name;
@@ -143,7 +147,7 @@ export default function CollectionPage() {
             }
         });
         return Array.from(venuesSet).sort((a, b) => a.localeCompare(b));
-    }, [collection?.enable_venue_filter, events]);
+    }, [collection?.enable_venue_filter, collection?.venues, events]);
 
     // Combined client-side in-memory filter on the loaded events array
     const displayedEvents = useMemo(() => {
@@ -377,7 +381,13 @@ export default function CollectionPage() {
                             
                             {/* Auto Stat: Venues */}
                             <div className="flex flex-col">
-                                <span className="text-xl md:text-2xl font-bold text-emerald-400">{new Set(events.map(e => (e as any).venue_id || (e as any).venue?.id).filter(Boolean)).size}</span>
+                                <span className="text-xl md:text-2xl font-bold text-emerald-400">
+                                    {collection.total_venue_count && collection.total_venue_count > 0
+                                        ? collection.total_venue_count
+                                        : (collection.venues && collection.venues.length > 0
+                                            ? collection.venues.length
+                                            : new Set(events.map(e => (e as any).venue_id || (e as any).venue?.id).filter(Boolean)).size)}
+                                </span>
                                 <span className="text-xs md:text-sm text-gray-300 uppercase tracking-wide mt-1">Venues</span>
                             </div>
 

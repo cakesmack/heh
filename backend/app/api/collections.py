@@ -12,7 +12,9 @@ from app.models.user import User
 from app.models.collection import Collection
 from app.models.event import Event
 from app.models.category import Category
-from app.schemas.collection import CollectionCreate, CollectionUpdate, Collection as CollectionSchema
+from app.models.venue import Venue
+from app.models.event_participating_venue import EventParticipatingVenue
+from app.schemas.collection import CollectionCreate, CollectionUpdate, Collection as CollectionSchema, VenueSummary
 
 router = APIRouter(tags=["Collections"])
 
@@ -38,39 +40,12 @@ def list_collections(
     collections = session.exec(query).all()
     return collections
 
-@router.get("/slug/{slug}", response_model=CollectionSchema)
-def get_collection_by_slug(
-    slug: str,
-    session: Session = Depends(get_session)
-):
+def build_collection_events_query(collection: Collection, session: Session):
     """
-    Get a single active collection by its URL slug (public).
-    """
-    collection = session.exec(
-        select(Collection).where(Collection.slug == slug, Collection.is_active == True)
-    ).first()
-    if not collection:
-        raise HTTPException(status_code=404, detail="Collection not found")
-    return collection
-
-@router.get("/slug/{slug}/events")
-def get_collection_events(
-    slug: str,
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=24, ge=1, le=1000),
-    session: Session = Depends(get_session)
-):
-    """
-    Get populated events for a specific collection by URL slug.
+    Build the base SQLAlchemy query for published events matching a collection.
     Enforces organizer_profile_ids as an absolute root boundary (AND condition),
     preventing flexible OR conditions (categories/keywords) from leaking events.
     """
-    collection = session.exec(
-        select(Collection).where(Collection.slug == slug, Collection.is_active == True)
-    ).first()
-    if not collection:
-        raise HTTPException(status_code=404, detail="Collection not found")
-
     query = select(Event).where(Event.status == "published")
 
     # 1. Apply absolute boundaries FIRST (Strict root-level AND boundary)
@@ -187,6 +162,115 @@ def get_collection_events(
         query = query.where(Event.date_start <= collection.fixed_end_date)
     elif filter_params.get("date_to"):
         query = query.where(Event.date_start <= filter_params["date_to"])
+
+    return query
+
+
+def get_collection_venues(collection: Collection, session: Session) -> tuple[List[VenueSummary], int]:
+    """
+    Compute all distinct venues associated with all published events in a collection.
+    Aggregates primary event venues, participating venues, and custom unlinked location names.
+    Returns an alphabetized list of VenueSummary and total distinct count.
+    """
+    events_subquery = build_collection_events_query(collection, session).subquery()
+    venue_map: dict[str, VenueSummary] = {}
+
+    # 1. Primary venues linked via Event.venue_id
+    primary_query = (
+        select(Venue)
+        .join(events_subquery, events_subquery.c.venue_id == Venue.id)
+        .distinct()
+    )
+    for v in session.exec(primary_query).all():
+        if v.name and v.name.strip():
+            key = v.name.strip().lower()
+            venue_map[key] = VenueSummary(
+                id=str(v.id) if v.id else None,
+                name=v.name.strip(),
+                slug=v.slug,
+                city=v.city,
+            )
+
+    # 2. Participating venues via event_participating_venues
+    part_query = (
+        select(Venue)
+        .join(EventParticipatingVenue, EventParticipatingVenue.venue_id == Venue.id)
+        .join(events_subquery, events_subquery.c.id == EventParticipatingVenue.event_id)
+        .distinct()
+    )
+    for v in session.exec(part_query).all():
+        if v.name and v.name.strip():
+            key = v.name.strip().lower()
+            if key not in venue_map:
+                venue_map[key] = VenueSummary(
+                    id=str(v.id) if v.id else None,
+                    name=v.name.strip(),
+                    slug=v.slug,
+                    city=v.city,
+                )
+
+    # 3. Custom location names for events without a linked venue_id
+    unlinked_query = (
+        select(events_subquery.c.location_name)
+        .where(
+            events_subquery.c.venue_id == None,
+            events_subquery.c.location_name != None
+        )
+        .distinct()
+    )
+    for loc in session.exec(unlinked_query).all():
+        if loc and str(loc).strip():
+            cleaned = str(loc).strip()
+            key = cleaned.lower()
+            if key not in venue_map:
+                venue_map[key] = VenueSummary(id=None, name=cleaned, slug=None, city=None)
+
+    sorted_venues = sorted(venue_map.values(), key=lambda v: v.name.lower())
+    return sorted_venues, len(sorted_venues)
+
+
+@router.get("/slug/{slug}", response_model=CollectionSchema)
+def get_collection_by_slug(
+    slug: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Get a single active collection by its URL slug (public).
+    Includes pre-aggregated venues and total_venue_count.
+    """
+    collection = session.exec(
+        select(Collection).where(Collection.slug == slug, Collection.is_active == True)
+    ).first()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    venues, total_venue_count = get_collection_venues(collection, session)
+
+    data = collection.model_dump()
+    data["venues"] = venues
+    data["total_venue_count"] = total_venue_count
+    return CollectionSchema(**data)
+
+
+@router.get("/slug/{slug}/events")
+def get_collection_events(
+    slug: str,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=24, ge=1, le=1000),
+    session: Session = Depends(get_session)
+):
+    """
+    Get populated events for a specific collection by URL slug.
+    Enforces organizer_profile_ids as an absolute root boundary (AND condition),
+    preventing flexible OR conditions (categories/keywords) from leaking events.
+    """
+    collection = session.exec(
+        select(Collection).where(Collection.slug == slug, Collection.is_active == True)
+    ).first()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    query = build_collection_events_query(collection, session)
 
     count_query = select(func.count()).select_from(query.subquery())
     total = session.exec(count_query).one()

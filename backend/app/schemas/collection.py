@@ -3,6 +3,12 @@ from typing import Optional, List
 from datetime import date
 from pydantic import BaseModel, field_validator
 
+class VenueSummary(BaseModel):
+    id: Optional[str] = None
+    name: str
+    slug: Optional[str] = None
+    city: Optional[str] = None
+
 class CollectionBase(BaseModel):
     title: str
     subtitle: Optional[str] = None
@@ -79,6 +85,8 @@ class CollectionUpdate(CollectionBase):
 
 class Collection(CollectionBase):
     id: int
+    venues: List[VenueSummary] = []
+    total_venue_count: int = 0
 
     class Config:
         from_attributes = True

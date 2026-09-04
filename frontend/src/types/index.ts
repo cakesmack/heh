@@ -804,6 +804,13 @@ export interface ReportCreate {
 // COLLECTION TYPES
 // ============================================================
 
+export interface VenueSummary {
+  id?: string | null;
+  name: string;
+  slug?: string | null;
+  city?: string | null;
+}
+
 export interface Collection {
   id: number;
   title: string;
@@ -831,6 +838,8 @@ export interface Collection {
   specific_venue_ids?: string[];
   enable_venue_filter?: boolean;
   organizer_profile_ids?: string[] | null;
+  venues?: VenueSummary[];
+  total_venue_count?: number;
 }
 
 export interface CollectionCreate {

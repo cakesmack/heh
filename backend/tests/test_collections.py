@@ -586,4 +586,152 @@ def test_list_collections_include_inactive(test_db: Session):
         app.dependency_overrides.clear()
 
 
+def test_collection_slug_returns_preaggregated_venues(test_db: Session):
+    """
+    Test that GET /api/collections/slug/{slug} returns pre-aggregated venues
+    and total_venue_count covering primary venues, participating venues,
+    and unlinked location names for published collection events.
+    """
+    from datetime import datetime, timezone, timedelta
+    from app.models.venue import Venue
+    from app.models.event import Event
+    from app.models.event_participating_venue import EventParticipatingVenue
+
+    now = datetime.now(timezone.utc)
+
+    # 1. Create venues
+    venue_a = Venue(
+        id=normalize_uuid(str(uuid4())),
+        name="Alpha Theatre",
+        address="1 Alpha St",
+        latitude=57.47,
+        longitude=-4.22,
+        slug="alpha-theatre",
+        city="Inverness"
+    )
+    venue_b = Venue(
+        id=normalize_uuid(str(uuid4())),
+        name="Beta Hall",
+        address="2 Beta St",
+        latitude=57.48,
+        longitude=-4.23,
+        slug="beta-hall",
+        city="Inverness"
+    )
+    venue_c = Venue(
+        id=normalize_uuid(str(uuid4())),
+        name="Gamma Arts Centre",
+        address="3 Gamma St",
+        latitude=57.49,
+        longitude=-4.24,
+        slug="gamma-arts-centre",
+        city="Aviemore"
+    )
+    unrelated_venue = Venue(
+        id=normalize_uuid(str(uuid4())),
+        name="Zeta Unrelated Venue",
+        address="99 Zeta St",
+        latitude=57.50,
+        longitude=-4.25,
+        slug="zeta-unrelated-venue",
+        city="Thurso"
+    )
+    test_db.add(venue_a)
+    test_db.add(venue_b)
+    test_db.add(venue_c)
+    test_db.add(unrelated_venue)
+    test_db.commit()
+
+    # 2. Create collection
+    col = Collection(
+        title="Inverness Festival",
+        target_link="/collections/inverness-festival",
+        slug="inverness-festival",
+        is_active=True,
+        enable_venue_filter=True,
+        filter_params={"q": "Festival"}
+    )
+    test_db.add(col)
+    test_db.commit()
+
+    # 3. Create published events matching collection keyword "Festival"
+    ev1 = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="Festival Opening Concert",
+        status="published",
+        date_start=now + timedelta(days=1),
+        date_end=now + timedelta(days=1, hours=3),
+        venue_id=venue_a.id,
+    )
+    ev2 = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="Festival Comedy Night",
+        status="published",
+        date_start=now + timedelta(days=2),
+        date_end=now + timedelta(days=2, hours=3),
+        venue_id=venue_b.id,
+    )
+    ev3 = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="Festival Multi-Venue Crawl",
+        status="published",
+        date_start=now + timedelta(days=3),
+        date_end=now + timedelta(days=3, hours=5),
+        venue_id=venue_a.id,
+    )
+    ev4 = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="Festival Park Gathering",
+        status="published",
+        date_start=now + timedelta(days=4),
+        date_end=now + timedelta(days=4, hours=2),
+        venue_id=None,
+        location_name="Bught Park",
+    )
+    ev5 = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="Standard Business Meeting",
+        status="published",
+        date_start=now + timedelta(days=5),
+        date_end=now + timedelta(days=5, hours=2),
+        venue_id=unrelated_venue.id,
+    )
+    test_db.add(ev1)
+    test_db.add(ev2)
+    test_db.add(ev3)
+    test_db.add(ev4)
+    test_db.add(ev5)
+    test_db.commit()
+
+    # Link participating venue for ev3 -> venue_c
+    part_link = EventParticipatingVenue(event_id=ev3.id, venue_id=venue_c.id)
+    test_db.add(part_link)
+    test_db.commit()
+
+    def get_session_override():
+        return test_db
+
+    app.dependency_overrides[get_session] = get_session_override
+    client = TestClient(app)
+
+    try:
+        res = client.get("/api/collections/slug/inverness-festival")
+        assert res.status_code == 200, res.text
+        data = res.json()
+
+        # Check total_venue_count
+        assert data["total_venue_count"] == 4
+
+        # Check venues array
+        venues = data["venues"]
+        assert len(venues) == 4
+
+        venue_names = [v["name"] for v in venues]
+        assert venue_names == ["Alpha Theatre", "Beta Hall", "Bught Park", "Gamma Arts Centre"]
+        assert "Zeta Unrelated Venue" not in venue_names
+    finally:
+        app.dependency_overrides.clear()
+
+
+
 
