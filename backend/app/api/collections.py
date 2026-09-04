@@ -3,10 +3,11 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, or_, and_
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_session
 from app.core.security import get_current_user
-from app.core.utils import normalize_uuid
+from app.core.utils import normalize_uuid, generate_seo_slug
 from app.models.user import User
 from app.models.collection import Collection
 from app.models.event import Event
@@ -18,12 +19,17 @@ router = APIRouter(tags=["Collections"])
 @router.get("", response_model=List[CollectionSchema])
 def list_collections(
     show_on_map: Optional[bool] = None,
+    include_inactive: bool = False,
     session: Session = Depends(get_session)
 ):
     """
-    List active curated collections.
+    List curated collections.
+    By default, lists only active collections (for public display).
+    Set include_inactive=True to return all collections (for admin management).
     """
-    query = select(Collection).where(Collection.is_active == True)
+    query = select(Collection)
+    if not include_inactive:
+        query = query.where(Collection.is_active == True)
     
     if show_on_map is not None:
         query = query.where(Collection.show_on_map == show_on_map)
@@ -202,9 +208,32 @@ def create_collection(
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
+    raw_slug = (collection_data.slug or "").strip().lower()
+    if not raw_slug and collection_data.title:
+        raw_slug = generate_seo_slug(collection_data.title)
+
+    if raw_slug:
+        existing = session.exec(select(Collection).where(Collection.slug == raw_slug)).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"A collection with the slug '{raw_slug}' already exists ('{existing.title}'). Please edit the existing collection or choose a different slug."
+            )
+
     collection = Collection.model_validate(collection_data)
+    if raw_slug:
+        collection.slug = raw_slug
+
     session.add(collection)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"A collection with the slug '{raw_slug or collection.title}' already exists."
+        )
+
     session.refresh(collection)
     return collection
 
@@ -226,11 +255,32 @@ def update_collection(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
 
     update_data = collection_data.model_dump(exclude_unset=True)
+
+    if "slug" in update_data and update_data["slug"]:
+        new_slug = update_data["slug"].strip().lower()
+        existing = session.exec(
+            select(Collection).where(Collection.slug == new_slug, Collection.id != collection_id)
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"A collection with the slug '{new_slug}' already exists ('{existing.title}'). Please choose a different slug."
+            )
+        update_data["slug"] = new_slug
+
     for key, value in update_data.items():
         setattr(collection, key, value)
 
     session.add(collection)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A database constraint error occurred while saving the collection."
+        )
+
     session.refresh(collection)
     return collection
 

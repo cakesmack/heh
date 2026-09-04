@@ -1589,9 +1589,9 @@ export const eventClaimsAPI = {
 
 export const collectionsAPI = {
   /**
-   * List active curated collections
+   * List curated collections (supports include_inactive for admin views)
    */
-  list: async (filters?: { show_on_map?: boolean }): Promise<Collection[]> => {
+  list: async (filters?: { show_on_map?: boolean; include_inactive?: boolean }): Promise<Collection[]> => {
     const query = filters ? buildQueryString(filters) : '';
     return apiFetch<Collection[]>(`/api/collections${query}`, {}, false);
   },

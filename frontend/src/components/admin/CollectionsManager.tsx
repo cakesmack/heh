@@ -51,6 +51,7 @@ export default function CollectionsManager() {
     const slugManuallyEdited = useRef(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [duplicateCollection, setDuplicateCollection] = useState<Collection | null>(null);
 
     // Event preview state for exclude management
     const [previewEvents, setPreviewEvents] = useState<EventResponse[]>([]);
@@ -75,7 +76,7 @@ export default function CollectionsManager() {
     const fetchCollections = async () => {
         try {
             const [colRes, catRes] = await Promise.all([
-                collectionsAPI.list(),
+                collectionsAPI.list({ include_inactive: true }),
                 categoriesAPI.list(true),
             ]);
             setCollections(colRes);
@@ -152,6 +153,7 @@ export default function CollectionsManager() {
             exclude_event_ids: [],
         });
         setError(null);
+        setDuplicateCollection(null);
         setPreviewEvents([]);
         setPreviewLoaded(false);
         setModalOpen(true);
@@ -172,6 +174,7 @@ export default function CollectionsManager() {
 
     const openEditModal = (collection: Collection) => {
         setEditingCollection(collection);
+        setDuplicateCollection(null);
         slugManuallyEdited.current = !!collection.slug;
 
         setFormData({
@@ -357,6 +360,25 @@ export default function CollectionsManager() {
                 delete finalFormData.filter_params.tag_ids;
             }
 
+            const targetSlug = (finalFormData.slug || slugify(finalFormData.title)).trim().toLowerCase();
+            if (!editingCollection) {
+                const duplicate = collections.find(c => c.slug?.toLowerCase() === targetSlug);
+                if (duplicate) {
+                    setError(`A collection with the slug "${targetSlug}" already exists ("${duplicate.title}"). You can switch to editing that collection or choose a different slug.`);
+                    setDuplicateCollection(duplicate);
+                    setSaving(false);
+                    return;
+                }
+            } else {
+                const duplicate = collections.find(c => c.slug?.toLowerCase() === targetSlug && c.id !== editingCollection.id);
+                if (duplicate) {
+                    setError(`A collection with the slug "${targetSlug}" already exists ("${duplicate.title}"). Please choose a different slug.`);
+                    setDuplicateCollection(duplicate);
+                    setSaving(false);
+                    return;
+                }
+            }
+
             if (editingCollection) {
                 await collectionsAPI.update(editingCollection.id, finalFormData);
             } else {
@@ -366,6 +388,11 @@ export default function CollectionsManager() {
             fetchCollections();
         } catch (err: any) {
             setError(err.message || 'Failed to save collection');
+            const targetSlug = (formData.slug || slugify(formData.title)).trim().toLowerCase();
+            const duplicate = collections.find(c => c.slug?.toLowerCase() === targetSlug && c.id !== editingCollection?.id);
+            if (duplicate) {
+                setDuplicateCollection(duplicate);
+            }
         } finally {
             setSaving(false);
         }
@@ -481,8 +508,21 @@ export default function CollectionsManager() {
                 >
                     <form onSubmit={handleSubmit} className="space-y-6">
     {error && (
-        <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-            {error}
+        <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <span>{error}</span>
+            {duplicateCollection && (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setEditingCollection(duplicateCollection);
+                        setDuplicateCollection(null);
+                        setError(null);
+                    }}
+                    className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700 transition-colors shrink-0"
+                >
+                    Edit Existing &ldquo;{duplicateCollection.title}&rdquo;
+                </button>
+            )}
         </div>
     )}
 
@@ -526,6 +566,11 @@ export default function CollectionsManager() {
                                 />
                             </div>
                             <p className="text-xs text-gray-400 mt-1">Auto-generated from title. Edit to override.</p>
+                            {!editingCollection && formData.slug && collections.some(c => c.slug?.toLowerCase() === formData.slug?.toLowerCase()) && (
+                                <p className="text-xs text-amber-600 font-medium mt-1">
+                                    ⚠️ A collection with this slug already exists (&ldquo;{collections.find(c => c.slug?.toLowerCase() === formData.slug?.toLowerCase())?.title}&rdquo;).
+                                </p>
+                            )}
                         </div>
             <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -462,3 +462,128 @@ def test_api_events_organizer_profile_ids_strict_isolation(test_db: Session):
         app.dependency_overrides.clear()
 
 
+def test_collection_slug_uniqueness_and_error_handling(test_db: Session):
+    """
+    Test that duplicate collection slugs are rejected with clean HTTP 400 Bad Request
+    errors on both creation and update, preventing 500 UniqueViolation errors.
+    """
+    admin_user = User(
+        id=normalize_uuid(str(uuid4())),
+        email="slugadmin@highlandevents.co.uk",
+        username="slugadmin",
+        is_admin=True,
+    )
+    test_db.add(admin_user)
+    test_db.commit()
+
+    def get_session_override():
+        return test_db
+
+    def get_current_admin_override():
+        return admin_user
+
+    app.dependency_overrides[get_session] = get_session_override
+    app.dependency_overrides[get_current_user] = get_current_admin_override
+
+    client = TestClient(app)
+
+    try:
+        # 1. Create first collection
+        payload1 = {
+            "title": "Inverness Fringe Festival",
+            "target_link": "/collections/inverness-fringe-festival",
+            "slug": "inverness-fringe-festival",
+            "is_active": True,
+        }
+        res1 = client.post("/api/collections", json=payload1)
+        assert res1.status_code == 201, res1.text
+        col1_id = res1.json()["id"]
+
+        # 2. Attempt to create duplicate collection with the same slug -> Must return 400, not 500
+        payload2 = {
+            "title": "Inverness Fringe Festival Duplicate",
+            "target_link": "/collections/inverness-fringe-festival",
+            "slug": "inverness-fringe-festival",
+            "is_active": True,
+        }
+        res2 = client.post("/api/collections", json=payload2)
+        assert res2.status_code == 400, res2.text
+        assert "already exists" in res2.json()["detail"]
+
+        # 3. Create second collection with distinct slug
+        payload3 = {
+            "title": "Inverness Fringe 2026",
+            "target_link": "/collections/inverness-fringe-2026",
+            "slug": "inverness-fringe-2026",
+            "is_active": True,
+        }
+        res3 = client.post("/api/collections", json=payload3)
+        assert res3.status_code == 201, res3.text
+        col2_id = res3.json()["id"]
+
+        # 4. Updating col1 with its existing slug must succeed
+        update_col1 = {
+            "title": "Inverness Fringe Festival Updated",
+            "slug": "inverness-fringe-festival",
+        }
+        res4 = client.put(f"/api/collections/{col1_id}", json=update_col1)
+        assert res4.status_code == 200, res4.text
+        assert res4.json()["title"] == "Inverness Fringe Festival Updated"
+
+        # 5. Updating col2 to col1's slug must be rejected with 400
+        update_col2_dup = {
+            "slug": "inverness-fringe-festival",
+        }
+        res5 = client.put(f"/api/collections/{col2_id}", json=update_col2_dup)
+        assert res5.status_code == 400, res5.text
+        assert "already exists" in res5.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_list_collections_include_inactive(test_db: Session):
+    """
+    Test that GET /api/collections excludes inactive collections by default
+    for public display, but includes them when include_inactive=True for admin management.
+    """
+    active_col = Collection(
+        title="Active Fest",
+        target_link="/collections/active-fest",
+        slug="active-fest",
+        is_active=True,
+    )
+    inactive_col = Collection(
+        title="Inactive Fest",
+        target_link="/collections/inactive-fest",
+        slug="inactive-fest",
+        is_active=False,
+    )
+    test_db.add(active_col)
+    test_db.add(inactive_col)
+    test_db.commit()
+
+    def get_session_override():
+        return test_db
+
+    app.dependency_overrides[get_session] = get_session_override
+    client = TestClient(app)
+
+    try:
+        # 1. Default list (public): only active collections
+        res_public = client.get("/api/collections")
+        assert res_public.status_code == 200
+        public_slugs = [c["slug"] for c in res_public.json()]
+        assert "active-fest" in public_slugs
+        assert "inactive-fest" not in public_slugs
+
+        # 2. Admin list with include_inactive=true: both active and inactive
+        res_admin = client.get("/api/collections?include_inactive=true")
+        assert res_admin.status_code == 200
+        admin_slugs = [c["slug"] for c in res_admin.json()]
+        assert "active-fest" in admin_slugs
+        assert "inactive-fest" in admin_slugs
+    finally:
+        app.dependency_overrides.clear()
+
+
+
