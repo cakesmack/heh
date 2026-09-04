@@ -306,11 +306,15 @@ export const eventsAPI = {
       if (filters.featured_only) params.featured_only = 'true';
       if (filters.organizer_id) params.organizer_id = filters.organizer_id;
       if (filters.organizer_profile_id) params.organizer_profile_id = filters.organizer_profile_id;
+      if (filters.organizer_profile_ids) {
+        params.organizer_profile_ids = Array.isArray(filters.organizer_profile_ids)
+          ? filters.organizer_profile_ids.join(',')
+          : filters.organizer_profile_ids;
+      }
       if (filters.max_duration_days !== undefined) params.max_duration_days = filters.max_duration_days;
       if (filters.venue_id) params.venue_id = filters.venue_id;
       if (filters.include_past) params.include_past = 'true';
       if (filters.skip !== undefined) params.skip = filters.skip;
-      if (filters.include_past) params.include_past = 'true';
       if (filters.time_range) params.time_range = filters.time_range;
 
       // Phase 2 Fix: Support mapping frontend `date` preset strings (e.g. 'weekend')

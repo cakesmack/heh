@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 from pydantic import BaseModel, field_validator
 
@@ -35,7 +35,7 @@ class CollectionBase(BaseModel):
     stat_3_value: Optional[str] = None
     specific_venue_ids: Optional[list] = None
     enable_venue_filter: bool = False
-    organizer_profile_ids: Optional[list] = None
+    organizer_profile_ids: Optional[List[str]] = None
 
     @field_validator('filter_params', mode='before')
     @classmethod
@@ -75,7 +75,7 @@ class CollectionUpdate(CollectionBase):
     stat_3_value: Optional[str] = None
     specific_venue_ids: Optional[list] = None
     enable_venue_filter: Optional[bool] = None
-    organizer_profile_ids: Optional[list] = None
+    organizer_profile_ids: Optional[List[str]] = None
 
 class Collection(CollectionBase):
     id: int

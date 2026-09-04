@@ -36,6 +36,11 @@ function buildEventFilter(params: Record<string, any>): EventFilter {
             ? params.category_ids
             : params.category_ids.split(',');
     }
+    if (params.organizer_profile_ids) {
+        filter.organizer_profile_ids = Array.isArray(params.organizer_profile_ids)
+            ? params.organizer_profile_ids.join(',')
+            : params.organizer_profile_ids;
+    }
     if (params.q) filter.q = params.q;
     if (params.combine_operator) filter.combine_operator = params.combine_operator;
 

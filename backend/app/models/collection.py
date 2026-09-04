@@ -40,3 +40,9 @@ class Collection(SQLModel, table=True):
     specific_venue_ids: Optional[list] = Field(default=None, sa_column=Column(JSONB))
     enable_venue_filter: bool = Field(default=False)
     organizer_profile_ids: Optional[list] = Field(default=None, sa_column=Column(JSONB))
+
+    @property
+    def match_mode(self) -> str:
+        if self.filter_params and isinstance(self.filter_params, dict):
+            return (self.filter_params.get("combine_operator") or self.filter_params.get("match_mode") or "and").upper()
+        return "AND"

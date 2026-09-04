@@ -870,8 +870,16 @@ def list_events(
             # Default "Upcoming" behavior if no specific range
             # (Matches standard feed behavior)
             query = query.where(func.coalesce(Event.date_end, Event.date_start) >= sql_now)
+
+        # Apply organizer profile filters if provided in city_filter
+        if organizer_profile_id:
+            query = query.where(or_(Event.organizer_profile_id == organizer_profile_id, Event.organizer_profile_id == normalize_uuid(organizer_profile_id)))
+        if organizer_profile_ids:
+            raw_ids = [oid.strip() for oid in organizer_profile_ids.split(",") if oid.strip()]
+            ids_to_match = list(set(raw_ids + [normalize_uuid(oid) for oid in raw_ids]))
+            if ids_to_match:
+                query = query.where(Event.organizer_profile_id.in_(ids_to_match))
             
-        
         # 5. GET TOTAL COUNT AND EVENTS
         events, total = deduplicate_recurring_events(
             session=session,
@@ -1069,12 +1077,13 @@ def list_events(
 
     # Filter by organizer profile (group)
     if organizer_profile_id:
-        query = query.where(Event.organizer_profile_id == normalize_uuid(organizer_profile_id))
+        query = query.where(or_(Event.organizer_profile_id == organizer_profile_id, Event.organizer_profile_id == normalize_uuid(organizer_profile_id)))
 
     if organizer_profile_ids:
-        org_profile_ids_list = [normalize_uuid(oid.strip()) for oid in organizer_profile_ids.split(",") if oid.strip()]
-        if org_profile_ids_list:
-            query = query.where(Event.organizer_profile_id.in_(org_profile_ids_list))
+        raw_ids = [oid.strip() for oid in organizer_profile_ids.split(",") if oid.strip()]
+        ids_to_match = list(set(raw_ids + [normalize_uuid(oid) for oid in raw_ids]))
+        if ids_to_match:
+            query = query.where(Event.organizer_profile_id.in_(ids_to_match))
 
     # Determine if we are performing a radius search (Near Me)
     is_radius_search = latitude is not None and longitude is not None and radius_km is not None

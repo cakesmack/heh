@@ -1,6 +1,7 @@
 from typing import List, Optional
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_, and_
 from sqlalchemy import func
 
 from app.core.database import get_session
@@ -9,6 +10,7 @@ from app.core.utils import normalize_uuid
 from app.models.user import User
 from app.models.collection import Collection
 from app.models.event import Event
+from app.models.category import Category
 from app.schemas.collection import CollectionCreate, CollectionUpdate, Collection as CollectionSchema
 
 router = APIRouter(tags=["Collections"])
@@ -54,7 +56,8 @@ def get_collection_events(
 ):
     """
     Get populated events for a specific collection by URL slug.
-    If organizer_profile_ids is configured, strictly filters to those organizers.
+    Enforces organizer_profile_ids as an absolute root boundary (AND condition),
+    preventing flexible OR conditions (categories/keywords) from leaking events.
     """
     collection = session.exec(
         select(Collection).where(Collection.slug == slug, Collection.is_active == True)
@@ -63,10 +66,121 @@ def get_collection_events(
         raise HTTPException(status_code=404, detail="Collection not found")
 
     query = select(Event).where(Event.status == "published")
+
+    # 1. Apply absolute boundaries FIRST (Strict root-level AND boundary)
     if collection.organizer_profile_ids:
-        normalized_org_ids = [normalize_uuid(oid) for oid in collection.organizer_profile_ids if oid]
-        if normalized_org_ids:
-            query = query.where(Event.organizer_profile_id.in_(normalized_org_ids))
+        raw_org_ids = [str(oid).strip() for oid in collection.organizer_profile_ids if oid]
+        ids_to_match = list(set(raw_org_ids + [normalize_uuid(oid) for oid in raw_org_ids]))
+        if ids_to_match:
+            query = query.where(Event.organizer_profile_id.in_(ids_to_match))
+
+    if collection.specific_venue_ids:
+        venue_ids = [normalize_uuid(vid) for vid in collection.specific_venue_ids if vid]
+        if venue_ids:
+            query = query.where(Event.venue_id.in_(venue_ids))
+
+    # 2. Extract flexible Keyword/Category conditions inside isolated blocks
+    filter_params = collection.filter_params or {}
+    category_conditions = []
+    keyword_conditions = []
+
+    # Category conditions
+    raw_cats = filter_params.get("category_ids") or filter_params.get("category") or []
+    if isinstance(raw_cats, str):
+        raw_cats = [c.strip() for c in raw_cats.split(",") if c.strip()]
+    if raw_cats:
+        cat_ids = []
+        for item in raw_cats:
+            item_str = str(item).strip()
+            norm = normalize_uuid(item_str)
+            if len(norm) == 32 and all(c in "0123456789abcdefABCDEF" for c in norm):
+                cat_ids.append(norm)
+            else:
+                cat = session.exec(
+                    select(Category).where(
+                        (Category.slug == item_str.lower()) |
+                        (func.lower(Category.name) == item_str.lower())
+                    )
+                ).first()
+                if cat:
+                    cat_ids.append(cat.id)
+        if cat_ids:
+            category_conditions.append(Event.category_id.in_(cat_ids))
+
+    # Keyword conditions (search keywords in title, description, location_name)
+    q = filter_params.get("q")
+    if q and str(q).strip():
+        search_term = f"%{str(q).strip()}%"
+        keyword_conditions.append(
+            or_(
+                Event.title.ilike(search_term),
+                Event.description.ilike(search_term),
+                Event.location_name.ilike(search_term),
+            )
+        )
+
+    # 3. Apply the flexible Keyword/Category logic inside their own isolated blocks
+    match_mode = getattr(collection, "match_mode", None)
+    if not match_mode:
+        match_mode = (filter_params.get("combine_operator") or filter_params.get("match_mode") or "and").upper()
+
+    keyword_block = or_(*keyword_conditions) if len(keyword_conditions) > 1 else (keyword_conditions[0] if keyword_conditions else None)
+    category_block = or_(*category_conditions) if len(category_conditions) > 1 else (category_conditions[0] if category_conditions else None)
+
+    if keyword_block is not None and category_block is not None:
+        if match_mode == "OR":
+            query = query.where(or_(keyword_block, category_block))
+        else:
+            query = query.where(and_(keyword_block, category_block))
+    elif keyword_block is not None:
+        query = query.where(keyword_block)
+    elif category_block is not None:
+        query = query.where(category_block)
+
+    # 4. Root-level exclusions, pricing, recurrence, and dates
+    exclude_events = filter_params.get("exclude_event_ids")
+    if exclude_events:
+        if isinstance(exclude_events, str):
+            exclude_events = [e.strip() for e in exclude_events.split(",") if e.strip()]
+        exclude_uuids = [normalize_uuid(e) for e in exclude_events if e]
+        if exclude_uuids:
+            query = query.where(Event.id.notin_(exclude_uuids))
+
+    exclude_age = filter_params.get("exclude_age_restrictions")
+    if exclude_age:
+        if isinstance(exclude_age, str):
+            exclude_age = [a.strip() for a in exclude_age.split(",") if a.strip()]
+        if exclude_age:
+            query = query.where(
+                or_(Event.age_restriction.notin_(exclude_age), Event.age_restriction == None)
+            )
+
+    age_restriction = filter_params.get("age_restriction")
+    if age_restriction:
+        query = query.where(Event.age_restriction == age_restriction)
+
+    price = filter_params.get("price")
+    if price == "free":
+        query = query.where(Event.price == 0)
+    elif price == "paid":
+        query = query.where(Event.price > 0)
+
+    is_recurring = filter_params.get("is_recurring")
+    if is_recurring is not None:
+        query = query.where(Event.is_recurring == is_recurring)
+
+    now_utc = datetime.now(timezone.utc)
+    if collection.fixed_start_date:
+        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= collection.fixed_start_date)
+    elif filter_params.get("date_from"):
+        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= filter_params["date_from"])
+    else:
+        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= now_utc)
+
+    if collection.fixed_end_date:
+        query = query.where(Event.date_start <= collection.fixed_end_date)
+    elif filter_params.get("date_to"):
+        query = query.where(Event.date_start <= filter_params["date_to"])
 
     count_query = select(func.count()).select_from(query.subquery())
     total = session.exec(count_query).one()

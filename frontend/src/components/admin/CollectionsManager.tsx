@@ -311,6 +311,9 @@ export default function CollectionsManager() {
             filterObj.exclude_event_ids = qbState.exclude_event_ids;
         }
 
+        if (formData.organizer_profile_ids && formData.organizer_profile_ids.length > 0) {
+            filterObj.organizer_profile_ids = formData.organizer_profile_ids;
+        }
 
         if (qbState.age) filterObj.age_restriction = qbState.age;
         if (qbState.price !== 'any') filterObj.price = qbState.price;
@@ -326,7 +329,7 @@ export default function CollectionsManager() {
         const newFilterParams = Object.keys(filterObj).length > 0 ? filterObj : null;
 
         setFormData(prev => ({ ...prev, filter_params: newFilterParams }));
-    }, [qbState, modalOpen, formData.fixed_start_date, formData.fixed_end_date, categories]);
+    }, [qbState, modalOpen, formData.fixed_start_date, formData.fixed_end_date, formData.organizer_profile_ids, categories]);
 
     const handleImageUpload = (urls: { url: string }) => {
         setFormData(prev => ({ ...prev, image_url: urls.url }));
