@@ -3,7 +3,7 @@
  * Renders a hero banner and a filtered event grid for a curated collection.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -11,12 +11,13 @@ import { collectionsAPI, eventsAPI } from '@/lib/api';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { EventList } from '@/components/events/EventList';
 import { Spinner } from '@/components/common/Spinner';
-import { EventFilters } from '@/components/events/EventFilters';
+import { DateFilterPills } from '@/components/events/DateFilterPills';
+import { CategoryFilterPills } from '@/components/categories/CategoryFilterPills';
 import type { Metadata } from 'next';
 import type { Collection, EventFilter, EventResponse } from '@/types';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
-const EVENTS_PER_PAGE = 12;
+const EVENTS_PER_PAGE = 24;
 
 /**
  * Convert the collection's filter_params JSON into an EventFilter object.
@@ -119,8 +120,49 @@ export default function CollectionPage() {
     const [total, setTotal] = useState(0);
     const [eventsLoading, setEventsLoading] = useState(false);
     const [eventsError, setEventsError] = useState<string | null>(null);
-    const [userFilters, setUserFilters] = useState<EventFilter>({});
     const [currentFilters, setCurrentFilters] = useState<EventFilter>({});
+
+    // Client-side filter state
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>(null);
+    const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all'); // 'all', 'today', 'weekend'
+
+    // Combined client-side in-memory filter on the loaded events array
+    const displayedEvents = useMemo(() => {
+        return events.filter(event => {
+            // Category filter
+            if (selectedCategoryId !== null && selectedCategoryId !== undefined) {
+                const target = String(selectedCategoryId);
+                const matchesId = event.category_id && String(event.category_id) === target;
+                const matchesCatId = event.category?.id && String(event.category.id) === target;
+                const matchesSlug = event.category?.slug && String(event.category.slug) === target;
+                if (!matchesId && !matchesCatId && !matchesSlug) {
+                    return false;
+                }
+            }
+
+            // Date filter
+            if (selectedDateFilter && selectedDateFilter !== 'all') {
+                const filterKey = selectedDateFilter === 'this-weekend' ? 'weekend' : selectedDateFilter;
+                const range = getDateRangeFromFilter(filterKey);
+                if (range.date_from && range.date_to) {
+                    const eventStart = new Date(event.date_start);
+                    const rangeFrom = new Date(range.date_from);
+                    const rangeTo = new Date(range.date_to);
+
+                    const matchesStart = eventStart >= rangeFrom && eventStart <= rangeTo;
+                    const matchesOverlap = event.date_end
+                        ? (eventStart <= rangeTo && new Date(event.date_end) >= rangeFrom)
+                        : matchesStart;
+
+                    if (!matchesStart && !matchesOverlap) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        });
+    }, [events, selectedCategoryId, selectedDateFilter]);
 
     const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
     const canonicalUrl = collection ? `${siteUrl.replace(/\/$/, '')}/collections/${collection.slug}` : '';
@@ -196,12 +238,11 @@ export default function CollectionPage() {
 
         if (collection.filter_params && Object.keys(collection.filter_params).length > 0) {
             const baseFilters = buildEventFilter(collection.filter_params);
-            const merged = mergeFilters(baseFilters, userFilters);
-            fetchEvents(merged);
+            fetchEvents(baseFilters);
         } else {
-            fetchEvents(userFilters);
+            fetchEvents({});
         }
-    }, [collection, userFilters, fetchEvents]);
+    }, [collection, fetchEvents]);
 
     // Infinite scroll observer
     useEffect(() => {
@@ -355,24 +396,56 @@ export default function CollectionPage() {
 
 
 
-            {/* SECTION 2: FILTERS */}
-            <section className="max-w-7xl mx-auto py-8 px-4 border-b border-gray-100">
-                <EventFilters
-                    onFilterChange={(newFilters) => setUserFilters(newFilters as any)}
-                    initialFilters={userFilters}
-                    isCollectionMode={true}
+            {/* SECTION 2: DATE & CATEGORY FILTERS */}
+            <section className="max-w-7xl mx-auto pt-6 pb-2 px-4 space-y-3">
+                {/* Date Filter Pills */}
+                <DateFilterPills
+                    activeFilter={selectedDateFilter}
+                    onSelectFilter={(filter) => setSelectedDateFilter(filter)}
+                />
+
+                {/* Colored Category Filter Pills */}
+                <CategoryFilterPills
+                    selectedCategoryId={selectedCategoryId}
+                    onSelectCategory={(catId) => setSelectedCategoryId(catId)}
                 />
             </section>
 
             {/* SECTION 3: EVENTS LIST */}
-            <section className="max-w-7xl mx-auto py-12 px-4">
+            <section className="max-w-7xl mx-auto py-8 px-4">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                        {selectedDateFilter === 'today'
+                            ? "Today's Events"
+                            : selectedDateFilter === 'weekend' || selectedDateFilter === 'this-weekend'
+                            ? "This Weekend's Events"
+                            : "All Upcoming Events"}
+                        <span className="ml-2.5 text-sm font-normal text-gray-500">
+                            ({displayedEvents.length}{displayedEvents.length !== events.length ? ` of ${events.length}` : ''})
+                        </span>
+                    </h2>
+
+                    {(selectedCategoryId !== null || selectedDateFilter !== 'all') && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedCategoryId(null);
+                                setSelectedDateFilter('all');
+                            }}
+                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                        >
+                            Reset filters
+                        </button>
+                    )}
+                </div>
+
                 {eventsLoading && !events.length ? (
                     <div className="flex justify-center py-8">
                         <Spinner size="lg" />
                     </div>
                 ) : (
                     <>
-                        <EventList events={events} isLoading={eventsLoading} error={eventsError} />
+                        <EventList events={displayedEvents} isLoading={eventsLoading} error={eventsError} />
 
                         {/* Infinite Scroll Sentinel */}
                         {hasMore && !eventsLoading && !eventsError && (

@@ -393,6 +393,11 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
         5. `id="cookies"`: Cookies & Local Storage (Zero third-party tracking cookies; strictly functional storage for banner dismissal and auth tokens).
         6. `id="your-rights"`: Your Rights Under UK GDPR (Access, rectification, erasure subject to HMRC retention, objection, ICO complaint rights at `ico.org.uk`).
         7. `id="contact"`: Contact Details (`contact@highlandeventshub.co.uk`, Inverness, Scottish Highlands).
+    - **Curated Collections Filter Pills & In-Memory Filtering (`pages/collections/[slug].tsx`)**:
+      - Replaced legacy manual filter bar (`EventFilters`) with modular, instant-action pills matching Location pages UX.
+      - **Date Filter Pills (`DateFilterPills.tsx`)**: "All Upcoming", "Today", and "This Weekend" pills with emerald active styling and horizontal scrolling.
+      - **Colored Category Filter Pills (`CategoryFilterPills.tsx`)**: Rendered with dynamic category hex colors, dot indicators, and mobile horizontal scrolling (`flex overflow-x-auto whitespace-nowrap scrollbar-hide`).
+      - **Client-Side In-Memory Filtering**: Treats the loaded collection events array as the single source of truth; filtering by category and date ranges (`today`, `weekend` via `getDateRangeFromFilter`) executes in-memory via `useMemo` with zero network requests or API re-fetching. Includes a "Reset filters" action button and dynamic event count indicators.
   - **Single-Session / 36-Hour Constraint (Permanent Platform Safeguard)**:
     - **Frontend Event Wizard**: Step 1 displays micro-copy note outlining the single-event / overnight limit. Step 2 automatically locks pattern selection to "One-Off Event", greys out and disables "Recurring Event" and "Various Dates & Times" with an "Unavailable with Native Ticketing" badge and informative toast, shows an inline duration warning, and disables the "Next" button if duration exceeds 36 hours.
     - **Backend API**: `POST /api/events` and `PUT /api/events/{id}` strictly validate that any ticketed event is non-recurring (`is_recurring == False`, `recurrence_rule == None`, `frequency == None`, and empty `showtimes`) and that duration `(date_end - date_start) <= 36 hours` (allowing overnight sessions up to 36 hours), raising HTTP 400 otherwise.
