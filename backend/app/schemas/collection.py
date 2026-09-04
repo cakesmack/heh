@@ -34,6 +34,7 @@ class CollectionBase(BaseModel):
     stat_3_label: Optional[str] = None
     stat_3_value: Optional[str] = None
     specific_venue_ids: Optional[list] = None
+    enable_venue_filter: bool = False
 
     @field_validator('filter_params', mode='before')
     @classmethod
@@ -72,6 +73,7 @@ class CollectionUpdate(CollectionBase):
     stat_3_label: Optional[str] = None
     stat_3_value: Optional[str] = None
     specific_venue_ids: Optional[list] = None
+    enable_venue_filter: Optional[bool] = None
 
 class Collection(CollectionBase):
     id: int

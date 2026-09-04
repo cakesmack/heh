@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin Collections Page
  * CRUD interface for managing curated collections
  */
@@ -45,6 +45,7 @@ export default function CollectionsManager() {
         stat_2_value: '',
         stat_3_label: '',
         stat_3_value: '',
+        enable_venue_filter: false,
     });
     const slugManuallyEdited = useRef(false);
     const [saving, setSaving] = useState(false);
@@ -119,6 +120,7 @@ export default function CollectionsManager() {
             stat_2_value: '',
             stat_3_label: '',
             stat_3_value: '',
+            enable_venue_filter: false,
         });
         setQbState({
             category: [],
@@ -179,6 +181,7 @@ export default function CollectionsManager() {
             stat_2_value: collection.stat_2_value || '',
             stat_3_label: collection.stat_3_label || '',
             stat_3_value: collection.stat_3_value || '',
+            enable_venue_filter: collection.enable_venue_filter ?? false,
         });
 
         // Initialize QB State from filter_params FIRST (JSON-first architecture)
@@ -631,6 +634,25 @@ export default function CollectionsManager() {
                             </div>
 
                             <div className="space-y-3">
+                                {/* Enable Venue Filter */}
+                                <div className="pb-3 border-b border-gray-200">
+                                    <label htmlFor="enable_venue_filter" className="flex items-start space-x-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            id="enable_venue_filter"
+                                            checked={!!formData.enable_venue_filter}
+                                            onChange={(e) => setFormData({ ...formData, enable_venue_filter: e.target.checked })}
+                                            className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300"
+                                        />
+                                        <div>
+                                            <span className="text-sm font-medium text-gray-700">Enable Venue Filter</span>
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                Dynamically generates a venue dropdown filter on the public collection page. Ideal for multi-venue festivals.
+                                            </p>
+                                        </div>
+                                    </label>
+                                </div>
+
                                 {/* Categories (Multi-select) */}
                                 <div>
                                     <label className="block text-xs font-medium text-gray-500 mb-2">Categories (Select matches)</label>

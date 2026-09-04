@@ -125,10 +125,32 @@ export default function CollectionPage() {
     // Client-side filter state
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>(null);
     const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all'); // 'all', 'today', 'weekend'
+    const [selectedVenue, setSelectedVenue] = useState<string | 'all'>('all');
+
+    // Extract alphabetized unique venue names from loaded events if enabled on the collection
+    const uniqueVenues = useMemo(() => {
+        if (!collection?.enable_venue_filter) return [];
+        const venuesSet = new Set<string>();
+        events.forEach(event => {
+            const venueName = event.venue_name || event.venue?.name;
+            if (venueName && venueName.trim()) {
+                venuesSet.add(venueName.trim());
+            }
+        });
+        return Array.from(venuesSet).sort((a, b) => a.localeCompare(b));
+    }, [collection?.enable_venue_filter, events]);
 
     // Combined client-side in-memory filter on the loaded events array
     const displayedEvents = useMemo(() => {
         return events.filter(event => {
+            // Venue filter
+            if (selectedVenue && selectedVenue !== 'all') {
+                const venueName = event.venue_name || event.venue?.name;
+                if (venueName !== selectedVenue) {
+                    return false;
+                }
+            }
+
             // Category filter
             if (selectedCategoryId !== null && selectedCategoryId !== undefined) {
                 const target = String(selectedCategoryId);
@@ -162,7 +184,7 @@ export default function CollectionPage() {
 
             return true;
         });
-    }, [events, selectedCategoryId, selectedDateFilter]);
+    }, [events, selectedCategoryId, selectedDateFilter, selectedVenue]);
 
     const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
     const canonicalUrl = collection ? `${siteUrl.replace(/\/$/, '')}/collections/${collection.slug}` : '';
@@ -396,13 +418,47 @@ export default function CollectionPage() {
 
 
 
-            {/* SECTION 2: DATE & CATEGORY FILTERS */}
+            {/* SECTION 2: DATE, VENUE & CATEGORY FILTERS */}
             <section className="max-w-7xl mx-auto pt-6 pb-2 px-4 space-y-3">
-                {/* Date Filter Pills */}
-                <DateFilterPills
-                    activeFilter={selectedDateFilter}
-                    onSelectFilter={(filter) => setSelectedDateFilter(filter)}
-                />
+                {/* Date Filter Pills & Optional Venue Dropdown */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                        <DateFilterPills
+                            activeFilter={selectedDateFilter}
+                            onSelectFilter={(filter) => setSelectedDateFilter(filter)}
+                        />
+                    </div>
+
+                    {collection?.enable_venue_filter && uniqueVenues.length > 0 && (
+                        <div className="shrink-0 flex items-center">
+                            <label htmlFor="collection-venue-filter" className="sr-only">Filter by Venue</label>
+                            <div className="relative w-full sm:w-auto min-w-[200px]">
+                                <select
+                                    id="collection-venue-filter"
+                                    value={selectedVenue}
+                                    onChange={(e) => setSelectedVenue(e.target.value)}
+                                    className={`w-full appearance-none rounded-full text-sm font-semibold py-2.5 pl-4 pr-9 transition-all cursor-pointer shadow-xs border ${
+                                        selectedVenue !== 'all'
+                                            ? 'bg-emerald-50 border-emerald-600 text-emerald-900 ring-1 ring-emerald-600'
+                                            : 'bg-white border-gray-200 text-gray-700 hover:border-emerald-500 hover:text-emerald-700'
+                                    }`}
+                                >
+                                    <option value="all">All Venues</option>
+                                    {uniqueVenues.map((venueName) => (
+                                        <option key={venueName} value={venueName}>
+                                            {venueName}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Colored Category Filter Pills */}
                 <CategoryFilterPills
@@ -425,12 +481,13 @@ export default function CollectionPage() {
                         </span>
                     </h2>
 
-                    {(selectedCategoryId !== null || selectedDateFilter !== 'all') && (
+                    {(selectedCategoryId !== null || selectedDateFilter !== 'all' || selectedVenue !== 'all') && (
                         <button
                             type="button"
                             onClick={() => {
                                 setSelectedCategoryId(null);
                                 setSelectedDateFilter('all');
+                                setSelectedVenue('all');
                             }}
                             className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
                         >

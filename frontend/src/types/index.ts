@@ -828,6 +828,7 @@ export interface Collection {
   stat_3_label?: string;
   stat_3_value?: string;
   specific_venue_ids?: string[];
+  enable_venue_filter?: boolean;
 }
 
 export interface CollectionCreate {
@@ -854,6 +855,7 @@ export interface CollectionCreate {
   stat_3_label?: string;
   stat_3_value?: string;
   specific_venue_ids?: string[];
+  enable_venue_filter?: boolean;
 }
 
 export interface CollectionUpdate {
@@ -880,6 +882,7 @@ export interface CollectionUpdate {
   stat_3_label?: string;
   stat_3_value?: string;
   specific_venue_ids?: string[];
+  enable_venue_filter?: boolean;
 }
 
 // ============================================================

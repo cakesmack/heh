@@ -196,6 +196,7 @@
 | `slug` | `str` | unique |
 | `description` | `Text` | long-form |
 | `filter_params` | `JSONB` | structured filter definition: category, tags, `filter_mode` (`AND` / `OR`), `exclude_age_restrictions` (`bool`), `exclude_event_ids` (`str[]`) |
+| `enable_venue_filter` | `bool` | optional toggle to generate compact venue dropdown filter (ideal for festivals) |
 
 ---
 
@@ -398,6 +399,9 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
       - **Date Filter Pills (`DateFilterPills.tsx`)**: "All Upcoming", "Today", and "This Weekend" pills with emerald active styling and horizontal scrolling.
       - **Colored Category Filter Pills (`CategoryFilterPills.tsx`)**: Rendered with dynamic category hex colors, dot indicators, and mobile horizontal scrolling (`flex overflow-x-auto whitespace-nowrap scrollbar-hide`).
       - **Client-Side In-Memory Filtering**: Treats the loaded collection events array as the single source of truth; filtering by category and date ranges (`today`, `weekend` via `getDateRangeFromFilter`) executes in-memory via `useMemo` with zero network requests or API re-fetching. Includes a "Reset filters" action button and dynamic event count indicators.
+    - **Curated Collections Venue Filter Dropdown (`enable_venue_filter`)**:
+      - **Admin Toggle (`CollectionsManager.tsx`)**: Configurable checkbox/toggle under "Filter Configuration" with helper text ("Dynamically generates a venue dropdown filter on the public collection page. Ideal for multi-venue festivals."). Stored in PostgreSQL `collections.enable_venue_filter` (`BOOLEAN DEFAULT false`, migration `c3d4e5f6a7b8`).
+      - **Space-Optimized Dropdown (`pages/collections/[slug].tsx`)**: Dynamically extracts and alphabetizes unique venues from loaded collection events. Renders a compact `<select>` pill dropdown inline with `DateFilterPills` (flex-aligned to the right on desktop, stacked on mobile) avoiding extra filter rows. Filters in memory (`event.venue_name || event.venue?.name === selectedVenue`) without network requests.
   - **Single-Session / 36-Hour Constraint (Permanent Platform Safeguard)**:
     - **Frontend Event Wizard**: Step 1 displays micro-copy note outlining the single-event / overnight limit. Step 2 automatically locks pattern selection to "One-Off Event", greys out and disables "Recurring Event" and "Various Dates & Times" with an "Unavailable with Native Ticketing" badge and informative toast, shows an inline duration warning, and disables the "Next" button if duration exceeds 36 hours.
     - **Backend API**: `POST /api/events` and `PUT /api/events/{id}` strictly validate that any ticketed event is non-recurring (`is_recurring == False`, `recurrence_rule == None`, `frequency == None`, and empty `showtimes`) and that duration `(date_end - date_start) <= 36 hours` (allowing overnight sessions up to 36 hours), raising HTTP 400 otherwise.
