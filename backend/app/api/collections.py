@@ -437,20 +437,21 @@ def seed_collections(
     return session.exec(select(Collection).order_by(Collection.sort_order)).all()
 
 
-@router.post("/{id_or_slug}/track-view", status_code=status.HTTP_200_OK)
+@router.post("/{collection_id}/track-view", status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.post("/{collection_id}/track-view/", status_code=status.HTTP_200_OK)
 def track_collection_view(
-    id_or_slug: str,
+    collection_id: str,
     session: Session = Depends(get_session)
 ):
     """
     Atomically increment view_count for a collection by ID or slug.
     Public endpoint.
     """
-    if id_or_slug.isdigit():
-        col_id = int(id_or_slug)
-        condition = or_(Collection.id == col_id, Collection.slug == id_or_slug)
+    if collection_id.isdigit():
+        col_id = int(collection_id)
+        condition = or_(Collection.id == col_id, Collection.slug == collection_id)
     else:
-        condition = Collection.slug == id_or_slug
+        condition = Collection.slug == collection_id
 
     collection = session.exec(select(Collection).where(condition)).first()
     if not collection:
@@ -466,20 +467,21 @@ def track_collection_view(
     return {"status": "ok", "view_count": collection.view_count}
 
 
-@router.post("/{id_or_slug}/track-click", status_code=status.HTTP_200_OK)
+@router.post("/{collection_id}/track-click", status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.post("/{collection_id}/track-click/", status_code=status.HTTP_200_OK)
 def track_collection_click(
-    id_or_slug: str,
+    collection_id: str,
     session: Session = Depends(get_session)
 ):
     """
     Atomically increment link_click_count for a collection by ID or slug.
     Public endpoint.
     """
-    if id_or_slug.isdigit():
-        col_id = int(id_or_slug)
-        condition = or_(Collection.id == col_id, Collection.slug == id_or_slug)
+    if collection_id.isdigit():
+        col_id = int(collection_id)
+        condition = or_(Collection.id == col_id, Collection.slug == collection_id)
     else:
-        condition = Collection.slug == id_or_slug
+        condition = Collection.slug == collection_id
 
     collection = session.exec(select(Collection).where(condition)).first()
     if not collection:

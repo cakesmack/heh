@@ -758,25 +758,25 @@ def test_collection_track_view_and_click(test_db: Session):
     client = TestClient(app)
 
     try:
-        # 1. Track view by slug
+        # 1. Track view by slug (without trailing slash)
         res_view_slug = client.post("/api/collections/track-test/track-view")
         assert res_view_slug.status_code == 200
         assert res_view_slug.json()["status"] == "ok"
         assert res_view_slug.json()["view_count"] == 1
 
-        # 2. Track view by ID
-        res_view_id = client.post(f"/api/collections/{col.id}/track-view")
+        # 2. Track view by ID (with trailing slash)
+        res_view_id = client.post(f"/api/collections/{col.id}/track-view/")
         assert res_view_id.status_code == 200
         assert res_view_id.json()["view_count"] == 2
 
-        # 3. Track link click by slug
+        # 3. Track link click by slug (without trailing slash)
         res_click_slug = client.post("/api/collections/track-test/track-click")
         assert res_click_slug.status_code == 200
         assert res_click_slug.json()["status"] == "ok"
         assert res_click_slug.json()["link_click_count"] == 1
 
-        # 4. Track link click by ID
-        res_click_id = client.post(f"/api/collections/{col.id}/track-click")
+        # 4. Track link click by ID (with trailing slash)
+        res_click_id = client.post(f"/api/collections/{col.id}/track-click/")
         assert res_click_id.status_code == 200
         assert res_click_id.json()["link_click_count"] == 2
 
@@ -788,7 +788,7 @@ def test_collection_track_view_and_click(test_db: Session):
         assert data["link_click_count"] == 2
 
         # 6. Verify non-existent returns 404
-        res_404 = client.post("/api/collections/non-existent-slug/track-view")
+        res_404 = client.post("/api/collections/non-existent-slug/track-view/")
         assert res_404.status_code == 404
     finally:
         app.dependency_overrides.clear()

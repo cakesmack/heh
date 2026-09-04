@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { collectionsAPI, eventsAPI } from '@/lib/api';
+import { collectionsAPI, eventsAPI, API_BASE_URL } from '@/lib/api';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { EventList } from '@/components/events/EventList';
 import { Spinner } from '@/components/common/Spinner';
@@ -249,11 +249,28 @@ export default function CollectionPage() {
 
     const handleExternalLinkClick = useCallback(() => {
         if (!collection?.id) return;
-        const trackingUrl = `/api/collections/${collection.id}/track-click`;
-        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-            navigator.sendBeacon(trackingUrl);
-        } else {
-            collectionsAPI.trackClick(collection.id).catch(() => {});
+        const baseUrl = (process.env.NEXT_PUBLIC_API_URL || API_BASE_URL || '').replace(/\/$/, '');
+        const trackingUrl = `${baseUrl}/api/collections/${collection.id}/track-click/`;
+
+        try {
+            if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+                window.fetch(trackingUrl, {
+                    method: 'POST',
+                    keepalive: true,
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' },
+                }).catch(() => {
+                    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+                        navigator.sendBeacon(trackingUrl);
+                    }
+                });
+            } else if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+                navigator.sendBeacon(trackingUrl);
+            } else {
+                collectionsAPI.trackClick(collection.id).catch(() => {});
+            }
+        } catch {
+            // Non-blocking catch to ensure external navigation is never interrupted
         }
     }, [collection?.id]);
 

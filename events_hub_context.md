@@ -474,6 +474,17 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - Creates a persistent database notification (`title = "New Ticket Sale!"`, `message = "${qty}x ${tier_name} sold for ${event.title} (£${order.total_amount:.2f})"`, `link = "/organizers/hub"`, `is_read = False`) targeting the organizer user.
   - Dynamically increments the header notification bell unread badge and routes directly to `/organizers/hub` on click.
 
+---
 
+## 11. Curated Collections Analytics Architecture
 
-
+- **Database Persistence & Schemas:**
+  - `collections.view_count` (`INTEGER`, default `0`, non-nullable) and `collections.link_click_count` (`INTEGER`, default `0`, non-nullable) stored in PostgreSQL with Alembic migration `e5f6a7b8c901`.
+- **Atomic Endpoints (`/api/collections`):**
+  - `POST /api/collections/{collection_id}/track-view/` & `POST /api/collections/{collection_id}/track-view`: Atomically increments `view_count` and commits transaction. Route decorators support both trailing slash and non-trailing slash to avoid 307/308 redirects. Supports both numeric ID and slug.
+  - `POST /api/collections/{collection_id}/track-click/` & `POST /api/collections/{collection_id}/track-click`: Atomically increments `link_click_count` and commits transaction. Route decorators support both trailing slash and non-trailing slash. Supports both numeric ID and slug.
+- **Frontend Tracking Dispatch:**
+  - View tracking fires on mount inside `[slug].tsx` guarded by `sessionStorage` (`has_viewed_col_${collection.id}`).
+  - External link click tracking fires non-blocking asynchronous `fetch` with `keepalive: true` (falling back to `navigator.sendBeacon`) pointing to `${NEXT_PUBLIC_API_URL}/api/collections/${collection.id}/track-click/` with trailing slash, avoiding Next.js edge 308 redirects while keeping external tab navigation instantaneous.
+- **Admin Visibility:**
+  - Total views and outbound clicks are rendered in the `/admin/collections` DataTable "Stats" column and the collection edit modal analytics banner.

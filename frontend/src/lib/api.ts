@@ -1617,7 +1617,7 @@ export const collectionsAPI = {
    * Track collection page view
    */
   trackView: async (idOrSlug: string | number): Promise<void> => {
-    return apiFetch<void>(`/api/collections/${idOrSlug}/track-view`, {
+    return apiFetch<void>(`/api/collections/${idOrSlug}/track-view/`, {
       method: 'POST',
     }, false);
   },
@@ -1626,7 +1626,7 @@ export const collectionsAPI = {
    * Track collection hero link click
    */
   trackClick: async (idOrSlug: string | number): Promise<void> => {
-    return apiFetch<void>(`/api/collections/${idOrSlug}/track-click`, {
+    return apiFetch<void>(`/api/collections/${idOrSlug}/track-click/`, {
       method: 'POST',
     }, false);
   },
