@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, or_, and_
-from sqlalchemy import func
+from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_session
@@ -435,3 +435,61 @@ def seed_collections(
     
     # Return all created
     return session.exec(select(Collection).order_by(Collection.sort_order)).all()
+
+
+@router.post("/{id_or_slug}/track-view", status_code=status.HTTP_200_OK)
+def track_collection_view(
+    id_or_slug: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Atomically increment view_count for a collection by ID or slug.
+    Public endpoint.
+    """
+    if id_or_slug.isdigit():
+        col_id = int(id_or_slug)
+        condition = or_(Collection.id == col_id, Collection.slug == id_or_slug)
+    else:
+        condition = Collection.slug == id_or_slug
+
+    collection = session.exec(select(Collection).where(condition)).first()
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
+
+    session.exec(
+        update(Collection)
+        .where(Collection.id == collection.id)
+        .values(view_count=Collection.view_count + 1)
+    )
+    session.commit()
+    session.refresh(collection)
+    return {"status": "ok", "view_count": collection.view_count}
+
+
+@router.post("/{id_or_slug}/track-click", status_code=status.HTTP_200_OK)
+def track_collection_click(
+    id_or_slug: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Atomically increment link_click_count for a collection by ID or slug.
+    Public endpoint.
+    """
+    if id_or_slug.isdigit():
+        col_id = int(id_or_slug)
+        condition = or_(Collection.id == col_id, Collection.slug == id_or_slug)
+    else:
+        condition = Collection.slug == id_or_slug
+
+    collection = session.exec(select(Collection).where(condition)).first()
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
+
+    session.exec(
+        update(Collection)
+        .where(Collection.id == collection.id)
+        .values(link_click_count=Collection.link_click_count + 1)
+    )
+    session.commit()
+    session.refresh(collection)
+    return {"status": "ok", "link_click_count": collection.link_click_count}

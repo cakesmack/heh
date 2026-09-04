@@ -459,6 +459,20 @@ export default function CollectionsManager() {
         },
         { key: 'sort_order', header: 'Order' },
         {
+            key: 'analytics',
+            header: 'Stats',
+            render: (col: Collection) => (
+                <div className="text-xs text-gray-600 flex flex-col gap-0.5 whitespace-nowrap">
+                    <span className="font-medium text-gray-900">
+                        {col.view_count ?? 0} <span className="font-normal text-gray-500">views</span>
+                    </span>
+                    <span className="text-gray-500">
+                        {col.link_click_count ?? 0} <span className="font-normal text-gray-400">clicks</span>
+                    </span>
+                </div>
+            ),
+        },
+        {
             key: 'is_active',
             header: 'Status',
             render: (col: Collection) => (
@@ -523,6 +537,20 @@ export default function CollectionsManager() {
                     Edit Existing &ldquo;{duplicateCollection.title}&rdquo;
                 </button>
             )}
+        </div>
+    )}
+
+    {editingCollection && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-lg text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="font-semibold text-emerald-900">Collection Analytics:</span>
+            </div>
+            <div className="flex items-center gap-4 text-emerald-800 text-xs sm:text-sm">
+                <span>Views: <strong className="font-bold text-emerald-950">{editingCollection.view_count ?? 0}</strong></span>
+                <span className="text-emerald-300">|</span>
+                <span>External Link Clicks: <strong className="font-bold text-emerald-950">{editingCollection.link_click_count ?? 0}</strong></span>
+            </div>
         </div>
     )}
 

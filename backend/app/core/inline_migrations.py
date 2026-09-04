@@ -99,8 +99,12 @@ def run_inline_migrations(session: Session) -> None:
         session.exec(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITHOUT TIME ZONE;"))
         session.exec(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS previous_date_start TIMESTAMP WITHOUT TIME ZONE;"))
         session.exec(text("CREATE INDEX IF NOT EXISTS ix_events_is_cancelled ON events (is_cancelled);"))
+    # --- Collection tracking columns ---
+    try:
+        session.exec(text("ALTER TABLE collections ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0 NOT NULL;"))
+        session.exec(text("ALTER TABLE collections ADD COLUMN IF NOT EXISTS link_click_count INTEGER DEFAULT 0 NOT NULL;"))
     except Exception as e:
-        logger.warning(f"Event cancellation migration skipped: {e}")
+        logger.warning(f"Collection tracking migration skipped: {e}")
 
     session.commit()
     logger.info("Inline migrations complete")

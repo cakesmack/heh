@@ -85,6 +85,8 @@ class CollectionUpdate(CollectionBase):
 
 class Collection(CollectionBase):
     id: int
+    view_count: int = 0
+    link_click_count: int = 0
     venues: List[VenueSummary] = []
     total_venue_count: int = 0
 

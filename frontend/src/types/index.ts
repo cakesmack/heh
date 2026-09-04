@@ -840,6 +840,8 @@ export interface Collection {
   organizer_profile_ids?: string[] | null;
   venues?: VenueSummary[];
   total_venue_count?: number;
+  view_count?: number;
+  link_click_count?: number;
 }
 
 export interface CollectionCreate {

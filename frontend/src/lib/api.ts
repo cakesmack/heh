@@ -1614,6 +1614,24 @@ export const collectionsAPI = {
   },
 
   /**
+   * Track collection page view
+   */
+  trackView: async (idOrSlug: string | number): Promise<void> => {
+    return apiFetch<void>(`/api/collections/${idOrSlug}/track-view`, {
+      method: 'POST',
+    }, false);
+  },
+
+  /**
+   * Track collection hero link click
+   */
+  trackClick: async (idOrSlug: string | number): Promise<void> => {
+    return apiFetch<void>(`/api/collections/${idOrSlug}/track-click`, {
+      method: 'POST',
+    }, false);
+  },
+
+  /**
    * Update collection (admin only)
    */
   update: async (id: number, data: CollectionUpdate): Promise<Collection> => {

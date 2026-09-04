@@ -231,6 +231,32 @@ export default function CollectionPage() {
         fetchCollection();
     }, [router.isReady, slug]);
 
+    // Track collection view on mount with sessionStorage deduplication
+    useEffect(() => {
+        if (!collection?.id) return;
+        const sessionKey = `has_viewed_col_${collection.id}`;
+        try {
+            if (!sessionStorage.getItem(sessionKey)) {
+                sessionStorage.setItem(sessionKey, '1');
+                collectionsAPI.trackView(collection.id).catch(err => {
+                    console.error('Failed to track collection view:', err);
+                });
+            }
+        } catch {
+            collectionsAPI.trackView(collection.id).catch(() => {});
+        }
+    }, [collection?.id]);
+
+    const handleExternalLinkClick = useCallback(() => {
+        if (!collection?.id) return;
+        const trackingUrl = `/api/collections/${collection.id}/track-click`;
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+            navigator.sendBeacon(trackingUrl);
+        } else {
+            collectionsAPI.trackClick(collection.id).catch(() => {});
+        }
+    }, [collection?.id]);
+
     // Fetch events when collection is loaded
     const fetchEvents = useCallback(async (filters: EventFilter, append = false, skipOverride?: number) => {
         if (append) {
@@ -421,6 +447,7 @@ export default function CollectionPage() {
                                     href={(collection as any).external_link_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={handleExternalLinkClick}
                                     className="inline-flex items-center px-6 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
                                 >
                                     {(collection as any).external_link_label || 'Learn More'}

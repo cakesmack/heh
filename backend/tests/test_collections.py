@@ -733,5 +733,67 @@ def test_collection_slug_returns_preaggregated_venues(test_db: Session):
         app.dependency_overrides.clear()
 
 
+def test_collection_track_view_and_click(test_db: Session):
+    """
+    Test that POST /api/collections/{id_or_slug}/track-view and
+    POST /api/collections/{id_or_slug}/track-click atomically increment
+    view_count and link_click_count.
+    """
+    col = Collection(
+        title="Tracking Test Collection",
+        target_link="/collections/track-test",
+        slug="track-test",
+        is_active=True,
+        view_count=0,
+        link_click_count=0,
+    )
+    test_db.add(col)
+    test_db.commit()
+    test_db.refresh(col)
+
+    def get_session_override():
+        return test_db
+
+    app.dependency_overrides[get_session] = get_session_override
+    client = TestClient(app)
+
+    try:
+        # 1. Track view by slug
+        res_view_slug = client.post("/api/collections/track-test/track-view")
+        assert res_view_slug.status_code == 200
+        assert res_view_slug.json()["status"] == "ok"
+        assert res_view_slug.json()["view_count"] == 1
+
+        # 2. Track view by ID
+        res_view_id = client.post(f"/api/collections/{col.id}/track-view")
+        assert res_view_id.status_code == 200
+        assert res_view_id.json()["view_count"] == 2
+
+        # 3. Track link click by slug
+        res_click_slug = client.post("/api/collections/track-test/track-click")
+        assert res_click_slug.status_code == 200
+        assert res_click_slug.json()["status"] == "ok"
+        assert res_click_slug.json()["link_click_count"] == 1
+
+        # 4. Track link click by ID
+        res_click_id = client.post(f"/api/collections/{col.id}/track-click")
+        assert res_click_id.status_code == 200
+        assert res_click_id.json()["link_click_count"] == 2
+
+        # 5. Verify database and read endpoint serialization
+        res_get = client.get("/api/collections/slug/track-test")
+        assert res_get.status_code == 200
+        data = res_get.json()
+        assert data["view_count"] == 2
+        assert data["link_click_count"] == 2
+
+        # 6. Verify non-existent returns 404
+        res_404 = client.post("/api/collections/non-existent-slug/track-view")
+        assert res_404.status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+
+
+
 
 

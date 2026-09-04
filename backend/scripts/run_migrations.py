@@ -107,6 +107,9 @@ def run_migrations():
             from app.scripts.backfill_preferences import backfill_preferences
             backfill_preferences()
             print("[SUCCESS] User preferences backfill complete")
+        except Exception as e:
+            print(f"Failed to backfill user preferences: {e}")
+
         # 8. Uncategorized venues migration
         try:
             print("Running uncategorized venues migration...")

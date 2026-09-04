@@ -40,6 +40,8 @@ class Collection(SQLModel, table=True):
     specific_venue_ids: Optional[list] = Field(default=None, sa_column=Column(JSONB))
     enable_venue_filter: bool = Field(default=False)
     organizer_profile_ids: Optional[list] = Field(default=None, sa_column=Column(JSONB))
+    view_count: int = Field(default=0)
+    link_click_count: int = Field(default=0)
 
     @property
     def match_mode(self) -> str:
