@@ -10,9 +10,9 @@ import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
-import { collectionsAPI, categoriesAPI, tagsAPI, eventsAPI } from '@/lib/api';
+import { collectionsAPI, categoriesAPI, tagsAPI, eventsAPI, organizersAPI } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
-import type { Collection, Category, EventResponse } from '@/types';
+import type { Collection, Category, EventResponse, Organizer } from '@/types';
 
 export default function CollectionsManager() {
     const [collections, setCollections] = useState<Collection[]>([]);
@@ -46,6 +46,7 @@ export default function CollectionsManager() {
         stat_3_label: '',
         stat_3_value: '',
         enable_venue_filter: false,
+        organizer_profile_ids: [] as string[],
     });
     const slugManuallyEdited = useRef(false);
     const [saving, setSaving] = useState(false);
@@ -58,6 +59,8 @@ export default function CollectionsManager() {
 
     // Query Builder State
     const [categories, setCategories] = useState<Category[]>([]);
+    const [organizers, setOrganizers] = useState<Organizer[]>([]);
+    const [organizerSearch, setOrganizerSearch] = useState('');
     const [qbState, setQbState] = useState({
         category: [] as string[],
         q: '',
@@ -73,10 +76,24 @@ export default function CollectionsManager() {
         try {
             const [colRes, catRes] = await Promise.all([
                 collectionsAPI.list(),
-                categoriesAPI.list(true)
+                categoriesAPI.list(true),
             ]);
             setCollections(colRes);
             setCategories(catRes.categories || []);
+
+            let allOrganizers: Organizer[] = [];
+            let skip = 0;
+            const limit = 100;
+            while (true) {
+                const orgRes = await organizersAPI.list({ skip, limit });
+                const batch = orgRes?.organizers || [];
+                allOrganizers = [...allOrganizers, ...batch];
+                if (batch.length < limit || allOrganizers.length >= (orgRes?.total ?? 0)) {
+                    break;
+                }
+                skip += limit;
+            }
+            setOrganizers(allOrganizers);
         } catch (err) {
             console.error('Failed to fetch data:', err);
         } finally {
@@ -121,7 +138,9 @@ export default function CollectionsManager() {
             stat_3_label: '',
             stat_3_value: '',
             enable_venue_filter: false,
+            organizer_profile_ids: [],
         });
+        setOrganizerSearch('');
         setQbState({
             category: [],
             q: '',
@@ -182,7 +201,9 @@ export default function CollectionsManager() {
             stat_3_label: collection.stat_3_label || '',
             stat_3_value: collection.stat_3_value || '',
             enable_venue_filter: collection.enable_venue_filter ?? false,
+            organizer_profile_ids: collection.organizer_profile_ids || [],
         });
+        setOrganizerSearch('');
 
         // Initialize QB State from filter_params FIRST (JSON-first architecture)
         if (collection.filter_params) {
@@ -322,6 +343,9 @@ export default function CollectionsManager() {
 
         try {
             const finalFormData = { ...formData };
+            if (finalFormData.organizer_profile_ids && finalFormData.organizer_profile_ids.length === 0) {
+                finalFormData.organizer_profile_ids = null as any;
+            }
             if (finalFormData.filter_params) {
                 finalFormData.filter_params = { ...finalFormData.filter_params };
             }
@@ -705,6 +729,62 @@ export default function CollectionsManager() {
                                     </div>
                                 </div>
 
+                                {/* Organizers Filter */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-xs font-medium text-gray-500">
+                                            Organizers {(formData.organizer_profile_ids || []).length > 0 && (
+                                                <span className="ml-1 px-1.5 py-0.5 text-xs bg-emerald-100 text-emerald-800 rounded-full font-semibold">
+                                                    {(formData.organizer_profile_ids || []).length}
+                                                </span>
+                                            )}
+                                        </label>
+                                        {(formData.organizer_profile_ids || []).length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, organizer_profile_ids: [] }))}
+                                                className="text-xs text-red-500 hover:text-red-700"
+                                            >
+                                                Clear
+                                            </button>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={organizerSearch}
+                                        onChange={(e) => setOrganizerSearch(e.target.value)}
+                                        className="w-full mb-1 px-2 py-1 text-xs border rounded focus:ring-1 focus:ring-emerald-500"
+                                        placeholder="Search organizers..."
+                                    />
+                                    <div className="max-h-36 overflow-y-auto border rounded p-2 space-y-1 bg-gray-50">
+                                        {organizers
+                                            .filter(org => !organizerSearch || org.name.toLowerCase().includes(organizerSearch.toLowerCase()))
+                                            .map(org => {
+                                                const selected = (formData.organizer_profile_ids || []).includes(org.id);
+                                                return (
+                                                    <label key={org.id} className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer hover:bg-white px-1 rounded">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selected}
+                                                            onChange={(e) => {
+                                                                const current = formData.organizer_profile_ids || [];
+                                                                const updated = e.target.checked
+                                                                    ? [...current, org.id]
+                                                                    : current.filter(id => id !== org.id);
+                                                                setFormData(prev => ({ ...prev, organizer_profile_ids: updated }));
+                                                            }}
+                                                            className="rounded text-emerald-600 focus:ring-emerald-500"
+                                                        />
+                                                        <span className="truncate">{org.name}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        {organizers.filter(org => !organizerSearch || org.name.toLowerCase().includes(organizerSearch.toLowerCase())).length === 0 && (
+                                            <p className="text-xs text-gray-400 py-1 text-center">No organizers found</p>
+                                        )}
+                                    </div>
+                                </div>
+
                                 {/* Search Query */}
                                 <div>
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Search Keywords (Title/Desc)</label>
@@ -837,6 +917,9 @@ export default function CollectionsManager() {
                                                     // Build filters from current qbState (without excludes, so we see all matches)
                                                     const filters: Record<string, any> = { limit: 100 };
                                                     if (qbState.category.length > 0) filters.category_ids = qbState.category;
+                                                    if (formData.organizer_profile_ids && formData.organizer_profile_ids.length > 0) {
+                                                        filters.organizer_profile_ids = formData.organizer_profile_ids.join(',');
+                                                    }
                                                     if (qbState.q) filters.q = qbState.q;
                                                     if (qbState.combine_operator) filters.combine_operator = qbState.combine_operator;
                                                     if (qbState.age) filters.age_restriction = qbState.age;

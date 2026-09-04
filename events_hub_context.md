@@ -197,6 +197,7 @@
 | `description` | `Text` | long-form |
 | `filter_params` | `JSONB` | structured filter definition: category, tags, `filter_mode` (`AND` / `OR`), `exclude_age_restrictions` (`bool`), `exclude_event_ids` (`str[]`) |
 | `enable_venue_filter` | `bool` | optional toggle to generate compact venue dropdown filter (ideal for festivals) |
+| `organizer_profile_ids` | `JSONB` | optional list of organizer profile UUIDs (hex string) to strictly filter collection events |
 
 ---
 
@@ -402,6 +403,10 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
     - **Curated Collections Venue Filter Dropdown (`enable_venue_filter`)**:
       - **Admin Toggle (`CollectionsManager.tsx`)**: Configurable checkbox/toggle under "Filter Configuration" with helper text ("Dynamically generates a venue dropdown filter on the public collection page. Ideal for multi-venue festivals."). Stored in PostgreSQL `collections.enable_venue_filter` (`BOOLEAN DEFAULT false`, migration `c3d4e5f6a7b8`).
       - **Space-Optimized Dropdown (`pages/collections/[slug].tsx`)**: Dynamically extracts and alphabetizes unique venues from loaded collection events. Renders a compact `<select>` pill dropdown inline with `DateFilterPills` (flex-aligned to the right on desktop, stacked on mobile) avoiding extra filter rows. Filters in memory (`event.venue_name || event.venue?.name === selectedVenue`) without network requests.
+    - **Curated Collections Organizer Profile Filter (`organizer_profile_ids`)**:
+      - **Admin Multi-Select (`CollectionsManager.tsx`)**: Searchable multi-select organizer selector in the "Filter Configuration" sidebar. Displays selected count badge, clear button, and filter search input bound to `formData.organizer_profile_ids`. Stored in PostgreSQL `collections.organizer_profile_ids` (`JSONB`, nullable, migration `d4e5f6a7b8c9`). Included in the visual preview query.
+      - **Backend Event Filtering (`backend/app/api/events.py` & `backend/app/api/collections.py`)**: Supports `organizer_profile_ids` query parameter as comma-separated hex strings (normalized via `normalize_uuid`) and filters with `Event.organizer_profile_id.in_(...)`. Added `GET /api/collections/slug/{slug}/events` for direct collection events retrieval.
+      - **Public Collection Page (`pages/collections/[slug].tsx`)**: Passes configured `collection.organizer_profile_ids` into `baseFilters` during initial load and infinite scroll pagination.
   - **Single-Session / 36-Hour Constraint (Permanent Platform Safeguard)**:
     - **Frontend Event Wizard**: Step 1 displays micro-copy note outlining the single-event / overnight limit. Step 2 automatically locks pattern selection to "One-Off Event", greys out and disables "Recurring Event" and "Various Dates & Times" with an "Unavailable with Native Ticketing" badge and informative toast, shows an inline duration warning, and disables the "Next" button if duration exceeds 36 hours.
     - **Backend API**: `POST /api/events` and `PUT /api/events/{id}` strictly validate that any ticketed event is non-recurring (`is_recurring == False`, `recurrence_rule == None`, `frequency == None`, and empty `showtimes`) and that duration `(date_end - date_start) <= 36 hours` (allowing overnight sessions up to 36 hours), raising HTTP 400 otherwise.

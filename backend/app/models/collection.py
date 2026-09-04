@@ -39,3 +39,4 @@ class Collection(SQLModel, table=True):
     stat_3_value: Optional[str] = Field(default=None, max_length=100)
     specific_venue_ids: Optional[list] = Field(default=None, sa_column=Column(JSONB))
     enable_venue_filter: bool = Field(default=False)
+    organizer_profile_ids: Optional[list] = Field(default=None, sa_column=Column(JSONB))

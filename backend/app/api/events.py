@@ -538,6 +538,7 @@ def list_events(
     featured_only: bool = False,
     organizer_id: Optional[str] = Query(None, description="Filter by organizer ID"),
     organizer_profile_id: Optional[str] = Query(None, description="Filter by organizer profile (group) ID"),
+    organizer_profile_ids: Optional[str] = Query(None, description="Filter by comma-separated organizer profile (group) IDs"),
     venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
     include_past: bool = Query(False, description="Include past events"),
     status: Optional[str] = Query(None, description="Filter by explicit status (e.g. 'pending')"),
@@ -1069,6 +1070,11 @@ def list_events(
     # Filter by organizer profile (group)
     if organizer_profile_id:
         query = query.where(Event.organizer_profile_id == normalize_uuid(organizer_profile_id))
+
+    if organizer_profile_ids:
+        org_profile_ids_list = [normalize_uuid(oid.strip()) for oid in organizer_profile_ids.split(",") if oid.strip()]
+        if org_profile_ids_list:
+            query = query.where(Event.organizer_profile_id.in_(org_profile_ids_list))
 
     # Determine if we are performing a radius search (Near Me)
     is_radius_search = latitude is not None and longitude is not None and radius_km is not None

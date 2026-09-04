@@ -24,7 +24,7 @@ router = APIRouter(tags=["Organizers"])
 @router.get("", response_model=OrganizerListResponse)
 def list_organizers(
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=100),
+    limit: int = Query(default=50, ge=1, le=500),
     user_id: Optional[str] = None,
     city: Optional[str] = None,
     group_type: Optional[str] = None,

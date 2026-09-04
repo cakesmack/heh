@@ -1,11 +1,14 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
+from sqlalchemy import func
 
 from app.core.database import get_session
 from app.core.security import get_current_user
+from app.core.utils import normalize_uuid
 from app.models.user import User
 from app.models.collection import Collection
+from app.models.event import Event
 from app.schemas.collection import CollectionCreate, CollectionUpdate, Collection as CollectionSchema
 
 router = APIRouter(tags=["Collections"])
@@ -41,6 +44,38 @@ def get_collection_by_slug(
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
     return collection
+
+@router.get("/slug/{slug}/events")
+def get_collection_events(
+    slug: str,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=24, ge=1, le=1000),
+    session: Session = Depends(get_session)
+):
+    """
+    Get populated events for a specific collection by URL slug.
+    If organizer_profile_ids is configured, strictly filters to those organizers.
+    """
+    collection = session.exec(
+        select(Collection).where(Collection.slug == slug, Collection.is_active == True)
+    ).first()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    query = select(Event).where(Event.status == "published")
+    if collection.organizer_profile_ids:
+        normalized_org_ids = [normalize_uuid(oid) for oid in collection.organizer_profile_ids if oid]
+        if normalized_org_ids:
+            query = query.where(Event.organizer_profile_id.in_(normalized_org_ids))
+
+    count_query = select(func.count()).select_from(query.subquery())
+    total = session.exec(count_query).one()
+
+    events_query = query.order_by(Event.date_start).offset(skip).limit(limit)
+    events = session.exec(events_query).all()
+
+    return {"events": events, "total": total, "skip": skip, "limit": limit}
+
 @router.post("", response_model=CollectionSchema, status_code=status.HTTP_201_CREATED)
 def create_collection(
     collection_data: CollectionCreate,

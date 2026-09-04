@@ -258,12 +258,15 @@ export default function CollectionPage() {
     useEffect(() => {
         if (!collection) return;
 
-        if (collection.filter_params && Object.keys(collection.filter_params).length > 0) {
-            const baseFilters = buildEventFilter(collection.filter_params);
-            fetchEvents(baseFilters);
-        } else {
-            fetchEvents({});
+        const baseFilters = (collection.filter_params && Object.keys(collection.filter_params).length > 0)
+            ? buildEventFilter(collection.filter_params)
+            : {};
+
+        if (collection.organizer_profile_ids && collection.organizer_profile_ids.length > 0) {
+            baseFilters.organizer_profile_ids = collection.organizer_profile_ids.join(',');
         }
+
+        fetchEvents(baseFilters);
     }, [collection, fetchEvents]);
 
     // Infinite scroll observer

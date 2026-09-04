@@ -495,6 +495,7 @@ export interface EventFilter {
   featured_only?: boolean;
   organizer_id?: string;
   organizer_profile_id?: string;
+  organizer_profile_ids?: string[] | string;
   max_duration_days?: number;
   include_past?: boolean;
   skip?: number;
@@ -829,6 +830,7 @@ export interface Collection {
   stat_3_value?: string;
   specific_venue_ids?: string[];
   enable_venue_filter?: boolean;
+  organizer_profile_ids?: string[] | null;
 }
 
 export interface CollectionCreate {
@@ -856,6 +858,7 @@ export interface CollectionCreate {
   stat_3_value?: string;
   specific_venue_ids?: string[];
   enable_venue_filter?: boolean;
+  organizer_profile_ids?: string[] | null;
 }
 
 export interface CollectionUpdate {
@@ -883,6 +886,7 @@ export interface CollectionUpdate {
   stat_3_value?: string;
   specific_venue_ids?: string[];
   enable_venue_filter?: boolean;
+  organizer_profile_ids?: string[] | null;
 }
 
 // ============================================================

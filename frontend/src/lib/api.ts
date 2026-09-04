@@ -1636,6 +1636,14 @@ export const collectionsAPI = {
       method: 'POST',
     });
   },
+
+  /**
+   * Get populated events for a collection by its URL slug
+   */
+  getEvents: async (slug: string, params?: { skip?: number; limit?: number }): Promise<{ events: any[]; total: number; skip: number; limit: number }> => {
+    const query = params ? buildQueryString(params) : '';
+    return apiFetch<{ events: any[]; total: number; skip: number; limit: number }>(`/api/collections/slug/${slug}/events${query}`, {}, false);
+  },
 };
 
 // ============================================================
@@ -1925,6 +1933,7 @@ export interface SellerStatusResponse {
 }
 
 export const sellersAPI = api.sellers;
+export const organizersAPI = api.organizers;
 
 export default api;
 // ============================================================
