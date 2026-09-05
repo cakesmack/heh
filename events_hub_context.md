@@ -494,3 +494,17 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - `GET /api/events/map` and alias `GET /api/map/events` accept `collection_id` (ID or slug) and mirror the collection page query engine.
   - Injects strict root-level AND filter `Event.organizer_profile_id.in_(collection.organizer_profile_ids)` when the collection specifies target organizers, isolating them from flexible OR keyword/category match modes.
   - Frontend interactive map (`map.tsx`) passes `collection_id` directly in `eventFilters` upon collection dropdown selection.
+
+## 12. Curated Collections Dynamic Open Graph & Social Sharing Metadata
+
+- **Dynamic Server-Side Metadata Resolution (`frontend/src/pages/collections/[slug].tsx`):**
+  - Uses `getServerSideProps` to fetch collection records on demand during SSR, converting `/collections/[slug]` to dynamic SSR (`λ`). This ensures external social crawlers (Facebook `facebookexternalhit`, Twitter/X `Twitterbot`, WhatsApp, LinkedInBot) receive fully-populated meta tags directly in the initial HTTP response without executing client-side JavaScript.
+  - Passes `initialCollection` and `meta` (title, description, canonical url, image, type) to `_app.tsx` and `CollectionPage` to immediately hydrate the view with zero loading spinner flicker.
+  - Exports `generateMetadata` returning Next.js `Metadata` containing Open Graph (`title`, `description`, `url`, `siteName`, `images` with 1200x630 dimensions, `type: 'website'`) and Twitter Card (`summary_large_image`, `title`, `description`, `images`).
+  - Preview Image Priority:
+    1. Collection-specific logo or hero banner (`image_url`, `featured_image`, or `logo_url`).
+    2. Cloudflare image optimization via `optimizeImage(..., 'og')` targeting 1200x630 resolution.
+    3. Fully-qualified URL resolution (protocol + production domain `https://highlandeventshub.co.uk`).
+    4. Site-wide default fallback (`https://highlandeventshub.co.uk/images/og-preview.jpg?v=3`).
+  - Implements complete Open Graph and Twitter Card `<meta>` tags in `<Head>` with matching `key` attributes for Next.js deduplication against `_app.tsx`.
+

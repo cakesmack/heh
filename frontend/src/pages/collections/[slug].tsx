@@ -13,7 +13,7 @@ import { EventList } from '@/components/events/EventList';
 import { Spinner } from '@/components/common/Spinner';
 import { DateFilterPills } from '@/components/events/DateFilterPills';
 import { CategoryFilterPills } from '@/components/categories/CategoryFilterPills';
-import type { Metadata } from 'next';
+import type { Metadata, GetServerSideProps } from 'next';
 import type { Collection, EventFilter, EventResponse } from '@/types';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
@@ -94,30 +94,132 @@ function mergeFilters(base: EventFilter, user: EventFilter): EventFilter {
     return merged;
 }
 
+export interface CollectionPageProps {
+    initialCollection?: Collection | null;
+    meta?: {
+        title: string;
+        description: string;
+        url: string;
+        image: string;
+        type: string;
+    };
+}
+
 /**
- * Dynamic metadata generation for independent indexing (Next.js alternates.canonical config).
+ * Resolves fully-qualified preview image URL for Open Graph and Twitter Cards.
+ * Priority:
+ * 1. Collection-specific logo or hero banner (image_url, featured_image, logo_url)
+ * 2. Absolute URL formatting (protocol + domain)
+ * 3. Site-wide default fallback
+ */
+export function resolveCollectionOgImage(
+    collection: Collection | null | undefined,
+    siteUrl: string = 'https://highlandeventshub.co.uk'
+): string {
+    const rawImage = collection?.image_url || collection?.featured_image || collection?.logo_url;
+    if (!rawImage) {
+        return `${siteUrl}/images/og-preview.jpg?v=3`;
+    }
+
+    const optimized = optimizeImage(rawImage, 'og');
+    if (!optimized) {
+        return `${siteUrl}/images/og-preview.jpg?v=3`;
+    }
+
+    if (optimized.startsWith('http://') || optimized.startsWith('https://')) {
+        return optimized;
+    }
+
+    const cleanPath = optimized.startsWith('/') ? optimized : `/${optimized}`;
+    return `${siteUrl}${cleanPath}`;
+}
+
+/**
+ * Fetch a single collection by slug directly from the backend API.
+ */
+export async function getCollectionBySlug(slug: string): Promise<Collection | null> {
+    try {
+        const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8003';
+        const res = await fetch(`${apiUrl}/api/collections/slug/${slug}`);
+        if (res.ok) {
+            return await res.json();
+        }
+        return await collectionsAPI.getBySlug(slug);
+    } catch {
+        try {
+            return await collectionsAPI.getBySlug(slug);
+        } catch {
+            return null;
+        }
+    }
+}
+
+/**
+ * Dynamic metadata generation for Next.js / social share indexers.
  */
 export async function generateMetadata({
     params
 }: {
     params: { slug: string };
 }): Promise<Metadata> {
-    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
+    const siteUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://highlandeventshub.co.uk').replace(/\/$/, '');
+    const collection = await getCollectionBySlug(params.slug);
+    if (!collection) {
+        return {
+            alternates: {
+                canonical: `${siteUrl}/collections/${params.slug}`
+            }
+        };
+    }
+
+    const imageUrl = resolveCollectionOgImage(collection, siteUrl);
+    const title = `${collection.seo_title || collection.title} | Highland Events Hub`;
+    const description = (
+        collection.seo_description ||
+        collection.subtitle ||
+        collection.meta_description ||
+        collection.description ||
+        'Curated collection of events across the Scottish Highlands on Highland Events Hub.'
+    ).trim();
+
     return {
+        title,
+        description,
         alternates: {
             canonical: `${siteUrl}/collections/${params.slug}`
-        }
+        },
+        openGraph: {
+            title: collection.title,
+            description: collection.subtitle || collection.description || description,
+            url: `${siteUrl}/collections/${params.slug}`,
+            siteName: 'Highland Events Hub',
+            images: [
+                {
+                    url: imageUrl,
+                    width: 1200,
+                    height: 630,
+                    alt: collection.title,
+                },
+            ],
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: collection.title,
+            description: collection.subtitle || collection.description || description,
+            images: [imageUrl],
+        },
     };
 }
 
 
-export default function CollectionPage() {
+export default function CollectionPage({ initialCollection }: CollectionPageProps) {
     const router = useRouter();
     const { slug } = router.query;
 
     // Collection state
-    const [collection, setCollection] = useState<Collection | null>(null);
-    const [collectionLoading, setCollectionLoading] = useState(true);
+    const [collection, setCollection] = useState<Collection | null>(initialCollection || null);
+    const [collectionLoading, setCollectionLoading] = useState(!initialCollection);
     const [notFound, setNotFound] = useState(false);
 
     // Events state
@@ -195,8 +297,19 @@ export default function CollectionPage() {
         });
     }, [events, selectedCategoryId, selectedDateFilter, selectedVenue]);
 
-    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandeventshub.co.uk';
-    const canonicalUrl = collection ? `${siteUrl.replace(/\/$/, '')}/collections/${collection.slug}` : '';
+    const siteUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://highlandeventshub.co.uk').replace(/\/$/, '');
+    const currentSlug = collection?.slug || (typeof slug === 'string' ? slug : '');
+    const canonicalUrl = currentSlug ? `${siteUrl}/collections/${currentSlug}` : '';
+    const ogTitle = collection?.seo_title || collection?.title || 'Curated Collection';
+    const pageTitle = `${ogTitle} | Highland Events Hub`;
+    const metaDescription = (
+        collection?.seo_description ||
+        collection?.subtitle ||
+        collection?.meta_description ||
+        collection?.description ||
+        'Curated collection of events across the Scottish Highlands on Highland Events Hub.'
+    ).trim();
+    const ogImage = resolveCollectionOgImage(collection, siteUrl);
 
     // Infinite scroll
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -205,9 +318,13 @@ export default function CollectionPage() {
     // Prevent infinite loop on fetchEvents
     const initialFiltersSet = useRef(false);
 
-    // Fetch collection by slug
+    // Fetch collection by slug (fallback/hydration if not provided via SSR or if route changes)
     useEffect(() => {
         if (!router.isReady || !slug) return;
+        if (collection && collection.slug === slug) {
+            setCollectionLoading(false);
+            return;
+        }
 
         initialFiltersSet.current = false;
 
@@ -373,12 +490,28 @@ export default function CollectionPage() {
     return (
         <div className="min-h-screen bg-white">
             <Head>
-                <title>{(collection as any).seo_title || collection.title} | Highland Events Hub</title>
-                {/* Fallback to seo_description, then subtitle, then description */}
-                {((collection as any).seo_description || collection.subtitle || collection.description) && (
-                    <meta name="description" content={((collection as any).seo_description || collection.subtitle || collection.description)} />
-                )}
+                <title>{pageTitle}</title>
+                <meta name="description" content={metaDescription} key="description" />
                 {canonicalUrl && <link rel="canonical" href={canonicalUrl} key="canonical" />}
+
+                {/* Open Graph / Facebook */}
+                <meta property="og:type" content="website" key="og-type" />
+                <meta property="og:site_name" content="Highland Events Hub" key="og-site-name" />
+                <meta property="og:url" content={canonicalUrl} key="og-url" />
+                <meta property="og:title" content={ogTitle} key="og-title" />
+                <meta property="og:description" content={collection.subtitle || collection.description || metaDescription} key="og-description" />
+                <meta property="og:image" content={ogImage} key="og-image" />
+                <meta property="og:image:secure_url" content={ogImage} key="og-image-secure-url" />
+                <meta property="og:image:width" content="1200" key="og-image-width" />
+                <meta property="og:image:height" content="630" key="og-image-height" />
+                <meta property="og:image:alt" content={collection.title} key="og-image-alt" />
+
+                {/* Twitter */}
+                <meta name="twitter:card" content="summary_large_image" key="twitter-card" />
+                <meta name="twitter:site" content="@HighlandEvents" key="twitter-site" />
+                <meta name="twitter:title" content={ogTitle} key="twitter-title" />
+                <meta name="twitter:description" content={collection.subtitle || collection.description || metaDescription} key="twitter-description" />
+                <meta name="twitter:image" content={ogImage} key="twitter-image" />
             </Head>
 
             {/* SECTION 1: HERO - ONLY PLACE FOR SHORT DESCRIPTION */}
@@ -586,3 +719,45 @@ export default function CollectionPage() {
         </div>
     );
 }
+
+export const getServerSideProps: GetServerSideProps<CollectionPageProps> = async (context) => {
+    const { slug } = context.params as { slug: string };
+
+    try {
+        const collection = await getCollectionBySlug(slug);
+        if (!collection || !collection.is_active) {
+            return { notFound: true };
+        }
+
+        const siteUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://highlandeventshub.co.uk').replace(/\/$/, '');
+        const canonicalUrl = `${siteUrl}/collections/${collection.slug || slug}`;
+        const ogTitle = collection.seo_title || collection.title;
+        const pageTitle = `${ogTitle} | Highland Events Hub`;
+        const metaDescription = (
+            collection.seo_description ||
+            collection.subtitle ||
+            collection.meta_description ||
+            collection.description ||
+            'Curated collection of events across the Scottish Highlands on Highland Events Hub.'
+        ).trim();
+
+        const ogImage = resolveCollectionOgImage(collection, siteUrl);
+
+        return {
+            props: {
+                initialCollection: collection,
+                meta: {
+                    title: pageTitle,
+                    description: metaDescription,
+                    url: canonicalUrl,
+                    image: ogImage,
+                    type: 'website',
+                },
+            },
+        };
+    } catch (error) {
+        console.error('SSR Error fetching collection:', error);
+        return { notFound: true };
+    }
+};
+

@@ -825,6 +825,12 @@ export interface Collection {
   fixed_end_date?: string;
   slug?: string;
   description?: string;
+  long_description?: string;
+  seo_title?: string;
+  seo_description?: string;
+  meta_description?: string;
+  featured_image?: string;
+  logo_url?: string;
   filter_params?: Record<string, any> | null;
   
   // Hero Customization & Stats (Optional)
