@@ -488,3 +488,7 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - External link click tracking fires non-blocking asynchronous `fetch` with `keepalive: true` (falling back to `navigator.sendBeacon`) pointing to `${NEXT_PUBLIC_API_URL}/api/collections/${collection.id}/track-click/` with trailing slash, avoiding Next.js edge 308 redirects while keeping external tab navigation instantaneous.
 - **Admin Visibility:**
   - Total views and outbound clicks are rendered in the `/admin/collections` DataTable "Stats" column and the collection edit modal analytics banner.
+- **Interactive Map Strict Collection Parity:**
+  - `GET /api/events/map` and alias `GET /api/map/events` accept `collection_id` (ID or slug) and mirror the collection page query engine.
+  - Injects strict root-level AND filter `Event.organizer_profile_id.in_(collection.organizer_profile_ids)` when the collection specifies target organizers, isolating them from flexible OR keyword/category match modes.
+  - Frontend interactive map (`map.tsx`) passes `collection_id` directly in `eventFilters` upon collection dropdown selection.

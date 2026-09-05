@@ -794,6 +794,127 @@ def test_collection_track_view_and_click(test_db: Session):
         app.dependency_overrides.clear()
 
 
+def test_map_events_strict_organizer_isolation(test_db: Session):
+    """
+    Verify that interactive map endpoints (/api/events/map and /api/map/events)
+    strictly enforce organizer_profile_ids boundary when a collection is selected,
+    preventing flexible OR conditions (categories/keywords) from leaking events.
+    """
+    from datetime import datetime, timezone, timedelta
+    from app.models.event import Event
+    from app.models.category import Category
+
+    admin_user = User(
+        id=normalize_uuid(str(uuid4())),
+        email="admin_map@highlandevents.co.uk",
+        username="mapadmin",
+        is_admin=True,
+    )
+    test_db.add(admin_user)
+
+    cat_music = Category(
+        id=normalize_uuid(str(uuid4())),
+        name="Map Music",
+        slug="map-music",
+    )
+    test_db.add(cat_music)
+
+    org_target = normalize_uuid(str(uuid4()))
+    org_leak = normalize_uuid(str(uuid4()))
+
+    now = datetime.now(timezone.utc)
+    future_start = now + timedelta(days=2)
+    future_end = now + timedelta(days=2, hours=3)
+
+    # Event 1: Target organizer (Matches organizer + category in OR)
+    ev_target = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="Target Fringe Concert",
+        slug="target-fringe-concert",
+        date_start=future_start,
+        date_end=future_end,
+        organizer_id=admin_user.id,
+        organizer_profile_id=org_target,
+        category_id=cat_music.id,
+        status="published",
+        latitude=57.4778,
+        longitude=-4.2247,
+    )
+    # Event 2: Leak organizer (Matches category + keyword in OR, but wrong organizer)
+    ev_leak = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="Leak Fringe Concert",
+        slug="leak-fringe-concert",
+        description="A Fringe event by another organizer",
+        date_start=future_start,
+        date_end=future_end,
+        organizer_id=admin_user.id,
+        organizer_profile_id=org_leak,
+        category_id=cat_music.id,
+        status="published",
+        latitude=57.4778,
+        longitude=-4.2247,
+    )
+    test_db.add(ev_target)
+    test_db.add(ev_leak)
+    test_db.commit()
+
+    col = Collection(
+        title="Strict Map Collection",
+        target_link="/collections/strict-map",
+        slug="strict-map",
+        is_active=True,
+        organizer_profile_ids=[org_target],
+        filter_params={
+            "category": "map-music",
+            "q": "Fringe",
+            "match_mode": "OR",
+        },
+    )
+    test_db.add(col)
+    test_db.commit()
+    test_db.refresh(col)
+
+    def get_session_override():
+        return test_db
+
+    app.dependency_overrides[get_session] = get_session_override
+    client = TestClient(app)
+
+    try:
+        # 1. Test /api/events/map with collection_id (int)
+        res_map_id = client.get(f"/api/events/map?collection_id={col.id}")
+        assert res_map_id.status_code == 200
+        event_ids_map_id = [normalize_uuid(e["id"]) for e in res_map_id.json()]
+        assert normalize_uuid(ev_target.id) in event_ids_map_id
+        assert normalize_uuid(ev_leak.id) not in event_ids_map_id
+
+        # 2. Test /api/events/map with collection slug
+        res_map_slug = client.get(f"/api/events/map?collection_id={col.slug}")
+        assert res_map_slug.status_code == 200
+        event_ids_map_slug = [normalize_uuid(e["id"]) for e in res_map_slug.json()]
+        assert normalize_uuid(ev_target.id) in event_ids_map_slug
+        assert normalize_uuid(ev_leak.id) not in event_ids_map_slug
+
+        # 3. Test /api/map/events alias endpoint
+        res_alias = client.get(f"/api/map/events?collection_id={col.id}")
+        assert res_alias.status_code == 200
+        event_ids_alias = [normalize_uuid(e["id"]) for e in res_alias.json()]
+        assert normalize_uuid(ev_target.id) in event_ids_alias
+        assert normalize_uuid(ev_leak.id) not in event_ids_alias
+
+        # 4. Verify exact parity with collection page endpoint
+        res_col = client.get(f"/api/collections/slug/{col.slug}/events")
+        assert res_col.status_code == 200
+        col_event_ids = [normalize_uuid(e["id"]) for e in res_col.json()["events"]]
+        assert normalize_uuid(ev_target.id) in col_event_ids
+        assert normalize_uuid(ev_leak.id) not in col_event_ids
+        assert set(event_ids_map_id) == set(col_event_ids)
+    finally:
+        app.dependency_overrides.clear()
+
+
+
 
 
 

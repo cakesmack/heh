@@ -508,6 +508,8 @@ export interface EventFilter {
   city_filter?: string;
   exclude_age_restrictions?: string[];
   exclude_event_ids?: string[];
+  collection_id?: number | string;
+  collection_slug?: string;
 }
 
 export interface EventListResponse {

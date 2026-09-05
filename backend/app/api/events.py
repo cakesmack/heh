@@ -417,6 +417,7 @@ def list_events_map(
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     category_id: Optional[str] = None,
+    collection_id: Optional[str] = Query(None, description="Filter by collection ID or slug"),
     latitude: Optional[float] = Query(None, description="User latitude"),
     longitude: Optional[float] = Query(None, description="User longitude"),
     radius_miles: Optional[float] = Query(None, alias="radius", description="Search radius in miles"),
@@ -426,8 +427,10 @@ def list_events_map(
     """
     Lean endpoint for Map View. Returns flattened list of events.
     Optimized for performance: selects only essential columns.
+    Enforces strict organizer_profile_ids boundary when collection_id is provided.
     """
     from sqlalchemy.orm import selectinload
+    from app.models.collection import Collection
     
     # 1. Base Query with minimal relationships (Join Category for color/name)
     query = select(Event).options(
@@ -438,51 +441,151 @@ def list_events_map(
     # 2. Status Filter
     query = query.where(Event.status == "published", Event.is_cancelled == False)
     
-    # 3. Date Filter (Simplified: Overlap logic)
-    if not date_from:
-        date_from = datetime.utcnow()
+    # 3. Collection Resolution
+    selected_collection = None
+    if collection_id:
+        if str(collection_id).isdigit():
+            col_id = int(collection_id)
+            selected_collection = session.exec(
+                select(Collection).where(or_(Collection.id == col_id, Collection.slug == str(collection_id)))
+            ).first()
+        else:
+            selected_collection = session.exec(
+                select(Collection).where(Collection.slug == str(collection_id))
+            ).first()
+
+    # 4. Strict Root-Level Organizer Boundary (AND condition)
+    if selected_collection and selected_collection.organizer_profile_ids:
+        raw_org_ids = [str(oid).strip() for oid in selected_collection.organizer_profile_ids if oid]
+        ids_to_match = list(set(raw_org_ids + [normalize_uuid(oid) for oid in raw_org_ids]))
+        if ids_to_match:
+            query = query.where(Event.organizer_profile_id.in_(ids_to_match))
+
+    if selected_collection and selected_collection.specific_venue_ids:
+        venue_ids = [normalize_uuid(vid) for vid in selected_collection.specific_venue_ids if vid]
+        if venue_ids:
+            query = query.where(Event.venue_id.in_(venue_ids))
+
+    # 5. Date Filter (Simplified: Overlap logic)
+    effective_date_from = date_from
+    effective_date_to = date_to
+    if selected_collection:
+        if selected_collection.fixed_start_date and not date_from:
+            effective_date_from = datetime.combine(selected_collection.fixed_start_date, datetime.min.time())
+        if selected_collection.fixed_end_date and not date_to:
+            effective_date_to = datetime.combine(selected_collection.fixed_end_date, datetime.max.time())
+
+    if not effective_date_from:
+        effective_date_from = datetime.utcnow()
         
-    if date_to:
+    if effective_date_to:
          # Overlap: start <= to AND end >= from
-        query = query.where((Event.date_start <= date_to) & (Event.date_end >= date_from))
+        query = query.where((Event.date_start <= effective_date_to) & (Event.date_end >= effective_date_from))
     else:
         # Just upcoming
-        query = query.where(Event.date_end >= date_from)
+        query = query.where(Event.date_end >= effective_date_from)
         
-    # 4. Category Filter
-    if category_id:
-        query = query.where(Event.category_id == normalize_uuid(category_id))
-        
+    # 6. Flexible Category and Keyword Logic
+    filter_params = (selected_collection.filter_params or {}) if selected_collection else {}
+    match_mode = getattr(selected_collection, "match_mode", None) if selected_collection else None
+    if selected_collection and not match_mode:
+        match_mode = (filter_params.get("combine_operator") or filter_params.get("match_mode") or "and").upper()
+
+    category_conditions = []
+    keyword_conditions = []
+
+    # Category conditions
+    raw_cats = filter_params.get("category_ids") or filter_params.get("category") or []
+    if isinstance(raw_cats, str):
+        raw_cats = [c.strip() for c in raw_cats.split(",") if c.strip()]
+    if category_id and not raw_cats:
+        raw_cats = [category_id]
+
+    if raw_cats:
+        cat_ids = []
+        for item in raw_cats:
+            item_str = str(item).strip()
+            norm = normalize_uuid(item_str)
+            if len(norm) == 32 and all(c in "0123456789abcdefABCDEF" for c in norm):
+                cat_ids.append(norm)
+            else:
+                cat = session.exec(
+                    select(Category).where(
+                        (Category.slug == item_str.lower()) |
+                        (func.lower(Category.name) == item_str.lower())
+                    )
+                ).first()
+                if cat:
+                    cat_ids.append(cat.id)
+        if cat_ids:
+            category_conditions.append(Event.category_id.in_(cat_ids))
+
+    # Keyword conditions
+    collection_q = filter_params.get("q")
+    effective_q = collection_q if collection_q else q
+    if effective_q and str(effective_q).strip():
+        search_term = f"%{str(effective_q).strip()}%"
+        query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+        query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
+        query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
+
+        keyword_conditions.append(
+            or_(
+                Event.title.ilike(search_term),
+                Event.description.ilike(search_term),
+                Event.location_name.ilike(search_term),
+                Event.address_full.ilike(search_term),
+                Venue.name.ilike(search_term),
+                Venue.address.ilike(search_term),
+                Tag.name.ilike(search_term),
+            )
+        )
+
+    # Apply flexible keyword/category logic
+    keyword_block = or_(*keyword_conditions) if len(keyword_conditions) > 1 else (keyword_conditions[0] if keyword_conditions else None)
+    category_block = or_(*category_conditions) if len(category_conditions) > 1 else (category_conditions[0] if category_conditions else None)
+
+    if keyword_block is not None and category_block is not None:
+        if match_mode == "OR":
+            query = query.where(or_(keyword_block, category_block))
+        else:
+            query = query.where(and_(keyword_block, category_block))
+    elif keyword_block is not None:
+        query = query.where(keyword_block)
+    elif category_block is not None:
+        query = query.where(category_block)
+
+    if keyword_conditions:
+        query = query.distinct()
+
+    # 7. Collection Exclusions
+    if selected_collection:
+        exclude_events = filter_params.get("exclude_event_ids")
+        if exclude_events:
+            if isinstance(exclude_events, str):
+                exclude_events = [e.strip() for e in exclude_events.split(",") if e.strip()]
+            exclude_uuids = [normalize_uuid(e) for e in exclude_events if e]
+            if exclude_uuids:
+                query = query.where(Event.id.notin_(exclude_uuids))
+
+        exclude_age = filter_params.get("exclude_age_restrictions")
+        if exclude_age:
+            if isinstance(exclude_age, str):
+                exclude_age = [a.strip() for a in exclude_age.split(",") if a.strip()]
+            if exclude_age:
+                query = query.where(
+                    or_(Event.age_restriction.notin_(exclude_age), Event.age_restriction == None)
+                )
+
+    # 8. Radius Filter
+    if latitude is not None and longitude is not None and radius_miles is not None:
+        min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius_miles)
         query = query.where(
             (Event.latitude.between(min_lat, max_lat)) & 
             (Event.longitude.between(min_lon, max_lon))
         )
 
-    # 6. Keyword Filter (Search)
-    if q:
-        search_term = f"%{q}%"
-        # Always join Venue for keyword search if not already filtered by radius
-        # (Though listinload(Event.venue) is used above, we need a join for where clause)
-        query = query.outerjoin(Venue, Event.venue_id == Venue.id)
-        
-        # Tags joining logic (matching list_events)
-        from app.models.tag import EventTag, Tag
-        query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
-        query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
-
-        # Build conditions
-        search_conditions = [
-            Event.title.ilike(search_term),
-            Event.description.ilike(search_term),
-            Event.location_name.ilike(search_term),
-            Event.address_full.ilike(search_term),
-            Venue.name.ilike(search_term),
-            Venue.address.ilike(search_term),
-            Tag.name.ilike(search_term)
-        ]
-        query = query.where(or_(*search_conditions)).distinct()
-
-    # 7. Select Limit (Safety)
+    # 9. Select Limit (Safety)
     query = query.limit(1000)
 
     # 8. Execute
@@ -518,6 +621,7 @@ def list_events_map(
 @limiter.limit("100/minute")
 def list_events(
     request: Request,
+    collection_id: Optional[str] = Query(None, description="Filter by collection ID or slug"),
     category_id: Optional[str] = None,
     category: Optional[str] = Query(None, description="Category slug for filtering"),
     category_ids: Optional[str] = Query(None, description="Comma-separated category IDs"),
@@ -1084,6 +1188,32 @@ def list_events(
         ids_to_match = list(set(raw_ids + [normalize_uuid(oid) for oid in raw_ids]))
         if ids_to_match:
             query = query.where(Event.organizer_profile_id.in_(ids_to_match))
+
+    # Filter by collection (enforcing strict organizer boundaries)
+    if collection_id:
+        from app.models.collection import Collection
+        if str(collection_id).isdigit():
+            col_id = int(collection_id)
+            selected_collection = session.exec(
+                select(Collection).where(or_(Collection.id == col_id, Collection.slug == str(collection_id)))
+            ).first()
+        else:
+            selected_collection = session.exec(
+                select(Collection).where(Collection.slug == str(collection_id))
+            ).first()
+
+        if selected_collection:
+            # 1. Apply absolute boundaries FIRST
+            if selected_collection.organizer_profile_ids:
+                raw_org_ids = [str(oid).strip() for oid in selected_collection.organizer_profile_ids if oid]
+                ids_to_match = list(set(raw_org_ids + [normalize_uuid(oid) for oid in raw_org_ids]))
+                if ids_to_match:
+                    query = query.where(Event.organizer_profile_id.in_(ids_to_match))
+
+            if selected_collection.specific_venue_ids:
+                venue_ids = [normalize_uuid(vid) for vid in selected_collection.specific_venue_ids if vid]
+                if venue_ids:
+                    query = query.where(Event.venue_id.in_(venue_ids))
 
     # Determine if we are performing a radius search (Near Me)
     is_radius_search = latitude is not None and longitude is not None and radius_km is not None

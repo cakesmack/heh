@@ -188,6 +188,8 @@ export function MapPage() {
             : null;
 
           if (activeCollection) {
+            // Pass collection ID / slug so backend applies strict organizer isolation and collection constraints
+            eventFilters.collection_id = activeCollection.id ?? activeCollection.slug;
             // Merge collection's filter_params
             if (activeCollection.filter_params) {
               Object.entries(activeCollection.filter_params).forEach(([key, value]) => {

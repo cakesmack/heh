@@ -311,6 +311,7 @@ export const eventsAPI = {
           ? filters.organizer_profile_ids.join(',')
           : filters.organizer_profile_ids;
       }
+      if (filters.collection_id) params.collection_id = filters.collection_id;
       if (filters.max_duration_days !== undefined) params.max_duration_days = filters.max_duration_days;
       if (filters.venue_id) params.venue_id = filters.venue_id;
       if (filters.include_past) params.include_past = 'true';
@@ -318,21 +319,24 @@ export const eventsAPI = {
       if (filters.time_range) params.time_range = filters.time_range;
 
       // Phase 2 Fix: Support mapping frontend `date` preset strings (e.g. 'weekend')
-      // directly to the backend's `time_range` parameter
-      if (filters.date && filters.date !== 'custom') {
-        params.time_range = filters.date;
-      }
+      if (filters.date) params.date = filters.date;
 
-      if (filters.skip !== undefined) params.skip = filters.skip;
-      if (filters.limit !== undefined) params.limit = filters.limit;
+      // New collection-related filter params
+      if (filters.exclude_age_restrictions) {
+        params.exclude_age_restrictions = filters.exclude_age_restrictions.join(',');
+      }
+      if (filters.exclude_event_ids) {
+        params.exclude_event_ids = filters.exclude_event_ids.join(',');
+      }
       if (filters.sort_by) params.sort_by = filters.sort_by;
-      if (filters.city_filter) params.city_filter = filters.city_filter;
       if (filters.status) params.status = filters.status;
       if (filters.is_recurring !== undefined) params.is_recurring = filters.is_recurring;
-      if (filters.exclude_age_restrictions?.length) params.exclude_age_restrictions = filters.exclude_age_restrictions.join(',');
-      if (filters.exclude_event_ids?.length) params.exclude_event_ids = filters.exclude_event_ids.join(',');
+      if (filters.city_filter) {
+        params.city_filter = filters.city_filter;
+      }
+      if (filters.skip !== undefined) params.skip = filters.skip;
+      if (filters.limit !== undefined) params.limit = filters.limit;
     }
-
     const queryString = buildQueryString(params);
     return apiFetch<EventListResponse>(`/api/events${queryString}`);
   },
@@ -353,27 +357,10 @@ export const eventsAPI = {
       if (filters.date_from) params.date_from = filters.date_from;
       if (filters.date_to) params.date_to = filters.date_to;
       if (filters.category_id) params.category_id = filters.category_id;
+      if (filters.collection_id) params.collection_id = filters.collection_id;
+      if (filters.collection_slug) params.collection_id = filters.collection_slug;
       if (filters.latitude !== undefined) params.latitude = filters.latitude;
       if (filters.longitude !== undefined) params.longitude = filters.longitude;
-      if (filters.radius_km !== undefined) params.radius = filters.radius_km; // API expects 'radius' in miles, but let's stick to consistent naming if backend handles it. 
-      // Backend /map endpoint uses alias="radius" for radius_miles. 
-      // Frontend filter uses "radius_km". 
-      // Need to convert km to miles or pass as is? 
-      // Backend `list_events_map` takes `radius_miles`.
-      // Let's assume standard conversion if needed, OR pass strict params matching backend.
-      // `query param radius` -> radius_miles.
-      // If frontend passes radius_km, we should convert or just pass 'radius' if the value is actually miles?
-      // Existing `list` logic: `if (filters.radius_km !== undefined) params.radius = filters.radius_km;` 
-      // Wait, standard `list` passes `filters.radius_km` as `params.radius`. Backend `list_events` aliases `radius` to `radius_miles`. 
-      // So `params.radius` should be in MILES?
-      // Let's check `list_events`: `radius_miles: Optional[float] = Query(None, alias="radius"...)`
-      // So backend expects `?radius=X` where X is miles.
-      // Frontend `filters.radius_km`... if it's KM, we are sending KM as Miles?
-      // Let's check where `filters.radius_km` comes from. 
-      // In `list`: `params.radius = filters.radius_km`
-      // If `filters.radius_km` is actually KM, then we are sending KM value to a Miles field. 
-      // Note: checking `map.tsx` might clarify. 
-      // For now, I will blindly copy the `list` logic to maintain consistency.
       if (filters.radius_km !== undefined) params.radius = filters.radius_km;
       if (filters.q) params.q = filters.q;
     }

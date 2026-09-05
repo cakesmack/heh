@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Query
 from sqlmodel import Session, select, func
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 from app.core.database import get_session
 from app.models.venue import Venue
 from app.models.venue_category import VenueCategory
 from app.models.event import Event
+from app.schemas.event import MapEventResponse
+from app.core.limiter import limiter
 
 router = APIRouter()
 
@@ -55,3 +57,36 @@ def list_map_venues(
         })
 
     return venues_list
+
+
+@router.get("/events", response_model=List[MapEventResponse])
+@limiter.limit("60/minute")
+def list_map_events(
+    request: Request,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    category_id: Optional[str] = None,
+    collection_id: Optional[str] = Query(None, description="Filter by collection ID or slug"),
+    latitude: Optional[float] = Query(None, description="User latitude"),
+    longitude: Optional[float] = Query(None, description="User longitude"),
+    radius_miles: Optional[float] = Query(None, alias="radius", description="Search radius in miles"),
+    q: Optional[str] = Query(None, description="Search keyword"),
+    session: Session = Depends(get_session)
+):
+    """
+    Supply event data to interactive map (alias matching GET /api/map/events).
+    Enforces strict organizer_profile_ids boundary when collection_id is provided.
+    """
+    from app.api.events import list_events_map
+    return list_events_map(
+        request=request,
+        date_from=date_from,
+        date_to=date_to,
+        category_id=category_id,
+        collection_id=collection_id,
+        latitude=latitude,
+        longitude=longitude,
+        radius_miles=radius_miles,
+        q=q,
+        session=session
+    )
