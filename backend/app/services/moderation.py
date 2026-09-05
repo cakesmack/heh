@@ -89,13 +89,15 @@ def check_content_with_reason(text: str) -> dict:
         if triggers:
             # Remove duplicates and limit to first 3
             unique_triggers = list(dict.fromkeys(triggers))[:3]
-            reason = f"Contains: {', '.join(unique_triggers)}"
+            detected_word = ', '.join(unique_triggers)
+            reason = f"Contains: {detected_word}"
         else:
+            detected_word = "offensive language"
             reason = "Flagged by content filter"
         
         logger.warning(f"Offensive content detected: {reason}")
-        return {"flagged": True, "reason": reason}
+        return {"flagged": True, "reason": reason, "detected_word": detected_word}
         
     except Exception as e:
         logger.error(f"Error checking content: {e}")
-        return {"flagged": False, "reason": None}
+        return {"flagged": False, "reason": None, "detected_word": None}

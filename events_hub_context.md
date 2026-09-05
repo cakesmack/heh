@@ -508,3 +508,26 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
     4. Site-wide default fallback (`https://highlandeventshub.co.uk/images/og-preview.jpg?v=3`).
   - Implements complete Open Graph and Twitter Card `<meta>` tags in `<Head>` with matching `key` attributes for Next.js deduplication against `_app.tsx`.
 
+---
+
+## 13. Event Moderation Triggers & Admin Moderation Queue Parity
+
+- **Moderation Trigger Reasons (`backend/app/api/events.py`):**
+  - Eliminated generic `"Flagged for initial moderation review"` placeholder.
+  - Replaced with specific contextual reasons:
+    - First-time organizer (`trust_level == 0` and `is_trusted_organizer == False`) editing a published event: `"First-time organizer account creation review"`.
+    - Existing untrusted organizer editing a published event: `"Edited by organizer after publication"`.
+    - Organizer editing a rejected event: `"Edited by organizer after rejection"`.
+    - Content filter triggers: `"Profanity Detected"` with extracted keywords (`"Contains: ..."`) and trigger field.
+    - Duplicate detection triggers: `"Potential Duplicate"` with matched event details and confidence score.
+  - Notification email dispatches the exact contextual reason to `resend_email_service.send_moderation_required_notification`, with direct CTA link to `/admin/moderation`.
+- **Database Transaction Report Creation:**
+  - In `create_event` (profanity quarantine) and `update_event` (untrusted organizer edit revert), a `Report` record (`target_type="event"`, `target_id=event.id`, `reason=event.moderation_reason`, `status="pending"`, `reporter_id="system"`) is created and committed in the same database transaction.
+  - This ensures flagged/quarantined events immediately populate the Admin Moderation Dashboard queue (`/admin/moderation?tab=reports`) without bypassing the view.
+- **Admin Resolution & Query Parity:**
+  - Resolving a report in `/admin/moderation` (`POST /api/moderation/reports/{id}/resolve?action=resolve`) marks the report resolved and automatically sets `target_event.status = "published"` and `target_event.moderation_reason = None`.
+  - Moderating an event directly (`POST /api/moderation/events/{id}/moderate`) approves/publishes the event and auto-resolves any pending `Report` records for that event.
+  - `GET /api/moderation/events/pending` queries `Event.status.in_(["pending", "pending_review", "pending_moderation"])` to capture all states requiring moderation.
+  - `GET /api/admin/events?status=pending` expands `status_filter == "pending"` to include `"pending_review"` and `"pending_moderation"`.
+  - `EventsManager.tsx` includes `pending_review` in the status filter dropdown.
+

@@ -91,7 +91,9 @@ def get_pending_events(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     events = session.exec(
-        select(Event).where(Event.status == "pending").order_by(Event.created_at.asc())
+        select(Event)
+        .where(Event.status.in_(["pending", "pending_review", "pending_moderation"]))
+        .order_by(Event.created_at.asc())
     ).all()
     
     results = []
@@ -145,6 +147,15 @@ def resolve_report(
     report.resolved_at = datetime.utcnow()
     report.resolved_by = str(current_user.id)
     
+    # If resolving a pending/quarantined event report, auto-publish the target event
+    if action == "resolve" and report.target_type == "event" and report.target_id:
+        target_event = session.get(Event, str(report.target_id).replace("-", ""))
+        if target_event and target_event.status in ("pending", "pending_review", "pending_moderation"):
+            target_event.status = "published"
+            target_event.moderation_reason = None
+            session.add(target_event)
+            logger.info(f"Auto-published event {target_event.id} upon resolving report {report.id}")
+    
     session.add(report)
     session.commit()
     return {"status": "success", "report_status": report.status}
@@ -181,10 +192,21 @@ async def moderate_event(
 
     if action == "approve":
         event.status = "published"
+        event.moderation_reason = None
         # Increment organizer's trust level for successful approval
         if event.organizer:
             event.organizer.trust_level = (event.organizer.trust_level or 0) + 1
             session.add(event.organizer)
+
+        # Resolve any associated pending reports for this event
+        associated_reports = session.exec(
+            select(Report).where(Report.target_type == "event", Report.target_id == event.id, Report.status == "pending")
+        ).all()
+        for rep in associated_reports:
+            rep.status = "resolved"
+            rep.resolved_at = datetime.utcnow()
+            rep.resolved_by = str(current_user.id)
+            session.add(rep)
         
         # If this event has a recurrence_group_id, approve ALL events in the group
         if event.recurrence_group_id:
@@ -204,16 +226,25 @@ async def moderate_event(
                 sibling_count = len(sibling_events)
                 for sibling in sibling_events:
                     sibling.status = "published"
+                    sibling.moderation_reason = None
                     session.add(sibling)
                 logger.info(f"Approved {sibling_count} sibling events in recurrence group {event.recurrence_group_id}")
 
     elif action == "reject":
         event.status = "rejected"
         event.moderation_reason = moderation.rejection_reason
-        # If rejecting a series, we might want to reject all? 
-        # For now, let's keep rejection granular or user can delete, 
-        # unless user typically wants to reject the whole series. 
-        # Let's reject ALL siblings too if it's a series rejection to prevent spamming the queue.
+
+        # Dismiss any associated pending reports for this event
+        associated_reports = session.exec(
+            select(Report).where(Report.target_type == "event", Report.target_id == event.id, Report.status == "pending")
+        ).all()
+        for rep in associated_reports:
+            rep.status = "dismissed"
+            rep.resolved_at = datetime.utcnow()
+            rep.resolved_by = str(current_user.id)
+            session.add(rep)
+
+        # If rejecting a series, reject ALL siblings too if it's a series rejection to prevent spamming the queue.
         if event.recurrence_group_id:
             from sqlalchemy import and_
             sibling_events = session.exec(

@@ -276,7 +276,11 @@ def list_admin_events(
             query = query.where(Event.venue_id == venue_id)
     
     if status_filter:
-        query = query.where(Event.status == status_filter.lower())
+        sf = status_filter.lower()
+        if sf == "pending":
+            query = query.where(Event.status.in_(["pending", "pending_review", "pending_moderation"]))
+        else:
+            query = query.where(Event.status == sf)
     
     if search:
         search_term = f"%{search}%"

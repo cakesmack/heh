@@ -1212,7 +1212,7 @@ class ResendEmailService:
 
         admin_target = settings.ADMIN_EMAIL or "contact@highlandeventshub.co.uk"
         subject = f"⚠️ Event Flagged for Moderation: {event_title}"
-        queue_link = f"{settings.FRONTEND_URL}/admin/events" + (f"?id={event_id}" if event_id else "")
+        queue_link = f"{settings.FRONTEND_URL.rstrip('/')}/admin/moderation"
         html_content = f"""
         <div style="font-family: sans-serif; padding: 20px;">
             <h2>Event Flagged for Moderation</h2>

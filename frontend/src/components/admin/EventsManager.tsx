@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin Events Page
  * CRUD interface for managing events with search, clickable rows, and full columns
  */
@@ -492,6 +492,7 @@ export default function EventsManager() {
                 <option value="all">All Status</option>
                 <option value="published">Published</option>
                 <option value="pending">Pending</option>
+                <option value="pending_review">Pending Review</option>
                 <option value="rejected">Rejected</option>
                 <option value="draft">Draft</option>
               </select>

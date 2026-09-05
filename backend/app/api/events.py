@@ -22,9 +22,11 @@ from app.models.tag import Tag, EventTag, normalize_tag_name
 from app.models.event_participating_venue import EventParticipatingVenue
 from app.models.featured_booking import FeaturedBooking, SlotType, BookingStatus
 from app.models.showtime import EventShowtime
+import json
 from app.models.bookmark import Bookmark
 from app.models.event_attendee import EventAttendee
 from app.models.ticket_tier import TicketTier
+from app.models.report import Report
 from app.schemas.event import (
     EventCreate,
     EventUpdate,
@@ -755,7 +757,7 @@ def list_events(
         pass 
     elif is_self_viewer:
         # Organizer sees own events in all states, including archived
-        query = query.where(Event.status.in_(["published", "pending", "rejected", "draft", "pending_moderation", "archived"]))
+        query = query.where(Event.status.in_(["published", "pending", "pending_review", "rejected", "draft", "pending_moderation", "archived"]))
     else:
         # Public / Guest / Other Users
         # STRICTLY PUBLISHED & NOT CANCELLED
@@ -1738,6 +1740,21 @@ async def create_event(
         new_event.moderation_reason = moderation_reason
         logger.info(f"[PROFANITY_FILTER] Event '{new_event.title}' flagged for moderation: {moderation_reason}")
         
+        # Create Moderation Report
+        report = Report(
+            target_type="event",
+            target_id=new_event.id,
+            reason="Profanity Detected",
+            details=json.dumps({
+                "detected_word": moderation_result.get("detected_word", "offensive language"),
+                "field": "title/description",
+                "reason": moderation_reason
+            }),
+            status="pending",
+            reporter_id="system"
+        )
+        session.add(report)
+        
     # PRIORITY 2: Duplicate Detection (Quarantined in pending_review)
     elif is_duplicate_risk:
         new_event.status = "pending_review"
@@ -2702,16 +2719,42 @@ async def update_event(
 
     if should_revert:
         event.status = "pending"
-        event.moderation_reason = "Edited after rejection/publication"
-        logger.info(f"[MODERATION] Event '{event.title}' reset to pending update by user {current_user.id}")
+        if original_status == "published":
+            if (current_user.trust_level or 0) == 0 and not current_user.is_trusted_organizer:
+                event.moderation_reason = "First-time organizer account creation review"
+            else:
+                event.moderation_reason = "Edited by organizer after publication"
+        elif original_status == "rejected":
+            event.moderation_reason = "Edited by organizer after rejection"
+        else:
+            event.moderation_reason = "Edited after rejection/publication"
+
+        logger.info(f"[MODERATION] Event '{event.title}' reset to pending update by user {current_user.id}: {event.moderation_reason}")
         
         # Trigger Admin Alert (Moderation Required)
         background_tasks.add_task(
             resend_email_service.send_moderation_required_notification,
             event.title,
             str(event.id),
-            "Flagged for initial moderation review"
+            event.moderation_reason
         )
+
+        # Create Moderation Report in database so it appears in Admin Moderation Queue
+        report = Report(
+            target_type="event",
+            target_id=event.id,
+            reason=event.moderation_reason,
+            details=json.dumps({
+                "organizer_email": current_user.email,
+                "organizer_username": current_user.username,
+                "trust_level": current_user.trust_level,
+                "original_status": original_status,
+                "revert_reason": event.moderation_reason
+            }),
+            status="pending",
+            reporter_id="system"
+        )
+        session.add(report)
 
     session.add(event)
     session.commit()
