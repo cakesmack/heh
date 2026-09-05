@@ -86,8 +86,14 @@ def run_migrations():
                 connection.execute(text("""
                     UPDATE users SET is_active = FALSE WHERE email = 'banned@test.com'
                 """))
+                connection.execute(text("""
+                    ALTER TABLE collections ADD COLUMN IF NOT EXISTS min_lat FLOAT;
+                    ALTER TABLE collections ADD COLUMN IF NOT EXISTS max_lat FLOAT;
+                    ALTER TABLE collections ADD COLUMN IF NOT EXISTS min_lng FLOAT;
+                    ALTER TABLE collections ADD COLUMN IF NOT EXISTS max_lng FLOAT;
+                """))
                 connection.commit()
-                print("[SUCCESS] Inline migrations: is_active column and banned status ensured on users table")
+                print("[SUCCESS] Inline migrations: is_active and collection bounding box columns ensured")
             except Exception as e:
                 connection.rollback()
                 print(f"Inline migrations note: {e}")
