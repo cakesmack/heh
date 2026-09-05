@@ -348,7 +348,11 @@ export default function CollectionsManager() {
         setError(null);
 
         try {
-            const finalFormData = { ...formData };
+            const finalFormData = {
+                ...formData,
+                fixed_start_date: formData.fixed_start_date ? formData.fixed_start_date : null,
+                fixed_end_date: formData.fixed_end_date ? formData.fixed_end_date : null,
+            };
             if (finalFormData.organizer_profile_ids && finalFormData.organizer_profile_ids.length === 0) {
                 finalFormData.organizer_profile_ids = null as any;
             }

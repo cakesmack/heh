@@ -914,6 +914,72 @@ def test_map_events_strict_organizer_isolation(test_db: Session):
         app.dependency_overrides.clear()
 
 
+def test_collection_empty_date_coercion(test_db: Session):
+    """
+    Verify that empty strings and whitespace for fixed_start_date and fixed_end_date
+    are coerced to None without triggering Pydantic validation errors (422),
+    and that clearing dates via PUT also cleanly sets them to None.
+    """
+    admin_user = User(
+        id=normalize_uuid(str(uuid4())),
+        email="dateadmin@highlandevents.co.uk",
+        username="dateadmin",
+        is_admin=True,
+    )
+    test_db.add(admin_user)
+    test_db.commit()
+
+    def get_session_override():
+        return test_db
+
+    def get_current_admin_override():
+        return admin_user
+
+    app.dependency_overrides[get_session] = get_session_override
+    app.dependency_overrides[get_current_user] = get_current_admin_override
+    client = TestClient(app)
+
+    try:
+        # 1. Create collection with empty strings for fixed dates
+        payload = {
+            "title": "Date Coercion Test",
+            "target_link": "/collections/date-coercion-test",
+            "slug": "date-coercion-test",
+            "is_active": True,
+            "fixed_start_date": "",
+            "fixed_end_date": "",
+        }
+        res = client.post("/api/collections", json=payload)
+        assert res.status_code == 201, res.text
+        data = res.json()
+        assert data["fixed_start_date"] is None
+        assert data["fixed_end_date"] is None
+        col_id = data["id"]
+
+        # 2. Update collection with valid dates
+        res_valid = client.put(
+            f"/api/collections/{col_id}",
+            json={"fixed_start_date": "2026-09-01", "fixed_end_date": "2026-09-05"},
+        )
+        assert res_valid.status_code == 200, res_valid.text
+        valid_data = res_valid.json()
+        assert valid_data["fixed_start_date"] == "2026-09-01"
+        assert valid_data["fixed_end_date"] == "2026-09-05"
+
+        # 3. Update collection with empty strings to clear dates
+        res_clear = client.put(
+            f"/api/collections/{col_id}",
+            json={"fixed_start_date": "", "fixed_end_date": "   "},
+        )
+        assert res_clear.status_code == 200, res_clear.text
+        cleared_data = res_clear.json()
+        assert cleared_data["fixed_start_date"] is None
+        assert cleared_data["fixed_end_date"] is None
+    finally:
+        app.dependency_overrides.clear()
+
+
+
 
 
 

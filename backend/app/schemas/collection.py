@@ -43,6 +43,15 @@ class CollectionBase(BaseModel):
     enable_venue_filter: bool = False
     organizer_profile_ids: Optional[List[str]] = None
 
+    @field_validator('fixed_start_date', 'fixed_end_date', mode='before')
+    @classmethod
+    def coerce_empty_dates_to_none(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
     @field_validator('filter_params', mode='before')
     @classmethod
     def parse_filter_params(cls, v):
