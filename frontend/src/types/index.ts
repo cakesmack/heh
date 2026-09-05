@@ -840,6 +840,10 @@ export interface Collection {
   specific_venue_ids?: string[];
   enable_venue_filter?: boolean;
   organizer_profile_ids?: string[] | null;
+  min_lat?: number | null;
+  max_lat?: number | null;
+  min_lng?: number | null;
+  max_lng?: number | null;
   venues?: VenueSummary[];
   total_venue_count?: number;
   view_count?: number;
@@ -872,6 +876,10 @@ export interface CollectionCreate {
   specific_venue_ids?: string[];
   enable_venue_filter?: boolean;
   organizer_profile_ids?: string[] | null;
+  min_lat?: number | null;
+  max_lat?: number | null;
+  min_lng?: number | null;
+  max_lng?: number | null;
 }
 
 export interface CollectionUpdate {
@@ -900,6 +908,10 @@ export interface CollectionUpdate {
   specific_venue_ids?: string[];
   enable_venue_filter?: boolean;
   organizer_profile_ids?: string[] | null;
+  min_lat?: number | null;
+  max_lat?: number | null;
+  min_lng?: number | null;
+  max_lng?: number | null;
 }
 
 // ============================================================

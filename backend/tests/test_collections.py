@@ -979,6 +979,159 @@ def test_collection_empty_date_coercion(test_db: Session):
         app.dependency_overrides.clear()
 
 
+def test_collection_bounding_box_filtering(test_db: Session):
+    """
+    Verify that geographic bounding box (min_lat, max_lat, min_lng, max_lng)
+    filters collection events by venue coordinates with parity across
+    feed (/api/collections/{slug}/events), map (/api/events/map), and list (/api/events).
+    """
+    from datetime import datetime, timezone, timedelta
+    from app.models.venue import Venue
+    from app.models.event import Event
+
+    admin_user = User(
+        id=normalize_uuid(str(uuid4())),
+        email="geo_admin@highlandevents.co.uk",
+        username="geoadmin",
+        is_admin=True,
+    )
+    test_db.add(admin_user)
+
+    now = datetime.now(timezone.utc)
+    future_start = now + timedelta(days=2)
+    future_end = now + timedelta(days=2, hours=3)
+
+    # 1. Create venues: one inside NC500 bounding box (Ullapool), one outside (Edinburgh)
+    venue_nc500 = Venue(
+        id=normalize_uuid(str(uuid4())),
+        name="Ullapool Village Hall",
+        address="Market St, Ullapool",
+        latitude=57.895,
+        longitude=-5.160,
+        slug="ullapool-village-hall",
+        city="Ullapool",
+    )
+    venue_central = Venue(
+        id=normalize_uuid(str(uuid4())),
+        name="Edinburgh Assembly Rooms",
+        address="George St, Edinburgh",
+        latitude=55.953,
+        longitude=-3.199,
+        slug="edinburgh-assembly-rooms",
+        city="Edinburgh",
+    )
+    test_db.add(venue_nc500)
+    test_db.add(venue_central)
+    test_db.commit()
+
+    # 2. Create published events linked to both venues
+    ev_nc500 = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="NC500 Coastal Music Fest",
+        slug="nc500-coastal-music-fest",
+        date_start=future_start,
+        date_end=future_end,
+        organizer_id=admin_user.id,
+        venue_id=venue_nc500.id,
+        latitude=57.895,
+        longitude=-5.160,
+        status="published",
+    )
+    ev_central = Event(
+        id=normalize_uuid(str(uuid4())),
+        title="Central Belt Comedy Night",
+        slug="central-belt-comedy-night",
+        date_start=future_start,
+        date_end=future_end,
+        organizer_id=admin_user.id,
+        venue_id=venue_central.id,
+        latitude=55.953,
+        longitude=-3.199,
+        status="published",
+    )
+    test_db.add(ev_nc500)
+    test_db.add(ev_central)
+    test_db.commit()
+
+    def get_session_override():
+        return test_db
+
+    def get_current_admin_override():
+        return admin_user
+
+    app.dependency_overrides[get_session] = get_session_override
+    app.dependency_overrides[get_current_user] = get_current_admin_override
+    client = TestClient(app)
+
+    try:
+        # 3. Create collection with NC500 bounding box (57.0 <= lat <= 59.0, -6.0 <= lng <= -3.0)
+        create_payload = {
+            "title": "NC500 Route Events",
+            "target_link": "/collections/nc500-route-events",
+            "slug": "nc500-route-events",
+            "is_active": True,
+            "min_lat": 57.0,
+            "max_lat": 59.0,
+            "min_lng": -6.0,
+            "max_lng": -3.0,
+        }
+        res_create = client.post("/api/collections", json=create_payload)
+        assert res_create.status_code == 201, res_create.text
+        col_data = res_create.json()
+        assert col_data["min_lat"] == 57.0
+        assert col_data["max_lat"] == 59.0
+        assert col_data["min_lng"] == -6.0
+        assert col_data["max_lng"] == -3.0
+        col_id = col_data["id"]
+
+        # 4. Verify public slug endpoint returns coordinates
+        res_slug = client.get("/api/collections/slug/nc500-route-events")
+        assert res_slug.status_code == 200
+        assert res_slug.json()["min_lat"] == 57.0
+
+        # 5. Verify collection feed endpoint filters strictly by bounding box
+        res_feed = client.get("/api/collections/slug/nc500-route-events/events")
+        assert res_feed.status_code == 200
+        feed_events = res_feed.json()["events"]
+        feed_titles = [e["title"] for e in feed_events]
+        assert "NC500 Coastal Music Fest" in feed_titles
+        assert "Central Belt Comedy Night" not in feed_titles
+        assert len(feed_titles) == 1
+
+        # 6. Verify interactive map endpoint mirrors collection parity
+        res_map = client.get(f"/api/events/map?collection_id={col_id}")
+        assert res_map.status_code == 200
+        map_titles = [e["title"] for e in res_map.json()]
+        assert "NC500 Coastal Music Fest" in map_titles
+        assert "Central Belt Comedy Night" not in map_titles
+        assert len(map_titles) == 1
+
+        # 7. Verify /api/events with collection_id mirrors parity
+        res_list = client.get(f"/api/events?collection_id={col_id}")
+        assert res_list.status_code == 200
+        list_titles = [e["title"] for e in res_list.json()["events"]]
+        assert "NC500 Coastal Music Fest" in list_titles
+        assert "Central Belt Comedy Night" not in list_titles
+
+        # 8. Clear bounding box via PUT and verify both events return
+        res_update = client.put(
+            f"/api/collections/{col_id}",
+            json={"min_lat": None, "max_lat": None, "min_lng": None, "max_lng": None},
+        )
+        assert res_update.status_code == 200
+        assert res_update.json()["min_lat"] is None
+
+        res_feed_cleared = client.get("/api/collections/slug/nc500-route-events/events")
+        assert res_feed_cleared.status_code == 200
+        cleared_titles = [e["title"] for e in res_feed_cleared.json()["events"]]
+        assert "NC500 Coastal Music Fest" in cleared_titles
+        assert "Central Belt Comedy Night" in cleared_titles
+        assert len(cleared_titles) == 2
+    finally:
+        app.dependency_overrides.clear()
+
+
+
 
 
 

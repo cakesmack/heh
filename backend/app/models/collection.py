@@ -42,6 +42,10 @@ class Collection(SQLModel, table=True):
     organizer_profile_ids: Optional[list] = Field(default=None, sa_column=Column(JSONB))
     view_count: int = Field(default=0)
     link_click_count: int = Field(default=0)
+    min_lat: Optional[float] = Field(default=None)
+    max_lat: Optional[float] = Field(default=None)
+    min_lng: Optional[float] = Field(default=None)
+    max_lng: Optional[float] = Field(default=None)
 
     @property
     def match_mode(self) -> str:

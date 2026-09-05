@@ -198,6 +198,8 @@
 | `filter_params` | `JSONB` | structured filter definition: category, tags, `filter_mode` (`AND` / `OR`), `exclude_age_restrictions` (`bool`), `exclude_event_ids` (`str[]`) |
 | `enable_venue_filter` | `bool` | optional toggle to generate compact venue dropdown filter (ideal for festivals) |
 | `organizer_profile_ids` | `JSONB` | optional list of organizer profile UUIDs (hex string) to strictly filter collection events |
+| `min_lat` / `max_lat` | `float` | optional bounding box latitude bounds for geographic route collections (e.g. NC500) |
+| `min_lng` / `max_lng` | `float` | optional bounding box longitude bounds for geographic route collections (e.g. NC500) |
 
 ---
 

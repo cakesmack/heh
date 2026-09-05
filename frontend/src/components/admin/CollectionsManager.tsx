@@ -47,6 +47,10 @@ export default function CollectionsManager() {
         stat_3_value: '',
         enable_venue_filter: false,
         organizer_profile_ids: [] as string[],
+        min_lat: '' as string | number,
+        max_lat: '' as string | number,
+        min_lng: '' as string | number,
+        max_lng: '' as string | number,
     });
     const slugManuallyEdited = useRef(false);
     const [saving, setSaving] = useState(false);
@@ -140,6 +144,10 @@ export default function CollectionsManager() {
             stat_3_value: '',
             enable_venue_filter: false,
             organizer_profile_ids: [],
+            min_lat: '',
+            max_lat: '',
+            min_lng: '',
+            max_lng: '',
         });
         setOrganizerSearch('');
         setQbState({
@@ -205,6 +213,10 @@ export default function CollectionsManager() {
             stat_3_value: collection.stat_3_value || '',
             enable_venue_filter: collection.enable_venue_filter ?? false,
             organizer_profile_ids: collection.organizer_profile_ids || [],
+            min_lat: collection.min_lat ?? '',
+            max_lat: collection.max_lat ?? '',
+            min_lng: collection.min_lng ?? '',
+            max_lng: collection.max_lng ?? '',
         });
         setOrganizerSearch('');
 
@@ -347,11 +359,21 @@ export default function CollectionsManager() {
         setSaving(true);
         setError(null);
 
+        const parseCoord = (val: any): number | null => {
+            if (val === '' || val === null || val === undefined) return null;
+            const parsed = parseFloat(val);
+            return isNaN(parsed) ? null : parsed;
+        };
+
         try {
             const finalFormData = {
                 ...formData,
                 fixed_start_date: formData.fixed_start_date ? formData.fixed_start_date : null,
                 fixed_end_date: formData.fixed_end_date ? formData.fixed_end_date : null,
+                min_lat: parseCoord(formData.min_lat),
+                max_lat: parseCoord(formData.max_lat),
+                min_lng: parseCoord(formData.min_lng),
+                max_lng: parseCoord(formData.max_lng),
             };
             if (finalFormData.organizer_profile_ids && finalFormData.organizer_profile_ids.length === 0) {
                 finalFormData.organizer_profile_ids = null as any;
@@ -1204,6 +1226,71 @@ export default function CollectionsManager() {
                                     <input type="text" placeholder="Stat 3 Label" value={formData.stat_3_label || ''} onChange={(e) => setFormData({ ...formData, stat_3_label: e.target.value })} className="w-full px-2 py-1.5 border rounded" />
                                     <input type="text" placeholder="Stat 3 Value" value={formData.stat_3_value || ''} onChange={(e) => setFormData({ ...formData, stat_3_value: e.target.value })} className="w-full px-2 py-1.5 border rounded" />
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            {/* --- GEOGRAPHIC BOUNDING BOX ACCORDION --- */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden text-left">
+                <details className="group">
+                    <summary className="flex justify-between items-center font-medium cursor-pointer list-none p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <span className="text-sm text-gray-900">Geographic Bounding Box</span>
+                        <span className="transition group-open:rotate-180">
+                            <svg fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
+                        </span>
+                    </summary>
+                    <div className="p-4 space-y-4 border-t border-gray-200 text-sm">
+                        <p className="text-xs text-gray-500">
+                            Optional. Include all events taking place within this rectangular geographic coordinate box.
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Min Latitude</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={formData.min_lat ?? ''}
+                                    onChange={(e) => setFormData({ ...formData, min_lat: e.target.value })}
+                                    className="w-full px-2 py-1.5 border rounded focus:ring-1 focus:ring-emerald-500 text-sm"
+                                    placeholder="e.g. 57.0"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Max Latitude</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={formData.max_lat ?? ''}
+                                    onChange={(e) => setFormData({ ...formData, max_lat: e.target.value })}
+                                    className="w-full px-2 py-1.5 border rounded focus:ring-1 focus:ring-emerald-500 text-sm"
+                                    placeholder="e.g. 58.7"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Min Longitude</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={formData.min_lng ?? ''}
+                                    onChange={(e) => setFormData({ ...formData, min_lng: e.target.value })}
+                                    className="w-full px-2 py-1.5 border rounded focus:ring-1 focus:ring-emerald-500 text-sm"
+                                    placeholder="e.g. -5.8"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Max Longitude</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={formData.max_lng ?? ''}
+                                    onChange={(e) => setFormData({ ...formData, max_lng: e.target.value })}
+                                    className="w-full px-2 py-1.5 border rounded focus:ring-1 focus:ring-emerald-500 text-sm"
+                                    placeholder="e.g. -3.0"
+                                />
                             </div>
                         </div>
                     </div>

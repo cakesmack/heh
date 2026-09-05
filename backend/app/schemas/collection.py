@@ -43,6 +43,21 @@ class CollectionBase(BaseModel):
     enable_venue_filter: bool = False
     organizer_profile_ids: Optional[List[str]] = None
 
+    # Geographic Bounding Box (Optional)
+    min_lat: Optional[float] = None
+    max_lat: Optional[float] = None
+    min_lng: Optional[float] = None
+    max_lng: Optional[float] = None
+
+    @field_validator('min_lat', 'max_lat', 'min_lng', 'max_lng', mode='before')
+    @classmethod
+    def coerce_empty_coords_to_none(cls, v):
+        if v is None or v == "":
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
     @field_validator('fixed_start_date', 'fixed_end_date', mode='before')
     @classmethod
     def coerce_empty_dates_to_none(cls, v):
@@ -91,6 +106,10 @@ class CollectionUpdate(CollectionBase):
     specific_venue_ids: Optional[list] = None
     enable_venue_filter: Optional[bool] = None
     organizer_profile_ids: Optional[List[str]] = None
+    min_lat: Optional[float] = None
+    max_lat: Optional[float] = None
+    min_lng: Optional[float] = None
+    max_lng: Optional[float] = None
 
 class Collection(CollectionBase):
     id: int

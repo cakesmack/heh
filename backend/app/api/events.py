@@ -466,6 +466,18 @@ def list_events_map(
         if venue_ids:
             query = query.where(Event.venue_id.in_(venue_ids))
 
+    # Geographic bounding box filter for collection
+    venue_joined = False
+    if selected_collection and (
+        selected_collection.min_lat is not None and selected_collection.max_lat is not None and
+        selected_collection.min_lng is not None and selected_collection.max_lng is not None
+    ):
+        query = query.join(Venue, Event.venue_id == Venue.id).where(
+            Venue.latitude.between(selected_collection.min_lat, selected_collection.max_lat),
+            Venue.longitude.between(selected_collection.min_lng, selected_collection.max_lng),
+        )
+        venue_joined = True
+
     # 5. Date Filter (Simplified: Overlap logic)
     effective_date_from = date_from
     effective_date_to = date_to
@@ -525,7 +537,9 @@ def list_events_map(
     effective_q = collection_q if collection_q else q
     if effective_q and str(effective_q).strip():
         search_term = f"%{str(effective_q).strip()}%"
-        query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+        if not venue_joined:
+            query = query.outerjoin(Venue, Event.venue_id == Venue.id)
+            venue_joined = True
         query = query.outerjoin(EventTag, Event.id == EventTag.event_id)
         query = query.outerjoin(Tag, EventTag.tag_id == Tag.id)
 
@@ -1214,6 +1228,18 @@ def list_events(
                 venue_ids = [normalize_uuid(vid) for vid in selected_collection.specific_venue_ids if vid]
                 if venue_ids:
                     query = query.where(Event.venue_id.in_(venue_ids))
+
+            if (
+                selected_collection.min_lat is not None and selected_collection.max_lat is not None and
+                selected_collection.min_lng is not None and selected_collection.max_lng is not None
+            ):
+                if not venue_joined:
+                    query = query.join(Venue, Event.venue_id == Venue.id)
+                    venue_joined = True
+                query = query.where(
+                    Venue.latitude.between(selected_collection.min_lat, selected_collection.max_lat),
+                    Venue.longitude.between(selected_collection.min_lng, selected_collection.max_lng),
+                )
 
     # Determine if we are performing a radius search (Near Me)
     is_radius_search = latitude is not None and longitude is not None and radius_km is not None

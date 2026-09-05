@@ -60,6 +60,16 @@ def build_collection_events_query(collection: Collection, session: Session):
         if venue_ids:
             query = query.where(Event.venue_id.in_(venue_ids))
 
+    # Geographic bounding box filter
+    if (
+        collection.min_lat is not None and collection.max_lat is not None and
+        collection.min_lng is not None and collection.max_lng is not None
+    ):
+        query = query.join(Venue, Event.venue_id == Venue.id).where(
+            Venue.latitude.between(collection.min_lat, collection.max_lat),
+            Venue.longitude.between(collection.min_lng, collection.max_lng),
+        )
+
     # 2. Extract flexible Keyword/Category conditions inside isolated blocks
     filter_params = collection.filter_params or {}
     category_conditions = []
