@@ -7,9 +7,10 @@ import logging
 
 from app.core.database import get_session
 from app.core.config import settings
-from app.core.utils import simple_slugify
+from app.core.utils import simple_slugify, normalize_uuid
 from app.api.auth import get_current_user
 from app.models import User, Organizer, OrganizerStripeAccount
+from app.models.group_member import GroupMember
 from app.services import stripe_service
 
 router = APIRouter()
@@ -69,12 +70,26 @@ def get_seller_status(
     
     # Target entity selection
     target_organizer: Optional[Organizer] = None
-    if organizer_id:
-        target_organizer = next((o for o in organizers if o.id == organizer_id), None)
+    clean_org_id = (organizer_id or "").strip()
+    if clean_org_id.lower() in ("", "null", "undefined", "none"):
+        clean_org_id = None
+
+    if clean_org_id:
+        norm_org_id = normalize_uuid(clean_org_id)
+        target_organizer = next((o for o in organizers if o.id == clean_org_id or o.id == norm_org_id or o.slug == clean_org_id), None)
         if not target_organizer:
-            target_organizer = session.get(Organizer, organizer_id)
+            target_organizer = session.get(Organizer, clean_org_id) or session.get(Organizer, norm_org_id)
+            if not target_organizer:
+                target_organizer = session.exec(select(Organizer).where(Organizer.slug == clean_org_id)).first()
             if target_organizer and target_organizer.user_id != current_user.id and not current_user.is_admin:
-                target_organizer = None
+                is_member = session.exec(
+                    select(GroupMember).where(
+                        GroupMember.group_id == target_organizer.id,
+                        GroupMember.user_id == current_user.id
+                    )
+                ).first() is not None
+                if not is_member:
+                    target_organizer = None
     else:
         target_organizer = organizers[0] if organizers else None
         
@@ -114,6 +129,102 @@ def get_seller_status(
         ]
     }
 
+def resolve_or_create_organizer(
+    session: Session,
+    current_user: User,
+    target_organizer_id: Optional[str] = None
+) -> Organizer:
+    """
+    Resolve an Organizer profile for the given user, or auto-create one if needed.
+    - Sanitizes input: empty strings, 'null', 'undefined', 'none' are treated as None.
+    - Flexible lookup: searches by primary key (as-is and unhyphenated) and by slug.
+    - Ownership / authorization:
+      - If unassigned (user_id is None), links it to current_user.
+      - If owned by current_user or current_user is admin, returns it.
+      - If user is a member of the group (GroupMember), returns it.
+      - If unowned and user lacks access, logs a warning and falls back to user's personal profile.
+    - Auto-creation fallback:
+      - Looks for an existing Organizer owned by current_user.
+      - If none exists, creates a new Organizer profile with a collision-resistant unique slug.
+    """
+    from uuid import uuid4
+
+    clean_id = (target_organizer_id or "").strip()
+    if clean_id.lower() in ("", "null", "undefined", "none"):
+        clean_id = None
+
+    organizer: Optional[Organizer] = None
+
+    if clean_id:
+        organizer = session.get(Organizer, clean_id)
+        if not organizer:
+            norm_id = normalize_uuid(clean_id)
+            if norm_id != clean_id:
+                organizer = session.get(Organizer, norm_id)
+        if not organizer:
+            organizer = session.exec(select(Organizer).where(Organizer.slug == clean_id)).first()
+
+        if organizer:
+            # If organizer profile has no owner, claim it for current_user
+            if not organizer.user_id:
+                organizer.user_id = current_user.id
+                session.add(organizer)
+                session.commit()
+                session.refresh(organizer)
+                return organizer
+
+            is_owner = (organizer.user_id == current_user.id)
+            is_admin = bool(current_user.is_admin)
+            is_member = False
+            if not is_owner and not is_admin:
+                member_record = session.exec(
+                    select(GroupMember).where(
+                        GroupMember.group_id == organizer.id,
+                        GroupMember.user_id == current_user.id
+                    )
+                ).first()
+                is_member = (member_record is not None)
+
+            if is_owner or is_admin or is_member:
+                return organizer
+
+            logger.warning(
+                f"User {current_user.id} requested organizer {organizer.id} ({organizer.slug}) "
+                f"without owner, admin, or group member permissions. Falling back to personal organizer."
+            )
+            organizer = None
+        else:
+            logger.warning(
+                f"Requested organizer '{clean_id}' by user {current_user.id} was not found in the database. "
+                f"Falling back to user's personal organizer."
+            )
+
+    # Fallback to existing personal organizer
+    organizer = session.exec(select(Organizer).where(Organizer.user_id == current_user.id)).first()
+    if organizer:
+        return organizer
+
+    # Auto-create new organizer profile for user
+    base_name = current_user.username or (current_user.email.split("@")[0] if current_user.email else "Organizer")
+    base_slug = simple_slugify(base_name) or "organizer"
+    slug_candidate = f"{base_slug}-{current_user.id[:6]}"
+
+    existing_slug = session.exec(select(Organizer).where(Organizer.slug == slug_candidate)).first()
+    if existing_slug:
+        slug_candidate = f"{base_slug}-{uuid4().hex[:8]}"
+
+    organizer = Organizer(
+        name=base_name,
+        slug=slug_candidate,
+        user_id=current_user.id
+    )
+    session.add(organizer)
+    session.commit()
+    session.refresh(organizer)
+    logger.info(f"Auto-created Organizer profile {organizer.id} ({organizer.slug}) for user {current_user.id}")
+    return organizer
+
+
 @router.post("/stripe-connect/onboard")
 @router.post("/stripe-connect/onboard/")
 def onboard_stripe_connect(
@@ -141,26 +252,7 @@ def onboard_stripe_connect(
         session.refresh(current_user)
 
     # Find or auto-create organizer profile
-    if target_organizer_id:
-        organizer = session.get(Organizer, target_organizer_id)
-        if not organizer or (organizer.user_id != current_user.id and not current_user.is_admin):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Organizer profile not found or not owned by you."
-            )
-    else:
-        organizer = session.exec(select(Organizer).where(Organizer.user_id == current_user.id)).first()
-        if not organizer:
-            base_name = current_user.username or (current_user.email.split("@")[0] if current_user.email else "Organizer")
-            slug = simple_slugify(base_name)
-            organizer = Organizer(
-                name=base_name,
-                slug=f"{slug}-{current_user.id[:6]}",
-                user_id=current_user.id
-            )
-            session.add(organizer)
-            session.commit()
-            session.refresh(organizer)
+    organizer = resolve_or_create_organizer(session, current_user, target_organizer_id)
 
     stripe_account = organizer.stripe_account
     
@@ -176,7 +268,7 @@ def onboard_stripe_connect(
             session.commit()
             session.refresh(stripe_account)
         except Exception as e:
-            logger.error(f"Failed to create Stripe Connect account: {e}")
+            logger.error(f"Failed to create Stripe Connect account for organizer {organizer.id} (user {current_user.id}): {e}")
             raise HTTPException(status_code=500, detail=f"Failed to create Stripe account: {str(e)}")
             
     # Generate Onboarding Link
@@ -192,7 +284,7 @@ def onboard_stripe_connect(
         )
         return {"url": onboarding_url}
     except Exception as e:
-        logger.error(f"Failed to generate Stripe onboarding link: {e}")
+        logger.error(f"Failed to generate Stripe onboarding link for account {stripe_account.stripe_account_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create onboarding link: {str(e)}")
 
 @router.get("/stripe-connect/dashboard-link")
@@ -205,19 +297,13 @@ def get_stripe_dashboard_link(
     """
     Get the Stripe Express/Standard dashboard URL for the connected account.
     """
-    if organizer_id:
-        organizer = session.get(Organizer, organizer_id)
-    else:
-        organizer = session.exec(select(Organizer).where(Organizer.user_id == current_user.id)).first()
-        
-    if not organizer or organizer.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organizer profile not found or not owned by you."
-        )
-        
+    organizer = resolve_or_create_organizer(session, current_user, organizer_id)
     stripe_account = organizer.stripe_account
-    if not stripe_account:
+    if not stripe_account or not stripe_account.stripe_account_id:
+        logger.warning(
+            f"Stripe dashboard link requested but no connected account found. "
+            f"user_id={current_user.id}, organizer_id={organizer.id}"
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No Stripe account connected."

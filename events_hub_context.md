@@ -531,3 +531,25 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - `GET /api/admin/events?status=pending` expands `status_filter == "pending"` to include `"pending_review"` and `"pending_moderation"`.
   - `EventsManager.tsx` includes `pending_review` in the status filter dropdown.
 
+---
+
+## 14. Seller Stripe Connect Onboarding & Resilient Organizer Resolution
+
+- **Non-Admin Onboarding Access (`backend/app/api/sellers.py`):**
+  - Standard authenticated users (`get_current_user`) have full permission to onboard with Stripe Connect via `POST /api/sellers/stripe-connect/onboard`.
+  - Automatically elevates user seller tier to 2 and seller status to `approved`.
+- **Resilient Organizer Resolution (`resolve_or_create_organizer`):**
+  - Sanitizes incoming organizer identifiers (treating `""`, `"null"`, `"undefined"`, `"none"` as `None`).
+  - Multi-strategy lookup:
+    1. Direct primary key lookup.
+    2. Normalized unhyphenated UUID lookup (`normalize_uuid`) to handle dashed UUID parameters from client state.
+    3. Slug lookup matching `Organizer.slug`.
+  - Authorization & Group Memberships:
+    - Automatically links unassigned organizer records (`user_id is None`) to `current_user.id`.
+    - Honors direct ownership (`organizer.user_id == current_user.id`), admin privilege (`current_user.is_admin`), and group membership (`GroupMember` table lookup).
+    - If an unowned or missing organizer ID is requested, logs a descriptive warning and falls back gracefully to the user's personal organizer rather than raising an HTTP 404.
+  - Auto-Creation Fallback:
+    - If the user has no existing `Organizer` record, auto-creates a new organizer profile linked to `current_user.id` with a collision-resistant unique slug and persists it in the database transaction.
+- **Dashboard Link & Status Parity:**
+  - `GET /api/sellers/stripe-connect/dashboard-link` and `GET /api/sellers/status` utilize flexible organizer resolution and log clear warnings if an account has not yet connected Stripe.
+
