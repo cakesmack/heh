@@ -182,8 +182,36 @@ These failures block cleanup decisions that depend on event creation, moderation
 
 Only numeric loopback traffic required by the local test runtime was permitted. No test overrides the socket guard outside its deterministic regression module. No non-loopback connection succeeded, and no production/development database, migration, Stripe API, email provider, Cloudflare, Google, or other external service was contacted. The application-global engine remained bound to the exact temporary SQLite path, per-test engines remained in-memory SQLite, application lifespan did not run, and the temporary database file was removed after the session.
 
+### Complete declared-environment baseline — 2026-09-09
+
+The existing project virtual environment was brought into line with the declared development manifest by installing `backend/requirements-dev.txt`, which recursively installs `backend/requirements.txt`. Installation completed without resolver errors. All previously installed requirements were already satisfied; the missing declared package `tzdata` was installed at version 2026.3. The only installer notice was that a newer pip release is available.
+
+Environment:
+
+* Python: 3.14.0
+* tzdata: 2026.3
+* pytest: 9.1.1
+* pytest-asyncio: 1.4.0
+
+`ZoneInfo("Europe/London")` loaded successfully after installation. Collection completed cleanly with exactly 19 modules and 75 tests, all under `backend/tests`; no scratch or archived test was collected.
+
+The scoped baseline `python -m pytest backend/tests` completed in 4.86 seconds:
+
+* Collected: 75
+* Passed: 75
+* Failed: 0
+* Skipped: 0
+* Errors: 0
+* Warnings: 551
+
+The warnings are existing deprecation warnings from Pydantic configuration, `datetime.utcnow()`, and SlowAPI's asyncio inspection, plus a pytest cache-path warning. They did not affect collection or test results.
+
+All eight timezone-dependent failures from the corrected loopback baseline are resolved without application or test assertion changes. This conclusively classifies them as local environment failures caused by the incomplete dependency installation rather than application regressions.
+
+The complete isolated backend suite is now a usable baseline for later cleanup decisions within the behaviours it covers. The safeguards remained active: the application-global engine targeted only its process-specific temporary SQLite file, per-test engines used in-memory SQLite, application lifespan and migrations did not run, external credentials remained test-only or empty, email/provider operations remained mocked, and the socket guard rejected non-loopback traffic. No real database or external service was contacted, and no temporary test database remained after the session.
+
 ## Remaining risks
 
 The suite still uses SQLite compatibility shims and does not establish PostgreSQL behavioural fidelity. Fresh PostgreSQL migration/bootstrap verification remains a separate task.
 
-The current environment has not installed the complete dependency graph declared through `backend/requirements-dev.txt`; specifically, its missing declared `tzdata` package blocks eight Windows timezone-dependent tests. Future tests that launch subprocesses or deliberately replace the network guard require a separate safety review.
+Future tests that launch subprocesses or deliberately replace the network guard require a separate safety review. The warning backlog should be handled separately from this baseline task.

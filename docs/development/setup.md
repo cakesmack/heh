@@ -102,7 +102,7 @@ Only values intended for browser exposure may use the `NEXT_PUBLIC_` prefix. Kee
 Repository and test-infrastructure verification does not prove that a fresh database can migrate or that the application starts. Those remain explicit gates:
 
 1. Fresh PostgreSQL bootstrap requires a dedicated migration-safety task.
-2. Backend test isolation is configured, but the suite still requires the packages in `backend/requirements-dev.txt`.
+2. The isolated backend baseline passes 75 tests when the declared packages in `backend/requirements-dev.txt` are installed.
 3. Frontend runtime/container alignment belongs to Batch 0B.
 4. Frontend verification command setup remains pending.
 
