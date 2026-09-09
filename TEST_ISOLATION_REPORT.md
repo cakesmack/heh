@@ -4,7 +4,7 @@
 
 Batch 0C changes test infrastructure only. It does not change application runtime code, database models, migrations, deployment configuration, frontend code, or business assertions.
 
-The approved suite contains 18 modules and 72 pytest-collected tests under `backend/tests`.
+The approved suite contains 19 modules and 75 pytest-collected tests under `backend/tests`, including three focused network-isolation regression tests.
 
 ## Original risks
 
@@ -76,7 +76,7 @@ Before application imports, the conftest replaces external-service settings with
 * Google Maps/geocoding and Ordnance Survey;
 * scraper and cron secrets.
 
-Existing email service and SDK calls remain mocked. Existing tests mock intended Stripe operations. An autouse fixture blocks `socket.socket.connect`, `socket.socket.connect_ex`, and `socket.create_connection`, causing any unexpected outbound network attempt to fail before reaching a remote service.
+Existing email service and SDK calls remain mocked. Existing tests mock intended Stripe operations. An autouse fixture guards `socket.socket.connect`, `socket.socket.connect_ex`, and `socket.create_connection`. It permits only numeric IPv4/IPv6 loopback destinations and local Unix-domain sockets, where supported, while rejecting hostnames without resolving them and rejecting every non-loopback IP before reaching a remote service.
 
 ## Test-only dependencies
 
@@ -144,8 +144,46 @@ These results do not establish application regressions or stale expectations for
 
 The 16 direct-service, schema, fee, and static security tests that did not require the blocked loopback path passed. No remote database or production/development database was contacted. The application-global database remained bound to its process-specific temporary SQLite target, per-test databases were isolated in-memory SQLite instances, no application lifespan ran, and no migration executed. No external network connection or Stripe, email, Cloudflare, Google, or other provider request completed. The temporary SQLite file was removed at session finish.
 
+### Corrected loopback baseline — 2026-09-09
+
+The network guard now preserves the original socket functions and delegates only when the destination is a numeric loopback address. `ipaddress.ip_address(...).is_loopback` permits IPv4 `127.0.0.0/8` and IPv6 `::1`. Local Unix-domain socket operations are also permitted when supported. Hostnames such as `localhost` are rejected without DNS resolution, as are arbitrary external IPv4 and IPv6 addresses.
+
+Three database-free regression tests exercise the guard through mocked original socket functions. They prove that required numeric loopback destinations delegate without making a live connection and that remote test-net addresses and hostnames raise before any resolver or connection delegate is called. The focused guard suite passed 3/3.
+
+Collection then completed cleanly with 19 modules and 75 tests. This is the original 18-module, 72-test suite plus the new three-test network-isolation module. No test from `backend/scratch`, `archive`, or `_archive` appeared.
+
+Environment:
+
+* Python: 3.14.0
+* pytest: 9.1.1
+* pytest-asyncio: 1.4.0
+
+The corrected scoped baseline `python -m pytest backend/tests` completed in 8.27 seconds:
+
+* Collected: 75
+* Passed: 67
+* Failed: 8
+* Skipped: 0
+* Errors: 0
+* Warnings: 508
+
+The loopback infrastructure failure is resolved: TestClient and asyncio started normally, and the new network-isolation tests passed. All eight remaining failures form one dependency/environment compatibility group. On this Windows Python 3.14 environment, `ZoneInfo("Europe/London")` raises `ZoneInfoNotFoundError` because the installed virtual environment lacks `tzdata`, although `backend/requirements.txt` already declares that dependency. The affected tests are:
+
+* `test_event_moderation_queue.py::test_profanity_event_creates_report_in_queue`
+* `test_private_beta_ticketing_gating.py::test_non_admin_allowed_creating_event_with_ticket_tiers`
+* `test_private_beta_ticketing_gating.py::test_single_session_and_36h_constraint_enforced_for_standard_users`
+* `test_streamlined_event_publishing.py::test_clean_event_submission_instant_publishing`
+* `test_streamlined_event_publishing.py::test_profanity_event_quarantine_in_pending_review`
+* `test_terms_acceptance.py::test_standard_free_event_without_ticketing_succeeds_without_terms`
+* `test_terms_acceptance.py::test_ticketed_event_with_terms_acceptance_succeeds`
+* `test_terms_acceptance.py::test_enabling_ticketing_on_event_update_requires_terms`
+
+These failures block cleanup decisions that depend on event creation, moderation, ticket gating, publishing, or terms acceptance. The later action is to install the complete declared development dependency set from `backend/requirements-dev.txt` in the isolated environment and rerun the same suite; no application or test assertion change is indicated by this baseline.
+
+Only numeric loopback traffic required by the local test runtime was permitted. No test overrides the socket guard outside its deterministic regression module. No non-loopback connection succeeded, and no production/development database, migration, Stripe API, email provider, Cloudflare, Google, or other external service was contacted. The application-global engine remained bound to the exact temporary SQLite path, per-test engines remained in-memory SQLite, application lifespan did not run, and the temporary database file was removed after the session.
+
 ## Remaining risks
 
 The suite still uses SQLite compatibility shims and does not establish PostgreSQL behavioural fidelity. Fresh PostgreSQL migration/bootstrap verification remains a separate task.
 
-The socket guard currently blocks required Windows loopback socket-pair setup as well as external destinations. Until that isolation fixture is refined, 56 TestClient/async tests cannot provide application-level results. Future tests that launch subprocesses or deliberately replace the guard require a separate safety review.
+The current environment has not installed the complete dependency graph declared through `backend/requirements-dev.txt`; specifically, its missing declared `tzdata` package blocks eight Windows timezone-dependent tests. Future tests that launch subprocesses or deliberately replace the network guard require a separate safety review.

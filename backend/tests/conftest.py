@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import os
 import socket
 import sys
@@ -53,6 +54,12 @@ import pytest
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 
+
+_ORIGINAL_SOCKET_CONNECT = socket.socket.connect
+_ORIGINAL_SOCKET_CONNECT_EX = socket.socket.connect_ex
+_ORIGINAL_CREATE_CONNECTION = socket.create_connection
+
+
 def assert_safe_database_configuration() -> None:
     if os.environ.get("DATABASE_URL") != TEST_DATABASE_URL:
         raise RuntimeError("Backend tests require the isolated pytest DATABASE_URL")
@@ -81,7 +88,40 @@ async def blocked_application_lifespan(_app):
     yield
 
 
-def block_outbound_network(*_args, **_kwargs):
+def is_numeric_loopback_destination(address) -> bool:
+    if not isinstance(address, tuple) or not address:
+        return False
+
+    host = address[0]
+    if not isinstance(host, str):
+        return False
+
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        # Do not resolve hostnames while deciding whether a destination is safe.
+        return False
+
+
+def _is_local_unix_socket(sock: socket.socket) -> bool:
+    return hasattr(socket, "AF_UNIX") and sock.family == socket.AF_UNIX
+
+
+def guarded_socket_connect(sock: socket.socket, address):
+    if _is_local_unix_socket(sock) or is_numeric_loopback_destination(address):
+        return _ORIGINAL_SOCKET_CONNECT(sock, address)
+    raise RuntimeError("Outbound network access is disabled during backend tests")
+
+
+def guarded_socket_connect_ex(sock: socket.socket, address):
+    if _is_local_unix_socket(sock) or is_numeric_loopback_destination(address):
+        return _ORIGINAL_SOCKET_CONNECT_EX(sock, address)
+    raise RuntimeError("Outbound network access is disabled during backend tests")
+
+
+def guarded_create_connection(address, *args, **kwargs):
+    if is_numeric_loopback_destination(address):
+        return _ORIGINAL_CREATE_CONNECTION(address, *args, **kwargs)
     raise RuntimeError("Outbound network access is disabled during backend tests")
 
 
@@ -104,9 +144,9 @@ def isolated_test_runtime(monkeypatch):
             "lifespan_context",
             blocked_application_lifespan,
         )
-    monkeypatch.setattr(socket.socket, "connect", block_outbound_network)
-    monkeypatch.setattr(socket.socket, "connect_ex", block_outbound_network)
-    monkeypatch.setattr(socket, "create_connection", block_outbound_network)
+    monkeypatch.setattr(socket.socket, "connect", guarded_socket_connect)
+    monkeypatch.setattr(socket.socket, "connect_ex", guarded_socket_connect_ex)
+    monkeypatch.setattr(socket, "create_connection", guarded_create_connection)
 
     yield
 

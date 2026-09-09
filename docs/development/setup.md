@@ -66,12 +66,12 @@ pip install -r backend/requirements-dev.txt
 From the repository root, the approved backend test command is:
 
 ```text
-pytest backend/tests
+python -m pytest backend/tests
 ```
 
 `pytest.ini` restricts ordinary discovery to `backend/tests`. Do not pass scratch, archive, or historical paths explicitly.
 
-The test conftest overwrites database and external-service settings before application modules are imported. The application-global engine is restricted to a process-specific SQLite file in the operating-system temporary directory, while individual tests continue to use their existing in-memory SQLite databases. Application lifespan is disabled for this handler-only suite so table creation and migration helpers cannot run. Outbound sockets are blocked and email providers are mocked.
+The test conftest overwrites database and external-service settings before application modules are imported. The application-global engine is restricted to a process-specific SQLite file in the operating-system temporary directory, while individual tests continue to use their existing in-memory SQLite databases. Application lifespan is disabled for this handler-only suite so table creation and migration helpers cannot run. Numeric loopback sockets required by the local test runtime are allowed; hostnames and non-loopback destinations remain blocked, and email providers are mocked.
 
 SQLite is used here only as the existing suite's isolation mechanism. It is not an application runtime or PostgreSQL migration substitute.
 
