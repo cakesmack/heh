@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 from app.core.database import get_session
 from app.core.security import get_current_user
 from app.core.utils import normalize_uuid
@@ -22,49 +22,6 @@ router = APIRouter()
 
 
 from app.core.permissions import get_user_group_role, require_group_role
-
-
-# =============================================================================
-# DEBUG ENDPOINT - Temporary for enum diagnosis
-# =============================================================================
-
-@router.get("/debug/check-roles")
-def check_db_roles(session: Session = Depends(get_session)):
-    """
-    Asks the database directly: 'What roles do you accept?'
-    """
-    from sqlalchemy import text
-    try:
-        # Use connection.execute for raw SQL instead of session.exec
-        connection = session.connection()
-        result = connection.execute(text("SELECT unnest(enum_range(NULL::grouprole))"))
-        rows = result.fetchall()
-        values = [row[0] for row in rows]
-        return {
-            "STATUS": "SUCCESS",
-            "VALID_DB_VALUES": values,
-            "MESSAGE": "Please update your Python Code to match these values exactly."
-        }
-    except Exception as e:
-        import traceback
-        return {"STATUS": "ERROR", "DETAILS": str(e), "TRACEBACK": traceback.format_exc()}
-
-
-@router.get("/debug/add-admin-role")
-def add_admin_role(session: Session = Depends(get_session)):
-    """
-    Adds the missing ADMIN value to the PostgreSQL grouprole enum.
-    """
-    from sqlalchemy import text
-    try:
-        connection = session.connection()
-        # Add ADMIN to the enum type
-        connection.execute(text("ALTER TYPE grouprole ADD VALUE IF NOT EXISTS 'ADMIN'"))
-        session.commit()
-        return {"STATUS": "SUCCESS", "MESSAGE": "ADMIN role added to PostgreSQL enum"}
-    except Exception as e:
-        import traceback
-        return {"STATUS": "ERROR", "DETAILS": str(e), "TRACEBACK": traceback.format_exc()}
 
 
 # =============================================================================
