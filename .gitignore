@@ -27,8 +27,8 @@ archive/
 
 scrapers/
 
-# Documentation (local only)
-docs/
+# Historical local documentation pending review
+/_archive/docs/
 
 # Node
 node_modules/
@@ -79,3 +79,16 @@ htmlcov/
 
 # Local Maintenance Scripts
 backend/create_admin_user.py
+
+# Required dependency and compiler manifests
+!/frontend/package.json
+!/frontend/package-lock.json
+!/frontend/tsconfig.json
+!/scripts-node/package.json
+!/scripts-node/package-lock.json
+
+# Sanitised onboarding template
+!/backend/.env.example
+
+# Local TypeScript incremental cache
+/frontend/*.tsbuildinfo
