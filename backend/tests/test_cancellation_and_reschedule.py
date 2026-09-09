@@ -42,9 +42,12 @@ def client_fixture(test_db: Session):
     def get_session_override():
         return test_db
     app.dependency_overrides[get_session] = get_session_override
-    with TestClient(app) as client:
+    client = TestClient(app)
+    try:
         yield client
-    app.dependency_overrides.pop(get_session, None)
+    finally:
+        client.close()
+        app.dependency_overrides.pop(get_session, None)
 
 
 def test_event_cancellation_service_and_refunds(client: TestClient, test_db: Session):

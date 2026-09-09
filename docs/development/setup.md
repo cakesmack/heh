@@ -1,6 +1,6 @@
 # Development setup
 
-This guide records the repository contract established during Batch 0A. It is based on static inspection of the `dev` branch at security remediation commit `e683fef`. No dependency installation, application startup, migration, database connection, or runtime test was performed while preparing it.
+This guide records the repository contract established during Batches 0A and 0C. Batch 0C added backend test isolation without changing application runtime behaviour.
 
 ## Supported architecture
 
@@ -16,6 +16,7 @@ The following files are the dependency and compiler sources of truth:
 
 ```text
 backend/requirements.txt
+backend/requirements-dev.txt
 frontend/package.json
 frontend/package-lock.json
 frontend/tsconfig.json
@@ -35,7 +36,7 @@ For a frontend checkout using a compatible Node runtime, install the exact lockf
 npm ci
 ```
 
-The repository currently defines frontend `dev`, `build`, and `start` scripts. It does not define supported `test`, `typecheck`, or `lint` npm scripts. Establishing those verification commands belongs to Batch 0C.
+The repository currently defines frontend `dev`, `build`, and `start` scripts. It does not define supported `test`, `typecheck`, or `lint` npm scripts. Frontend verification commands remain pending.
 
 The `scripts-node` manifest defines a database-writing `npm start` command and currently relies on an unpinned `npx tsx` executor that is absent from its lock. Track the manifests for provenance, but do not run the command until the maintenance tooling is separately reviewed.
 
@@ -53,6 +54,26 @@ SECRET_KEY
 The template also lists optional service, email, media, boundary, and feature settings accepted by `backend/app/core/config.py`. Values resembling keys in the template are explicit placeholders only. Public sender addresses and localhost URLs are examples/defaults, not credentials.
 
 The existing startup paths can execute Alembic, SQL-ledger migrations, table creation, data backfills, and inline PostgreSQL changes. Do not run `start.sh`, `release.sh`, application lifespan startup, or migration commands against any database until the intended disposable or production database and migration state have been explicitly confirmed.
+
+## Safe backend tests
+
+Install production and test-only dependencies from the dedicated development manifest:
+
+```text
+pip install -r backend/requirements-dev.txt
+```
+
+From the repository root, the approved backend test command is:
+
+```text
+pytest backend/tests
+```
+
+`pytest.ini` restricts ordinary discovery to `backend/tests`. Do not pass scratch, archive, or historical paths explicitly.
+
+The test conftest overwrites database and external-service settings before application modules are imported. The application-global engine is restricted to a process-specific SQLite file in the operating-system temporary directory, while individual tests continue to use their existing in-memory SQLite databases. Application lifespan is disabled for this handler-only suite so table creation and migration helpers cannot run. Outbound sockets are blocked and email providers are mocked.
+
+SQLite is used here only as the existing suite's isolation mechanism. It is not an application runtime or PostgreSQL migration substitute.
 
 ## Frontend environment
 
@@ -78,12 +99,12 @@ Only values intended for browser exposure may use the `NEXT_PUBLIC_` prefix. Kee
 
 ## Verification status
 
-Batch 0A performs repository-only verification. It does not prove that a fresh database can migrate, that the application starts, or that the current test suite is isolated. Those remain explicit gates:
+Repository and test-infrastructure verification does not prove that a fresh database can migrate or that the application starts. Those remain explicit gates:
 
 1. Fresh PostgreSQL bootstrap requires a dedicated migration-safety task.
-2. Backend tests require global engine and lifespan isolation before broad discovery.
+2. Backend test isolation is configured, but the suite still requires the packages in `backend/requirements-dev.txt`.
 3. Frontend runtime/container alignment belongs to Batch 0B.
-4. Frontend and backend verification command setup belongs to Batch 0C.
+4. Frontend verification command setup remains pending.
 
 ## External scraper boundary
 
