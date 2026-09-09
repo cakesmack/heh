@@ -4,7 +4,7 @@
 
 Batch 0C changes test infrastructure only. It does not change application runtime code, database models, migrations, deployment configuration, frontend code, or business assertions.
 
-The approved suite contains 18 modules and 84 statically defined `test_*` functions under `backend/tests`.
+The approved suite contains 18 modules and 72 pytest-collected tests under `backend/tests`.
 
 ## Original risks
 
@@ -29,13 +29,14 @@ The root `pytest.ini` defines:
 
 * `testpaths = backend/tests`
 * `python_files = test_*.py`
+* `pythonpath = backend`, so repository-root pytest runs can import the existing `backend/app` package as `app`
 * exclusions for Git/cache/bytecode, virtual environments, dependency trees, frontend and Node tooling, generated/build output, `scratch`, `archive`, and `_archive`
 * strict marker handling and strict pytest-asyncio mode
 
 The approved command remains explicit:
 
 ```text
-pytest backend/tests
+python -m pytest backend/tests
 ```
 
 No scratch or archived test was executed or moved.
@@ -102,18 +103,49 @@ Static verification confirmed:
 
 A local engine-construction check confirmed that the existing production pool arguments accept the isolated SQLite file URL, resolve to the expected temporary path, and do not create the file without a connection.
 
-The approved command `python -m pytest backend/tests` was attempted after the static safety gate. The interpreter exited before collection with `No module named pytest`. Neither the system Python nor `backend/.venv` currently provides pytest or pytest-asyncio, and this task prohibited making network calls to install them. No test body or application module was executed by that command. Results are therefore:
+### First isolated baseline — 2026-09-09
 
-* Collected: 0
-* Passed: 0
-* Failed: 0
+Environment:
+
+* Python: 3.14.0
+* pytest: 9.1.1
+* pytest-asyncio: 1.4.0
+
+Collection completed cleanly with 18 modules and 72 tests. No test from `backend/scratch`, `archive`, or `_archive` appeared. The earlier static estimate of 84 tests was inaccurate: current syntax-tree inspection finds 87 `test_`-prefixed definitions, of which 15 are fixtures named `test_db_fixture`. Pytest correctly excludes those fixtures, leaving 72 runnable tests.
+
+The scoped baseline command `python -m pytest backend/tests` completed in 15.63 seconds:
+
+* Collected: 72
+* Passed: 16
+* Failed: 55
 * Skipped: 0
-* Blocked: all 84 tests, pending installation from `backend/requirements-dev.txt` in an isolated development environment
+* Errors: 1
+* Warnings: 411
 
-No application data or external service was contacted or changed. No migration, application startup, payment flow, deployment action, or network request was run.
+The 55 failures and one setup error form one test-isolation/fixture group. The outbound network guard replaces `socket.socket.connect`, `socket.socket.connect_ex`, and `socket.create_connection`. On Windows with Python 3.14, AnyIO/TestClient and asyncio create internal loopback socket pairs while starting their event loops. The guard rejects those `127.0.0.1` connections before request handlers execute. The affected modules and counts are:
+
+* `test_auto_seller_verification.py` — 1 failure
+* `test_cancellation_and_reschedule.py` — 1 failure
+* `test_checkout.py` — 4 failures
+* `test_collections.py` — 11 failures
+* `test_event_moderation_queue.py` — 6 failures
+* `test_fee_settings_api.py` — 1 failure
+* `test_location_hubs.py` — 1 failure
+* `test_operational_safeguards.py` — 5 failures
+* `test_organizer_invoices.py` — 2 failures
+* `test_private_beta_ticketing_gating.py` — 6 failures
+* `test_scanner.py` — 1 failure
+* `test_sellers.py` — 7 failures
+* `test_streamlined_event_publishing.py` — 2 failures and 1 setup error
+* `test_terms_acceptance.py` — 4 failures
+* `test_webhooks.py` — 3 failures
+
+These results do not establish application regressions or stale expectations for the affected tests because their handlers did not run. They block cleanup work that depends on those 56 tests. The next test-infrastructure investigation should permit only the loopback communication required by the local event-loop/TestClient implementation while continuing to reject non-loopback network destinations.
+
+The 16 direct-service, schema, fee, and static security tests that did not require the blocked loopback path passed. No remote database or production/development database was contacted. The application-global database remained bound to its process-specific temporary SQLite target, per-test databases were isolated in-memory SQLite instances, no application lifespan ran, and no migration executed. No external network connection or Stripe, email, Cloudflare, Google, or other provider request completed. The temporary SQLite file was removed at session finish.
 
 ## Remaining risks
 
 The suite still uses SQLite compatibility shims and does not establish PostgreSQL behavioural fidelity. Fresh PostgreSQL migration/bootstrap verification remains a separate task.
 
-The socket guard covers in-process Python network clients used by the current suite. Future tests that launch subprocesses or deliberately replace the guard require a separate safety review.
+The socket guard currently blocks required Windows loopback socket-pair setup as well as external destinations. Until that isolation fixture is refined, 56 TestClient/async tests cannot provide application-level results. Future tests that launch subprocesses or deliberately replace the guard require a separate safety review.

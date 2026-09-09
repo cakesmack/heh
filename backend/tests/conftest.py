@@ -22,7 +22,7 @@ TEST_ENVIRONMENT = {
     "DATABASE_URL": TEST_DATABASE_URL,
     "DATABASE_URL_POOLER": "",
     "SECRET_KEY": "pytest-only-secret-key",
-    "ALLOWED_ORIGINS": "http://testserver",
+    "ALLOWED_ORIGINS": '["http://testserver"]',
     "GOOGLE_MAPS_API_KEY": "",
     "GOOGLE_GEOCODE_API_KEY": "",
     "STRIPE_SECRET_KEY": "sk_test_pytest_only",
