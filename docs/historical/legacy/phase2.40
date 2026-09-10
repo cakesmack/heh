@@ -1,0 +1,213 @@
+Phase 2.4: The Social Graph, System Maturity & Data Insights (Master Spec)
+Project: Highland Events Hub Current State: Post-Phase 2.3 Objective: Transform into a community platform with robust social features, secure auth, and a powerful Analytics Engine.
+
+📅 Sprint 1: Auth, Identity & Profiles
+Goal: Transition from Email-based identity to Username-based identity and secure the platform.
+
+1. Database Schema Updates (users or profiles table)
+Add Columns:
+
+username (Text, Unique, Nullable initially).
+
+display_name (Text, Nullable).
+
+trust_level (Integer, Default: 0).
+
+is_admin (Boolean, Default: false) - Ensure this exists for the new moderation logic.
+
+2. The "Username Migration" (Blocker Logic)
+Scenario: Existing users have no username. New users must pick one.
+
+Sign-Up Flow: Update the Registration Form to add a mandatory "Username" field. Check uniqueness before submit.
+
+Existing User Flow (The Blocker):
+
+Logic: On every page load (or inside the Layout wrapper), check: if (user && !user.username).
+
+Action: If true, trigger a Full Screen Modal (cannot be closed).
+
+Modal Content: "Choose your Username to continue." Input field + Submit button.
+
+Backend: Update the record. Once set, the modal disappears.
+
+3. Google Login Integration
+Implementation: Add "Continue with Google" button to Login/Signup forms.
+
+Library: Use your existing Auth provider's Google integration (or standard OAuth2).
+
+Logic:
+
+If the Google email matches an existing account, link them.
+
+If new, create account and trigger the Username Blocker modal immediately after redirect.
+
+📅 Sprint 2: The Social Layer (Groups & Following)
+Goal: Connect users to Organizers and Venues.
+
+1. The "Follow" System
+Database Table: follows
+
+id (Primary Key)
+
+follower_id (User ID, Foreign Key)
+
+target_id (UUID - Linked to Venue OR Organizer)
+
+target_type (String/Enum: 'venue' or 'group')
+
+created_at (Timestamp)
+
+Constraint: Unique composite key on [follower_id, target_id] (User can't follow same thing twice).
+
+UI Components:
+
+Profile Header (Venue & Group Pages): Add a "Follow" toggle button.
+
+State: If row exists in follows table -> "Following" (Active style). Else -> "Follow" (Outline style).
+
+Dashboard ("My Feed" Tab):
+
+Query: Fetch Events where (venue_id IN user_followed_venue_ids) OR (organizer_id IN user_followed_group_ids).
+
+Sort: Chronological (Newest created or Upcoming).
+
+2. Group Management (Invite Links)
+Database Table: group_members
+
+group_id (Foreign Key)
+
+user_id (Foreign Key)
+
+role (String: 'owner', 'editor')
+
+Database Table: group_invites
+
+token (String, Unique, Index)
+
+group_id (Foreign Key)
+
+created_at (Timestamp)
+
+expires_at (Timestamp - e.g., 7 days)
+
+UI & Logic:
+
+Owner Dashboard: "Generate Invite Link" button.
+
+Action: Creates a row in group_invites and returns URL: .../join/group/[token].
+
+The "Join" Page (/join/group/[token]):
+
+On load, validate token (check if exists and not expired).
+
+If valid: Show "Join [Group Name]?" button.
+
+On Click: Add user to group_members (Role: 'editor'), delete the invite token, redirect to Group Dashboard.
+
+📅 Sprint 3: Admin & Moderation Overhaul
+Goal: Streamline operations and organize the chaos.
+
+1. Moderation Logic Upgrade (The "Trust" System)
+Backend "Create Event" Logic:
+
+Current: All events -> Pending.
+
+New:
+
+JavaScript
+
+if (user.is_admin || user.trust_level > 0) {
+    status = 'approved';
+} else {
+    status = 'pending';
+}
+"Approve Series" Action:
+
+In the Admin Queue, when clicking "Approve" on an event with a parent_event_id:
+
+Action: Update status = 'approved' for ALL events where parent_event_id matches the target. (Bulk update).
+
+2. Admin Dashboard Redesign
+Layout: Replace the 4 big cards with a single "Platform Health" panel.
+
+Columns: Users (Total/New), Events (Active/Pending), Venues.
+
+Navigation: Update Sidebar to use Collapsible Categories:
+
+Manage: Events, Venues, Groups, Users.
+
+System: Categories, Tags, Moderation.
+
+Data: Analytics (Placeholder).
+
+📅 Sprint 4: The Analytics Engine (Data Capture)
+Goal: Capture raw intent and conversion data.
+
+1. Database Table: analytics_events
+Columns:
+
+id (PK)
+
+timestamp (DateTime, Default: Now)
+
+user_id (Nullable - for logged in users)
+
+visitor_id (String - Anonymous session ID/Cookie)
+
+event_type (String: 'page_view', 'click_ticket', 'save_event', 'search_query', 'click_website')
+
+target_id (UUID, Nullable - The Event/Venue ID being viewed)
+
+meta_data (JSON/Text - e.g., Search terms, Referrer URL)
+
+2. The Capture Mechanism (Hook/Service)
+Component: Create a global AnalyticsTracker or Hook.
+
+Triggers:
+
+Page Load: Fire page_view (Path: URL).
+
+Search Bar: When user hits "Search" (not typing), fire search_query (Term: "Jazz").
+
+Ticket Button: On Click, fire click_ticket.
+
+Save Button: On Click, fire save_event.
+
+Performance Note: These writes should be "fire and forget" (don't await the promise in the UI).
+
+📅 Sprint 5: Insights & Polish
+Goal: Visualize the data and clean up the frontend.
+
+1. The Insights Dashboard (Admin)
+View: Create /admin/insights.
+
+Widget A (Content Gaps): Query analytics_events for event_type = 'search_query'. Group by term, count frequency. Display Top 10.
+
+Widget B (Conversion): Calculate % of page_view events that result in click_ticket for the last 30 days.
+
+2. Event Owner Stats (User Dashboard)
+View: On "My Events" or "Event Details" for the owner.
+
+Data: Count rows in analytics_events where target_id matches this event.
+
+Display: Simple cards: "Total Views: 120", "Ticket Clicks: 5", "Saves: 12".
+
+3. Homepage "Popular" Section
+Logic: Query analytics_events:
+
+Filter: event_type = 'page_view', timestamp > (Now - 7 Days).
+
+Group By: target_id.
+
+Order By: Count Descending.
+
+Limit: 10.
+
+UI: Render these events in a new "Trending Now" strip on the homepage.
+
+🚫 Critical Constraints
+Tech Stack Agnostic: Use generic DB logic. Code must work with the existing ORM/Query builder (e.g., Prisma, Drizzle, TypeORM, or raw SQL).
+
+Past Events: Update the main getEvents query (Public) to strictly filter out dates before Today (date >= NOW()).
+
+Analytics: Do not block the UI waiting for analytics to save.

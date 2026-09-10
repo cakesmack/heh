@@ -19,7 +19,7 @@ Neither route required authentication or authorization. Both were included in th
 
 ## Exposure and dependency investigation
 
-Static repository searches found no frontend call, automated test, script, operational command, or current documentation that consumes either endpoint. The only non-source references were audit findings in `REPOSITORY_CLEANUP_PLAN.md`, `REPOSITORY_INVENTORY.md`, and `_archive/misc/BACKEND_AUDIT_REPORT.md`.
+Static repository searches found no frontend call, automated test, script, operational command, or current documentation that consumes either endpoint. The only non-source references were audit findings in `REPOSITORY_CLEANUP_PLAN.md`, `REPOSITORY_INVENTORY.md`, and `docs/audits/historical/BACKEND_AUDIT_REPORT.md`.
 
 Local Git history shows that the enum-inspection route was introduced by commit `e9e7b77` on 25 January 2026 as a debug endpoint. The schema-repair route followed in `91da490`; commit `5ef8cf0` then changed it from POST to GET for browser access. Source comments called the block temporary enum diagnosis. This supports removal rather than retaining an operational API contract.
 
