@@ -19,6 +19,13 @@ backend/scripts/_archive/
 backend/scripts/archive/
 archive/
 
+# One reviewed disabled debug artifact retained for audit history
+!/backend/scripts/archive/
+/backend/scripts/archive/*
+!/backend/scripts/archive/debug/
+/backend/scripts/archive/debug/*
+!/backend/scripts/archive/debug/test_event_update_moderation.py.disabled
+
 # Env Examples
 .env.example
 *.env.example

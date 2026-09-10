@@ -22,8 +22,10 @@ The following groups require separate operator and data-safety review before use
 * `backend/scripts/apply_constraints.py` and `backend/scripts/fix_admin_user.py`, which can change schema or account state;
 * Node venue maintenance tools under `scripts-node/`, which write database records and have unresolved execution assumptions.
 
-## Dangerous, debug, and historical utilities
+## Dangerous historical and debug utilities — DO NOT EXECUTE
 
-`backend/scratch/test_event_update_moderation.py` can alter existing records and must not be treated as an isolated test. Debug and migration utilities under archive locations may query or mutate configured databases and remain historical evidence. Do not execute or move them without the separately approved cleanup batch.
+`backend/scripts/archive/debug/test_event_update_moderation.py.disabled` is a quarantined scratch reproduction that selects existing records through the configured database engine, changes event moderation and venue state, and creates or deletes featured-booking data. Its disabled extension and archive location exclude it from normal Python imports and pytest discovery. Restoring, importing, or executing it requires an explicit dependency and data-safety review.
+
+Other debug and migration utilities under archive locations may query or mutate configured databases and remain historical evidence. Do not execute or move them without a separately approved cleanup batch.
 
 External schedules, operator-owned commands, and production migration state remain unresolved. No scheduler is asserted by this document.
