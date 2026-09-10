@@ -296,3 +296,45 @@ Remediation backup and captured verification evidence:
 ```text
 C:\Users\Craig\AppData\Local\Temp\heh_initial_type_blockers_20260910_193054
 ```
+
+## Collection fixed-date type remediation
+
+**Remediation date:** 10 September 2026
+
+This remediation addressed only the two `CollectionsManager.tsx` diagnostics:
+
+* `src/components/admin/CollectionsManager.tsx:409:67` — `TS2345`: the update payload contained `fixed_start_date: string | null`, while `CollectionUpdate` allowed only `string | undefined`.
+* `src/components/admin/CollectionsManager.tsx:411:45` — `TS2345`: the create payload contained `fixed_start_date: string | null`, while `CollectionCreate` allowed only `string | undefined`.
+
+The same structural mismatch covered both `fixed_start_date` and `fixed_end_date`. The backend model stores both as nullable dates. `CollectionCreate`, `CollectionUpdate`, and the response schema define both as `Optional[date] = None`; empty or whitespace strings are explicitly coerced to `None`. Update handling uses `model_dump(exclude_unset=True)`, so an omitted field leaves its stored value unchanged while an explicit `null` clears it. FastAPI serializes a populated date as an ISO `YYYY-MM-DD` string and an absent date as JSON `null`. Existing backend tests verify creation with empty values, updates with valid ISO dates, and clearing both dates back to `null`.
+
+The UI already implements that contract. Its date inputs hold strings, edit initialization maps a null or missing response to `''`, and submission maps an empty input to `null`. The API functions pass the object through `JSON.stringify` without renaming or transforming either field.
+
+The canonical frontend declarations in `src/types/index.ts` were corrected as follows:
+
+* Collection responses: `fixed_start_date` and `fixed_end_date` are `string | null`.
+* Create/update inputs: both fields are optional `string | null`, allowing omission, a valid ISO string, or explicit clearing with `null`.
+
+No `CollectionsManager.tsx` implementation, request body, API URL, permission check, collection date calculation, visibility rule, event-membership query, geographic bound, ordering, or analytics behavior changed. No assertion, cast, fallback date, backend change, model change, or migration was introduced.
+
+### Verification result
+
+V2 improved from **24 diagnostics across 4 files** to **22 diagnostics across 3 files**. Both collection diagnostics disappeared and no new diagnostic appeared. The remaining diagnostics are unchanged:
+
+| File | Count | Root cause |
+|---|---:|---|
+| `src/pages/events/[id].tsx` | 8 × `TS2339` | Missing event cancellation response fields |
+| `src/pages/locations/[city].tsx` | 3 × `TS2339` | Missing location partner response fields |
+| `src/pages/organizers/invoices.tsx` | 11 × `TS2339` | Stale organizer-invoice response interfaces |
+
+The controlled production build passed with exit code `0` in 28.03 seconds. It reused the local font cache and made no external request; the build-only policy still authorised only `fonts.googleapis.com` and `fonts.gstatic.com`. The production server started on `http://127.0.0.1:43119`, became ready in 1.581 seconds, and returned HTTP `404` for the deliberate local route. The focused Chromium smoke collected one test and passed one test in 1.9 seconds. Server and browser-runner network logs were empty.
+
+Two preliminary server starts encountered `EADDRINUSE` because a Next process from the preceding verification task still held the fixed smoke port. That repository-owned stale process was identified by its start time and executable, stopped, and the clean start/smoke cycle then passed. The final server was stopped and `netstat` confirmed no listener remained on port 43119.
+
+Before the build, `frontend/next-env.d.ts` was backed up outside the repository. Its pre-task and final SHA-256 are both `F41E9C5A66FE4DCE9688EC9848279A51F1AF1091D7BDB0A1E813E9661F26C77D`; the user's pre-existing modification remains unstaged. Backend source remains unchanged, so the established backend baseline remains 75/75 without a rerun.
+
+Captured verification evidence:
+
+```text
+C:\Users\Craig\AppData\Local\Temp\heh_collection_date_types_20260910
+```

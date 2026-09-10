@@ -821,8 +821,8 @@ export interface Collection {
   target_link: string;
   is_active: boolean;
   sort_order: number;
-  fixed_start_date?: string;
-  fixed_end_date?: string;
+  fixed_start_date: string | null;
+  fixed_end_date: string | null;
   slug?: string;
   description?: string;
   long_description?: string;
@@ -863,8 +863,8 @@ export interface CollectionCreate {
   target_link: string;
   is_active?: boolean;
   sort_order?: number;
-  fixed_start_date?: string;
-  fixed_end_date?: string;
+  fixed_start_date?: string | null;
+  fixed_end_date?: string | null;
   slug?: string;
   description?: string;
   filter_params?: Record<string, any> | null;
@@ -895,8 +895,8 @@ export interface CollectionUpdate {
   target_link?: string;
   is_active?: boolean;
   sort_order?: number;
-  fixed_start_date?: string;
-  fixed_end_date?: string;
+  fixed_start_date?: string | null;
+  fixed_end_date?: string | null;
   slug?: string;
   description?: string;
   filter_params?: Record<string, any> | null;
