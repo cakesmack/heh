@@ -36,7 +36,7 @@ For a frontend checkout using a compatible Node runtime, install the exact lockf
 npm ci
 ```
 
-The repository currently defines frontend `dev`, `build`, and `start` scripts. It does not define supported `test`, `typecheck`, or `lint` npm scripts. Frontend verification commands remain pending.
+The repository defines frontend `dev`, `build`, `start`, and explicit non-incremental `typecheck` scripts. It does not define supported `test` or `lint` npm scripts. The current command results and blockers are recorded in [the frontend verification baseline](../../FRONTEND_VERIFICATION_BASELINE.md).
 
 The `scripts-node` manifest defines a database-writing `npm start` command and currently relies on an unpinned `npx tsx` executor that is absent from its lock. Track the manifests for provenance, but do not run the command until the maintenance tooling is separately reviewed.
 
@@ -97,14 +97,38 @@ NEXT_PUBLIC_STAY22_AID
 
 Only values intended for browser exposure may use the `NEXT_PUBLIC_` prefix. Keep server credentials, Stripe secret keys, Cloudflare API tokens, SMTP passwords, and database URLs out of frontend public variables.
 
+## Frontend verification
+
+From `frontend/`, run the explicit typecheck with:
+
+```text
+npm run typecheck
+```
+
+The production build command remains:
+
+```text
+npm run build
+```
+
+The 10 September 2026 baseline records 33 existing TypeScript diagnostics. A loopback-guarded production build also fails because `next/font/google` attempts to retrieve Inter from Google Fonts. Do not treat the build's configured TypeScript skip as a successful typecheck, and do not connect a local verification run to production services to bypass the font failure.
+
+The new local-only Playwright smoke test can be collected without starting a browser or server:
+
+```text
+node node_modules/@playwright/test/cli.js test tests/smoke.spec.ts --project=chromium --list
+```
+
+The smoke test is fixed to `http://127.0.0.1:43119` and rejects external browser requests. Its execution remains blocked until a safe production build exists and the declared Chromium browser is installed.
+
 ## Verification status
 
 Repository and test-infrastructure verification does not prove that a fresh database can migrate or that the application starts. Those remain explicit gates:
 
 1. Fresh PostgreSQL bootstrap requires a dedicated migration-safety task.
 2. The isolated backend baseline passes 75 tests when the declared packages in `backend/requirements-dev.txt` are installed.
-3. Frontend runtime/container alignment belongs to Batch 0B.
-4. Frontend verification command setup remains pending.
+3. Frontend runtime/container alignment belongs to Batch 0B; local Node 25.1.0 satisfies the current lock, while deployment configuration remains unchanged.
+4. Frontend typecheck and smoke collection commands now exist, but V2 fails with 33 diagnostics and V3 is blocked by the Google Fonts build request. See the frontend verification baseline before Batch 4 work.
 
 ## External scraper boundary
 
