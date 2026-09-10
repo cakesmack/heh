@@ -102,8 +102,11 @@ Only values intended for browser exposure may use the `NEXT_PUBLIC_` prefix. Kee
 From `frontend/`, run the explicit typecheck with:
 
 ```text
+node node_modules/next/dist/bin/next typegen
 npm run typecheck
 ```
+
+The first command generates the supported production route and page types under `.next/types`; the explicit typecheck then checks those generated types together with the frontend source. Isolated `.next/dev/types` validator output belongs to the development server and is excluded from wildcard discovery by this external production-type check.
 
 The production build command remains:
 
@@ -111,7 +114,7 @@ The production build command remains:
 npm run build
 ```
 
-The 10 September 2026 baseline records 33 existing TypeScript diagnostics. The production build has been positively verified when its existing `next/font/google` configuration can retrieve Inter from the exact Google Fonts hosts it requires. Do not treat the build's configured TypeScript skip as a successful typecheck, and do not connect a local verification run to production application services.
+The 10 September 2026 baseline began with 33 TypeScript diagnostics. After resolving the generated-validator collision and missing authentication type imports, 24 existing diagnostics remain in four explicitly deferred application files. The production build has been positively verified when its existing `next/font/google` configuration can retrieve Inter from the exact Google Fonts hosts it requires. Do not treat the build's configured TypeScript skip as a successful typecheck, and do not connect a local verification run to production application services.
 
 The new local-only Playwright smoke test can be collected without starting a browser or server:
 
@@ -146,7 +149,7 @@ Repository and test-infrastructure verification does not prove that a fresh data
 1. Fresh PostgreSQL bootstrap requires a dedicated migration-safety task.
 2. The isolated backend baseline passes 75 tests when the declared packages in `backend/requirements-dev.txt` are installed.
 3. Frontend runtime/container alignment belongs to Batch 0B; local Node 25.1.0 satisfies the current lock, while deployment configuration remains unchanged.
-4. Frontend V3 now passes the controlled production build, loopback production start, and one-test Chromium smoke. V2 still fails with 33 diagnostics, all classified in the frontend verification baseline, and remains the verification gate before Batch 4 work.
+4. Frontend V3 passes the controlled production build, loopback production start, and one-test Chromium smoke. V2 has improved from 33 to 24 diagnostics, all classified in the frontend verification baseline, and remains the verification gate before Batch 4 work.
 
 ## External scraper boundary
 

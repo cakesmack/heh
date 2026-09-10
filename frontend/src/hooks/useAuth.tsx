@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, createContext, useContext, ReactNode 
 import { useRouter } from 'next/router';
 import { toast } from 'react-hot-toast';
 import { api } from '@/lib/api';
+import type { LoginRequest, RegisterRequest, User } from '@/types';
 /**
  * Check if a user is eligible to sell and access Organizer tools.
  * Native ticketing engine is generally available for all registered users.

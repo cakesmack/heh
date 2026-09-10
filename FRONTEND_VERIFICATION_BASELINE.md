@@ -232,3 +232,67 @@ Completion-run backup location:
 ```text
 C:\Users\Craig\AppData\Local\Temp\highland_events_hub_v3_completion_20260910_190545
 ```
+
+## Initial type-blocker remediation
+
+**Remediation date:** 10 September 2026
+
+This scoped remediation addressed only the two generated-validator diagnostics and the seven missing authentication type references. Collection, event, location, and organizer-invoice diagnostics remain unchanged.
+
+### Generated validator collision
+
+Next 16 enables `experimental.isolatedDevBuild` by default. Development output is therefore generated under `.next/dev`, while `next typegen` and production builds generate types under `.next/types`. The existing `tsconfig.json` selected both trees explicitly and also matched them through its broad TypeScript globs. Consequently, `.next/dev/types/validator.ts` and `.next/types/validator.ts` were compiled together; each declares the same top-level `PagesPageConfig` type and produced one `TS2300` duplicate-identifier diagnostic.
+
+The durable correction keeps `.next/types/**/*.ts` as the supported production/typegen input, removes the explicit `.next/dev/types/**/*.ts` include, and excludes the isolated development type tree from wildcard discovery by external `tsc`. The protected `next-env.d.ts` still directly imports `.next/dev/types/routes.d.ts`, so that compatible route declaration remains reachable; the final compiler file list contains the two route declaration files and only the production `.next/types/validator.ts`. Application source coverage, compiler strictness, and the Next TypeScript plugin remain unchanged. No generated validator was edited or committed, and no diagnostic suppression was added.
+
+The installed command:
+
+```text
+node node_modules/next/dist/bin/next typegen
+```
+
+completed successfully without network access and regenerated `.next/types`. The following `npm run typecheck` reported 31 diagnostics and no diagnostic from either generated validator, proving that both `TS2300` errors disappeared while the production/typegen types remained included.
+
+### Authentication type references
+
+All seven `useAuth.tsx` diagnostics were missing-name errors for three existing canonical types:
+
+* `User`, used by seller eligibility, auth context state, and provider state.
+* `LoginRequest`, used by the context login signature and login callback.
+* `RegisterRequest`, used by the context registration signature and registration callback.
+
+These definitions already exist in `src/types/index.ts`. The authentication API client imports and uses the same `LoginRequest` and `RegisterRequest` payloads, returns the existing `TokenResponse`, and exposes the current-user response as `UserProfile`, which extends `User`. The only application-source change was a type-only import of `User`, `LoginRequest`, and `RegisterRequest` into `src/hooks/useAuth.tsx`. No storage, token, cookie, redirect, login, logout, registration, Google authentication, bookmark, provider, or backend behavior changed.
+
+### V2 result
+
+| Measurement | Before | After |
+|---|---:|---:|
+| Diagnostics | 33 | 24 |
+| Files | 7 | 4 |
+| Generated validator diagnostics | 2 | 0 |
+| `useAuth.tsx` diagnostics | 7 | 0 |
+
+The 24 remaining diagnostics are the four explicitly deferred root causes:
+
+| File | Count | Root cause |
+|---|---:|---|
+| `src/components/admin/CollectionsManager.tsx` | 2 × `TS2345` | Collection fixed-date nullability |
+| `src/pages/events/[id].tsx` | 8 × `TS2339` | Missing event cancellation response fields |
+| `src/pages/locations/[city].tsx` | 3 × `TS2339` | Missing location partner response fields |
+| `src/pages/organizers/invoices.tsx` | 11 × `TS2339` | Stale organizer-invoice response interfaces |
+
+No new diagnostic appeared elsewhere.
+
+### V3 regression result
+
+The controlled build passed with exit code `0` in 40.8 seconds. The successful run contacted only `fonts.googleapis.com` and `fonts.gstatic.com`, under the same exact build-only allowlist. A preliminary sandboxed attempt safely blocked an npm update-check connection to `registry.npmjs.org`; the connection did not succeed, the allowlist was not broadened, and the sandbox prevented the authorised font retrieval in that attempt. The successful rerun recorded no unexpected destination.
+
+The production server then started on `http://127.0.0.1:43119`, became ready in 1.555 seconds, and returned HTTP `404` for the deliberate local smoke route. The focused Chromium run collected one test and passed one test in 1.8 seconds. Server and test-runner network logs were empty, and the server was stopped with no remaining listener on port 43119.
+
+Before any Next command, `frontend/next-env.d.ts` was backed up outside the repository with SHA-256 `F41E9C5A66FE4DCE9688EC9848279A51F1AF1091D7BDB0A1E813E9661F26C77D`. It was restored after type generation and build and retains that exact final hash. The user's pre-existing change remains unstaged.
+
+Remediation backup and captured verification evidence:
+
+```text
+C:\Users\Craig\AppData\Local\Temp\heh_initial_type_blockers_20260910_193054
+```
