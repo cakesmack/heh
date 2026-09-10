@@ -20,7 +20,7 @@ See [docs/development/setup.md](docs/development/setup.md) for the current depen
 Important current limitations:
 
 * Do not assume a new PostgreSQL database can be initialised by the existing Alembic baseline. Fresh-database bootstrap remains blocked pending a dedicated migration task.
-* Do not run broad pytest discovery with development or production credentials present. Test isolation remains a separate stabilisation task.
+* The approved isolated backend suite is `python -m pytest backend/tests`; its recorded baseline is 75 passing tests. Do not explicitly collect scratch or archived paths.
 * The frontend container runtime and production image behaviour remain scheduled for Batch 0B; they are not changed here.
 
 ## Deployment context

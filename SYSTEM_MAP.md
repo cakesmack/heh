@@ -1,5 +1,7 @@
 # SYSTEM_MAP.md — Highland Events Hub
 
+For the documentation entrypoint and the relationship between this map and the authoritative project context, see [docs/architecture/index.md](docs/architecture/index.md).
+
 ## Data Validation Rules
 
 ### Flexible URL Validation (ticket_url, website_url, image_url)
@@ -21,11 +23,11 @@
 **Affected Files:**
 | Layer | File | What Changed |
 |-------|------|-------------|
-| Frontend Utility | `src/utils/url.ts` | New shared URL normalization helpers |
-| Frontend Create | `src/components/events/form-sections/EventTicketingSection.tsx` | `type="text"`, blur handlers, `setFormData` prop |
-| Frontend Create | `src/pages/submit-event.tsx` | Passes `setFormData` to `EventTicketingSection` |
-| Frontend Edit | `src/pages/events/[id]/edit.tsx` | `type="text"`, blur handler on ticket_url |
-| Frontend Showtimes | `src/components/events/form-sections/EventScheduleSection.tsx` | Showtime ticket_url: `type="text"` + blur normalization |
+| Frontend Utility | `frontend/src/utils/url.ts` | Shared URL normalization helpers |
+| Unified Create/Edit Wizard | `frontend/src/components/events/wizard/StepReview.tsx` | Normalizes `ticket_url` and `website_url` on blur for the current wizard |
+| Frontend Create Route | `frontend/src/pages/submit-event.tsx` | Renders `EventWizardForm` in creation mode |
+| Frontend Edit Route | `frontend/src/pages/events/[id]/edit.tsx` | Renders the same `EventWizardForm` in edit mode |
+| Frontend Showtimes | `frontend/src/components/events/form-sections/EventScheduleSection.tsx` | Normalizes per-showtime `ticket_url`; used by the wizard timeline step |
 | Backend Schema | `backend/app/schemas/event.py` | `_sanitize_url()` helper + `@model_validator` on `EventCreate` and `EventUpdate` |
 
 > [!NOTE]
@@ -34,6 +36,8 @@
 ---
 
 ## Scraper Data Sources
+
+The scraper paths in this section belong to the separate, manually operated scraper project and are not present in this application repository. This repository retains the typed ingestion and administrative import boundaries only.
 
 ### The Victorian Market (Inverness)
 
