@@ -111,7 +111,7 @@ The production build command remains:
 npm run build
 ```
 
-The 10 September 2026 baseline records 33 existing TypeScript diagnostics. A loopback-guarded production build also fails because `next/font/google` attempts to retrieve Inter from Google Fonts. Do not treat the build's configured TypeScript skip as a successful typecheck, and do not connect a local verification run to production services to bypass the font failure.
+The 10 September 2026 baseline records 33 existing TypeScript diagnostics. The production build has been positively verified when its existing `next/font/google` configuration can retrieve Inter from the exact Google Fonts hosts it requires. Do not treat the build's configured TypeScript skip as a successful typecheck, and do not connect a local verification run to production application services.
 
 The new local-only Playwright smoke test can be collected without starting a browser or server:
 
@@ -119,7 +119,25 @@ The new local-only Playwright smoke test can be collected without starting a bro
 node node_modules/@playwright/test/cli.js test tests/smoke.spec.ts --project=chromium --list
 ```
 
-The smoke test is fixed to `http://127.0.0.1:43119` and rejects external browser requests. Its execution remains blocked until a safe production build exists and the declared Chromium browser is installed.
+Install only the declared Playwright Chromium browser with the project-installed CLI:
+
+```text
+node node_modules/playwright/cli.js install chromium
+```
+
+After a successful build, the production server has been verified on the smoke harness's fixed loopback address with:
+
+```text
+node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 43119
+```
+
+With that server running, execute only the focused smoke test with:
+
+```text
+node node_modules/@playwright/test/cli.js test tests/smoke.spec.ts --project=chromium --workers=1 --reporter=line
+```
+
+The smoke test is fixed to `http://127.0.0.1:43119`, rejects external browser requests, and passes one test under the verified baseline.
 
 ## Verification status
 
@@ -128,7 +146,7 @@ Repository and test-infrastructure verification does not prove that a fresh data
 1. Fresh PostgreSQL bootstrap requires a dedicated migration-safety task.
 2. The isolated backend baseline passes 75 tests when the declared packages in `backend/requirements-dev.txt` are installed.
 3. Frontend runtime/container alignment belongs to Batch 0B; local Node 25.1.0 satisfies the current lock, while deployment configuration remains unchanged.
-4. Frontend typecheck and smoke collection commands now exist, but V2 fails with 33 diagnostics and V3 is blocked by the Google Fonts build request. See the frontend verification baseline before Batch 4 work.
+4. Frontend V3 now passes the controlled production build, loopback production start, and one-test Chromium smoke. V2 still fails with 33 diagnostics, all classified in the frontend verification baseline, and remains the verification gate before Batch 4 work.
 
 ## External scraper boundary
 
