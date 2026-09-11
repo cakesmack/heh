@@ -338,3 +338,33 @@ Captured verification evidence:
 ```text
 C:\Users\Craig\AppData\Local\Temp\heh_collection_date_types_20260910
 ```
+
+## Event and location response type remediation
+
+**Remediation date:** 11 September 2026
+
+This remediation addressed the 11 live-page diagnostics deferred from the previous baseline: eight `TS2339` diagnostics in `src/pages/events/[id].tsx` and three `TS2339` diagnostics in `src/pages/locations/[city].tsx`.
+
+The event-detail diagnostics were reads of `is_cancelled` at lines 657, 666, 682, 690, 695, and 877, plus two reads of `cancellation_reason` at line 699. The public `GET /api/events/{event_id}` endpoint uses the backend `EventResponse` schema. That schema always serializes `is_cancelled` as a boolean and serializes `cancellation_reason`, `cancelled_at`, and `previous_date_start` as a string or JSON `null`; the datetime values use the API's ISO datetime serialization. The current public contract has no replacement-event reference. The organizer update input is a separate schema and was not used as evidence for the public page. The shared frontend `EventResponse` omitted all four cancellation/reschedule response fields, so it was extended with the existing backend field names and nullable string forms. The fields remain optional in this broad shared frontend interface because it is also used for locally constructed previews and other event projections; the public detail endpoint itself always supplies them.
+
+The location diagnostics were reads of `partner_logo`, `partner_name`, and `partner_url` at lines 90-92. Both public location-feed routes use `LocationFeedResponse`, whose three partner fields are nullable strings. The endpoint explicitly assigns every field from the matching location record or `None`, so FastAPI always serializes each key with a string or JSON `null`, including fallback feeds. The inline return contract of `locationsAPI.getFeed` was the canonical client declaration for this endpoint and omitted those fields. It now declares all three as required nullable strings.
+
+Only `src/types/index.ts` and `src/lib/api.ts` application declarations changed. Event fetching, cancellation messaging, reschedule data, ticket gating and links, status handling, dates, venue/location output, redirects, query handling, SEO, JSON-LD, location fetching, partner rendering, event filters/listing, maps, and SSR were not changed. No backend source, API response, request payload, ticketing/payment code, invoice code, assertion, cast, `any`, or runtime branch was added or modified.
+
+### Verification result
+
+V2 improved from **22 diagnostics across 3 files** to **11 diagnostics in 1 file**. Both target pages now have zero diagnostics, and no new diagnostic file appeared. The 11 remaining `TS2339` diagnostics are all in the explicitly deferred `src/pages/organizers/invoices.tsx` contract.
+
+The targeted isolated backend checks passed: `backend/tests/test_cancellation_and_reschedule.py` contributed two passing tests and `backend/tests/test_location_hubs.py` contributed one, for **3 passed**. They used the existing in-memory test isolation; no real database, migration, or network service was used. The established full backend baseline remains 75/75.
+
+The final controlled production build passed with exit code `0`. The build ran with the two public Google client variables explicitly empty so the existing credential-free smoke environment did not initialize Google Maps or Google sign-in providers. The font-only build allowlist remained in force; the final build used the local font cache, blocked two npm update-check attempts to `registry.npmjs.org`, and completed without a successful external request. An earlier sandboxed build attempt could not fetch the allowed Google font, and an initial build that inherited local public client values was rejected by the smoke harness after it intercepted Google Maps and Google sign-in script requests. No intercepted request completed, the allowlist was not expanded, and no application file was changed in response.
+
+The final production server started on `http://127.0.0.1:43119`, became ready in 1.314 seconds, and returned HTTP `404` for the deliberate local route. The focused Chromium smoke collected one test and passed one test in 1.6 seconds. The final server and browser-runner network logs were empty. The verified Node server process was stopped, and no listener remained on port 43119.
+
+Before any Next command, `frontend/next-env.d.ts` was backed up outside the repository. Its pre-task and final SHA-256 are both `F41E9C5A66FE4DCE9688EC9848279A51F1AF1091D7BDB0A1E813E9661F26C77D`; the user's existing modification remains unstaged.
+
+Captured verification evidence:
+
+```text
+C:\Users\Craig\AppData\Local\Temp\heh_event_location_types_20260910
+```

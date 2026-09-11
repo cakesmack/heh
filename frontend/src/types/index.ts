@@ -398,6 +398,10 @@ export interface EventResponse extends Event {
   ticket_tiers?: any[];
   is_ticketing_enabled?: boolean;
   pass_fees_to_buyer?: boolean;
+  is_cancelled?: boolean;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+  previous_date_start?: string | null;
 }
 
 export interface EventCreate {

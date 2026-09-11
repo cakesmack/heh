@@ -2133,6 +2133,9 @@ export const locationsAPI = {
     h1_heading: string;
     hero_image_url?: string;
     seo_anchor_text?: string;
+    partner_logo: string | null;
+    partner_url: string | null;
+    partner_name: string | null;
     is_fallback: boolean;
     fallback_notice?: string;
     events: EventResponse[];
