@@ -368,3 +368,49 @@ Captured verification evidence:
 ```text
 C:\Users\Craig\AppData\Local\Temp\heh_event_location_types_20260910
 ```
+
+## Organizer invoice response type remediation
+
+**Remediation date:** 11 September 2026
+
+This remediation addressed the final 11 frontend diagnostics, all `TS2339` property errors in `src/pages/organizers/invoices.tsx`:
+
+| Line(s) | Page access | Stale page-local type | Backend response |
+|---|---|---|---|
+| 144, 367 | `InvoiceItem.buyer_email` | Field omitted | Always-present buyer email string |
+| 215 | `InvoiceSummary.total_gross` | Declared as unused `gross_sales` | Always-present major-unit float, rounded to two decimals |
+| 216 | `InvoiceSummary.total_tickets` | Field omitted | Always-present integer ticket count |
+| 221 | `InvoiceSummary.total_fees` | Declared as unused `platform_fees` | Always-present major-unit float, rounded to two decimals |
+| 227 | `InvoiceSummary.total_net` | Declared as unused `net_payout` | Always-present major-unit float, rounded to two decimals |
+| 348, 383 | `InvoiceItem.order_id` | Field omitted | Always-present order identifier string |
+| 354 | `InvoiceItem.created_at` | Declared as unused `issue_date` | Always-present datetime serialized as an ISO string |
+| 370 | `InvoiceItem.tickets_count` | Field omitted | Always-present integer count, including zero |
+| 373 | `InvoiceItem.total_gross` | Declared as unused `gross_amount` | Always-present major-unit float, rounded to two decimals |
+
+The page calls two authenticated endpoints. `GET /api/ticketing/organizer/invoices` is called through `apiFetch`, which includes the stored bearer token, and returns a plain FastAPI-serialized wrapper rather than a declared Pydantic response model. The wrapper always contains `summary`, `invoices`, `events_filter`, and `tax_years`; it is not paginated. `GET /api/ticketing/organizer/invoices/export` is called with an explicit bearer token and returns a CSV `StreamingResponse` with a download filename. The page also links to `/organizers/invoices/{order_id}`; that separate page calls the authenticated single-invoice endpoint and was not changed.
+
+For non-admin users, both list and export handlers first restrict ticket-enabled events to direct ownership through `Event.organizer_id` or an organizer profile present in `current_user.organizer_profiles`, then query only completed orders for those event IDs. These handlers do not perform a separate `GroupMember` lookup. Admins may see all ticket-enabled events. Frozen or rejected sellers receive HTTP 403 unless they are admins. The optional `event_id` and UK `tax_year` query filters preserve this ownership boundary.
+
+The list summary contains required `total_gross`, `total_fees`, `total_net`, `total_invoices`, and `total_tickets` numbers. Each invoice item contains required `invoice_ref`, `order_id`, `order_ref`, `event_id`, `event_title`, `created_at`, `tax_year`, `buyer_name`, `buyer_email`, `tickets_count`, `total_gross`, `platform_fee`, `net_payout`, `status`, and `currency`. Monetary values are Python floats in major GBP units and are rounded to two decimals; `currency` is the literal string `GBP`. The list exposes no separate VAT amount, refund amount, payout identifier, download URL, or pagination metadata. Because only completed orders are selected, refunded and failed orders do not enter this list.
+
+The two page-local interfaces were corrected to those existing names and primitive types. No canonical shared invoice type exists; the organizer hub has a separate, unexported page-local copy of the same list shape. No new duplicate model was created.
+
+No fetch URL, query parameter, bearer-token handling, organizer authorization, ownership rule, monetary calculation, rounding, displayed total, fee, tax-year rule, currency, ticket sale, refund, payout, Stripe Connect flow, CSV behavior, invoice navigation, attendee data, pagination, formatting, filtering, sorting, or other runtime behavior changed. No backend source, database model, migration, assertion, cast, compiler setting, dependency, or unrelated frontend file changed.
+
+### Verification result
+
+The targeted isolated module `backend/tests/test_organizer_invoices.py` passed **2/2 tests**. It verified the list summary and invoice fields, CSV export, single-invoice detail, the `/api/organizers/invoices` alias, and organizer hub/export behavior using the existing in-memory test isolation. No real database, Stripe, email, or external service was contacted.
+
+V2 improved from **11 diagnostics in 1 file** to **0 diagnostics**. `npm run typecheck` completed with exit code `0`, without suppression or reduced compiler coverage.
+
+The controlled production build passed with exit code `0`. Public Google client variables were empty for the established credential-free smoke environment. The font-only build allowlist remained active; the local font cache was used, and two npm update-check attempts to `registry.npmjs.org` were blocked without affecting the build. No external request succeeded.
+
+The production server started on `http://127.0.0.1:43119`, became ready in 1.540 seconds, and returned HTTP `404` for the deliberate local route. The focused Chromium smoke collected one test and passed one test in 1.9 seconds. Server and browser-runner network logs were empty. The verified Node server process was stopped, and no listener remained on port 43119.
+
+Before the build, `frontend/next-env.d.ts` was backed up outside the repository. Its pre-task and final SHA-256 are both `F41E9C5A66FE4DCE9688EC9848279A51F1AF1091D7BDB0A1E813E9661F26C77D`; the user's existing modification remains unstaged.
+
+Captured verification evidence:
+
+```text
+C:\Users\Craig\AppData\Local\Temp\heh_organizer_invoice_types_20260911
+```

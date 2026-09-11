@@ -6,22 +6,25 @@ import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch, API_BASE_URL } from '@/lib/api';
 
 interface InvoiceSummary {
-  gross_sales: number;
-  platform_fees: number;
-  net_payout: number;
+  total_gross: number;
+  total_fees: number;
+  total_net: number;
   total_invoices: number;
-  currency: string;
+  total_tickets: number;
 }
 
 interface InvoiceItem {
   invoice_ref: string;
+  order_id: string;
   order_ref: string;
-  issue_date: string;
   event_id: string;
   event_title: string;
+  created_at: string;
   buyer_name: string;
+  buyer_email: string;
   tax_year: string;
-  gross_amount: number;
+  tickets_count: number;
+  total_gross: number;
   platform_fee: number;
   net_payout: number;
   status: string;
