@@ -92,7 +92,6 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH
 NEXT_PUBLIC_IMAGE_BASE_URL
 NEXT_PUBLIC_GA_MEASUREMENT_ID
-NEXT_PUBLIC_STAY22_AID
 ```
 
 Only values intended for browser exposure may use the `NEXT_PUBLIC_` prefix. Keep server credentials, Stripe secret keys, Cloudflare API tokens, SMTP passwords, and database URLs out of frontend public variables.
