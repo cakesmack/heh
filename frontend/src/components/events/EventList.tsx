@@ -2,7 +2,6 @@
 
 import { EventResponse } from '@/types';
 import { EventCard } from '@/components/events/EventCard';
-import { Spinner } from '@/components/common/Spinner';
 import { EventCardSkeleton } from '@/components/events/EventCardSkeleton';
 
 interface EventListProps {

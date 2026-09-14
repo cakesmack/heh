@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { EventResponse } from '@/types';
 import { EventCard } from '@/components/events/EventCard';
-import { EventCardSkeleton } from '@/components/events/EventCardSkeleton';
 import Link from 'next/link';
 
 interface HappeningNextEventsProps {
