@@ -12,7 +12,6 @@ import MultiVenueSelector from '@/components/venues/MultiVenueSelector';
 import OrganizerSelector from '@/components/events/OrganizerSelector';
 import { Category, Organizer, VenueResponse } from '@/types';
 import { eventsAPI, api, SellerStatusResponse } from '@/lib/api';
-import { Spinner } from '@/components/common/Spinner';
 import { toast } from 'react-hot-toast';
 
 interface StepBasicsProps {
