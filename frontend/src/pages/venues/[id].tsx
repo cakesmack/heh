@@ -893,7 +893,7 @@ export const getServerSideProps: GetServerSideProps<VenueDetailPageProps> = asyn
     const optimizedOgUrl = venue.image_url ? optimizeImage(venue.image_url, 'og') : null;
     const ogImage = optimizedOgUrl
       ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${baseUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
-      : `${baseUrl}/images/og-default.jpg`;
+      : `${baseUrl}/images/og-preview.jpg?v=3`;
 
     return {
       props: {

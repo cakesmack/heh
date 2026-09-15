@@ -557,7 +557,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   
   const ogImageUrl = optimizedOgUrl
     ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${siteUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
-    : `${siteUrl}/images/og-default.jpg`;
+    : `${siteUrl}/images/og-preview.jpg?v=3`;
   const canonicalUrl = `${siteUrl}/events/${event.slug || event.id}`;
 
   return (
@@ -1491,7 +1491,7 @@ export const getServerSideProps: GetServerSideProps<EventDetailPageProps> = asyn
     const optimizedOgUrl = event.image_url ? optimizeImage(event.image_url, 'og') : null;
     const ogImage = optimizedOgUrl
       ? (optimizedOgUrl.startsWith('http') ? optimizedOgUrl : `${baseUrl}/${optimizedOgUrl.startsWith('/') ? optimizedOgUrl.substring(1) : optimizedOgUrl}`)
-      : `${baseUrl}/images/og-default.jpg`;
+      : `${baseUrl}/images/og-preview.jpg?v=3`;
 
     return {
       props: {

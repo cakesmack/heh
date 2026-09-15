@@ -104,7 +104,7 @@ export default function CuratedCollections() {
                             {/* Background Image */}
                             <div className="absolute inset-0">
                                 <OptimizedImage
-                                    src={collection.image_url || '/images/placeholder-collection.jpg'}
+                                    src={collection.image_url || '/images/hero-bg.jpg'}
                                     alt={collection.title}
                                     fill
                                     className="object-cover transition-transform duration-700 group-hover:scale-105"

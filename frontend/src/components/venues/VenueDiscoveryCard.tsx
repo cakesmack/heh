@@ -7,9 +7,6 @@ interface VenueDiscoveryCardProps {
 }
 
 export function VenueDiscoveryCard({ venue }: VenueDiscoveryCardProps) {
-    // Determine image source - use venue image or fallback
-    const imageSrc = venue.image_url || '/images/placeholders/venue-placeholder.jpg';
-
     return (
         <Link href={`/venues/${venue.slug || venue.id}`} className="group block h-full">
             <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col border border-gray-100">
@@ -17,7 +14,7 @@ export function VenueDiscoveryCard({ venue }: VenueDiscoveryCardProps) {
                 <div className="relative h-48 w-full bg-gray-100 overflow-hidden">
                     {venue.image_url ? (
                         <OptimizedImage
-                            src={imageSrc}
+                            src={venue.image_url}
                             alt={venue.name}
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

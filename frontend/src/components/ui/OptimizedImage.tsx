@@ -15,7 +15,7 @@ interface OptimizedImageProps extends Omit<ImageProps, 'src'> {
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
     src,
     variant = 'hero',
-    fallback = '/images/event-placeholder.jpg',
+    fallback = '/images/hero-bg.jpg',
     alt = 'Image',
     width,
     height,

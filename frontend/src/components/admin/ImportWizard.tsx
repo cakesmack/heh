@@ -9,7 +9,7 @@ import { UnifiedVenueSelect } from '@/components/venues/UnifiedVenueSelect';
  * Only proxies non-Cloudflare external URLs; Cloudflare and local URLs pass through.
  */
 function proxyImageUrl(url: string | undefined): string {
-    if (!url) return '/images/event-placeholder.jpg';
+    if (!url) return '/images/hero-bg.jpg';
     // Already a Cloudflare delivery URL or local path — no proxy needed
     if (url.includes('imagedelivery.net') || url.startsWith('/') || url.startsWith('data:')) return url;
     // External URL — route through backend proxy
@@ -486,7 +486,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                                 src={proxyImageUrl(event.image_url)}
                                                 alt=""
                                                 className="w-full h-full object-cover"
-                                                onError={(e) => { (e.target as HTMLImageElement).src = '/images/event-placeholder.jpg'; }}
+                                                onError={(e) => { (e.target as HTMLImageElement).src = '/images/hero-bg.jpg'; }}
                                             />
                                         </div>
                                     </td>
@@ -570,7 +570,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ venues, categories, 
                                             src={proxyImageUrl(currentEvent.image_url)}
                                             alt="Staged Event"
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                            onError={(e) => { (e.target as HTMLImageElement).src = '/images/event-placeholder.jpg'; }}
+                                            onError={(e) => { (e.target as HTMLImageElement).src = '/images/hero-bg.jpg'; }}
                                         />
                                     </div>
                                 ) : (

@@ -41,7 +41,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.highlandevents
  * Ensures Open Graph and Twitter images are valid, absolute URLs.
  */
 function resolveAbsoluteOgImage(imageUrl?: string | null): string {
-    const defaultOgImage = `${SITE_URL}/images/defaults/category_festivals.jpg`;
+    const defaultOgImage = `${SITE_URL}/images/og-preview.jpg?v=3`;
     if (!imageUrl) return defaultOgImage;
 
     const optimized = optimizeImage(imageUrl, 'hero') || imageUrl;
@@ -107,7 +107,7 @@ export const getServerSideProps: GetServerSideProps<LocationPageProps> = async (
         const formattedCity = cityFilter.replace(/\b\w/g, c => c.toUpperCase());
         const defaultTitle = `Events in ${formattedCity} | Highland Events Hub`;
         const defaultDesc = `Discover upcoming events in ${formattedCity}, Scottish Highlands.`;
-        const defaultImage = `${SITE_URL}/images/defaults/category_festivals.jpg`;
+        const defaultImage = `${SITE_URL}/images/og-preview.jpg?v=3`;
 
         return {
             props: {

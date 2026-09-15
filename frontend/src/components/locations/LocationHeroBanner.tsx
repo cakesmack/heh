@@ -16,7 +16,7 @@ interface LocationHeroBannerProps {
   partnerUrl?: string | null;
 }
 
-const FALLBACK_IMAGE = '/images/defaults/category_festivals.jpg';
+const FALLBACK_IMAGE = '/images/hero-bg.jpg';
 
 export function LocationHeroBanner({
   city,
