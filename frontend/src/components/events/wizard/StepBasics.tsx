@@ -3,7 +3,7 @@
  * Organizer, Title (with duplicate detection), Category, Price, Venue
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { WizardFormData } from '@/hooks/useEventWizard';
 import { Input } from '@/components/common/Input';
