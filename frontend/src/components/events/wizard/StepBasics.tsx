@@ -36,7 +36,7 @@ export default function StepBasics({
   user,
   stepErrors,
 }: StepBasicsProps) {
-  const { watch, setValue, getValues } = form;
+  const { watch, setValue } = form;
   const formData = watch();
   const errors = stepErrors || {};
 
@@ -95,23 +95,6 @@ export default function StepBasics({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Adapter for setFormData pattern used by existing components
-  const setFormDataAdapter = (updater: any) => {
-    if (typeof updater === 'function') {
-      const current = getValues();
-      const next = updater(current);
-      Object.keys(next).forEach((key) => {
-        if (next[key] !== current[key as keyof WizardFormData]) {
-          setValue(key as keyof WizardFormData, next[key]);
-        }
-      });
-    } else {
-      Object.keys(updater).forEach((key) => {
-        setValue(key as keyof WizardFormData, updater[key]);
-      });
-    }
-  };
 
   // Current host calculation
   const currentHostId = formData.selectedOrganizer ?? formData.organizer_profile_id ?? '';
