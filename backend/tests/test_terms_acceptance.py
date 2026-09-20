@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.core.config import settings
 from app.core.database import get_session
 from app.core.security import get_current_user
 from app.models.user import User
@@ -46,7 +47,8 @@ def client_fixture(test_db: Session):
     limiter.enabled = True
 
 
-def test_standard_free_event_without_ticketing_succeeds_without_terms(client: TestClient, test_db: Session):
+def test_standard_free_event_without_ticketing_succeeds_without_terms(client: TestClient, test_db: Session, monkeypatch):
+    monkeypatch.setattr(settings, 'NATIVE_TICKET_SALES_ENABLED', False)
     user = User(
         id=str(uuid4()).replace('-', ''),
         email='free.organizer@highland.scot',
@@ -89,6 +91,19 @@ def test_standard_free_event_without_ticketing_succeeds_without_terms(client: Te
     data = res.json()
     assert data['title'] == 'Local Book Club Meeting'
     assert data['is_ticketing_enabled'] is False
+
+    native_payload = {
+        **payload,
+        'title': 'Blocked Native Ticket Setup',
+        'is_ticketing_enabled': True,
+        'terms_accepted': True,
+        'ticket_tiers': [
+            {'name': 'Admission', 'price': 10.00, 'quantity_available': 50, 'max_per_order': 4}
+        ],
+    }
+    blocked = client.post('/api/events', json=native_payload)
+    assert blocked.status_code == 503, blocked.text
+    assert 'external ticket URL' in blocked.json()['detail']
 
 
 def test_ticketed_event_without_terms_acceptance_rejected(client: TestClient, test_db: Session):

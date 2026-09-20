@@ -8,11 +8,14 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.core.config import settings
 from app.core.database import get_session
 from app.models.user import User
 from app.models.event import Event
 from app.models.ticket_tier import TicketTier
 from app.models.organizer_stripe_account import OrganizerStripeAccount
+from app.models.order import Order
+from app.models.ticket import Ticket
 from app.core.utils import normalize_uuid
 
 from sqlalchemy.dialects.postgresql import JSONB
@@ -160,6 +163,84 @@ def test_checkout_create_payment_intent_event_lookup_and_paths(client: TestClien
     )
     assert res_slash.status_code == 200, res_slash.text
     assert res_slash.json().get("free_order") is True
+
+
+@pytest.mark.parametrize("price", [0.0, 25.0], ids=["free", "paid"])
+def test_disabled_native_sales_create_no_payment_order_or_ticket(
+    client: TestClient,
+    test_db: Session,
+    price: float,
+):
+    user = User(
+        id="disabled_sales_user",
+        email="disabled-sales@example.com",
+        username="disabled_sales",
+        seller_tier=2,
+        seller_status="approved",
+    )
+    test_db.add(user)
+
+    from app.models.organizer import Organizer
+
+    organizer = Organizer(
+        id="disabled_sales_org",
+        name="Disabled Sales Organizer",
+        slug="disabled-sales-organizer",
+        user_id=user.id,
+    )
+    test_db.add(organizer)
+    test_db.flush()
+    test_db.add(
+        OrganizerStripeAccount(
+            id="disabled_sales_stripe",
+            organizer_profile_id=organizer.id,
+            stripe_account_id="acct_disabled_sales",
+            charges_enabled=True,
+            payouts_enabled=True,
+        )
+    )
+
+    event = Event(
+        id="disabled_sales_event",
+        title="Contained Native Ticket Event",
+        slug="contained-native-ticket-event",
+        date_start=datetime.utcnow() + timedelta(days=10),
+        date_end=datetime.utcnow() + timedelta(days=10, hours=2),
+        organizer_id=user.id,
+        is_ticketing_enabled=True,
+    )
+    tier = TicketTier(
+        id="disabled_sales_tier",
+        event_id=event.id,
+        name="Admission",
+        price=price,
+        quantity_available=20,
+        quantity_sold=0,
+        max_per_order=4,
+    )
+    test_db.add(event)
+    test_db.add(tier)
+    test_db.commit()
+
+    with patch.object(settings, "NATIVE_TICKET_SALES_ENABLED", False), \
+         patch("stripe.PaymentIntent.create") as create_payment_intent:
+        response = client.post(
+            "/api/ticketing/checkout/create-payment-intent",
+            json={
+                "event_id": event.id,
+                "items": [{"tier_id": tier.id, "quantity": 2}],
+                "buyer_name": "Contained Buyer",
+                "buyer_email": "contained@example.com",
+            },
+        )
+
+    assert response.status_code == 503, response.text
+    assert "No payment has been initiated" in response.json()["detail"]
+    create_payment_intent.assert_not_called()
+    assert test_db.exec(select(Order)).all() == []
+    assert test_db.exec(select(Ticket)).all() == []
+    test_db.refresh(tier)
+    assert tier.quantity_sold == 0
 
 
 def test_intent_status_from_db(client: TestClient, test_db: Session):

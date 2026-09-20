@@ -90,7 +90,8 @@ def test_stripe_connect_webhook_payment_intent_succeeded(client: TestClient, tes
     fake_stripe_event.type = "payment_intent.succeeded"
     fake_stripe_event.data.object = fake_intent_data
 
-    with patch.object(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_test_connect_secret"), \
+    with patch.object(settings, "NATIVE_TICKET_SALES_ENABLED", False), \
+         patch.object(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_test_connect_secret"), \
          patch("stripe.Webhook.construct_event", return_value=fake_stripe_event), \
          patch("app.services.resend_email.resend_email_service.send_ticket_order_confirmation") as mock_send_email:
         

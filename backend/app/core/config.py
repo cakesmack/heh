@@ -119,6 +119,9 @@ class Settings(BaseSettings):
 
     # Feature Flags
     TICKETING_PUBLIC_ENABLED: bool = True
+    # Emergency containment switch for new native ticket commitments. This is
+    # deliberately fail-closed until durable checkout reservations are shipped.
+    NATIVE_TICKET_SALES_ENABLED: bool = False
 
     class Config:
         env_file = ".env"

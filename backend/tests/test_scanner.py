@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 
 from app.main import app
+from app.core.config import settings
 from app.core.database import get_session
 from app.api.auth import get_current_user
 from app.models.user import User
@@ -43,7 +44,8 @@ def client_fixture(test_db: Session):
         app.dependency_overrides.pop(get_session, None)
 
 
-def test_scanner_activation_and_validation(client: TestClient, test_db: Session):
+def test_scanner_activation_and_validation(client: TestClient, test_db: Session, monkeypatch):
+    monkeypatch.setattr(settings, "NATIVE_TICKET_SALES_ENABLED", False)
     # Setup organizer user with seller_tier=2
     organizer = User(
         id="org_user_1",
@@ -114,6 +116,21 @@ def test_scanner_activation_and_validation(client: TestClient, test_db: Session)
         assert act_data["status"] == "active"
         token = act_data["scanner_access_key"]
         assert token is not None
+
+        # New cash walk-up sales are contained without changing inventory or
+        # existing fulfilment records.
+        walk_up_res = client.post("/api/ticketing/scan/cash-walk-up", json={
+            "event_id": event.id,
+            "token": token,
+            "tier_id": tier.id,
+            "quantity": 2,
+        })
+        assert walk_up_res.status_code == 503, walk_up_res.text
+        assert "No payment has been initiated" in walk_up_res.json()["detail"]
+        assert len(test_db.exec(select(Order)).all()) == 1
+        assert len(test_db.exec(select(Ticket)).all()) == 1
+        test_db.refresh(tier)
+        assert tier.quantity_sold == 1
 
         # 3. Validate Scanner Key
         key_res = client.post("/api/ticketing/scan/validate-key", json={"event_id": event.id, "token": token})

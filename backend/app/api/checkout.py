@@ -11,6 +11,7 @@ import logging
 
 from app.core.database import get_session
 from app.core.config import settings
+from app.core.ticketing import require_native_ticket_sales_enabled
 from app.core.utils import normalize_uuid
 from app.models import Event, TicketTier, Order, Ticket, PromoCode
 from app.services import fee_service, promo_service
@@ -189,6 +190,8 @@ def create_payment_intent(
     """
     Creates a Stripe PaymentIntent for the checkout or processes a free order immediately.
     """
+    require_native_ticket_sales_enabled()
+
     if not request.items:
         raise HTTPException(status_code=400, detail="Cart is empty.")
 

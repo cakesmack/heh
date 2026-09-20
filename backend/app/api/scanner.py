@@ -8,6 +8,7 @@ import secrets
 import logging
 
 from app.core.database import get_session
+from app.core.ticketing import require_native_ticket_sales_enabled
 from app.core.utils import normalize_uuid
 from app.models import Event, Ticket, Order, TicketTier
 
@@ -209,6 +210,8 @@ def manual_check_in(request: ManualCheckInRequest, session: Session = Depends(ge
 
 @router.post("/cash-walk-up")
 def cash_walk_up(request: CashWalkUpRequest, session: Session = Depends(get_session)):
+    require_native_ticket_sales_enabled()
+
     event = _validate_scanner_key(request.event_id, request.token, session)
 
     if getattr(event, "is_cancelled", False):

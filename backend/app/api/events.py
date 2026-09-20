@@ -52,6 +52,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 from app.core.config import settings
+from app.core.ticketing import require_native_ticket_sales_enabled
 from app.schemas.ticketing import TicketTierCreate, TicketTierUpdate, TicketTierResponse
 from app.models.organizer import Organizer
 from app.models.group_member import GroupMember, GroupRole
@@ -1531,6 +1532,9 @@ async def create_event(
     """
     Create a new event.
     """
+    if event_data.is_ticketing_enabled:
+        require_native_ticket_sales_enabled(setup=True)
+
     # Intercept Skiddle URLs to append affiliate tracking parameter
     if event_data.ticket_url:
         event_data.ticket_url = append_skiddle_affiliate(event_data.ticket_url)
@@ -2227,6 +2231,9 @@ async def update_event(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this event"
         )
+
+    if event_data.is_ticketing_enabled is True and not event.is_ticketing_enabled:
+        require_native_ticket_sales_enabled(setup=True)
 
     # 36-Hour Single-Session Constraint & Terms Validation for Native Ticketing
     effective_ticketing = event_data.is_ticketing_enabled if event_data.is_ticketing_enabled is not None else event.is_ticketing_enabled
@@ -3051,6 +3058,8 @@ def create_event_ticket_tier(
     """
     Create a new ticket tier for an event.
     """
+    require_native_ticket_sales_enabled(setup=True)
+
     event = session.exec(select(Event).where(Event.slug == event_id)).first()
     if not event:
         event = session.get(Event, normalize_uuid(event_id))

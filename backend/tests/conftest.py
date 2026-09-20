@@ -47,6 +47,9 @@ TEST_ENVIRONMENT = {
     "CAMPAIGN_SMTP_PASS": "",
     "SCRAPER_API_KEY": "pytest-disabled",
     "CRON_SECRET_KEY": "pytest-disabled",
+    # Existing ticketing contract tests opt in explicitly. Containment tests
+    # patch the runtime setting off and assert the fail-closed behaviour.
+    "NATIVE_TICKET_SALES_ENABLED": "true",
 }
 os.environ.update(TEST_ENVIRONMENT)
 
