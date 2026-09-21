@@ -177,8 +177,8 @@ def test_two_paid_buyers_cannot_reserve_the_last_ticket(postgres_app):
     event_id, tiers, _, _ = seed_inventory(postgres_app, "pg_paid")
     with patch("stripe.PaymentIntent.create", side_effect=fake_intent):
         responses = run_competitors(
-            lambda: checkout(event_id, tiers, "pg-paid-attempt-one"),
-            lambda: checkout(event_id, tiers, "pg-paid-attempt-two"),
+            lambda: checkout(event_id, tiers, f"{event_id}-attempt-one"),
+            lambda: checkout(event_id, tiers, f"{event_id}-attempt-two"),
         )
     assert sorted(response.status_code for response in responses) == [200, 400]
     assert committed(postgres_app, tiers[0]) == 1
@@ -188,8 +188,8 @@ def test_multi_tier_locking_is_atomic_and_deterministic(postgres_app):
     event_id, tiers, _, _ = seed_inventory(postgres_app, "pg_multi", (1, 1))
     with patch("stripe.PaymentIntent.create", side_effect=fake_intent):
         responses = run_competitors(
-            lambda: checkout(event_id, tiers, "pg-multi-attempt-one"),
-            lambda: checkout(event_id, list(reversed(tiers)), "pg-multi-attempt-two"),
+            lambda: checkout(event_id, tiers, f"{event_id}-attempt-one"),
+            lambda: checkout(event_id, list(reversed(tiers)), f"{event_id}-attempt-two"),
         )
     assert sorted(response.status_code for response in responses) == [200, 400]
     assert [committed(postgres_app, tier_id) for tier_id in tiers] == [1, 1]
@@ -199,8 +199,8 @@ def test_paid_and_free_checkout_compete_for_one_invariant(postgres_app):
     event_id, tiers, _, _ = seed_inventory(postgres_app, "pg_free", promo=True)
     with patch("stripe.PaymentIntent.create", side_effect=fake_intent):
         responses = run_competitors(
-            lambda: checkout(event_id, tiers, "pg-paid-free-paid"),
-            lambda: checkout(event_id, tiers, "pg-paid-free-free", promo_code="FREE100"),
+            lambda: checkout(event_id, tiers, f"{event_id}-paid"),
+            lambda: checkout(event_id, tiers, f"{event_id}-free", promo_code="FREE100"),
         )
     assert sorted(response.status_code for response in responses) == [200, 400]
     assert committed(postgres_app, tiers[0]) == 1

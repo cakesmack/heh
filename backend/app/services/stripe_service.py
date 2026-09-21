@@ -139,7 +139,7 @@ def _fulfill_reserved_order(
         return None
     if order.status == "completed":
         return FulfillmentResult(order=order, newly_fulfilled=False)
-    if order.status != "pending_payment":
+    if order.status not in {"pending_payment", "payment_intent_uncertain"}:
         logger.warning("Order %s cannot be fulfilled from status %s", order.id, order.status)
         return None
     pi_id = getattr(intent, "id", None)
@@ -312,7 +312,10 @@ def reconcile_payment_intent(
     if not intent:
         return "unresolved"
     if getattr(intent, "status", "") == "succeeded":
-        return "fulfilled" if fulfill_payment_intent(intent, session, stripe_account_id) else "unresolved"
+        result = fulfill_payment_intent(intent, session, stripe_account_id)
+        if not result:
+            return "unresolved"
+        return "fulfilled" if result.newly_fulfilled else "already_fulfilled"
 
     metadata = _intent_metadata(intent)
     order_id = metadata.get("ticket_order_id")
@@ -325,7 +328,7 @@ def reconcile_payment_intent(
         return "legacy"
 
     order = session.exec(select(Order).where(Order.id == order_id).with_for_update()).first()
-    if not order or order.status != "pending_payment":
+    if not order or order.status not in {"pending_payment", "payment_intent_uncertain"}:
         return order.status if order else "missing"
     if not stripe_account_id or stripe_account_id != order.stripe_account_id:
         session.rollback()
@@ -340,6 +343,57 @@ def reconcile_payment_intent(
     session.add(order)
     session.commit()
     return "released"
+
+
+def recover_uncertain_payment_intent(
+    order_id: str,
+    intent_id: str,
+    session: Session,
+) -> str:
+    """Attach and reconcile an operator-verified PaymentIntent without creating one."""
+    order = session.get(Order, order_id)
+    if not order:
+        raise ValueError(f"Order {order_id} was not found")
+    if order.status not in {"pending_payment", "payment_intent_uncertain", "completed"}:
+        raise ValueError(f"Order {order_id} cannot be recovered from status {order.status}")
+    if not order.stripe_account_id:
+        raise ValueError(f"Order {order_id} has no connected Stripe account")
+
+    stripe_account_id = order.stripe_account_id
+    expected_amount = int(round(order.total_amount * 100))
+    session.rollback()
+    intent = _retrieve_payment_intent(intent_id, stripe_account_id)
+    if not intent:
+        raise ValueError(
+            f"PaymentIntent {intent_id} could not be retrieved from {stripe_account_id}"
+        )
+    metadata = _intent_metadata(intent)
+    if metadata.get("ticket_order_id") != order_id:
+        raise ValueError("PaymentIntent metadata does not identify the requested order")
+    if int(getattr(intent, "amount", -1)) != expected_amount:
+        raise ValueError("PaymentIntent amount does not match the order")
+    if str(getattr(intent, "currency", "")).lower() != "gbp":
+        raise ValueError("PaymentIntent currency does not match the order")
+
+    locked_order = session.exec(
+        select(Order).where(Order.id == order_id).with_for_update()
+    ).first()
+    if not locked_order:
+        session.rollback()
+        raise ValueError(f"Order {order_id} was not found")
+    if locked_order.stripe_payment_intent_id not in (None, intent_id):
+        session.rollback()
+        raise ValueError("Order is already associated with a different PaymentIntent")
+    locked_order.stripe_payment_intent_id = intent_id
+    locked_order.updated_at = datetime.utcnow()
+    session.add(locked_order)
+    session.commit()
+
+    return reconcile_payment_intent(
+        intent,
+        session,
+        stripe_account_id=stripe_account_id,
+    )
 
 
 async def dispatch_order_confirmation_emails(

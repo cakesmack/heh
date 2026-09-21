@@ -24,7 +24,11 @@ from app.models import (
     TicketTier,
     User,
 )
-from app.services.stripe_service import fulfill_payment_intent, reconcile_payment_intent
+from app.services.stripe_service import (
+    fulfill_payment_intent,
+    reconcile_payment_intent,
+    recover_uncertain_payment_intent,
+)
 
 
 @compiles(JSONB, "sqlite")
@@ -168,7 +172,7 @@ def test_paid_checkout_commits_order_and_reservation_before_stripe(
     assert ticketing_setup.paid.quantity_sold == 0
 
 
-def test_stripe_failure_retains_reservation_and_retry_reuses_order(
+def test_stripe_failure_is_persistently_fail_closed_across_retries(
     client: TestClient,
     test_db: Session,
     ticketing_setup,
@@ -182,15 +186,141 @@ def test_stripe_failure_retains_reservation_and_retry_reuses_order(
     assert first.status_code == 503
     order = test_db.exec(select(Order)).one()
     reservation = test_db.exec(select(TicketReservation)).one()
-    assert order.status == "pending_payment"
+    assert order.status == "payment_intent_uncertain"
     assert reservation.status == "active"
 
-    with patch("stripe.PaymentIntent.create", return_value=stripe_intent(order)) as retry_create:
+    with patch("stripe.PaymentIntent.create") as retry_create:
         retry = client.post("/api/ticketing/checkout/create-payment-intent", json=payload)
-    assert retry.status_code == 200, retry.text
+    assert retry.status_code == 409, retry.text
+    assert order.order_ref in retry.json()["detail"]
     assert len(test_db.exec(select(Order)).all()) == 1
     assert len(test_db.exec(select(TicketReservation)).all()) == 1
-    assert create_intent.call_args.kwargs["idempotency_key"] == retry_create.call_args.kwargs["idempotency_key"]
+    assert create_intent.call_count == 1
+    retry_create.assert_not_called()
+
+    new_attempt_payload = checkout_payload("retry-after-idempotency-window", ticketing_setup.paid.id)
+    with patch("stripe.PaymentIntent.create") as new_attempt_create:
+        later_retry = client.post(
+            "/api/ticketing/checkout/create-payment-intent",
+            json=new_attempt_payload,
+        )
+    assert later_retry.status_code == 409, later_retry.text
+    assert order.order_ref in later_retry.json()["detail"]
+    new_attempt_create.assert_not_called()
+    assert len(test_db.exec(select(Order)).all()) == 1
+
+    # A late success webhook remains authoritative even though local creation
+    # failed closed before the PaymentIntent ID could be persisted.
+    result = fulfill_payment_intent(
+        stripe_intent(order),
+        test_db,
+        stripe_account_id="acct_reservation",
+    )
+    assert result and result.newly_fulfilled is True
+    test_db.refresh(order)
+    assert order.status == "completed"
+    assert order.stripe_payment_intent_id == "pi_reserved_order"
+
+
+def test_operator_recovery_attaches_existing_intent_without_creating_one(
+    client: TestClient,
+    test_db: Session,
+    ticketing_setup,
+):
+    payload = checkout_payload("operator-recovery-attempt", ticketing_setup.paid.id)
+    with patch(
+        "stripe.PaymentIntent.create",
+        side_effect=stripe.error.APIConnectionError("timeout"),
+    ):
+        response = client.post("/api/ticketing/checkout/create-payment-intent", json=payload)
+    assert response.status_code == 503
+    order = test_db.exec(select(Order)).one()
+    intent = stripe_intent(order, status="processing")
+
+    with patch(
+        "app.services.stripe_service._retrieve_payment_intent",
+        return_value=intent,
+    ) as retrieve, patch("stripe.PaymentIntent.create") as create_intent:
+        outcome = recover_uncertain_payment_intent(order.id, intent.id, test_db)
+
+    assert outcome == "retained"
+    retrieve.assert_called_once_with(intent.id, "acct_reservation")
+    create_intent.assert_not_called()
+    test_db.refresh(order)
+    assert order.status == "payment_intent_uncertain"
+    assert order.stripe_payment_intent_id == intent.id
+    assert test_db.exec(select(TicketReservation)).one().status == "active"
+
+
+def test_reconciliation_reports_uncertain_order_without_intent(
+    client: TestClient,
+    test_db: Session,
+    ticketing_setup,
+    monkeypatch,
+    caplog,
+):
+    payload = checkout_payload("unresolved-report-attempt", ticketing_setup.paid.id)
+    with patch(
+        "stripe.PaymentIntent.create",
+        side_effect=stripe.error.APIConnectionError("timeout"),
+    ):
+        response = client.post("/api/ticketing/checkout/create-payment-intent", json=payload)
+    assert response.status_code == 503
+    order = test_db.exec(select(Order)).one()
+    order.created_at = datetime.utcnow() - timedelta(hours=1)
+    test_db.add(order)
+    test_db.commit()
+
+    from app.scripts import reconcile_ticket_reservations as reconciliation_script
+
+    monkeypatch.setattr(reconciliation_script, "engine", test_db.get_bind())
+    outcomes = reconciliation_script.reconcile_pending_ticket_orders(minimum_age_minutes=30)
+
+    assert outcomes == {"unresolved": 1}
+    assert order.id in caplog.text
+
+
+def test_reconciliation_fulfills_and_emails_only_once(
+    client: TestClient,
+    test_db: Session,
+    ticketing_setup,
+    monkeypatch,
+):
+    with patch("stripe.PaymentIntent.create") as create_intent:
+        create_intent.side_effect = lambda **kwargs: stripe_intent(
+            test_db.exec(select(Order)).one()
+        )
+        response = client.post(
+            "/api/ticketing/checkout/create-payment-intent",
+            json=checkout_payload("scheduled-reconciliation-attempt", ticketing_setup.paid.id),
+        )
+    assert response.status_code == 200
+    order = test_db.exec(select(Order)).one()
+    order.created_at = datetime.utcnow() - timedelta(hours=1)
+    test_db.add(order)
+    test_db.commit()
+    intent = stripe_intent(order)
+
+    from app.scripts import reconcile_ticket_reservations as reconciliation_script
+
+    monkeypatch.setattr(reconciliation_script, "engine", test_db.get_bind())
+    with patch(
+        "app.services.stripe_service._retrieve_payment_intent",
+        return_value=intent,
+    ), patch(
+        "app.scripts.reconcile_ticket_reservations.dispatch_order_confirmation_emails",
+        new_callable=AsyncMock,
+        return_value=True,
+    ) as dispatch:
+        first = reconciliation_script.reconcile_pending_ticket_orders(30)
+        second = reconciliation_script.reconcile_pending_ticket_orders(30)
+
+    assert first == {"fulfilled": 1}
+    assert second == {}
+    assert dispatch.await_count == 1
+    test_db.refresh(order)
+    assert order.status == "completed"
+    assert len(test_db.exec(select(Ticket)).all()) == 1
 
 
 def test_reservation_capacity_failure_makes_no_stripe_call(

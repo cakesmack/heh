@@ -71,12 +71,39 @@ def _checkout_payload_hash(
 def _existing_checkout_response(order: Order) -> Optional[dict]:
     if order.status == "completed":
         return {"order_completed": True, "order_ref": order.order_ref}
+    if order.status == "payment_intent_uncertain":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Payment setup for this order has an unresolved Stripe outcome. "
+                f"Do not start another payment; contact support with order reference {order.order_ref}."
+            ),
+        )
     if order.status not in {"initializing", "pending_payment"}:
         raise HTTPException(
             status_code=409,
             detail="This checkout attempt is no longer active. Start a new checkout attempt.",
         )
     return None
+
+
+def _mark_payment_intent_uncertain(session: Session, order_id: str) -> None:
+    """Persist a circuit breaker after a PaymentIntent creation outcome is unknown."""
+    session.rollback()
+    locked_order = session.exec(
+        select(Order).where(Order.id == order_id).with_for_update()
+    ).first()
+    if (
+        locked_order
+        and locked_order.status in {"initializing", "pending_payment"}
+        and not locked_order.stripe_payment_intent_id
+    ):
+        locked_order.status = "payment_intent_uncertain"
+        locked_order.updated_at = datetime.utcnow()
+        session.add(locked_order)
+        session.commit()
+    else:
+        session.rollback()
 
 
 def _create_or_reuse_payment_intent(order: Order, session: Session) -> dict:
@@ -116,17 +143,26 @@ def _create_or_reuse_payment_intent(order: Order, session: Session) -> dict:
         )
     except stripe.error.StripeError as exc:
         # Creation may have succeeded remotely even when the response is lost.
-        # Keep the reservation active; retrying this checkout uses the same key.
+        # Persist a circuit breaker: Stripe can prune idempotency keys after its
+        # retention window, so an application retry must never create again.
         logger.warning("Stripe PaymentIntent creation unresolved for order %s: %s", order_id, exc)
+        _mark_payment_intent_uncertain(session, order_id)
         raise HTTPException(
             status_code=503,
-            detail="Payment setup is temporarily unresolved. Retry this checkout attempt; your reservation is retained.",
+            detail=(
+                "Payment setup is unresolved. Do not retry with a new payment; "
+                f"your reservation is retained under order reference {order_ref}."
+            ),
         )
     except Exception as exc:
         logger.warning("Unexpected PaymentIntent creation outcome for order %s: %s", order_id, exc)
+        _mark_payment_intent_uncertain(session, order_id)
         raise HTTPException(
             status_code=503,
-            detail="Payment setup is temporarily unresolved. Retry this checkout attempt; your reservation is retained.",
+            detail=(
+                "Payment setup is unresolved. Do not retry with a new payment; "
+                f"your reservation is retained under order reference {order_ref}."
+            ),
         )
 
     locked_order = session.exec(
@@ -339,6 +375,22 @@ def create_payment_intent(
                 detail="This checkout attempt identifier was already used for different details.",
             )
         return _create_or_reuse_payment_intent(existing_order, session)
+
+    unresolved_order = session.exec(
+        select(Order).where(
+            Order.checkout_payload_hash == payload_hash,
+            Order.status == "payment_intent_uncertain",
+        )
+    ).first()
+    if unresolved_order:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "A matching checkout has an unresolved Stripe outcome. "
+                f"Do not start another payment; contact support with order reference "
+                f"{unresolved_order.order_ref}."
+            ),
+        )
         
     # Resolve organizer Stripe account
     from app.models.organizer_stripe_account import OrganizerStripeAccount
