@@ -114,17 +114,38 @@ async def stripe_connect_webhook(
         if event.type == "payment_intent.succeeded":
             intent = event.data.object
             pi_id = getattr(intent, "id", "")
+            connected_account_id = getattr(event, "account", None)
             logger.info(f"[Connect Webhook] Processing payment_intent.succeeded for intent: {pi_id}")
-            order = stripe_service.fulfill_payment_intent(intent, session)
-            if order:
-                logger.info(f"[Connect Webhook] Successfully fulfilled ticket order: {order.order_ref} (PaymentIntent: {pi_id})")
-                try:
-                    await stripe_service.dispatch_order_confirmation_emails(order, session)
-                except Exception as email_err:
-                    logger.error(f"[Connect Webhook] Failed to dispatch order confirmation emails: {email_err}", exc_info=True)
+            result = stripe_service.fulfill_payment_intent(
+                intent,
+                session,
+                stripe_account_id=connected_account_id,
+            )
+            if result:
+                logger.info(f"[Connect Webhook] Successfully fulfilled ticket order: {result.order.order_ref} (PaymentIntent: {pi_id})")
+                if result.newly_fulfilled:
+                    try:
+                        await stripe_service.dispatch_order_confirmation_emails(result.order, session)
+                    except Exception as email_err:
+                        logger.error(f"[Connect Webhook] Failed to dispatch order confirmation emails: {email_err}", exc_info=True)
             else:
                 logger.warning(f"[Connect Webhook] Could not fulfill payment intent {pi_id}")
             return {"status": "success"}
+
+        elif event.type in {"payment_intent.payment_failed", "payment_intent.canceled"}:
+            intent = event.data.object
+            outcome = stripe_service.reconcile_payment_intent(
+                intent,
+                session,
+                stripe_account_id=getattr(event, "account", None),
+            )
+            logger.info(
+                "[Connect Webhook] Reconciled %s for %s: %s",
+                event.type,
+                getattr(intent, "id", ""),
+                outcome,
+            )
+            return {"status": "success", "reconciliation": outcome}
 
         elif event.type == "account.updated":
             account = event.data.object

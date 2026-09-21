@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from .event import Event
     from .ticket import Ticket
     from .promo_code import PromoCode
+    from .ticket_reservation import TicketReservation
 
 class TicketTier(SQLModel, table=True):
     """
@@ -38,4 +39,5 @@ class TicketTier(SQLModel, table=True):
     
     event: "Event" = Relationship(back_populates="ticket_tiers")
     tickets: List["Ticket"] = Relationship(back_populates="tier", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    reservations: List["TicketReservation"] = Relationship(back_populates="tier")
     promo_codes: List["PromoCode"] = Relationship(back_populates="target_tier")

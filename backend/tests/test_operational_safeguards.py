@@ -100,6 +100,7 @@ def test_automated_ticket_sales_cutoff_past_sale_end(client: TestClient, test_db
     test_db.commit()
 
     res = client.post('/api/ticketing/checkout/create-payment-intent', json={
+        'checkout_attempt_id': 'cutoff-test-attempt-01',
         'event_id': event.id,
         'buyer_name': 'Bob Smith',
         'buyer_email': 'bob@example.com',
@@ -161,6 +162,7 @@ def test_automated_ticket_sales_cutoff_fallback_to_event_date_start(client: Test
     test_db.commit()
 
     res = client.post('/api/ticketing/checkout/create-payment-intent', json={
+        'checkout_attempt_id': 'cutoff-test-attempt-02',
         'event_id': event_passed.id,
         'buyer_name': 'Jane Doe',
         'buyer_email': 'jane@example.com',
@@ -222,6 +224,7 @@ def test_anti_overselling_validation(client: TestClient, test_db: Session):
     test_db.commit()
 
     res = client.post('/api/ticketing/checkout/create-payment-intent', json={
+        'checkout_attempt_id': 'oversell-test-attempt-01',
         'event_id': event.id,
         'buyer_name': 'Over Buyer',
         'buyer_email': 'over@example.com',
@@ -231,6 +234,7 @@ def test_anti_overselling_validation(client: TestClient, test_db: Session):
     assert 'Not enough tickets available for Exclusive Pass' in res.json()['detail']
 
     res_ok = client.post('/api/ticketing/checkout/create-payment-intent', json={
+        'checkout_attempt_id': 'oversell-test-attempt-02',
         'event_id': event.id,
         'buyer_name': 'Exact Buyer',
         'buyer_email': 'exact@example.com',
@@ -240,6 +244,7 @@ def test_anti_overselling_validation(client: TestClient, test_db: Session):
     assert res_ok.json()['free_order'] is True
 
     res_sold_out = client.post('/api/ticketing/checkout/create-payment-intent', json={
+        'checkout_attempt_id': 'oversell-test-attempt-03',
         'event_id': event.id,
         'buyer_name': 'Late Buyer',
         'buyer_email': 'late@example.com',

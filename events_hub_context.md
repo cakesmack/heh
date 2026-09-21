@@ -341,6 +341,13 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
   - **Published Event Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` with event title, date/time, venue/location, organizer name, creator email, ticketed status (`Yes (Native Ticketing)` or `No`), subject badge (`[🎟️ TICKETED]` when native ticketing is enabled), live link, and admin management link.
   - **Quarantine Moderation Alert**: Dispatches background email to `contact@highlandeventshub.co.uk` detailing flagged keywords, reason, event ID, organizer name, creator email, and direct link to the admin moderation queue.
 - **Native Ticketing Engine (General Availability - GA)**:
+  - **Checkout Containment & Durable Inventory (September 2026)**:
+    - New native ticket purchases remain blocked by default through `NATIVE_TICKET_SALES_ENABLED = False`; this is separate from the public ticketing UI/onboarding flag and must stay disabled until the migration, Stripe webhook, and reconciliation job have been reviewed in the deployment environment.
+    - Paid checkout now creates a durable pending `Order` plus per-tier `TicketReservation` rows before contacting Stripe. The shared inventory invariant is `quantity_sold + active reservations <= quantity_available`, enforced while ticket-tier rows are locked in deterministic order.
+    - PaymentIntents remain Stripe Connect direct charges and use the stable idempotency key `ticket-order:{order.id}`. Server-persisted order and reservation data—not Stripe metadata—is authoritative for quantities, prices, fees, ownership, and fulfilment.
+    - Verified success consumes reservations, increments sold quantities, creates tickets, and completes the order in one transaction. Replayed success events are state-checked and do not repeat inventory, ticket, promo, or confirmation-email effects.
+    - Free claims and scanner cash/walk-up sales use the same locked reservation/consumption path. Tier capacity reductions and deletion also include active reservations.
+    - `python -m app.scripts.reconcile_ticket_reservations` safely reconciles aged pending orders against Stripe in the connected-account context; age alone never releases stock. A reliable production schedule for this command is an explicit prerequisite before sales can be reopened.
   - Feature flag `TICKETING_PUBLIC_ENABLED` enabled by default (`True` in `backend/app/core/config.py`).
   - Native ticketing creation, Stripe Connect onboarding (`/api/sellers/stripe-connect/onboard`), seller status checks, and ticket tier management are accessible to all authenticated registered users.
   - Event Wizard Step 1 toggle and ticket tier configurations are open to all registered users without Admin Beta gating badges.

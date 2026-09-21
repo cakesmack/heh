@@ -1,11 +1,14 @@
 from __future__ import annotations
 import json
+import hashlib
 import secrets
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union, Tuple
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 import logging
 
@@ -13,17 +16,24 @@ from app.core.database import get_session
 from app.core.config import settings
 from app.core.ticketing import require_native_ticket_sales_enabled
 from app.core.utils import normalize_uuid
-from app.models import Event, TicketTier, Order, Ticket, PromoCode
+from app.models import Event, TicketTier, Order, PromoCode
 from app.services import fee_service, promo_service
+from app.services.ticket_inventory import (
+    consume_order_reservations,
+    create_active_reservations,
+    ensure_capacity,
+    lock_ticket_tiers,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 class CheckoutItem(BaseModel):
     tier_id: str
-    quantity: int
+    quantity: int = Field(ge=1)
 
 class CheckoutRequest(BaseModel):
+    checkout_attempt_id: str = Field(min_length=16, max_length=128)
     event_id: str
     items: List[CheckoutItem]
     buyer_email: EmailStr
@@ -39,6 +49,111 @@ def generate_order_ref() -> str:
 def generate_qr_token() -> str:
     return secrets.token_urlsafe(48)
 
+
+def _checkout_payload_hash(
+    request: CheckoutRequest,
+    event_id: str,
+    quantities: Dict[str, int],
+) -> str:
+    canonical = {
+        "event_id": event_id,
+        "items": [{"tier_id": tier_id, "quantity": quantities[tier_id]} for tier_id in sorted(quantities)],
+        "buyer_email": request.buyer_email.strip().lower(),
+        "buyer_name": request.buyer_name.strip(),
+        "buyer_phone": (request.buyer_phone or "").strip(),
+        "promo_code": (request.promo_code or "").strip().upper(),
+        "attendee_responses": request.attendee_responses or {},
+    }
+    encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _existing_checkout_response(order: Order) -> Optional[dict]:
+    if order.status == "completed":
+        return {"order_completed": True, "order_ref": order.order_ref}
+    if order.status not in {"initializing", "pending_payment"}:
+        raise HTTPException(
+            status_code=409,
+            detail="This checkout attempt is no longer active. Start a new checkout attempt.",
+        )
+    return None
+
+
+def _create_or_reuse_payment_intent(order: Order, session: Session) -> dict:
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe is not configured.")
+
+    completed = _existing_checkout_response(order)
+    if completed:
+        return completed
+
+    order_id = order.id
+    total_amount = order.total_amount
+    platform_fee_amount = order.platform_fee_amount
+    buyer_email = order.buyer_email
+    order_ref = order.order_ref
+    event_id = order.event_id
+    connected_account_id = order.stripe_account_id
+    # Attribute refreshes may have opened a transaction after the reservation
+    # commit. End it before the network request; no database transaction or lock
+    # is held while Stripe is contacted.
+    session.rollback()
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(round(total_amount * 100)),
+            currency="gbp",
+            application_fee_amount=int(round(platform_fee_amount * 100)),
+            receipt_email=buyer_email,
+            metadata={
+                "ticket_order_id": order_id,
+                "order_ref": order_ref,
+                "event_id": event_id,
+            },
+            stripe_account=connected_account_id,
+            idempotency_key=f"ticket-order:{order_id}",
+        )
+    except stripe.error.StripeError as exc:
+        # Creation may have succeeded remotely even when the response is lost.
+        # Keep the reservation active; retrying this checkout uses the same key.
+        logger.warning("Stripe PaymentIntent creation unresolved for order %s: %s", order_id, exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Payment setup is temporarily unresolved. Retry this checkout attempt; your reservation is retained.",
+        )
+    except Exception as exc:
+        logger.warning("Unexpected PaymentIntent creation outcome for order %s: %s", order_id, exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Payment setup is temporarily unresolved. Retry this checkout attempt; your reservation is retained.",
+        )
+
+    locked_order = session.exec(
+        select(Order).where(Order.id == order_id).with_for_update()
+    ).first()
+    if not locked_order:
+        raise HTTPException(status_code=409, detail="Checkout order no longer exists.")
+    if locked_order.stripe_payment_intent_id not in (None, intent.id):
+        session.rollback()
+        raise HTTPException(status_code=409, detail="Checkout payment identity conflict.")
+    locked_order.stripe_payment_intent_id = intent.id
+    locked_order.updated_at = datetime.utcnow()
+    session.add(locked_order)
+    session.commit()
+
+    return {
+        "client_secret": intent.client_secret,
+        "stripe_account_id": locked_order.stripe_account_id,
+        "publishable_key": settings.STRIPE_PUBLISHABLE_KEY,
+        "amount": locked_order.total_amount,
+        "gross_amount": locked_order.total_amount,
+        "subtotal_amount": locked_order.subtotal_amount,
+        "platform_fee": locked_order.platform_fee_amount,
+        "platform_fee_amount": locked_order.platform_fee_amount,
+        "order_ref": locked_order.order_ref,
+    }
+
 class PromoValidationRequest(BaseModel):
     code: str
 
@@ -50,9 +165,10 @@ def get_order_by_intent(
     event_id: Optional[str] = Query(None),
     session: Session = Depends(get_session)
 ):
-    # 1. First check local database: if an Order already exists, return immediately without calling Stripe
+    # 1. Completed local orders can return immediately. Pending orders still
+    # require authoritative Stripe reconciliation.
     order = session.exec(select(Order).where(Order.stripe_payment_intent_id == intent_id)).first()
-    if order:
+    if order and order.status == "completed":
         return {
             "status": "succeeded",
             "order_ref": order.order_ref
@@ -79,11 +195,11 @@ def get_order_by_intent(
     # 2. Polling fallback: check with Stripe directly if webhook was delayed
     try:
         from app.services.stripe_service import fulfill_payment_intent
-        order = fulfill_payment_intent(intent_id, session, stripe_account_id=resolved_stripe_account)
-        if order:
+        result = fulfill_payment_intent(intent_id, session, stripe_account_id=resolved_stripe_account)
+        if result:
             return {
                 "status": "succeeded",
-                "order_ref": order.order_ref
+                "order_ref": result.order.order_ref
             }
     except Exception as e:
         logger.warning(f"Error checking Stripe status for intent {intent_id}: {e}")
@@ -195,6 +311,10 @@ def create_payment_intent(
     if not request.items:
         raise HTTPException(status_code=400, detail="Cart is empty.")
 
+    requested_quantities: Dict[str, int] = {}
+    for item in request.items:
+        requested_quantities[item.tier_id] = requested_quantities.get(item.tier_id, 0) + item.quantity
+
     # 1. Validate Event & Organizer
     event = session.exec(select(Event).where(Event.slug == request.event_id)).first()
     if not event:
@@ -207,6 +327,18 @@ def create_payment_intent(
         
     if not event.is_ticketing_enabled or event.sales_frozen:
         raise HTTPException(status_code=400, detail="Sales are not active for this event.")
+
+    payload_hash = _checkout_payload_hash(request, event.id, requested_quantities)
+    existing_order = session.exec(
+        select(Order).where(Order.checkout_attempt_id == request.checkout_attempt_id)
+    ).first()
+    if existing_order:
+        if existing_order.checkout_payload_hash != payload_hash or existing_order.event_id != event.id:
+            raise HTTPException(
+                status_code=409,
+                detail="This checkout attempt identifier was already used for different details.",
+            )
+        return _create_or_reuse_payment_intent(existing_order, session)
         
     # Resolve organizer Stripe account
     from app.models.organizer_stripe_account import OrganizerStripeAccount
@@ -236,27 +368,61 @@ def create_payment_intent(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
-    # 3. Lock & Validate Inventory
-    tier_ids = [item.tier_id for item in request.items]
-    
-    # We use with_for_update() to lock these rows during the transaction
-    statement = select(TicketTier).where(TicketTier.id.in_(tier_ids)).with_for_update()
-    tiers = session.exec(statement).all()
-    tier_map = {t.id: t for t in tiers}
-    
+    buyer_email_clean = request.buyer_email.strip().lower()
+    from app.models.user import User
+    matching_user = session.exec(select(User).where(func.lower(User.email) == buyer_email_clean)).first()
+
+    order_ref = generate_order_ref()
+    while session.exec(select(Order).where(Order.order_ref == order_ref)).first():
+        order_ref = generate_order_ref()
+
+    # Insert the idempotency identity before locking inventory. A concurrent
+    # retry waits on the unique key and then reuses the committed order.
+    order = Order(
+        order_ref=order_ref,
+        event_id=event.id,
+        buyer_user_id=matching_user.id if matching_user else None,
+        buyer_email=str(request.buyer_email),
+        buyer_name=request.buyer_name,
+        buyer_phone=request.buyer_phone,
+        total_amount=0.0,
+        subtotal_amount=0.0,
+        platform_fee_amount=0.0,
+        checkout_attempt_id=request.checkout_attempt_id,
+        checkout_payload_hash=payload_hash,
+        stripe_account_id=stripe_account_id,
+        promo_code=request.promo_code,
+        status="initializing",
+        attendee_responses=request.attendee_responses,
+    )
+    session.add(order)
+    try:
+        session.flush()
+    except IntegrityError:
+        session.rollback()
+        existing_order = session.exec(
+            select(Order).where(Order.checkout_attempt_id == request.checkout_attempt_id)
+        ).first()
+        if not existing_order or existing_order.checkout_payload_hash != payload_hash:
+            raise HTTPException(status_code=409, detail="Checkout attempt conflict.")
+        return _create_or_reuse_payment_intent(existing_order, session)
+
+    # 3. Lock & validate inventory in deterministic tier order.
+    tier_map = lock_ticket_tiers(session, requested_quantities)
     tier_items = []
+    reservation_items: Dict[str, Tuple[int, float]] = {}
     now = datetime.utcnow()
-    
-    for item in request.items:
-        tier = tier_map.get(item.tier_id)
+
+    for tier_id in sorted(requested_quantities):
+        quantity = requested_quantities[tier_id]
+        tier = tier_map.get(tier_id)
         if not tier or tier.event_id != event.id:
-            raise HTTPException(status_code=400, detail=f"Invalid tier ID: {item.tier_id}")
+            raise HTTPException(status_code=400, detail=f"Invalid tier ID: {tier_id}")
             
-        if item.quantity > tier.max_per_order:
+        if quantity > tier.max_per_order:
             raise HTTPException(status_code=400, detail=f"Cannot order more than {tier.max_per_order} for {tier.name}.")
-            
-        if tier.quantity_sold + item.quantity > tier.quantity_available:
-            raise HTTPException(status_code=400, detail=f"Not enough tickets available for {tier.name}.")
+
+        ensure_capacity(session, tier, quantity)
             
         if tier.sale_start and now < tier.sale_start:
             raise HTTPException(status_code=400, detail=f"Sales for {tier.name} have not started.")
@@ -268,116 +434,37 @@ def create_payment_intent(
         # Target tier promo validation
         if promo and promo.target_tier_id and promo.target_tier_id != tier.id:
              raise HTTPException(status_code=400, detail="Promo code is not applicable to selected tiers.")
-             
-        tier_items.append((tier, item.quantity))
+
+        tier_items.append((tier, quantity))
+        reservation_items[tier.id] = (quantity, float(tier.price))
 
     # 4. Calculate Fees
     fee_breakdown = fee_service.calculate_order_fees(event, tier_items, promo, session)
-    
-    # 5. Handle Free Orders
-    if fee_breakdown.gross_amount <= 0.0:
-        # Fulfill instantly
-        order_ref = generate_order_ref()
-        # Prevent collisions (extremely rare but good practice)
-        while session.exec(select(Order).where(Order.order_ref == order_ref)).first():
-            order_ref = generate_order_ref()
-            
-        buyer_email_clean = (request.buyer_email or "").strip().lower()
-        from app.models.user import User
-        from sqlalchemy import func
-        matching_user = session.exec(select(User).where(func.lower(User.email) == buyer_email_clean)).first()
-        buyer_user_id = matching_user.id if matching_user else None
+    order.subtotal_amount = fee_breakdown.subtotal_amount
+    order.total_amount = fee_breakdown.gross_amount
+    order.platform_fee_amount = fee_breakdown.platform_fee_amount
+    order.status = "pending_payment"
+    order.updated_at = datetime.utcnow()
+    session.add(order)
+    create_active_reservations(session, order, reservation_items)
 
-        order = Order(
-            order_ref=order_ref,
-            event_id=event.id,
-            buyer_user_id=buyer_user_id,
-            buyer_email=request.buyer_email,
-            buyer_name=request.buyer_name,
-            buyer_phone=request.buyer_phone,
-            total_amount=0.0,
-            platform_fee_amount=0.0,
-            status="completed",
-            attendee_responses=request.attendee_responses
-        )
+    # 5. Free claims reserve and consume in the same transaction.
+    if fee_breakdown.gross_amount <= 0.0:
+        consume_order_reservations(session, order)
+        order.status = "completed"
+        order.updated_at = datetime.utcnow()
         session.add(order)
-        session.flush() # get order.id
-        
-        # Create tickets & decrement inventory
-        for tier, qty in tier_items:
-            tier.quantity_sold += qty
-            session.add(tier)
-            for _ in range(qty):
-                ticket = Ticket(
-                    order_id=order.id,
-                    tier_id=tier.id,
-                    qr_token=generate_qr_token(),
-                    status="valid"
-                )
-                session.add(ticket)
-                
         if promo:
             promo.usage_count += 1
             session.add(promo)
-            
         session.commit()
-        
-        # Dispatch email and notification for free order
+
         from app.services.stripe_service import trigger_order_confirmation_emails
         trigger_order_confirmation_emails(order, session)
-
         return {"free_order": True, "order_ref": order.order_ref}
 
-    # 6. Handle Paid Orders
-    if not settings.STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=500, detail="Stripe is not configured.")
-        
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-    items_payload = [item.dict() for item in request.items]
-    
-    buyer_email_clean = (request.buyer_email or "").strip().lower()
-    from app.models.user import User
-    from sqlalchemy import func
-    matching_user = session.exec(select(User).where(func.lower(User.email) == buyer_email_clean)).first()
-    buyer_user_id = matching_user.id if matching_user else ""
-
-    try:
-        intent = stripe.PaymentIntent.create(
-            amount=int(round(fee_breakdown.gross_amount * 100)), # in pence
-            currency="gbp",
-            application_fee_amount=int(round(fee_breakdown.platform_fee_amount * 100)),
-            receipt_email=request.buyer_email,
-            metadata={
-                "event_id": event.id,
-                "buyer_user_id": buyer_user_id,
-                "buyer_name": request.buyer_name,
-                "buyer_email": request.buyer_email,
-                "buyer_phone": request.buyer_phone or "",
-                "items_json": json.dumps(items_payload),
-                "promo_code": request.promo_code or "",
-                "attendee_responses": json.dumps(request.attendee_responses or {})
-            },
-            stripe_account=stripe_account_id
-        )
-        
-        # We DO NOT save the order yet. It will be saved in the webhook upon success.
-        # This prevents empty/abandoned orders from holding inventory.
-        session.commit() # Commit any implicit locks (release them so others can buy)
-        
-        return {
-            "client_secret": intent.client_secret,
-            "stripe_account_id": stripe_account_id,
-            "publishable_key": settings.STRIPE_PUBLISHABLE_KEY,
-            "amount": fee_breakdown.gross_amount,
-            "gross_amount": fee_breakdown.gross_amount,
-            "subtotal_amount": fee_breakdown.subtotal_amount,
-            "platform_fee": fee_breakdown.platform_fee_amount,
-            "platform_fee_amount": fee_breakdown.platform_fee_amount,
-            "pass_fees_to_buyer": fee_breakdown.pass_fees_to_buyer
-        }
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e.user_message or e))
-    except Exception as e:
-        logger.error(f"Unexpected checkout error: {e}")
-        raise HTTPException(status_code=500, detail="Checkout failed")
+    # 6. Commit the durable reservation before making any Stripe request.
+    session.commit()
+    response = _create_or_reuse_payment_intent(order, session)
+    response["pass_fees_to_buyer"] = fee_breakdown.pass_fees_to_buyer
+    return response

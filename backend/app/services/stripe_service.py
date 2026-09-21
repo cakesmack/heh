@@ -3,11 +3,13 @@ import stripe
 import json
 import secrets
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union, Tuple
 from sqlmodel import Session, select, or_
 from app.core.config import settings
 from app.models import OrganizerStripeAccount, User, Order, TicketTier, Ticket, PromoCode, Event
+from app.services.ticket_inventory import consume_order_reservations, release_order_reservations
 
 logger = logging.getLogger(__name__)
 
@@ -92,231 +94,252 @@ def sync_account_status(stripe_account_id: str, session: Session) -> OrganizerSt
     
     return db_account
 
-def fulfill_payment_intent(
-    intent_or_id: Any,
-    session: Session,
-    stripe_account_id: Optional[str] = None
-) -> Optional[Order]:
-    """
-    Fulfills an order from a successful Stripe payment intent.
-    Idempotent: if the order already exists, returns it immediately.
-    Supports both platform and connected account (Stripe Connect) contexts.
-    Can be invoked by webhooks or as a direct polling fallback.
-    """
-    # 1. Idempotency check with local DB first
-    pi_id = intent_or_id if isinstance(intent_or_id, str) else getattr(intent_or_id, "id", None)
-    if pi_id:
-        existing_order = session.exec(select(Order).where(Order.stripe_payment_intent_id == pi_id)).first()
-        if existing_order:
-            return existing_order
+@dataclass
+class FulfillmentResult:
+    order: Order
+    newly_fulfilled: bool
 
-    if not settings.STRIPE_SECRET_KEY:
-        return None
-        
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-    intent = None
 
-    if isinstance(intent_or_id, str):
-        # A. Try with provided connected account context if available
-        if stripe_account_id:
-            try:
-                intent = stripe.PaymentIntent.retrieve(intent_or_id, stripe_account=stripe_account_id)
-            except stripe.error.InvalidRequestError as e:
-                logger.info(f"Intent {intent_or_id} not found on connected account {stripe_account_id}: {e}")
-            except Exception as e:
-                logger.warning(f"Error retrieving intent on connected account {stripe_account_id}: {e}")
-
-        # B. Try platform account context
-        if not intent:
-            try:
-                intent = stripe.PaymentIntent.retrieve(intent_or_id)
-            except stripe.error.InvalidRequestError:
-                pass
-            except Exception as e:
-                logger.warning(f"Error retrieving intent on platform account: {e}")
-
-        # C. Try searching across active connected accounts in DB as fallback
-        if not intent:
-            try:
-                active_accounts = session.exec(
-                    select(OrganizerStripeAccount.stripe_account_id)
-                    .where(OrganizerStripeAccount.charges_enabled == True)
-                ).all()
-                for acc_id in active_accounts:
-                    if not acc_id or acc_id == stripe_account_id:
-                        continue
-                    try:
-                        intent = stripe.PaymentIntent.retrieve(intent_or_id, stripe_account=acc_id)
-                        if intent:
-                            break
-                    except stripe.error.InvalidRequestError:
-                        continue
-                    except Exception:
-                        continue
-            except Exception as e:
-                logger.warning(f"Error searching connected accounts for intent {intent_or_id}: {e}")
-    else:
-        intent = intent_or_id
-
-    if not intent:
-        return None
-
-    pi_id = getattr(intent, "id", None) or str(intent_or_id)
-    pi_status = getattr(intent, "status", "")
-    
-    if pi_status != "succeeded":
-        logger.info(f"PaymentIntent {pi_id} status is '{pi_status}', skipping fulfillment.")
-        return None
-
-    # Idempotency re-check
-    existing_order = session.exec(select(Order).where(Order.stripe_payment_intent_id == pi_id)).first()
-    if existing_order:
-        return existing_order
-
+def _intent_metadata(intent: Any) -> Dict[str, Any]:
     metadata = getattr(intent, "metadata", {}) or {}
     if hasattr(metadata, "to_dict"):
-        metadata = metadata.to_dict()
-    elif not isinstance(metadata, dict):
-        try:
-            metadata = dict(metadata)
-        except Exception:
-            metadata = {}
+        return metadata.to_dict()
+    if isinstance(metadata, dict):
+        return metadata
+    try:
+        return dict(metadata)
+    except Exception:
+        return {}
 
-    event_id = metadata.get("event_id")
-    if not event_id:
-        logger.warning(f"PaymentIntent {pi_id} missing event_id in metadata.")
+
+def _retrieve_payment_intent(intent_id: str, stripe_account_id: Optional[str]) -> Any:
+    if not settings.STRIPE_SECRET_KEY:
+        return None
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    try:
+        return stripe.PaymentIntent.retrieve(intent_id, stripe_account=stripe_account_id)
+    except stripe.error.InvalidRequestError:
+        return None
+    except Exception as exc:
+        logger.warning("Unable to reconcile PaymentIntent %s: %s", intent_id, exc)
         return None
 
+
+def _fulfill_reserved_order(
+    intent: Any,
+    session: Session,
+    order_id: str,
+    stripe_account_id: Optional[str],
+) -> Optional[FulfillmentResult]:
+    order = session.exec(select(Order).where(Order.id == order_id).with_for_update()).first()
+    if not order:
+        return None
+    if not stripe_account_id or stripe_account_id != order.stripe_account_id:
+        logger.error("Connected-account mismatch while fulfilling order %s", order.id)
+        return None
+    if order.status == "completed":
+        return FulfillmentResult(order=order, newly_fulfilled=False)
+    if order.status != "pending_payment":
+        logger.warning("Order %s cannot be fulfilled from status %s", order.id, order.status)
+        return None
+    pi_id = getattr(intent, "id", None)
+    if not pi_id or order.stripe_payment_intent_id not in (None, pi_id):
+        logger.error("PaymentIntent mismatch while fulfilling order %s", order.id)
+        return None
+    if int(getattr(intent, "amount", -1)) != int(round(order.total_amount * 100)):
+        logger.error("Payment amount mismatch while fulfilling order %s", order.id)
+        return None
+    if str(getattr(intent, "currency", "")).lower() != "gbp":
+        logger.error("Payment currency mismatch while fulfilling order %s", order.id)
+        return None
+
+    order.stripe_payment_intent_id = pi_id
+    consume_order_reservations(session, order)
+    if order.promo_code:
+        promo = session.exec(
+            select(PromoCode)
+            .where(PromoCode.event_id == order.event_id, PromoCode.code_text == order.promo_code)
+            .with_for_update()
+        ).first()
+        if promo:
+            promo.usage_count += 1
+            session.add(promo)
+    order.status = "completed"
+    order.updated_at = datetime.utcnow()
+    session.add(order)
+    session.commit()
+    session.refresh(order)
+    return FulfillmentResult(order=order, newly_fulfilled=True)
+
+
+def _fulfill_legacy_payment_intent(intent: Any, session: Session) -> Optional[FulfillmentResult]:
+    """Compatibility path for PaymentIntents created before reservations existed."""
+    pi_id = getattr(intent, "id", None)
+    existing = session.exec(select(Order).where(Order.stripe_payment_intent_id == pi_id)).first()
+    if existing:
+        return FulfillmentResult(order=existing, newly_fulfilled=False)
+
+    metadata = _intent_metadata(intent)
+    event_id = metadata.get("event_id")
+    if not event_id:
+        return None
     try:
         raw_items = metadata.get("items_json", "[]")
-        if isinstance(raw_items, list):
-            items_payload = raw_items
-        elif isinstance(raw_items, str):
-            try:
-                items_payload = json.loads(raw_items)
-            except Exception:
-                items_payload = []
-        else:
-            items_payload = []
-
-        promo_code = metadata.get("promo_code")
-        
-        # 1. Lock and decrement inventory
-        tier_ids = [item.get("tier_id") for item in items_payload if item.get("tier_id")]
-        tiers = session.exec(select(TicketTier).where(TicketTier.id.in_(tier_ids)).with_for_update()).all()
-        tier_map = {t.id: t for t in tiers}
-        
+        items_payload = raw_items if isinstance(raw_items, list) else json.loads(raw_items)
+        tier_ids = sorted({item.get("tier_id") for item in items_payload if item.get("tier_id")})
+        tiers = session.exec(
+            select(TicketTier).where(TicketTier.id.in_(tier_ids)).order_by(TicketTier.id).with_for_update()
+        ).all()
+        tier_map = {tier.id: tier for tier in tiers}
         tier_items = []
         for item in items_payload:
-            tier = tier_map.get(item["tier_id"])
+            tier = tier_map.get(item.get("tier_id"))
             if not tier:
                 continue
-            qty = item.get("quantity", 1)
-            tier.quantity_sold += qty
+            quantity = int(item.get("quantity", 1))
+            tier.quantity_sold += quantity
             session.add(tier)
-            tier_items.append((tier, qty))
-            
-        # 2. Promo Code usage
+            tier_items.append((tier, quantity))
+
+        promo_code = metadata.get("promo_code")
         if promo_code:
             promo = session.exec(
-                select(PromoCode).where(PromoCode.event_id == event_id, PromoCode.code_text == promo_code).with_for_update()
+                select(PromoCode)
+                .where(PromoCode.event_id == event_id, PromoCode.code_text == promo_code)
+                .with_for_update()
             ).first()
             if promo:
                 promo.usage_count += 1
                 session.add(promo)
-                
-        # 3. Generate Order Ref
-        def generate_order_ref():
-            return "HEH-" + secrets.token_hex(3).upper()
-            
-        order_ref = generate_order_ref()
+
+        order_ref = "HEH-" + secrets.token_hex(3).upper()
         while session.exec(select(Order).where(Order.order_ref == order_ref)).first():
-            order_ref = generate_order_ref()
-            
+            order_ref = "HEH-" + secrets.token_hex(3).upper()
         total_amount = float(getattr(intent, "amount", 0) or 0) / 100.0
-        
         app_fee = getattr(intent, "application_fee_amount", None)
-        if app_fee is not None and app_fee > 0:
-            platform_fee_amount = float(app_fee) / 100.0
-        else:
-            platform_fee_amount = float(metadata.get("platform_fee_amount", 0) or 0)
-        
-        charges = getattr(intent, "charges", None)
-        billing_details = None
-        if charges and getattr(charges, "data", None) and len(charges.data) > 0:
-            billing_details = getattr(charges.data[0], "billing_details", None)
-
-        buyer_email = (
-            metadata.get("buyer_email")
-            or getattr(intent, "receipt_email", None)
-            or (getattr(billing_details, "email", None) if billing_details else None)
-            or ""
+        platform_fee_amount = (
+            float(app_fee) / 100.0
+            if app_fee is not None and app_fee > 0
+            else float(metadata.get("platform_fee_amount", 0) or 0)
         )
-        buyer_name = (
-            metadata.get("buyer_name")
-            or (getattr(billing_details, "name", None) if billing_details else None)
-            or "Ticket Buyer"
-        )
-        buyer_phone = (
-            metadata.get("buyer_phone")
-            or (getattr(billing_details, "phone", None) if billing_details else None)
-        )
-
-        buyer_email_clean = buyer_email.strip().lower()
+        buyer_email = metadata.get("buyer_email") or getattr(intent, "receipt_email", None) or ""
+        buyer_name = metadata.get("buyer_name") or "Ticket Buyer"
         buyer_user_id = metadata.get("buyer_user_id") or None
-        if not buyer_user_id and buyer_email_clean:
+        if not buyer_user_id and buyer_email:
             from sqlalchemy import func
-            matching_user = session.exec(select(User).where(func.lower(User.email) == buyer_email_clean)).first()
-            if matching_user:
-                buyer_user_id = matching_user.id
-        
-        attendee_responses = {}
-        raw_responses = metadata.get("attendee_responses")
-        if raw_responses:
-            if isinstance(raw_responses, dict):
-                attendee_responses = raw_responses
-            elif isinstance(raw_responses, str):
-                try:
-                    attendee_responses = json.loads(raw_responses)
-                except Exception:
-                    attendee_responses = {}
-
+            matching_user = session.exec(
+                select(User).where(func.lower(User.email) == buyer_email.strip().lower())
+            ).first()
+            buyer_user_id = matching_user.id if matching_user else None
+        raw_responses = metadata.get("attendee_responses") or "{}"
+        attendee_responses = raw_responses if isinstance(raw_responses, dict) else json.loads(raw_responses)
         order = Order(
             order_ref=order_ref,
             event_id=event_id,
             buyer_user_id=buyer_user_id,
             buyer_email=buyer_email,
             buyer_name=buyer_name,
-            buyer_phone=buyer_phone,
+            buyer_phone=metadata.get("buyer_phone"),
             total_amount=total_amount,
+            subtotal_amount=max(0.0, total_amount - platform_fee_amount),
             platform_fee_amount=platform_fee_amount,
             stripe_payment_intent_id=pi_id,
             status="completed",
-            attendee_responses=attendee_responses
+            attendee_responses=attendee_responses,
         )
         session.add(order)
         session.flush()
-        
-        # 4. Generate Tickets
-        for tier, qty in tier_items:
-            for _ in range(qty):
-                ticket = Ticket(
+        for tier, quantity in tier_items:
+            for _ in range(quantity):
+                session.add(Ticket(
                     order_id=order.id,
                     tier_id=tier.id,
                     qr_token=secrets.token_urlsafe(48),
-                    status="valid"
-                )
-                session.add(ticket)
-                
+                    status="valid",
+                ))
         session.commit()
         session.refresh(order)
-        logger.info(f"FulfillPaymentIntent: Successfully created order {order_ref} for {pi_id}")
-
-        return order
-    except Exception as e:
+        logger.warning("Fulfilled legacy unreserved PaymentIntent %s", pi_id)
+        return FulfillmentResult(order=order, newly_fulfilled=True)
+    except Exception as exc:
         session.rollback()
-        logger.error(f"FulfillPaymentIntent failed for {pi_id}: {e}")
+        logger.error("Legacy PaymentIntent fulfillment failed for %s: %s", pi_id, exc)
         return None
+
+
+def fulfill_payment_intent(
+    intent_or_id: Any,
+    session: Session,
+    stripe_account_id: Optional[str] = None,
+) -> Optional[FulfillmentResult]:
+    intent = (
+        _retrieve_payment_intent(intent_or_id, stripe_account_id)
+        if isinstance(intent_or_id, str)
+        else intent_or_id
+    )
+    if not intent or getattr(intent, "status", "") != "succeeded":
+        return None
+
+    metadata = _intent_metadata(intent)
+    order_id = metadata.get("ticket_order_id")
+    if not order_id:
+        existing = session.exec(
+            select(Order).where(Order.stripe_payment_intent_id == getattr(intent, "id", None))
+        ).first()
+        if existing and existing.checkout_attempt_id:
+            order_id = existing.id
+    if order_id:
+        try:
+            return _fulfill_reserved_order(intent, session, order_id, stripe_account_id)
+        except Exception as exc:
+            session.rollback()
+            logger.error("Reserved PaymentIntent fulfillment failed for %s: %s", getattr(intent, "id", None), exc)
+            return None
+    return _fulfill_legacy_payment_intent(intent, session)
+
+
+def reconcile_payment_intent(
+    intent_or_id: Any,
+    session: Session,
+    stripe_account_id: Optional[str] = None,
+) -> str:
+    """Reconcile without releasing stock for processing, uncertain, or unavailable payments."""
+    intent = (
+        _retrieve_payment_intent(intent_or_id, stripe_account_id)
+        if isinstance(intent_or_id, str)
+        else intent_or_id
+    )
+    if not intent:
+        return "unresolved"
+    if getattr(intent, "status", "") == "succeeded":
+        return "fulfilled" if fulfill_payment_intent(intent, session, stripe_account_id) else "unresolved"
+
+    metadata = _intent_metadata(intent)
+    order_id = metadata.get("ticket_order_id")
+    if not order_id:
+        existing = session.exec(
+            select(Order).where(Order.stripe_payment_intent_id == getattr(intent, "id", None))
+        ).first()
+        order_id = existing.id if existing and existing.checkout_attempt_id else None
+    if not order_id:
+        return "legacy"
+
+    order = session.exec(select(Order).where(Order.id == order_id).with_for_update()).first()
+    if not order or order.status != "pending_payment":
+        return order.status if order else "missing"
+    if not stripe_account_id or stripe_account_id != order.stripe_account_id:
+        session.rollback()
+        return "account_mismatch"
+    if getattr(intent, "status", "") != "canceled":
+        session.rollback()
+        return "retained"
+
+    release_order_reservations(session, order)
+    order.status = "failed"
+    order.updated_at = datetime.utcnow()
+    session.add(order)
+    session.commit()
+    return "released"
 
 
 async def dispatch_order_confirmation_emails(

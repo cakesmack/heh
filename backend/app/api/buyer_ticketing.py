@@ -160,9 +160,8 @@ def process_buyer_refund(order_id: str, current_user: User = Depends(get_current
         # Trigger Stripe Refund
         stripe.Refund.create(
             payment_intent=order.stripe_payment_intent_id,
-            reverse_transfer=True,
-            # Refunds application fee as well:
-            refund_application_fee=True
+            stripe_account=order.stripe_account_id or stripe_account.stripe_account_id,
+            refund_application_fee=True,
         )
         
     except stripe.error.StripeError as e:

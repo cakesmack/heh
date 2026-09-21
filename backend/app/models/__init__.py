@@ -38,6 +38,7 @@ from .organizer_stripe_account import OrganizerStripeAccount
 from .ticket_tier import TicketTier
 from .promo_code import PromoCode
 from .order import Order
+from .ticket_reservation import TicketReservation
 from .ticket import Ticket
 from .platform_settings import PlatformSettings
 
@@ -114,6 +115,7 @@ __all__ = [
     "TicketTier",
     "PromoCode",
     "Order",
+    "TicketReservation",
     "Ticket",
     "PlatformSettings",
 ]

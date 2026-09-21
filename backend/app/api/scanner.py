@@ -11,6 +11,12 @@ from app.core.database import get_session
 from app.core.ticketing import require_native_ticket_sales_enabled
 from app.core.utils import normalize_uuid
 from app.models import Event, Ticket, Order, TicketTier
+from app.services.ticket_inventory import (
+    consume_order_reservations,
+    create_active_reservations,
+    ensure_capacity,
+    lock_ticket_tiers,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -220,16 +226,12 @@ def cash_walk_up(request: CashWalkUpRequest, session: Session = Depends(get_sess
     if request.quantity <= 0:
         raise HTTPException(status_code=400, detail="Invalid quantity")
         
-    # Lock the tier to enforce capacity
-    tier = session.exec(select(TicketTier).where(TicketTier.id == request.tier_id).with_for_update()).first()
+    # Lock the tier and include outstanding paid reservations in availability.
+    tier = lock_ticket_tiers(session, [request.tier_id]).get(request.tier_id)
     if not tier or tier.event_id != event.id:
         raise HTTPException(status_code=404, detail="Tier not found.")
-        
-    if tier.quantity_sold + request.quantity > tier.quantity_available:
-        raise HTTPException(status_code=400, detail="Not enough tickets available.")
-        
-    tier.quantity_sold += request.quantity
-    session.add(tier)
+
+    ensure_capacity(session, tier, request.quantity)
     
     def generate_order_ref():
         return "HEH-" + secrets.token_hex(3).upper()
@@ -245,6 +247,7 @@ def cash_walk_up(request: CashWalkUpRequest, session: Session = Depends(get_sess
         event_id=event.id,
         buyer_email="walkup@door",
         buyer_name="Cash Walk-Up",
+        subtotal_amount=total,
         total_amount=total,
         platform_fee_amount=0.0,
         status="cash_door_sale",
@@ -252,17 +255,19 @@ def cash_walk_up(request: CashWalkUpRequest, session: Session = Depends(get_sess
     )
     session.add(order)
     session.flush()
-    
-    for _ in range(request.quantity):
-        ticket = Ticket(
-            order_id=order.id,
-            tier_id=tier.id,
-            qr_token=secrets.token_urlsafe(48),
-            status="checked_in", # Instantly checked in
-            checked_in_at=datetime.utcnow(),
-            checked_in_by=request.device_id
-        )
-        session.add(ticket)
+
+    create_active_reservations(
+        session,
+        order,
+        {tier.id: (request.quantity, float(tier.price))},
+    )
+    consume_order_reservations(
+        session,
+        order,
+        ticket_status="checked_in",
+        checked_in_at=datetime.utcnow(),
+        checked_in_by=request.device_id,
+    )
         
     session.commit()
     

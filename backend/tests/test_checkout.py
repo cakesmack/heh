@@ -112,6 +112,7 @@ def test_checkout_create_payment_intent_event_lookup_and_paths(client: TestClien
     res = client.post(
         "/api/ticketing/checkout/create-payment-intent",
         json={
+            "checkout_attempt_id": "checkout-test-attempt-01",
             "event_id": event.id,
             "items": [{"tier_id": "tier_free_1", "quantity": 2}],
             "buyer_name": "John Doe",
@@ -128,6 +129,7 @@ def test_checkout_create_payment_intent_event_lookup_and_paths(client: TestClien
     res_slug = client.post(
         "/api/ticketing/checkout/create-payment-intent",
         json={
+            "checkout_attempt_id": "checkout-test-attempt-02",
             "event_id": "highland-ceilidh-night",
             "items": [{"tier_id": "tier_free_1", "quantity": 1}],
             "buyer_name": "Jane Doe",
@@ -142,6 +144,7 @@ def test_checkout_create_payment_intent_event_lookup_and_paths(client: TestClien
     res_hyphen = client.post(
         "/api/ticketing/checkout/create-payment-intent",
         json={
+            "checkout_attempt_id": "checkout-test-attempt-03",
             "event_id": hyphenated_uuid,
             "items": [{"tier_id": "tier_free_1", "quantity": 1}],
             "buyer_name": "Bob Doe",
@@ -155,6 +158,7 @@ def test_checkout_create_payment_intent_event_lookup_and_paths(client: TestClien
     res_slash = client.post(
         "/api/ticketing/checkout/create-payment-intent/",
         json={
+            "checkout_attempt_id": "checkout-test-attempt-04",
             "event_id": event.id,
             "items": [{"tier_id": "tier_free_1", "quantity": 1}],
             "buyer_name": "Alice Doe",
@@ -227,6 +231,7 @@ def test_disabled_native_sales_create_no_payment_order_or_ticket(
         response = client.post(
             "/api/ticketing/checkout/create-payment-intent",
             json={
+                "checkout_attempt_id": f"disabled-sales-{price}",
                 "event_id": event.id,
                 "items": [{"tier_id": tier.id, "quantity": 2}],
                 "buyer_name": "Contained Buyer",

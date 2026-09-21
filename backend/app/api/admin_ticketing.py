@@ -12,6 +12,7 @@ from app.models.order import Order
 from app.models.ticket_tier import TicketTier
 from app.models.ticket import Ticket
 from app.models.organizer import Organizer
+from app.models.organizer_stripe_account import OrganizerStripeAccount
 from app.models.platform_settings import PlatformSettings
 from sqlalchemy import func
 import stripe
@@ -96,12 +97,31 @@ def force_refund(order_id: str, current_user: User = Depends(get_current_user), 
         raise HTTPException(status_code=400, detail="Only completed orders can be refunded")
         
     if order.stripe_payment_intent_id:
+        stripe_account_id = order.stripe_account_id
+        if not stripe_account_id:
+            event = session.get(Event, order.event_id)
+            if event and event.organizer_profile_id:
+                account = session.exec(
+                    select(OrganizerStripeAccount).where(
+                        OrganizerStripeAccount.organizer_profile_id == event.organizer_profile_id
+                    )
+                ).first()
+                stripe_account_id = account.stripe_account_id if account else None
+            elif event and event.organizer_id:
+                account = session.exec(
+                    select(OrganizerStripeAccount)
+                    .join(Organizer, OrganizerStripeAccount.organizer_profile_id == Organizer.id)
+                    .where(Organizer.user_id == event.organizer_id)
+                ).first()
+                stripe_account_id = account.stripe_account_id if account else None
+        if not stripe_account_id:
+            raise HTTPException(status_code=400, detail="Organizer Stripe account not found.")
         try:
-            # Trigger Stripe Refund (Bypassing balance checks as admin)
+            # Direct charges must be refunded in the connected-account context.
             stripe.Refund.create(
                 payment_intent=order.stripe_payment_intent_id,
-                reverse_transfer=True,
-                refund_application_fee=True
+                stripe_account=stripe_account_id,
+                refund_application_fee=True,
             )
         except stripe.error.StripeError as e:
             raise HTTPException(status_code=400, detail=f"Stripe refund failed: {str(e)}")

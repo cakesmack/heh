@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from .event import Event
     from .user import User
     from .ticket import Ticket
+    from .ticket_reservation import TicketReservation
 
 class Order(SQLModel, table=True):
     """
@@ -34,7 +35,13 @@ class Order(SQLModel, table=True):
     buyer_phone: Optional[str] = Field(default=None, max_length=50)
     
     total_amount: float = Field(nullable=False, ge=0.0)
+    subtotal_amount: float = Field(default=0.0, nullable=False, ge=0.0)
     platform_fee_amount: float = Field(default=0.0, ge=0.0)
+
+    checkout_attempt_id: Optional[str] = Field(default=None, max_length=128, unique=True, index=True)
+    checkout_payload_hash: Optional[str] = Field(default=None, max_length=64)
+    stripe_account_id: Optional[str] = Field(default=None, max_length=255, index=True)
+    promo_code: Optional[str] = Field(default=None, max_length=50)
     
     stripe_payment_intent_id: Optional[str] = Field(default=None, unique=True, index=True)
     
@@ -49,3 +56,7 @@ class Order(SQLModel, table=True):
     
     event: "Event" = Relationship(back_populates="orders")
     tickets: List["Ticket"] = Relationship(back_populates="order", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    reservations: List["TicketReservation"] = Relationship(
+        back_populates="order",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )

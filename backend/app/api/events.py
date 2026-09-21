@@ -53,6 +53,7 @@ import logging
 logger = logging.getLogger(__name__)
 from app.core.config import settings
 from app.core.ticketing import require_native_ticket_sales_enabled
+from app.services.ticket_inventory import committed_quantity, ensure_capacity
 from app.schemas.ticketing import TicketTierCreate, TicketTierUpdate, TicketTierResponse
 from app.models.organizer import Organizer
 from app.models.group_member import GroupMember, GroupRole
@@ -2441,7 +2442,10 @@ async def update_event(
     # Handle ticket tiers update
     if event_data.ticket_tiers is not None:
         existing_tiers = session.exec(
-            select(TicketTier).where(TicketTier.event_id == event.id)
+            select(TicketTier)
+            .where(TicketTier.event_id == event.id)
+            .order_by(TicketTier.id)
+            .with_for_update()
         ).all()
         existing_tiers_map = {t.id: t for t in existing_tiers}
         retained_tier_ids = set()
@@ -2467,7 +2471,9 @@ async def update_event(
                 if "price" in tier_dict and tier_dict["price"] is not None:
                     matched_tier.price = float(tier_dict["price"])
                 if "quantity_available" in tier_dict and tier_dict["quantity_available"] is not None:
-                    matched_tier.quantity_available = int(tier_dict["quantity_available"])
+                    proposed_capacity = int(tier_dict["quantity_available"])
+                    ensure_capacity(session, matched_tier, proposed_capacity=proposed_capacity)
+                    matched_tier.quantity_available = proposed_capacity
                 if "max_per_order" in tier_dict and tier_dict["max_per_order"] is not None:
                     matched_tier.max_per_order = int(tier_dict["max_per_order"])
                 if "sale_start" in tier_dict:
@@ -2494,7 +2500,7 @@ async def update_event(
 
         for old_tier_id, old_tier in existing_tiers_map.items():
             if old_tier_id not in retained_tier_ids:
-                if old_tier.quantity_sold == 0:
+                if committed_quantity(session, old_tier) == 0:
                     session.delete(old_tier)
                 else:
                     old_tier.is_hidden = True
@@ -3144,11 +3150,19 @@ def update_event_ticket_tier(
     if not is_owner:
         raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
 
-    tier = session.get(TicketTier, tier_id)
+    tier = session.exec(
+        select(TicketTier).where(TicketTier.id == tier_id).with_for_update()
+    ).first()
     if not tier or tier.event_id != event.id:
         raise HTTPException(status_code=404, detail="Ticket tier not found for this event")
 
     update_dict = tier_data.model_dump(exclude_unset=True)
+    if "quantity_available" in update_dict:
+        ensure_capacity(
+            session,
+            tier,
+            proposed_capacity=int(update_dict["quantity_available"]),
+        )
     for field, val in update_dict.items():
         setattr(tier, field, val)
 
@@ -3201,11 +3215,13 @@ def delete_event_ticket_tier(
     if not is_owner:
         raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
 
-    tier = session.get(TicketTier, tier_id)
+    tier = session.exec(
+        select(TicketTier).where(TicketTier.id == tier_id).with_for_update()
+    ).first()
     if not tier or tier.event_id != event.id:
         raise HTTPException(status_code=404, detail="Ticket tier not found for this event")
 
-    if tier.quantity_sold > 0:
+    if committed_quantity(session, tier) > 0:
         tier.is_hidden = True
         session.add(tier)
     else:

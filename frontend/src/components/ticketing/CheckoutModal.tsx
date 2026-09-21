@@ -273,6 +273,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState('');
   const [confirmedTotal, setConfirmedTotal] = useState(total);
+  const checkoutAttemptIdRef = useRef<string>('');
+  if (!checkoutAttemptIdRef.current) {
+    checkoutAttemptIdRef.current =
+      typeof globalThis.crypto?.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  }
 
   const displaySubtotal = breakdown?.subtotal ?? total;
   const displayFee = breakdown?.bookingFee ?? 0;
@@ -288,6 +295,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     try {
       const res = await axios.post(`${API_BASE_URL}/api/ticketing/checkout/create-payment-intent`, {
+        checkout_attempt_id: checkoutAttemptIdRef.current,
         event_id: eventId,
         items,
         buyer_name: buyerName.trim(),
@@ -297,6 +305,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       });
 
       if (res.data.free_order) {
+        window.location.href = `/orders/${res.data.order_ref}`;
+        return;
+      }
+
+      if (res.data.order_completed && res.data.order_ref) {
         window.location.href = `/orders/${res.data.order_ref}`;
         return;
       }
