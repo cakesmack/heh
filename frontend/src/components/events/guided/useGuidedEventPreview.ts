@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react';
 import type { VenueResponse } from '@/types';
-import type { GuidedEventDraft } from './guidedEventTypes';
+import type { GuidedEventDraft, VenueMode } from './guidedEventTypes';
 
 const INITIAL_DRAFT: GuidedEventDraft = {
   title: '',
-  venueId: null,
-  venue: null,
+  venueMode: 'single',
+  singleVenueId: null,
+  singleVenue: null,
+  participatingVenues: [],
 };
 
 export function useGuidedEventPreview() {
@@ -15,9 +17,18 @@ export function useGuidedEventPreview() {
     setDraft((current) => ({ ...current, title }));
   }, []);
 
-  const setVenue = useCallback((venueId: string | null, venue: VenueResponse | null) => {
-    setDraft((current) => ({ ...current, venueId, venue }));
+  const setVenueMode = useCallback((venueMode: VenueMode) => {
+    setDraft((current) => ({ ...current, venueMode }));
   }, []);
 
-  return { draft, setTitle, setVenue };
+  const setSingleVenue = useCallback((singleVenueId: string | null, singleVenue: VenueResponse | null) => {
+    setDraft((current) => ({ ...current, singleVenueId, singleVenue }));
+  }, []);
+
+  const setParticipatingVenues = useCallback((participatingVenues: VenueResponse[]) => {
+    const uniqueVenues = Array.from(new Map(participatingVenues.map((venue) => [venue.id, venue])).values());
+    setDraft((current) => ({ ...current, participatingVenues: uniqueVenues }));
+  }, []);
+
+  return { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues };
 }

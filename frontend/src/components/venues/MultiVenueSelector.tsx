@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import { VenueResponse } from '@/types';
 import { UnifiedVenueSelect } from '../venues/UnifiedVenueSelect';
 
@@ -8,13 +8,25 @@ interface MultiVenueSelectorProps {
     onChange: (venues: VenueResponse[]) => void;
     disabled?: boolean;
     onFocus?: () => void;
+    disableGoogle?: boolean;
+    inputId?: string;
+    inputRef?: Ref<HTMLInputElement>;
+    error?: string;
+    ariaDescribedBy?: string;
+    errorId?: string;
 }
 
 export default function MultiVenueSelector({
     selectedVenues,
     onChange,
     disabled = false,
-    onFocus
+    onFocus,
+    disableGoogle = false,
+    inputId,
+    inputRef,
+    error,
+    ariaDescribedBy,
+    errorId,
 }: MultiVenueSelectorProps) {
     // Key to force reset of the input after adding
     const [inputKey, setInputKey] = useState(0);
@@ -38,11 +50,13 @@ export default function MultiVenueSelector({
         <div className="space-y-6">
             {/* Search / Add Section */}
             <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1">
+                <label htmlFor={inputId} className="block text-sm font-medium text-gray-800 mb-1">
                     Add Participating Venue
                 </label>
                 <p className="text-xs text-gray-500 mb-3">
-                    Search existing venues or type a new place name to add from Google Maps.
+                    {disableGoogle
+                        ? 'Search and add an existing registered venue.'
+                        : 'Search existing venues or type a new place name to add from Google Maps.'}
                 </p>
                 <UnifiedVenueSelect
                     key={inputKey}
@@ -51,6 +65,12 @@ export default function MultiVenueSelector({
                     placeholder="Search for a venue or place..."
                     disabled={disabled}
                     onFocus={onFocus}
+                    disableGoogle={disableGoogle}
+                    inputId={inputId}
+                    inputRef={inputRef}
+                    error={error}
+                    ariaDescribedBy={ariaDescribedBy}
+                    errorId={errorId}
                 />
             </div>
 
@@ -58,7 +78,7 @@ export default function MultiVenueSelector({
             {selectedVenues.length > 0 && (
                 <div className="mt-4">
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Venues</h4>
-                    <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+                    <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100" aria-live="polite">
                         {selectedVenues.map((venue) => (
                             <div key={venue.id} className="flex items-center justify-between p-3">
                                 <div className="flex-1 min-w-0 mr-4">
@@ -77,7 +97,7 @@ export default function MultiVenueSelector({
                                     onClick={() => handleRemoveVenue(venue.id)}
                                     disabled={disabled}
                                     className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
-                                    aria-label="Remove venue"
+                                    aria-label={`Remove ${venue.name}`}
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -90,7 +110,7 @@ export default function MultiVenueSelector({
             )}
 
             {selectedVenues.length === 0 && (
-                <p className="text-xs text-gray-500 italic">No additional venues selected.</p>
+                <p className="text-xs text-gray-500 italic" aria-live="polite">No participating venues selected.</p>
             )}
         </div>
     );

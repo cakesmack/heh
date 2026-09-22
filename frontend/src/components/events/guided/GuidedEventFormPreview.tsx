@@ -11,7 +11,7 @@ import styles from './GuidedEventFormPreview.module.css';
 type Direction = 'forward' | 'backward';
 
 export default function GuidedEventFormPreview() {
-  const { draft, setTitle, setVenue } = useGuidedEventPreview();
+  const { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues } = useGuidedEventPreview();
   const [questionIndex, setQuestionIndex] = useState(0);
   const [direction, setDirection] = useState<Direction>('forward');
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -49,8 +49,14 @@ export default function GuidedEventFormPreview() {
       titleInputRef.current?.focus();
       return false;
     }
-    if (currentQuestion.id === 'venue' && !draft.venueId) {
-      setErrors((current) => ({ ...current, venue: 'Choose a registered venue before continuing.' }));
+    const hasValidVenue = draft.venueMode === 'single'
+      ? Boolean(draft.singleVenueId)
+      : draft.participatingVenues.length > 0;
+    if (currentQuestion.id === 'venue' && !hasValidVenue) {
+      const message = draft.venueMode === 'single'
+        ? 'Choose a registered venue before continuing.'
+        : 'Add at least one participating venue before continuing.';
+      setErrors((current) => ({ ...current, venue: message }));
       venueInputRef.current?.focus();
       return false;
     }
@@ -138,12 +144,24 @@ export default function GuidedEventFormPreview() {
                   />
                 ) : (
                   <VenueQuestion
-                    value={draft.venueId}
-                    selectedVenue={draft.venue}
+                    mode={draft.venueMode}
+                    singleVenueId={draft.singleVenueId}
+                    singleVenue={draft.singleVenue}
+                    participatingVenues={draft.participatingVenues}
                     error={errors.venue}
                     inputRef={venueInputRef}
-                    onChange={(venueId, venue) => {
-                      setVenue(venueId, venue);
+                    onModeChange={(mode) => {
+                      setVenueMode(mode);
+                      setIsComplete(false);
+                      if (errors.venue) setErrors((current) => ({ ...current, venue: undefined }));
+                    }}
+                    onSingleVenueChange={(venueId, venue) => {
+                      setSingleVenue(venueId, venue);
+                      setIsComplete(false);
+                      if (errors.venue) setErrors((current) => ({ ...current, venue: undefined }));
+                    }}
+                    onParticipatingVenuesChange={(venues) => {
+                      setParticipatingVenues(venues);
                       setIsComplete(false);
                       if (errors.venue) setErrors((current) => ({ ...current, venue: undefined }));
                     }}

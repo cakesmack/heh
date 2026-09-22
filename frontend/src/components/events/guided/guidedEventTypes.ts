@@ -1,11 +1,14 @@
 import type { VenueResponse } from '@/types';
 
 export type GuidedQuestionId = 'title' | 'venue';
+export type VenueMode = 'single' | 'multiple';
 
 export interface GuidedEventDraft {
   title: string;
-  venueId: string | null;
-  venue: VenueResponse | null;
+  venueMode: VenueMode;
+  singleVenueId: string | null;
+  singleVenue: VenueResponse | null;
+  participatingVenues: VenueResponse[];
 }
 
 export const GUIDED_QUESTIONS: Array<{

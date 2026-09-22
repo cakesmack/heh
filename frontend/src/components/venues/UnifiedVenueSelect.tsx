@@ -16,6 +16,7 @@ interface UnifiedVenueSelectProps {
     inputRef?: Ref<HTMLInputElement>;
     ariaDescribedBy?: string;
     initialVenue?: VenueResponse | null;
+    errorId?: string;
 }
 
 interface GooglePrediction {
@@ -40,6 +41,7 @@ export function UnifiedVenueSelect({
     inputRef,
     ariaDescribedBy,
     initialVenue = null,
+    errorId,
 }: UnifiedVenueSelectProps) {
     const [query, setQuery] = useState(initialVenue?.name || '');
     const [internalResults, setInternalResults] = useState<VenueResponse[]>([]);
@@ -293,7 +295,7 @@ export function UnifiedVenueSelect({
 
             {/* Error message */}
             {error && (
-                <p className="mt-1 text-sm text-red-600">{error}</p>
+                <p id={errorId} className="mt-1 text-sm text-red-600">{error}</p>
             )}
 
             {/* Selected Venue Display (Optional: could duplicate the input content but helpful for verification) */}

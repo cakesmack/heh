@@ -7,9 +7,14 @@ interface SummaryContentProps {
 }
 
 function SummaryContent({ draft, onEdit }: SummaryContentProps) {
+  const locationValue = draft.venueMode === 'single'
+    ? draft.singleVenue?.name || 'Not added yet'
+    : draft.participatingVenues.length > 0
+      ? `${draft.participatingVenues.length} ${draft.participatingVenues.length === 1 ? 'venue' : 'venues'} · ${draft.participatingVenues.map((venue) => venue.name).join(', ')}`
+      : 'Not added yet';
   const items: Array<{ id: GuidedQuestionId; label: string; value: string }> = [
     { id: 'title', label: 'Event name', value: draft.title.trim() || 'Not added yet' },
-    { id: 'venue', label: 'Venue', value: draft.venue?.name || 'Not added yet' },
+    { id: 'venue', label: draft.venueMode === 'single' ? 'Venue' : 'Venues', value: locationValue },
   ];
 
   return (
@@ -26,7 +31,7 @@ function SummaryContent({ draft, onEdit }: SummaryContentProps) {
             <span className="block text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
               {item.label}
             </span>
-            <span className={`mt-1 block truncate text-sm ${item.value === 'Not added yet' ? 'text-gray-400' : 'font-semibold text-stone-dark'}`}>
+            <span title={item.value} className={`mt-1 block text-sm leading-5 ${item.value === 'Not added yet' ? 'text-gray-400' : 'font-semibold text-stone-dark'}`}>
               {item.value}
             </span>
           </span>
