@@ -50,7 +50,7 @@ test('validates, navigates, preserves answers and never creates a venue', async 
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.locator('#guided-event-venue')).toHaveValue('Eden Court Theatre');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('status')).toContainText('No event has been created.');
+  await expect(page.getByRole('heading', { name: 'When does your event happen?' })).toBeFocused();
   expect(venueCreateRequests).toBe(0);
 });
 
@@ -100,7 +100,7 @@ test('supports multiple venues, deduplicates, removes and preserves both venue m
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.locator('#guided-event-venue')).toHaveValue('Eden Court Theatre');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('status')).toContainText('No event has been created.');
+  await expect(page.getByRole('heading', { name: 'When does your event happen?' })).toBeFocused();
   expect(venueCreateRequests).toBe(0);
 });
 
