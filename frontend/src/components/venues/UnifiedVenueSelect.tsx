@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type Ref } from 'react';
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
 import { VenueResponse, VenueCreate, VenueStatus } from '@/types';
 import { api } from '@/lib/api';
@@ -12,6 +12,10 @@ interface UnifiedVenueSelectProps {
     error?: string;
     disableGoogle?: boolean;
     excludedVenueId?: string;
+    inputId?: string;
+    inputRef?: Ref<HTMLInputElement>;
+    ariaDescribedBy?: string;
+    initialVenue?: VenueResponse | null;
 }
 
 interface GooglePrediction {
@@ -32,15 +36,19 @@ export function UnifiedVenueSelect({
     error,
     disableGoogle = false,
     excludedVenueId,
+    inputId,
+    inputRef,
+    ariaDescribedBy,
+    initialVenue = null,
 }: UnifiedVenueSelectProps) {
-    const [query, setQuery] = useState('');
+    const [query, setQuery] = useState(initialVenue?.name || '');
     const [internalResults, setInternalResults] = useState<VenueResponse[]>([]);
     const [googleResults, setGoogleResults] = useState<GooglePrediction[]>([]);
 
     const [isLoading, setIsLoading] = useState(false);
     const [isCreating, setIsCreating] = useState(false); // For silent create
     const [showDropdown, setShowDropdown] = useState(false);
-    const [selectedVenue, setSelectedVenue] = useState<VenueResponse | null>(null);
+    const [selectedVenue, setSelectedVenue] = useState<VenueResponse | null>(initialVenue);
 
     const placesLib = useMapsLibrary('places');
     const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
@@ -62,6 +70,11 @@ export function UnifiedVenueSelect({
 
     // Fetch venue details if value is set but no selectedVenue or if value has changed (Initial Load / Updates)
     useEffect(() => {
+        if (value && initialVenue?.id === value) {
+            setSelectedVenue(initialVenue);
+            setQuery(initialVenue.name);
+            return;
+        }
         if (value && (!selectedVenue || selectedVenue.id !== value)) {
             api.venues.get(value).then(venue => {
                 setSelectedVenue(venue);
@@ -75,7 +88,7 @@ export function UnifiedVenueSelect({
             setSelectedVenue(null);
             setQuery('');
         }
-    }, [value]); // Dependent only on value changes
+    }, [value, initialVenue]);
 
     // Search Logic
     useEffect(() => {
@@ -239,6 +252,8 @@ export function UnifiedVenueSelect({
             <div ref={placesServiceDivRef} className="hidden"></div>
             <div className="relative">
                 <input
+                    id={inputId}
+                    ref={inputRef}
                     type="text"
                     value={query}
                     onChange={handleInputChange}
@@ -248,6 +263,8 @@ export function UnifiedVenueSelect({
                     }}
                     placeholder={placeholder}
                     disabled={disabled || isCreating}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={ariaDescribedBy}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${error ? 'border-red-300' : 'border-gray-300'
                         } ${disabled || isCreating ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 />
