@@ -2,7 +2,7 @@ import { buildEventPayload, WIZARD_DEFAULTS, type WizardFormData } from '@/hooks
 import { RRule } from 'rrule';
 import type { EventCreate } from '@/types';
 import type { GuidedEventDraft, GuidedQuestionId, RecurrenceSchedule } from './guidedEventTypes';
-import { validateAttendance, validateDetails, validateFinishing } from './guidedFormHelpers';
+import { validateAttendance, validateDetails, validateFinishing, validateNativeTerms, validateTickets } from './guidedFormHelpers';
 import { addLocalDay, toUkUtcIso, validateSchedule } from './scheduleHelpers';
 
 export type CreationIssue = { question: GuidedQuestionId; message: string };
@@ -14,11 +14,14 @@ export function validateGuidedCreation(draft: GuidedEventDraft): CreationIssue |
   if (scheduleIssue) return { question: 'schedule', message: scheduleIssue };
   const attendanceIssue = validateAttendance(draft);
   if (attendanceIssue) return { question: 'attendance', message: attendanceIssue };
-  if (draft.attendanceMode === 'native') return { question: 'attendance', message: 'Highland Events Hub ticket creation is not available in this guided form yet.' };
+  const ticketIssue = validateTickets(draft);
+  if (ticketIssue) return { question: 'tickets', message: ticketIssue };
   const detailsIssue = validateDetails(draft);
   if (detailsIssue) return { question: 'details', message: detailsIssue };
   const finishingIssue = validateFinishing(draft);
   if (finishingIssue) return { question: 'finishing', message: finishingIssue };
+  const termsIssue = validateNativeTerms(draft);
+  if (termsIssue) return { question: 'review', message: termsIssue };
   return null;
 }
 
@@ -101,9 +104,10 @@ export function buildGuidedEventPayload(draft: GuidedEventDraft, imageUrl?: stri
     website_url: draft.websiteUrl.trim(),
     age_restriction: draft.ageRestriction,
     tags: draft.tags,
-    is_ticketing_enabled: false,
-    ticket_tiers: [],
-    pass_fees_to_buyer: false,
+    is_ticketing_enabled: draft.attendanceMode === 'native',
+    ticket_tiers: draft.attendanceMode === 'native' ? draft.ticketTiers.map(({ name, price, quantity_available, max_per_order }) => ({ name, price, quantity_available, max_per_order })) : [],
+    pass_fees_to_buyer: draft.attendanceMode === 'native' && draft.passFeesToBuyer,
+    terms_accepted: draft.attendanceMode === 'native' && draft.termsAccepted,
   };
   const payload = buildEventPayload(data);
   // The live wizard's envelope uses the viewer's local timezone for showtimes.

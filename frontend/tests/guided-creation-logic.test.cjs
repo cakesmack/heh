@@ -24,7 +24,7 @@ const draft = () => ({
   scheduleMode: 'once', once: { start: '2026-07-01T10:00', end: '2026-07-01T12:00', allDay: false }, performances: [],
   recurrence: { startDate: '2026-07-01', startTime: '10:00', endTime: '12:00', endsNextDay: false, allDay: false, frequency: 'weekly', interval: 1, weekdays: [2], monthlyMode: 'date', ordinal: 1, ordinalWeekday: 2, endsOn: 'date', endDate: '2026-07-31' },
   attendanceMode: 'free', doorPrice: '', doorReservationRequired: false, doorReservationUrl: '', externalUrl: '', externalIsFree: null,
-  ticketTiers: [{ id: 'inactive', name: 'Not for sale', price: 50, quantity_available: 1, max_per_order: 1 }], passFeesToBuyer: true,
+  ticketTiers: [{ id: 'inactive', name: 'Not for sale', price: 50, quantity_available: 1, max_per_order: 1 }], passFeesToBuyer: true, termsAccepted: false,
   description: '<p>Local stalls</p>', categoryId: 'category-1', organizerId: '', tags: ['market'], ageRestriction: '18+', websiteUrl: 'https://example.org',
 });
 
@@ -184,8 +184,37 @@ test('each performance shares one-off valid-range rules without changing another
   assert.equal(validatePerformances(items), null);
 });
 
-test('native mode remains non-submittable', () => {
+test('one-off native tickets reuse live tier pricing, fee and terms payload fields', () => {
   const native = draft();
   native.attendanceMode = 'native';
-  assert.match(validateGuidedCreation(native).message, /ticket creation/);
+  assert.deepEqual(validateGuidedCreation(native), { question: 'review', message: 'You must agree to the Organiser Terms of Service to publish a ticketed event.' });
+  native.termsAccepted = true;
+  assert.equal(validateGuidedCreation(native), null);
+  const payload = buildGuidedEventPayload(native);
+  assert.equal(payload.is_ticketing_enabled, true);
+  assert.equal(payload.pass_fees_to_buyer, true);
+  assert.equal(payload.terms_accepted, true);
+  assert.equal(payload.price, '£52.05');
+  assert.deepEqual(payload.ticket_tiers, [{ name: 'Not for sale', price: 50, quantity_available: 1, max_per_order: 1 }]);
+  assert.equal(payload.ticket_url, undefined);
+  assert.equal(payload.frequency, undefined);
+  assert.equal(payload.showtimes, undefined);
+});
+
+test('native ticket constraints and tier validation remain enforced', () => {
+  const native = draft();
+  native.attendanceMode = 'native';
+  native.termsAccepted = true;
+  native.once.end = '2026-07-03T00:00';
+  assert.match(validateGuidedCreation(native).message, /36 hours/);
+  native.once.end = '2026-07-01T12:00';
+  native.ticketTiers = [];
+  assert.equal(validateGuidedCreation(native).question, 'tickets');
+  native.ticketTiers = [{ id: 'invalid', name: 'General Admission', price: -1, quantity_available: 10, max_per_order: 2 }];
+  assert.match(validateGuidedCreation(native).message, /valid price/);
+  native.scheduleMode = 'recurring';
+  assert.match(validateGuidedCreation(native).message, /one-off/);
+  native.scheduleMode = 'selected_dates';
+  native.performances = [{ id: 'one', start: '2026-07-01T10:00', end: '2026-07-01T12:00' }];
+  assert.match(validateGuidedCreation(native).message, /one-off/);
 });

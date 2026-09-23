@@ -32,8 +32,9 @@ export default function GuidedEventFormPreview() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<GuidedQuestionId, string>>>({});
   const [onceEndReset, setOnceEndReset] = useState(false);
-  const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'uploading' | 'creating'>('idle');
+  const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'checking-seller' | 'uploading' | 'creating'>('idle');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [ticketSellerReady, setTicketSellerReady] = useState(false);
   const [createdEvent, setCreatedEvent] = useState<EventResponse | null>(null);
   const submittingRef = useRef(false);
   const uploadedImageRef = useRef<{ file: File; url: string } | null>(null);
@@ -53,6 +54,13 @@ export default function GuidedEventFormPreview() {
 
   useEffect(() => () => {
     if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
+  }, []);
+
+  useEffect(() => { setTicketSellerReady(false); }, [draft.organizerId]);
+
+  const handleSellerReadyChange = useCallback((ready: boolean) => {
+    setTicketSellerReady(ready);
+    if (ready) setErrors((current) => ({ ...current, tickets: undefined }));
   }, []);
 
   const moveToQuestion = useCallback((targetIndex: number, nextDirection?: Direction, targetSchedulePart = 0) => {
@@ -112,6 +120,11 @@ export default function GuidedEventFormPreview() {
         : 'Add at least one participating venue before continuing.';
       setErrors((current) => ({ ...current, venue: message }));
       venueInputRef.current?.focus();
+      return false;
+    }
+    if (currentQuestion.id === 'tickets' && !ticketSellerReady) {
+      setErrors((current) => ({ ...current, tickets: 'Connect Stripe payouts for the selected host before continuing.' }));
+      headingRef.current?.focus();
       return false;
     }
     const issue = currentQuestion.id === 'attendance' ? validateAttendance(draft)
@@ -183,6 +196,11 @@ export default function GuidedEventFormPreview() {
     submittingRef.current = true;
     let createAttempted = false;
     try {
+      if (draft.attendanceMode === 'native') {
+        setSubmissionPhase('checking-seller');
+        const seller = await api.sellers.getStatus(draft.organizerId || null);
+        if (!seller.charges_enabled) throw new Error('Stripe payouts are not active for the selected host. Edit Tickets to connect Stripe before creating this event.');
+      }
       let imageUrl: string | undefined;
       if (draft.imageFile) {
         if (uploadedImageRef.current?.file === draft.imageFile) imageUrl = uploadedImageRef.current.url;
@@ -221,7 +239,7 @@ export default function GuidedEventFormPreview() {
   const help = currentQuestion.id === 'title' ? 'Start with the clearest name for people browsing events across the Highlands.'
     : currentQuestion.id === 'venue' ? 'Find the registered venue where visitors should arrive.'
       : currentQuestion.id === 'attendance' ? 'Choose the route visitors will use. We will only show the fields that apply.'
-        : currentQuestion.id === 'tickets' ? 'Configure tickets for a single one-off event. Nothing is sold in this preview.'
+        : currentQuestion.id === 'tickets' ? 'Connect Stripe payouts and configure ticket tiers for your one-off event.'
           : currentQuestion.id === 'details' ? 'Help visitors understand what to expect and who is hosting.'
             : currentQuestion.id === 'finishing' ? 'Make your listing yours. The photo stays local to this preview.'
               : currentQuestion.id === 'review' ? 'Check every answer and edit any section before leaving this preview.'
@@ -316,13 +334,13 @@ export default function GuidedEventFormPreview() {
                 ) : currentQuestion.id === 'attendance' ? (
                   <AttendanceQuestion draft={draft} error={errors.attendance} onChange={handleAdditionalChange} />
                 ) : currentQuestion.id === 'tickets' ? (
-                  <TicketsQuestion draft={draft} error={errors.tickets} onChange={handleAdditionalChange} onChooseAnotherMethod={() => moveToQuestion(visibleQuestions.findIndex((item) => item.id === 'attendance'), 'backward')} />
+                  <TicketsQuestion draft={draft} error={errors.tickets} onChange={handleAdditionalChange} onChooseAnotherMethod={() => moveToQuestion(visibleQuestions.findIndex((item) => item.id === 'attendance'), 'backward')} onSellerReadyChange={handleSellerReadyChange} />
                 ) : currentQuestion.id === 'details' ? (
                   <DetailsQuestion draft={draft} error={errors.details} onChange={handleAdditionalChange} />
                 ) : currentQuestion.id === 'finishing' ? (
                   <FinishingQuestion draft={draft} error={errors.finishing} onChange={handleAdditionalChange} />
                 ) : (
-                  <ReviewQuestion draft={draft} onEdit={handleSummaryEdit} />
+                  <ReviewQuestion draft={draft} onEdit={handleSummaryEdit} onChange={handleAdditionalChange} error={errors.review} />
                 )}
               </div>
 
@@ -333,8 +351,8 @@ export default function GuidedEventFormPreview() {
               <Button type="button" variant="ghost" onClick={handleBack} disabled={(questionIndex === 0 && schedulePart === 0) || isTransitioning || submissionPhase !== 'idle'} className="min-h-[48px] !rounded-xl">
                 <span className="inline-flex items-center gap-2"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</span>
               </Button>
-              <Button type="button" onClick={currentQuestion.id === 'review' ? handleCreateEvent : handleContinue} disabled={isTransitioning || submissionPhase !== 'idle' || (currentQuestion.id === 'review' && draft.attendanceMode === 'native')} className="min-h-[48px] min-w-[132px] !rounded-xl">
-                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? draft.attendanceMode === 'native' ? 'Creation unavailable' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Creating event…' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
+              <Button type="button" onClick={currentQuestion.id === 'review' ? handleCreateEvent : handleContinue} disabled={isTransitioning || submissionPhase !== 'idle' || (currentQuestion.id === 'review' && draft.attendanceMode === 'native' && draft.scheduleMode !== 'once')} className="min-h-[48px] min-w-[132px] !rounded-xl">
+                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? draft.attendanceMode === 'native' && draft.scheduleMode !== 'once' ? 'Creation unavailable' : submissionPhase === 'checking-seller' ? 'Checking seller…' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Creating event…' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
               </Button>
             </div>
           </section>

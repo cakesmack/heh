@@ -1,4 +1,5 @@
 import type { GuidedEventDraft } from './guidedEventTypes';
+import { getStepValidator, WIZARD_DEFAULTS } from '@/hooks/useEventWizard';
 import { validateInterval } from './scheduleHelpers';
 
 export function isHttpUrl(value: string): boolean {
@@ -50,6 +51,8 @@ export function validateTickets(draft: GuidedEventDraft): string | null {
   if (draft.attendanceMode !== 'native') return null;
   const eligibilityIssue = nativeTicketIssue(draft);
   if (eligibilityIssue) return eligibilityIssue;
+  const wizardErrors = getStepValidator(4, true)({ ...WIZARD_DEFAULTS, is_ticketing_enabled: true, ticket_tiers: draft.ticketTiers });
+  if (wizardErrors) return Object.values(wizardErrors)[0];
   if (!draft.ticketTiers.length) return 'Add at least one ticket tier.';
   for (const [index, tier] of draft.ticketTiers.entries()) {
     const label = `Tier ${index + 1}`;
@@ -59,6 +62,12 @@ export function validateTickets(draft: GuidedEventDraft): string | null {
     if (!Number.isInteger(tier.max_per_order) || tier.max_per_order < 1 || tier.max_per_order > tier.quantity_available) return `${label}: max per order must be between 1 and its capacity.`;
   }
   return null;
+}
+
+export function validateNativeTerms(draft: GuidedEventDraft): string | null {
+  if (draft.attendanceMode !== 'native') return null;
+  const wizardErrors = getStepValidator(5, true)({ ...WIZARD_DEFAULTS, is_ticketing_enabled: true, terms_accepted: draft.termsAccepted });
+  return wizardErrors?.terms_accepted || null;
 }
 
 export function validateDetails(draft: GuidedEventDraft): string | null {

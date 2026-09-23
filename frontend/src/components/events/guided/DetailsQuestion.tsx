@@ -42,7 +42,7 @@ export function DetailsQuestion({ draft, error, onChange }: Props) {
       {categoryIssue && <p className="mt-2 text-sm text-amber-800" role="status">Categories could not be loaded. Check that the local API is available.</p>}
     </div>
     {user && <OrganizerSelector user={user} organizers={organizers} selectedId={draft.organizerId} onChange={(organizerId) => onChange({ organizerId, organizerName: organizers.find((organizer) => organizer.id === organizerId)?.name || user.username || user.email || 'Personal profile' })} />}
-    {!user && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Sign in to choose who hosts this event. No event will be created in this preview.</p>}
+    {!user && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Sign in to choose who hosts this event. An event is created only when you submit.</p>}
     <div>
       <label className="mb-2 block text-sm font-semibold text-gray-800">Description</label>
       <p className="mb-3 text-sm text-gray-600">What should visitors expect? This field is optional in the existing form.</p>

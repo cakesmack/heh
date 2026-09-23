@@ -41,6 +41,7 @@ export interface GuidedEventDraft {
   externalIsFree: boolean | null;
   ticketTiers: Array<TicketTierCreate & { id: string }>;
   passFeesToBuyer: boolean;
+  termsAccepted: boolean;
   description: string;
   categoryId: string;
   categoryName: string;

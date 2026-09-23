@@ -20,7 +20,7 @@ const INITIAL_DRAFT: GuidedEventDraft = {
   attendanceMode: null,
   doorPrice: '', doorReservationRequired: false, doorReservationUrl: '',
   externalUrl: '', externalIsFree: null,
-  ticketTiers: [], passFeesToBuyer: false,
+  ticketTiers: [], passFeesToBuyer: false, termsAccepted: false,
   description: '', categoryId: '', categoryName: '', organizerId: '', organizerName: '',
   tags: [], ageRestriction: '', websiteUrl: '', imageName: '', imagePreviewUrl: '', imageFile: null,
 };
