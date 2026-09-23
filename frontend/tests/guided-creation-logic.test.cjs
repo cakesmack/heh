@@ -17,7 +17,7 @@ require.extensions['.ts'] = (module, filename) => {
 };
 
 const { buildGuidedEventPayload, validateGuidedCreation } = require('../src/components/events/guided/guidedCreation.ts');
-const { applyOnceChange, toUkUtcIso } = require('../src/components/events/guided/scheduleHelpers.ts');
+const { applyOnceChange, applyPerformanceChange, toUkUtcIso, validatePerformances, validateRecurrence } = require('../src/components/events/guided/scheduleHelpers.ts');
 
 const draft = () => ({
   title: 'Highland Market', venueMode: 'single', singleVenueId: 'venue-1', participatingVenues: [],
@@ -94,11 +94,97 @@ test('external and several-date events map booking, venues, image and showtimes'
   assert.equal(payload.age_restriction, '18+');
 });
 
-test('recurring and native modes cannot be submitted', () => {
+test('weekly and biweekly recurrence maps selected weekdays and an inclusive ending', () => {
   const recurring = draft();
   recurring.scheduleMode = 'recurring';
-  assert.match(validateGuidedCreation(recurring).message, /Recurring/);
-  assert.throws(() => buildGuidedEventPayload(recurring));
+  recurring.recurrence.weekdays = [2, 4];
+  assert.equal(validateGuidedCreation(recurring), null);
+  const weekly = buildGuidedEventPayload(recurring);
+  assert.equal(weekly.is_recurring, true);
+  assert.equal(weekly.frequency, 'WEEKLY');
+  assert.deepEqual(weekly.weekdays, [2, 4]);
+  assert.equal(weekly.recurrence_rule, undefined);
+  assert.equal(weekly.recurrence_end_date, '2026-07-31T23:59:59.000Z');
+  assert.equal(weekly.date_start, '2026-07-01T09:00:00.000Z');
+  recurring.recurrence.interval = 2;
+  assert.equal(buildGuidedEventPayload(recurring).frequency, 'BIWEEKLY');
+});
+
+test('custom recurrence preserves intervals, weekdays, monthly patterns and ongoing choice', () => {
+  const recurring = draft();
+  recurring.scheduleMode = 'recurring';
+  recurring.recurrence.interval = 3;
+  recurring.recurrence.weekdays = [2, 4];
+  const weekly = buildGuidedEventPayload(recurring);
+  assert.equal(weekly.frequency, 'CUSTOM');
+  assert.match(weekly.recurrence_rule, /FREQ=WEEKLY;INTERVAL=3;BYDAY=WE,FR/);
+  assert.match(weekly.recurrence_rule, /UNTIL=20260731T235959Z/);
+  recurring.recurrence.frequency = 'daily';
+  recurring.recurrence.interval = 2;
+  recurring.recurrence.endsOn = 'ongoing';
+  const daily = buildGuidedEventPayload(recurring);
+  assert.match(daily.recurrence_rule, /FREQ=DAILY;INTERVAL=2/);
+  assert.doesNotMatch(daily.recurrence_rule, /UNTIL/);
+  assert.equal(daily.recurrence_end_date, undefined);
+  recurring.recurrence.frequency = 'monthly';
+  recurring.recurrence.interval = 1;
+  assert.equal(buildGuidedEventPayload(recurring).frequency, 'MONTHLY');
+  recurring.recurrence.monthlyMode = 'ordinal';
+  recurring.recurrence.ordinal = 1;
+  recurring.recurrence.ordinalWeekday = 2;
+  const ordinal = buildGuidedEventPayload(recurring);
+  assert.equal(ordinal.frequency, 'CUSTOM');
+  assert.match(ordinal.recurrence_rule, /FREQ=MONTHLY;INTERVAL=1;BYDAY=WE;BYSETPOS=1/);
+  recurring.recurrence.monthlyMode = 'date';
+  recurring.recurrence.interval = 2;
+  assert.match(buildGuidedEventPayload(recurring).recurrence_rule, /FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=1/);
+});
+
+test('recurrence anchor must match selected weekdays and monthly position', () => {
+  const rule = draft().recurrence;
+  rule.weekdays = [0];
+  assert.match(validateRecurrence(rule), /first event date/);
+  rule.weekdays = [2];
+  assert.equal(validateRecurrence(rule), null);
+  rule.frequency = 'monthly';
+  rule.monthlyMode = 'ordinal';
+  rule.ordinal = -1;
+  assert.match(validateRecurrence(rule), /first event date/);
+  rule.startDate = '2026-07-29';
+  assert.equal(validateRecurrence(rule), null);
+});
+
+test('recurring first instance keeps overnight and all-day ranges', () => {
+  const recurring = draft();
+  recurring.scheduleMode = 'recurring';
+  recurring.recurrence.endsNextDay = true;
+  recurring.recurrence.endTime = '01:00';
+  assert.equal(buildGuidedEventPayload(recurring).date_end, '2026-07-02T00:00:00.000Z');
+  recurring.recurrence.allDay = true;
+  const allDay = buildGuidedEventPayload(recurring);
+  assert.equal(allDay.is_all_day, true);
+  assert.equal(allDay.date_start, '2026-06-30T23:00:00.000Z');
+  assert.equal(allDay.date_end, '2026-07-01T22:59:00.000Z');
+});
+
+test('each performance shares one-off valid-range rules without changing another performance', () => {
+  const items = [
+    { id: 'first', start: '2026-09-16T10:00', end: '2026-09-16T12:00' },
+    { id: 'second', start: '2026-09-20T23:00', end: '2026-09-21T01:00' },
+  ];
+  const changed = applyPerformanceChange(items, 'first', { start: '2026-09-24T10:00' });
+  assert.equal(changed.endCleared, true);
+  assert.equal(changed.items[0].end, '');
+  assert.deepEqual(changed.items[1], items[1]);
+  assert.match(validatePerformances(changed.items), /Performance 1/);
+  const invalid = applyPerformanceChange(changed.items, 'first', { end: '2026-09-24T10:00' });
+  assert.match(validatePerformances(invalid.items), /finish must be after/);
+  const corrected = applyPerformanceChange(changed.items, 'first', { end: '2026-09-25T09:00' });
+  assert.equal(validatePerformances(corrected.items), null);
+  assert.equal(validatePerformances(items), null);
+});
+
+test('native mode remains non-submittable', () => {
   const native = draft();
   native.attendanceMode = 'native';
   assert.match(validateGuidedCreation(native).message, /ticket creation/);

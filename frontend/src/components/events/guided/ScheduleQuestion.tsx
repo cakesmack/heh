@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CalendarDays, CalendarRange, Repeat2, Plus, Clock3 } from 'lucide-react';
 import DateTimePicker from '@/components/common/DateTimePicker';
 import type { GuidedEventDraft, Performance, RecurrenceSchedule, ScheduleDateTime, ScheduleMode } from './guidedEventTypes';
-import { addLocalDay, formatLocalDateTime, scheduleSummary, validateInterval } from './scheduleHelpers';
+import { addLocalDay, applyPerformanceChange, formatLocalDateTime, scheduleSummary, validateInterval } from './scheduleHelpers';
 
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const fieldClass = 'w-full min-h-[44px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-stone-dark focus:border-moss-green focus:ring-2 focus:ring-moss-green/30';
@@ -25,6 +25,24 @@ function DateField({ id, label, value, onChange }: { id: string; label: string; 
   </label>;
 }
 
+function DateTimeRangeFields({ start, end, allDay = false, startId, endId, onStartChange, onEndChange, endReset }: {
+  start: string; end: string; allDay?: boolean; startId: string; endId: string;
+  onStartChange: (value: string) => void; onEndChange: (value: string) => void; endReset?: boolean;
+}) {
+  return <div className="space-y-4">
+    <div className="grid gap-5 sm:grid-cols-2">
+      <div><label htmlFor={startId} className="mb-2 block text-sm font-semibold text-gray-800">Start {allDay ? 'date' : 'date and time'} *</label>{allDay
+        ? <input id={startId} type="date" value={start.slice(0, 10)} onChange={(event) => onStartChange(event.target.value)} className={fieldClass} />
+        : <DateTimePicker id={startId} name={startId} value={start} onChange={onStartChange} required />}</div>
+      <div><label htmlFor={endId} className="mb-2 block text-sm font-semibold text-gray-800">Finish {allDay ? 'date' : 'date and time'} *</label>{allDay
+        ? <input id={endId} type="date" min={start.slice(0, 10) || undefined} value={end.slice(0, 10)} onChange={(event) => onEndChange(event.target.value)} className={fieldClass} />
+        : <DateTimePicker id={endId} name={endId} value={end} min={start || undefined} onChange={onEndChange} required />}</div>
+    </div>
+    {endReset && <p role="status" className="text-sm font-semibold text-amber-900">The previous finish no longer followed your start, so it was cleared. Choose a new finish.</p>}
+    {start && end && validateInterval(start, end, allDay) && <p role="status" className="text-sm font-semibold text-amber-900">The finish must be after the start. On the same date, choose a later time.</p>}
+  </div>;
+}
+
 function OnceFields({ draft, onChange, endReset }: { draft: GuidedEventDraft; onChange: Props['onOnceChange']; endReset?: boolean }) {
   const { once } = draft;
   return <div className="space-y-6">
@@ -32,20 +50,7 @@ function OnceFields({ draft, onChange, endReset }: { draft: GuidedEventDraft; on
       <input type="checkbox" checked={once.allDay} onChange={(event) => onChange({ allDay: event.target.checked })} className="h-5 w-5 rounded border-gray-300 text-moss-green focus:ring-moss-green" />
       All day event
     </label>
-    <div>
-      <label htmlFor="schedule-once-start" className="mb-2 block text-sm font-semibold text-gray-800">Start {once.allDay ? 'date' : 'date and time'} *</label>
-      {once.allDay
-        ? <input id="schedule-once-start" type="date" value={once.start.slice(0, 10)} onChange={(event) => onChange({ start: event.target.value })} className={fieldClass} />
-        : <DateTimePicker id="schedule-once-start" name="schedule-once-start" value={once.start} onChange={(start) => onChange({ start })} required />}
-    </div>
-    <div>
-      <label htmlFor="schedule-once-end" className="mb-2 block text-sm font-semibold text-gray-800">Finish {once.allDay ? 'date' : 'date and time'} *</label>
-      {once.allDay
-        ? <input id="schedule-once-end" type="date" min={once.start.slice(0, 10) || undefined} value={once.end.slice(0, 10)} onChange={(event) => onChange({ end: event.target.value })} className={fieldClass} />
-        : <DateTimePicker id="schedule-once-end" name="schedule-once-end" value={once.end} min={once.start || undefined} onChange={(end) => onChange({ end })} required />}
-    </div>
-    {endReset && <p role="status" className="text-sm font-semibold text-amber-900">The previous finish no longer followed your start, so it was cleared. Choose a new finish.</p>}
-    {once.start && once.end && validateInterval(once.start, once.end, once.allDay) && <p role="status" className="text-sm font-semibold text-amber-900">The finish must be after the start. On the same date, choose a later time.</p>}
+    <DateTimeRangeFields start={once.start} end={once.end} allDay={once.allDay} startId="schedule-once-start" endId="schedule-once-end" onStartChange={(start) => onChange({ start })} onEndChange={(end) => onChange({ end })} endReset={endReset} />
     <p className="text-sm text-gray-500">Times are in UK event-local time. For overnight or multi-day events, choose the actual finish date. All-day finish dates are inclusive.</p>
     {once.start && once.end && !validateInterval(once.start, once.end, once.allDay) &&
       <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-highland-green">
@@ -56,8 +61,13 @@ function OnceFields({ draft, onChange, endReset }: { draft: GuidedEventDraft; on
 
 function PerformanceFields({ items, onChange }: { items: Performance[]; onChange: Props['onPerformancesChange'] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [endResetIds, setEndResetIds] = useState<string[]>([]);
   const sorted = [...items].sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999'));
-  const update = (id: string, patch: Partial<Performance>) => onChange(items.map((item) => item.id === id ? { ...item, ...patch } : item));
+  const update = (id: string, patch: Partial<Pick<Performance, 'start' | 'end'>>) => {
+    const result = applyPerformanceChange(items, id, patch);
+    onChange(result.items);
+    setEndResetIds((current) => result.endCleared ? [...new Set([...current, id])] : 'end' in patch ? current.filter((item) => item !== id) : current);
+  };
   const add = (source?: Performance) => {
     const date = source?.start.slice(0, 10) || '';
     const nextDate = date ? addLocalDay(date) : '';
@@ -83,14 +93,11 @@ function PerformanceFields({ items, onChange }: { items: Performance[]; onChange
             </div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setEditingId(open ? null : item.id)} className="rounded-lg px-2 py-1 text-sm font-semibold text-moss-green hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-moss-green">{open ? 'Done' : 'Edit'}</button>
-              {item.start && item.end && <button type="button" onClick={() => add(item)} className="rounded-lg px-2 py-1 text-sm font-semibold text-moss-green hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-moss-green">Reuse times</button>}
+              {item.start && item.end && !validateInterval(item.start, item.end) && <button type="button" onClick={() => add(item)} className="rounded-lg px-2 py-1 text-sm font-semibold text-moss-green hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-moss-green">Reuse times</button>}
               <button type="button" onClick={() => { onChange(items.filter((entry) => entry.id !== item.id)); if (editingId === item.id) setEditingId(null); }} className="rounded-lg px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600" aria-label={`Remove performance ${index + 1}`}>Remove</button>
             </div>
           </div>
-          {open && <div className="mt-5 grid gap-5 border-t border-gray-100 pt-5 sm:grid-cols-2">
-            <div><label htmlFor={`performance-start-${item.id}`} className="mb-2 block text-sm font-semibold">Start *</label><DateTimePicker id={`performance-start-${item.id}`} name={`performance-start-${item.id}`} value={item.start} onChange={(start) => update(item.id, { start })} required /></div>
-            <div><label htmlFor={`performance-end-${item.id}`} className="mb-2 block text-sm font-semibold">Finish *</label><DateTimePicker id={`performance-end-${item.id}`} name={`performance-end-${item.id}`} value={item.end} onChange={(end) => update(item.id, { end })} required /></div>
-          </div>}
+          {open && <div className="mt-5 border-t border-gray-100 pt-5"><DateTimeRangeFields start={item.start} end={item.end} startId={`performance-start-${item.id}`} endId={`performance-end-${item.id}`} onStartChange={(start) => update(item.id, { start })} onEndChange={(end) => update(item.id, { end })} endReset={endResetIds.includes(item.id)} /></div>}
         </div>;
       })}
     </div>
@@ -128,7 +135,7 @@ function RecurringFields({ rule, part, onChange }: { rule: RecurrenceSchedule; p
       <label className="flex gap-3 rounded-xl border border-gray-200 p-4 text-sm"><input type="radio" name="recurrence-ending" checked={rule.endsOn === 'ongoing'} onChange={() => onChange({ endsOn: 'ongoing' })} /> Ongoing</label>
     </fieldset>
     {rule.endsOn === 'date' && <DateField id="recurrence-end-date" label="Last date *" value={rule.endDate} onChange={(endDate) => onChange({ endDate })} />}
-    {rule.endsOn === 'ongoing' && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Ongoing is a saved preview choice. Automatic future-date generation and extension must be verified before this form can publish recurring events.</p>}
+    {rule.endsOn === 'ongoing' && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">The existing service creates dates within a 90-day horizon. It does not automatically extend the series after that.</p>}
     <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-highland-green"><strong>Selected rule</strong><p className="mt-1">{scheduleSummary({ scheduleMode: 'recurring', recurrence: rule } as GuidedEventDraft)}</p><p className="mt-2 text-xs text-gray-600">This describes your settings; it is not a generated list of dates.</p></div>
   </div>;
 }

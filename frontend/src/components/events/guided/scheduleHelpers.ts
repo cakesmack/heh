@@ -60,6 +60,17 @@ export function applyOnceChange(current: ScheduleDateTime, patch: Partial<Schedu
   return { value, endCleared: false };
 }
 
+export function applyPerformanceChange(items: Performance[], id: string, patch: Partial<Pick<Performance, 'start' | 'end'>>): { items: Performance[]; endCleared: boolean } {
+  let endCleared = false;
+  const updated = items.map((item) => {
+    if (item.id !== id) return item;
+    const result = applyOnceChange({ start: item.start, end: item.end, allDay: false }, patch);
+    endCleared = result.endCleared;
+    return { ...item, start: result.value.start, end: result.value.end };
+  });
+  return { items: updated, endCleared };
+}
+
 /** Turn a validated UK wall time into an ISO instant, independent of the browser timezone. */
 export function toUkUtcIso(value: string): string {
   const issue = ukWallTimeIssue(value);
@@ -89,7 +100,21 @@ export function validatePerformances(performances: Performance[]): string | null
 export function validateRecurrence(rule: RecurrenceSchedule): string | null {
   if (!validDate(rule.startDate)) return 'Choose the first event date.';
   if (!Number.isInteger(rule.interval) || rule.interval < 1 || rule.interval > 100) return 'Enter a repeat interval from 1 to 100.';
-  if (rule.frequency === 'weekly' && rule.weekdays.length === 0) return 'Choose at least one weekday.';
+  if (rule.frequency === 'weekly') {
+    if (rule.weekdays.length === 0) return 'Choose at least one weekday.';
+    if (rule.weekdays.some((day) => !Number.isInteger(day) || day < 0 || day > 6)) return 'Choose valid weekdays.';
+    const [year, month, day] = rule.startDate.split('-').map(Number);
+    const anchorWeekday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+    if (!rule.weekdays.includes(anchorWeekday)) return 'The first event date must fall on one of the selected weekdays.';
+  }
+  if (rule.frequency === 'monthly' && rule.monthlyMode === 'ordinal') {
+    if (![-1, 1, 2, 3, 4].includes(rule.ordinal) || !Number.isInteger(rule.ordinalWeekday) || rule.ordinalWeekday < 0 || rule.ordinalWeekday > 6) return 'Choose a valid monthly weekday pattern.';
+    const [year, month, day] = rule.startDate.split('-').map(Number);
+    const anchorWeekday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+    const position = Math.ceil(day / 7);
+    const isLast = new Date(Date.UTC(year, month - 1, day + 7)).getUTCMonth() !== month - 1;
+    if (anchorWeekday !== rule.ordinalWeekday || (rule.ordinal === -1 ? !isLast : position !== rule.ordinal)) return 'The first event date must match the selected monthly weekday pattern.';
+  }
   if (rule.endsOn === 'date' && (!validDate(rule.endDate) || rule.endDate < rule.startDate)) return 'Choose an end date on or after the first event.';
   if (!rule.allDay) {
     const endDate = rule.endsNextDay ? addLocalDay(rule.startDate) : rule.startDate;

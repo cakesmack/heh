@@ -1628,6 +1628,16 @@ async def create_event(
         base_rule = freq_map.get(event_data.frequency)
         if base_rule:
             recurrence_rule = base_rule
+            if event_data.frequency in ("WEEKLY", "BIWEEKLY") and event_data.weekdays:
+                weekday_codes = ("MO", "TU", "WE", "TH", "FR", "SA", "SU")
+                if any(day < 0 or day > 6 for day in event_data.weekdays):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Recurrence weekdays must be between 0 (Monday) and 6 (Sunday).",
+                    )
+                recurrence_rule += ";BYDAY=" + ",".join(
+                    weekday_codes[day] for day in sorted(set(event_data.weekdays))
+                )
             if event_data.recurrence_end_date:
                 # Format: YYYYMMDDTHHMMSSZ
                 until_str = event_data.recurrence_end_date.strftime("%Y%m%dT%H%M%SZ")

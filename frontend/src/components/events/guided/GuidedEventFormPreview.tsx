@@ -333,8 +333,8 @@ export default function GuidedEventFormPreview() {
               <Button type="button" variant="ghost" onClick={handleBack} disabled={(questionIndex === 0 && schedulePart === 0) || isTransitioning || submissionPhase !== 'idle'} className="min-h-[48px] !rounded-xl">
                 <span className="inline-flex items-center gap-2"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</span>
               </Button>
-              <Button type="button" onClick={currentQuestion.id === 'review' ? handleCreateEvent : handleContinue} disabled={isTransitioning || submissionPhase !== 'idle' || (currentQuestion.id === 'review' && (draft.attendanceMode === 'native' || draft.scheduleMode === 'recurring'))} className="min-h-[48px] min-w-[132px] !rounded-xl">
-                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? draft.attendanceMode === 'native' || draft.scheduleMode === 'recurring' ? 'Creation unavailable' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Creating event…' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
+              <Button type="button" onClick={currentQuestion.id === 'review' ? handleCreateEvent : handleContinue} disabled={isTransitioning || submissionPhase !== 'idle' || (currentQuestion.id === 'review' && draft.attendanceMode === 'native')} className="min-h-[48px] min-w-[132px] !rounded-xl">
+                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? draft.attendanceMode === 'native' ? 'Creation unavailable' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Creating event…' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
               </Button>
             </div>
           </section>

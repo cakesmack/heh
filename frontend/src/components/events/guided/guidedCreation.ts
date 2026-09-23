@@ -1,8 +1,9 @@
 import { buildEventPayload, WIZARD_DEFAULTS, type WizardFormData } from '@/hooks/useEventWizard';
+import { RRule } from 'rrule';
 import type { EventCreate } from '@/types';
-import type { GuidedEventDraft, GuidedQuestionId } from './guidedEventTypes';
+import type { GuidedEventDraft, GuidedQuestionId, RecurrenceSchedule } from './guidedEventTypes';
 import { validateAttendance, validateDetails, validateFinishing } from './guidedFormHelpers';
-import { toUkUtcIso, validateSchedule } from './scheduleHelpers';
+import { addLocalDay, toUkUtcIso, validateSchedule } from './scheduleHelpers';
 
 export type CreationIssue = { question: GuidedQuestionId; message: string };
 
@@ -11,8 +12,6 @@ export function validateGuidedCreation(draft: GuidedEventDraft): CreationIssue |
   if (draft.venueMode === 'single' ? !draft.singleVenueId : draft.participatingVenues.length === 0) return { question: 'venue', message: 'Choose at least one registered venue.' };
   const scheduleIssue = validateSchedule(draft);
   if (scheduleIssue) return { question: 'schedule', message: scheduleIssue };
-  // The current recurrence generator does not faithfully publish all guided rules.
-  if (draft.scheduleMode === 'recurring') return { question: 'schedule', message: 'Recurring events cannot be created from this guided form yet. The existing recurrence generator needs verification first.' };
   const attendanceIssue = validateAttendance(draft);
   if (attendanceIssue) return { question: 'attendance', message: attendanceIssue };
   if (draft.attendanceMode === 'native') return { question: 'attendance', message: 'Highland Events Hub ticket creation is not available in this guided form yet.' };
@@ -29,15 +28,53 @@ function priceForAttendance(draft: GuidedEventDraft): string {
   return 'Free';
 }
 
+const rruleWeekdays = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU];
+
+function recurrenceFields(rule: RecurrenceSchedule): Pick<WizardFormData, 'is_recurring' | 'frequency' | 'recurrence_rule' | 'recurrence_end_date' | 'ends_on' | 'weekdays'> {
+  const simpleWeekly = rule.frequency === 'weekly' && (rule.interval === 1 || rule.interval === 2);
+  const simpleMonthly = rule.frequency === 'monthly' && rule.interval === 1 && rule.monthlyMode === 'date';
+  const frequency = simpleWeekly ? rule.interval === 1 ? 'WEEKLY' : 'BIWEEKLY' : simpleMonthly ? 'MONTHLY' : 'CUSTOM';
+  const endDate = rule.endsOn === 'date' ? `${rule.endDate}T23:59:59Z` : '';
+  let recurrenceRule = '';
+  if (frequency === 'CUSTOM') {
+    const options: ConstructorParameters<typeof RRule>[0] = {
+      freq: rule.frequency === 'daily' ? RRule.DAILY : rule.frequency === 'weekly' ? RRule.WEEKLY : RRule.MONTHLY,
+      interval: rule.interval,
+    };
+    if (rule.frequency === 'weekly') options.byweekday = rule.weekdays.map((day) => rruleWeekdays[day]);
+    if (rule.frequency === 'monthly') {
+      if (rule.monthlyMode === 'ordinal') {
+        options.byweekday = [rruleWeekdays[rule.ordinalWeekday]];
+        options.bysetpos = rule.ordinal;
+      } else {
+        options.bymonthday = Number(rule.startDate.slice(8, 10));
+      }
+    }
+    if (endDate) options.until = new Date(endDate);
+    recurrenceRule = new RRule(options).toString().replace(/^RRULE:/, '');
+  }
+  return {
+    is_recurring: true,
+    frequency,
+    recurrence_rule: recurrenceRule,
+    recurrence_end_date: endDate,
+    ends_on: rule.endsOn === 'date' ? 'date' : 'never',
+    weekdays: rule.frequency === 'weekly' ? [...rule.weekdays] : [],
+  };
+}
+
 /** Adapt guided answers to the live wizard's canonical payload builder. */
 export function buildGuidedEventPayload(draft: GuidedEventDraft, imageUrl?: string): EventCreate {
   const issue = validateGuidedCreation(draft);
   if (issue) throw new Error(issue.message);
 
   const isSeveralDates = draft.scheduleMode === 'selected_dates';
+  const isRecurring = draft.scheduleMode === 'recurring';
   const performances = [...draft.performances].sort((a, b) => a.start.localeCompare(b.start));
-  const startLocal = isSeveralDates ? performances[0].start : draft.once.allDay ? `${draft.once.start.slice(0, 10)}T00:00` : draft.once.start;
-  const endLocal = isSeveralDates ? [...performances].sort((a, b) => a.end.localeCompare(b.end)).at(-1)!.end : draft.once.allDay ? `${draft.once.end.slice(0, 10)}T23:59` : draft.once.end;
+  const recurrence = draft.recurrence;
+  const startLocal = isSeveralDates ? performances[0].start : isRecurring ? `${recurrence.startDate}T${recurrence.allDay ? '00:00' : recurrence.startTime}` : draft.once.allDay ? `${draft.once.start.slice(0, 10)}T00:00` : draft.once.start;
+  const recurringEndDate = recurrence.endsNextDay ? addLocalDay(recurrence.startDate) : recurrence.startDate;
+  const endLocal = isSeveralDates ? [...performances].sort((a, b) => a.end.localeCompare(b.end)).at(-1)!.end : isRecurring ? `${recurrence.allDay ? recurrence.startDate : recurringEndDate}T${recurrence.allDay ? '23:59' : recurrence.endTime}` : draft.once.allDay ? `${draft.once.end.slice(0, 10)}T23:59` : draft.once.end;
   const dateStart = toUkUtcIso(startLocal);
   const dateEnd = toUkUtcIso(endLocal);
 
@@ -52,8 +89,9 @@ export function buildGuidedEventPayload(draft: GuidedEventDraft, imageUrl?: stri
     participating_venue_ids: draft.venueMode === 'multiple' ? draft.participatingVenues.map((venue) => venue.id) : [],
     date_start: dateStart,
     date_end: dateEnd,
-    is_all_day: !isSeveralDates && draft.once.allDay,
+    is_all_day: !isSeveralDates && (isRecurring ? recurrence.allDay : draft.once.allDay),
     isMultiSession: isSeveralDates,
+    ...(isRecurring ? recurrenceFields(recurrence) : {}),
     // Showtime fields are event-local wall times in the existing create API.
     showtimes: isSeveralDates ? performances.map((performance) => ({ start_time: `${performance.start}:00`, end_time: `${performance.end}:00` })) : [],
     description: draft.description,
