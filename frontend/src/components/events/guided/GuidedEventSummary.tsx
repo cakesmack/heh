@@ -49,7 +49,7 @@ function SummaryContent({ draft, onEdit, availableQuestionIds }: SummaryContentP
           </span>
         </button>
       ))}
-      <p className="mt-3 border-t border-gray-200 px-3 pt-4 text-xs leading-5 text-gray-500">Development preview · nothing is submitted.</p>
+      <p className="mt-3 border-t border-gray-200 px-3 pt-4 text-xs leading-5 text-gray-500">Development route · a real event is created only when you select Create Event.</p>
     </div>
   );
 }

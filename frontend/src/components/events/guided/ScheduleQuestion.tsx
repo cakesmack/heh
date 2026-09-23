@@ -15,6 +15,7 @@ interface Props {
   onOnceChange: (patch: Partial<ScheduleDateTime>) => void;
   onPerformancesChange: (items: Performance[]) => void;
   onRecurrenceChange: (patch: Partial<RecurrenceSchedule>) => void;
+  onceEndReset?: boolean;
 }
 
 function DateField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
@@ -24,9 +25,9 @@ function DateField({ id, label, value, onChange }: { id: string; label: string; 
   </label>;
 }
 
-function OnceFields({ draft, part, onChange }: { draft: GuidedEventDraft; part: number; onChange: Props['onOnceChange'] }) {
+function OnceFields({ draft, onChange, endReset }: { draft: GuidedEventDraft; onChange: Props['onOnceChange']; endReset?: boolean }) {
   const { once } = draft;
-  if (part === 1) return <div className="space-y-6">
+  return <div className="space-y-6">
     <label className="flex items-center gap-3 text-sm font-semibold text-gray-800">
       <input type="checkbox" checked={once.allDay} onChange={(event) => onChange({ allDay: event.target.checked })} className="h-5 w-5 rounded border-gray-300 text-moss-green focus:ring-moss-green" />
       All day event
@@ -37,16 +38,15 @@ function OnceFields({ draft, part, onChange }: { draft: GuidedEventDraft; part: 
         ? <input id="schedule-once-start" type="date" value={once.start.slice(0, 10)} onChange={(event) => onChange({ start: event.target.value })} className={fieldClass} />
         : <DateTimePicker id="schedule-once-start" name="schedule-once-start" value={once.start} onChange={(start) => onChange({ start })} required />}
     </div>
-    <p className="text-sm text-gray-500">Times are entered in UK event-local time.</p>
-  </div>;
-  return <div className="space-y-6">
     <div>
       <label htmlFor="schedule-once-end" className="mb-2 block text-sm font-semibold text-gray-800">Finish {once.allDay ? 'date' : 'date and time'} *</label>
       {once.allDay
-        ? <input id="schedule-once-end" type="date" value={once.end.slice(0, 10)} onChange={(event) => onChange({ end: event.target.value })} className={fieldClass} />
-        : <DateTimePicker id="schedule-once-end" name="schedule-once-end" value={once.end} onChange={(end) => onChange({ end })} required />}
+        ? <input id="schedule-once-end" type="date" min={once.start.slice(0, 10) || undefined} value={once.end.slice(0, 10)} onChange={(event) => onChange({ end: event.target.value })} className={fieldClass} />
+        : <DateTimePicker id="schedule-once-end" name="schedule-once-end" value={once.end} min={once.start || undefined} onChange={(end) => onChange({ end })} required />}
     </div>
-    <p className="text-sm text-gray-500">For overnight or multi-day events, select the actual finish date. All-day finish dates are inclusive.</p>
+    {endReset && <p role="status" className="text-sm font-semibold text-amber-900">The previous finish no longer followed your start, so it was cleared. Choose a new finish.</p>}
+    {once.start && once.end && validateInterval(once.start, once.end, once.allDay) && <p role="status" className="text-sm font-semibold text-amber-900">The finish must be after the start. On the same date, choose a later time.</p>}
+    <p className="text-sm text-gray-500">Times are in UK event-local time. For overnight or multi-day events, choose the actual finish date. All-day finish dates are inclusive.</p>
     {once.start && once.end && !validateInterval(once.start, once.end, once.allDay) &&
       <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-highland-green">
         <strong>One continuous event</strong><span className="block mt-1">{formatLocalDateTime(once.start, once.allDay)} → {formatLocalDateTime(once.end, once.allDay)} · UK time</span>
@@ -133,7 +133,7 @@ function RecurringFields({ rule, part, onChange }: { rule: RecurrenceSchedule; p
   </div>;
 }
 
-export function ScheduleQuestion({ draft, part, error, onModeChange, onOnceChange, onPerformancesChange, onRecurrenceChange }: Props) {
+export function ScheduleQuestion({ draft, part, error, onModeChange, onOnceChange, onPerformancesChange, onRecurrenceChange, onceEndReset }: Props) {
   if (part === 0) return <div className="space-y-5">
     <fieldset><legend className="sr-only">Choose a schedule type</legend><div className="grid gap-3 sm:grid-cols-3">
       {([
@@ -149,7 +149,7 @@ export function ScheduleQuestion({ draft, part, error, onModeChange, onOnceChang
   </div>;
   return <div className="space-y-6">
     <div className="flex items-center gap-2 text-sm font-semibold text-moss-green"><Clock3 aria-hidden="true" className="h-4 w-4" /> UK event-local time</div>
-    {draft.scheduleMode === 'once' && <OnceFields draft={draft} part={part} onChange={onOnceChange} />}
+    {draft.scheduleMode === 'once' && <OnceFields draft={draft} onChange={onOnceChange} endReset={onceEndReset} />}
     {draft.scheduleMode === 'selected_dates' && <PerformanceFields items={draft.performances} onChange={onPerformancesChange} />}
     {draft.scheduleMode === 'recurring' && <RecurringFields rule={draft.recurrence} part={part} onChange={onRecurrenceChange} />}
     {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}

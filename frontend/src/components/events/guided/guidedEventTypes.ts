@@ -51,6 +51,7 @@ export interface GuidedEventDraft {
   websiteUrl: string;
   imageName: string;
   imagePreviewUrl: string;
+  imageFile: File | null;
 }
 
 export const GUIDED_QUESTIONS: Array<{

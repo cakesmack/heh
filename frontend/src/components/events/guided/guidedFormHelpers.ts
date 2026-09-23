@@ -32,10 +32,13 @@ export function validateAttendance(draft: GuidedEventDraft): string | null {
     case 'free': return null;
     case 'door':
       if (!draft.doorPrice.trim() || !Number.isFinite(Number(draft.doorPrice)) || Number(draft.doorPrice) <= 0) return 'Enter a pay-at-door price greater than £0.';
+      if (Math.abs(Math.round(Number(draft.doorPrice) * 100) - Number(draft.doorPrice) * 100) > 0.000001) return 'Enter the door price in pounds and pence.';
       if (draft.doorReservationRequired && !isHttpUrl(draft.doorReservationUrl)) return 'Enter a valid HTTP(S) reservation URL.';
+      if (draft.doorReservationRequired && draft.doorReservationUrl.length > 500) return 'Reservation URL must be 500 characters or less.';
       return null;
     case 'external':
       if (!isHttpUrl(draft.externalUrl)) return 'Enter a valid HTTP(S) booking URL.';
+      if (draft.externalUrl.length > 500) return 'Booking URL must be 500 characters or less.';
       if (draft.externalIsFree === null) return 'Choose whether external booking is free or paid.';
       return null;
     case 'native': return nativeTicketIssue(draft);
@@ -66,6 +69,7 @@ export function validateDetails(draft: GuidedEventDraft): string | null {
 
 export function validateFinishing(draft: GuidedEventDraft): string | null {
   if (draft.websiteUrl.trim() && !isHttpUrl(draft.websiteUrl)) return 'Enter a valid HTTP(S) event website URL.';
+  if (draft.websiteUrl.length > 500) return 'Event website URL must be 500 characters or less.';
   if (draft.tags.length > 5) return 'Choose no more than five tags.';
   return null;
 }

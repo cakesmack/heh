@@ -1,4 +1,4 @@
-import type { GuidedEventDraft, Performance, RecurrenceSchedule } from './guidedEventTypes';
+import type { GuidedEventDraft, Performance, RecurrenceSchedule, ScheduleDateTime } from './guidedEventTypes';
 
 const ukParts = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -50,6 +50,27 @@ export function validateInterval(start: string, end: string, allDay = false): st
   if (endIssue) return `Finish: ${endIssue}`;
   if (end <= start) return 'The finish must be after the start.';
   return null;
+}
+
+export function applyOnceChange(current: ScheduleDateTime, patch: Partial<ScheduleDateTime>): { value: ScheduleDateTime; endCleared: boolean } {
+  const value = { ...current, ...patch };
+  if (('start' in patch || 'allDay' in patch) && value.end && validateInterval(value.start, value.end, value.allDay)) {
+    return { value: { ...value, end: '' }, endCleared: true };
+  }
+  return { value, endCleared: false };
+}
+
+/** Turn a validated UK wall time into an ISO instant, independent of the browser timezone. */
+export function toUkUtcIso(value: string): string {
+  const issue = ukWallTimeIssue(value);
+  if (issue) throw new Error(issue);
+  const [year, month, day, hour, minute] = value.match(/\d+/g)!.map(Number);
+  const wallUtc = Date.UTC(year, month - 1, day, hour, minute);
+  const matches = [wallUtc, wallUtc - 60 * 60 * 1000].filter((instant) => {
+    const parts = Object.fromEntries(ukParts.formatToParts(new Date(instant)).map((part) => [part.type, part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}` === value;
+  });
+  return new Date(matches[0]).toISOString();
 }
 
 export function validatePerformances(performances: Performance[]): string | null {

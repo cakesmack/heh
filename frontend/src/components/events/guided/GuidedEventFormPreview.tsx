@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Mountain } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Mountain } from 'lucide-react';
 import { Button } from '@/components/common/Button';
+import { api } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import type { EventResponse } from '@/types';
 import { EventTitleQuestion } from './EventTitleQuestion';
 import { GuidedEventSummary } from './GuidedEventSummary';
 import { getGuidedQuestions, type GuidedQuestionId } from './guidedEventTypes';
@@ -12,20 +15,28 @@ import { TicketsQuestion } from './TicketsQuestion';
 import { DetailsQuestion } from './DetailsQuestion';
 import { FinishingQuestion } from './FinishingQuestion';
 import { ReviewQuestion } from './ReviewQuestion';
+import { GuidedCreationSuccess } from './GuidedCreationSuccess';
+import { buildGuidedEventPayload, validateGuidedCreation } from './guidedCreation';
 import { validateAttendance, validateDetails, validateFinishing, validateTickets } from './guidedFormHelpers';
-import { addLocalDay, validDate, validateInterval, validateRecurrence, validateSchedule } from './scheduleHelpers';
+import { addLocalDay, applyOnceChange, validDate, validateInterval, validateRecurrence, validateSchedule } from './scheduleHelpers';
 import styles from './GuidedEventFormPreview.module.css';
 
 type Direction = 'forward' | 'backward';
 
 export default function GuidedEventFormPreview() {
+  const { user } = useAuth();
   const { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues, setScheduleMode, setOnce, setPerformances, setRecurrence, updateDraft } = useGuidedEventPreview();
   const [questionIndex, setQuestionIndex] = useState(0);
   const [schedulePart, setSchedulePart] = useState(0);
   const [direction, setDirection] = useState<Direction>('forward');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<GuidedQuestionId, string>>>({});
-  const [isComplete, setIsComplete] = useState(false);
+  const [onceEndReset, setOnceEndReset] = useState(false);
+  const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'uploading' | 'creating'>('idle');
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [createdEvent, setCreatedEvent] = useState<EventResponse | null>(null);
+  const submittingRef = useRef(false);
+  const uploadedImageRef = useRef<{ file: File; url: string } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const venueInputRef = useRef<HTMLInputElement>(null);
@@ -45,10 +56,9 @@ export default function GuidedEventFormPreview() {
   }, []);
 
   const moveToQuestion = useCallback((targetIndex: number, nextDirection?: Direction, targetSchedulePart = 0) => {
-    if (isTransitioning || targetIndex === questionIndex || targetIndex < 0 || targetIndex >= visibleQuestions.length) return;
+    if (isTransitioning || submittingRef.current || targetIndex === questionIndex || targetIndex < 0 || targetIndex >= visibleQuestions.length) return;
     setDirection(nextDirection ?? (targetIndex > questionIndex ? 'forward' : 'backward'));
     setIsTransitioning(true);
-    setIsComplete(false);
     setQuestionIndex(targetIndex);
     if (visibleQuestions[targetIndex]?.id === 'schedule') setSchedulePart(targetSchedulePart);
     if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
@@ -59,25 +69,20 @@ export default function GuidedEventFormPreview() {
     if (isTransitioning) return;
     setDirection(nextDirection);
     setIsTransitioning(true);
-    setIsComplete(false);
     setErrors((current) => ({ ...current, schedule: undefined }));
     setSchedulePart(part);
     if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
     transitionTimerRef.current = window.setTimeout(() => setIsTransitioning(false), 260);
   };
 
-  const schedulePartCount = draft.scheduleMode === 'recurring' ? 3 : draft.scheduleMode === 'once' ? 2 : 1;
+  const schedulePartCount = draft.scheduleMode === 'recurring' ? 3 : 1;
   const progressTotal = visibleQuestions.length;
   const progressCurrent = questionIndex + 1;
 
   const validateSchedulePart = (): string | null => {
     if (!draft.scheduleMode) return 'Choose how your event is scheduled.';
     if (schedulePart === 0) return null;
-    if (draft.scheduleMode === 'once' && schedulePart === 1) {
-      if (!validDate(draft.once.start.slice(0, 10))) return 'Choose the start date.';
-      if (draft.once.allDay) return null;
-      return validateInterval(draft.once.start, `${addLocalDay(draft.once.start.slice(0, 10))}T00:00`);
-    }
+    if (draft.scheduleMode === 'once') return validateSchedule(draft);
     if (draft.scheduleMode === 'recurring' && schedulePart === 1) {
       if (!validDate(draft.recurrence.startDate)) return 'Choose the first event date.';
       if (draft.recurrence.allDay) return null;
@@ -127,7 +132,7 @@ export default function GuidedEventFormPreview() {
       const issue = validateSchedulePart();
       if (issue) {
         setErrors((current) => ({ ...current, schedule: issue }));
-        document.getElementById(schedulePart === 0 ? 'schedule-mode-once' : draft.scheduleMode === 'once' ? `schedule-once-${schedulePart === 1 ? 'start' : 'end'}` : draft.scheduleMode === 'recurring' ? ['','recurrence-first-date','recurrence-frequency','recurrence-end-date'][schedulePart] : 'schedule-add-performance')?.focus();
+        document.getElementById(schedulePart === 0 ? 'schedule-mode-once' : draft.scheduleMode === 'once' ? (draft.once.start ? 'schedule-once-end' : 'schedule-once-start') : draft.scheduleMode === 'recurring' ? ['','recurrence-first-date','recurrence-frequency','recurrence-end-date'][schedulePart] : 'schedule-add-performance')?.focus();
         return;
       }
       if (schedulePart < schedulePartCount) moveSchedulePart(schedulePart + 1, 'forward');
@@ -136,12 +141,11 @@ export default function GuidedEventFormPreview() {
     }
     if (questionIndex < visibleQuestions.length - 1) {
       moveToQuestion(questionIndex + 1, 'forward');
-    } else {
-      setIsComplete(true);
     }
   };
 
   const handleBack = () => {
+    if (submittingRef.current) return;
     if (currentQuestion.id === 'schedule' && schedulePart > 0) { moveSchedulePart(schedulePart - 1, 'backward'); return; }
     if (questionIndex > 0) {
       moveToQuestion(questionIndex - 1, 'backward', visibleQuestions[questionIndex - 1]?.id === 'schedule' ? schedulePartCount : 0);
@@ -149,6 +153,7 @@ export default function GuidedEventFormPreview() {
   };
 
   const handleSummaryEdit = (question: GuidedQuestionId) => {
+    if (submittingRef.current) return;
     if (question === 'schedule' && currentQuestion.id === 'schedule' && schedulePart > 0) {
       moveSchedulePart(0, 'backward');
       return;
@@ -158,9 +163,48 @@ export default function GuidedEventFormPreview() {
   };
 
   const handleAdditionalChange = (patch: Parameters<typeof updateDraft>[0]) => {
+    if (submittingRef.current) return;
     updateDraft(patch);
-    setIsComplete(false);
+    setSubmissionError(null);
     setErrors((current) => ({ ...current, [currentQuestion.id]: undefined }));
+  };
+
+  const handleCreateEvent = async () => {
+    if (submittingRef.current || createdEvent) return;
+    setSubmissionError(null);
+    const issue = validateGuidedCreation(draft);
+    if (issue) {
+      setErrors((current) => ({ ...current, [issue.question]: issue.message }));
+      if (issue.question === 'schedule') setSchedulePart(schedulePartCount);
+      moveToQuestion(visibleQuestions.findIndex((question) => question.id === issue.question), 'backward', issue.question === 'schedule' ? schedulePartCount : 0);
+      return;
+    }
+    if (!user) { setSubmissionError('Sign in before creating this event. Your answers remain in this tab.'); return; }
+    submittingRef.current = true;
+    let createAttempted = false;
+    try {
+      let imageUrl: string | undefined;
+      if (draft.imageFile) {
+        if (uploadedImageRef.current?.file === draft.imageFile) imageUrl = uploadedImageRef.current.url;
+        else {
+          setSubmissionPhase('uploading');
+          const uploaded = await api.media.upload(draft.imageFile, 'events');
+          imageUrl = uploaded.url;
+          uploadedImageRef.current = { file: draft.imageFile, url: imageUrl };
+        }
+      }
+      const payload = buildGuidedEventPayload(draft, imageUrl);
+      setSubmissionPhase('creating');
+      createAttempted = true;
+      const event = await api.events.create(payload);
+      setCreatedEvent(event);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Event creation failed.';
+      setSubmissionError(createAttempted ? `${message} If the connection failed after submission, check your dashboard before trying again.` : message);
+    } finally {
+      submittingRef.current = false;
+      setSubmissionPhase('idle');
+    }
   };
 
   const title = currentQuestion.id === 'title' ? 'What is your event called?'
@@ -171,7 +215,7 @@ export default function GuidedEventFormPreview() {
             : currentQuestion.id === 'finishing' ? 'Add a photo and finishing details'
               : currentQuestion.id === 'review' ? 'Review your event'
       : schedulePart === 0 ? 'When does your event happen?'
-        : draft.scheduleMode === 'once' ? (schedulePart === 1 ? 'When does it start?' : 'When does it finish?')
+        : draft.scheduleMode === 'once' ? 'When does it start and finish?'
           : draft.scheduleMode === 'recurring' ? ['','When is the first event?','How often does it happen?','When should it stop?'][schedulePart]
             : 'Add your dates and times';
   const help = currentQuestion.id === 'title' ? 'Start with the clearest name for people browsing events across the Highlands.'
@@ -183,6 +227,8 @@ export default function GuidedEventFormPreview() {
               : currentQuestion.id === 'review' ? 'Check every answer and edit any section before leaving this preview.'
       : schedulePart === 0 ? 'Choose the pattern that best describes your event.'
         : 'Set the dates and times visitors will see. All times are in the UK event timezone.';
+
+  if (createdEvent) return <div className="min-h-screen bg-warm-white px-4 py-12 sm:py-20"><GuidedCreationSuccess event={createdEvent} /></div>;
 
   return (
     <div className="relative overflow-hidden bg-warm-white">
@@ -199,7 +245,7 @@ export default function GuidedEventFormPreview() {
             </div>
           </div>
           <span className="rounded-full border border-golden-heather/30 bg-golden-heather/10 px-3 py-1.5 text-xs font-bold text-highland-green">
-            Development preview · nothing is submitted
+            Development route · creates real non-native events
           </span>
         </div>
 
@@ -236,7 +282,6 @@ export default function GuidedEventFormPreview() {
                     inputRef={titleInputRef}
                     onChange={(value) => {
                       setTitle(value);
-                      setIsComplete(false);
                       if (errors.title) setErrors((current) => ({ ...current, title: undefined }));
                     }}
                   />
@@ -250,26 +295,23 @@ export default function GuidedEventFormPreview() {
                     inputRef={venueInputRef}
                     onModeChange={(mode) => {
                       setVenueMode(mode);
-                      setIsComplete(false);
                       if (errors.venue) setErrors((current) => ({ ...current, venue: undefined }));
                     }}
                     onSingleVenueChange={(venueId, venue) => {
                       setSingleVenue(venueId, venue);
-                      setIsComplete(false);
                       if (errors.venue) setErrors((current) => ({ ...current, venue: undefined }));
                     }}
                     onParticipatingVenuesChange={(venues) => {
                       setParticipatingVenues(venues);
-                      setIsComplete(false);
                       if (errors.venue) setErrors((current) => ({ ...current, venue: undefined }));
                     }}
                   />
                 ) : currentQuestion.id === 'schedule' ? (
-                  <ScheduleQuestion draft={draft} part={schedulePart} error={errors.schedule}
-                    onModeChange={(mode) => { setScheduleMode(mode); setIsComplete(false); setErrors((current) => ({ ...current, schedule: undefined })); }}
-                    onOnceChange={(patch) => { setOnce(patch); setIsComplete(false); setErrors((current) => ({ ...current, schedule: undefined })); }}
-                    onPerformancesChange={(items) => { setPerformances(items); setIsComplete(false); setErrors((current) => ({ ...current, schedule: undefined })); }}
-                    onRecurrenceChange={(patch) => { setRecurrence(patch); setIsComplete(false); setErrors((current) => ({ ...current, schedule: undefined })); }}
+                  <ScheduleQuestion draft={draft} part={schedulePart} error={errors.schedule} onceEndReset={onceEndReset}
+                    onModeChange={(mode) => { setScheduleMode(mode); setErrors((current) => ({ ...current, schedule: undefined })); }}
+                    onOnceChange={(patch) => { const change = applyOnceChange(draft.once, patch); setOnce(change.value); setOnceEndReset(change.endCleared ? true : 'end' in patch ? false : onceEndReset); setErrors((current) => ({ ...current, schedule: undefined })); }}
+                    onPerformancesChange={(items) => { setPerformances(items); setErrors((current) => ({ ...current, schedule: undefined })); }}
+                    onRecurrenceChange={(patch) => { setRecurrence(patch); setErrors((current) => ({ ...current, schedule: undefined })); }}
                   />
                 ) : currentQuestion.id === 'attendance' ? (
                   <AttendanceQuestion draft={draft} error={errors.attendance} onChange={handleAdditionalChange} />
@@ -284,22 +326,15 @@ export default function GuidedEventFormPreview() {
                 )}
               </div>
 
-              {isComplete && (
-                <div role="status" className="mt-7 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
-                    <Check aria-hidden="true" className="h-4 w-4" />
-                  </span>
-                  <span><strong>Preview complete.</strong> Your answers are ready for manual review. No event has been created.</span>
-                </div>
-              )}
+              {currentQuestion.id === 'review' && submissionError && <p role="alert" className="mt-7 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{submissionError}</p>}
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4 sm:px-9 lg:px-12">
-              <Button type="button" variant="ghost" onClick={handleBack} disabled={(questionIndex === 0 && schedulePart === 0) || isTransitioning} className="min-h-[48px] !rounded-xl">
+              <Button type="button" variant="ghost" onClick={handleBack} disabled={(questionIndex === 0 && schedulePart === 0) || isTransitioning || submissionPhase !== 'idle'} className="min-h-[48px] !rounded-xl">
                 <span className="inline-flex items-center gap-2"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</span>
               </Button>
-              <Button type="button" onClick={handleContinue} disabled={isTransitioning} className="min-h-[48px] min-w-[132px] !rounded-xl">
-                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? 'Finish preview' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
+              <Button type="button" onClick={currentQuestion.id === 'review' ? handleCreateEvent : handleContinue} disabled={isTransitioning || submissionPhase !== 'idle' || (currentQuestion.id === 'review' && (draft.attendanceMode === 'native' || draft.scheduleMode === 'recurring'))} className="min-h-[48px] min-w-[132px] !rounded-xl">
+                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? draft.attendanceMode === 'native' || draft.scheduleMode === 'recurring' ? 'Creation unavailable' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Creating event…' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
               </Button>
             </div>
           </section>

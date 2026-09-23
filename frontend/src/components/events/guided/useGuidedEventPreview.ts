@@ -22,7 +22,7 @@ const INITIAL_DRAFT: GuidedEventDraft = {
   externalUrl: '', externalIsFree: null,
   ticketTiers: [], passFeesToBuyer: false,
   description: '', categoryId: '', categoryName: '', organizerId: '', organizerName: '',
-  tags: [], ageRestriction: '', websiteUrl: '', imageName: '', imagePreviewUrl: '',
+  tags: [], ageRestriction: '', websiteUrl: '', imageName: '', imagePreviewUrl: '', imageFile: null,
 };
 
 export function useGuidedEventPreview() {
