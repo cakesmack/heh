@@ -241,8 +241,8 @@ export default function GuidedEventFormPreview() {
       : currentQuestion.id === 'attendance' ? 'Choose the route visitors will use. We will only show the fields that apply.'
         : currentQuestion.id === 'tickets' ? 'Connect Stripe payouts and configure ticket tiers for your one-off event.'
           : currentQuestion.id === 'details' ? 'Help visitors understand what to expect and who is hosting.'
-            : currentQuestion.id === 'finishing' ? 'Make your listing yours. The photo stays local to this preview.'
-              : currentQuestion.id === 'review' ? 'Check every answer and edit any section before leaving this preview.'
+            : currentQuestion.id === 'finishing' ? 'Make your listing yours. The photo uploads only when you create the event.'
+              : currentQuestion.id === 'review' ? 'Check every answer and edit any section before creating your event.'
       : schedulePart === 0 ? 'Choose the pattern that best describes your event.'
         : 'Set the dates and times visitors will see. All times are in the UK event timezone.';
 
@@ -258,12 +258,12 @@ export default function GuidedEventFormPreview() {
               <Mountain aria-hidden="true" className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss-green">Guided form preview</p>
-              <p className="text-sm font-semibold text-highland-green">Create an event · Full form preview</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss-green">Guided event form</p>
+              <p className="text-sm font-semibold text-highland-green">Create an event</p>
             </div>
           </div>
           <span className="rounded-full border border-golden-heather/30 bg-golden-heather/10 px-3 py-1.5 text-xs font-bold text-highland-green">
-            Development route · creates real non-native events
+            Local development route · creates real events
           </span>
         </div>
 
@@ -351,8 +351,8 @@ export default function GuidedEventFormPreview() {
               <Button type="button" variant="ghost" onClick={handleBack} disabled={(questionIndex === 0 && schedulePart === 0) || isTransitioning || submissionPhase !== 'idle'} className="min-h-[48px] !rounded-xl">
                 <span className="inline-flex items-center gap-2"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</span>
               </Button>
-              <Button type="button" onClick={currentQuestion.id === 'review' ? handleCreateEvent : handleContinue} disabled={isTransitioning || submissionPhase !== 'idle' || (currentQuestion.id === 'review' && draft.attendanceMode === 'native' && draft.scheduleMode !== 'once')} className="min-h-[48px] min-w-[132px] !rounded-xl">
-                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? draft.attendanceMode === 'native' && draft.scheduleMode !== 'once' ? 'Creation unavailable' : submissionPhase === 'checking-seller' ? 'Checking seller…' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Creating event…' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
+              <Button type="button" onClick={currentQuestion.id === 'review' ? handleCreateEvent : handleContinue} disabled={isTransitioning || submissionPhase !== 'idle'} className="min-h-[48px] min-w-[132px] !rounded-xl">
+                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? submissionPhase === 'checking-seller' ? 'Checking seller…' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Creating event…' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
               </Button>
             </div>
           </section>
