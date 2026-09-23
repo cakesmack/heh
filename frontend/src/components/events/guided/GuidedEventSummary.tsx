@@ -1,14 +1,15 @@
-import { ChevronDown, MapPin, Sparkles } from 'lucide-react';
+import { ChevronDown, Sparkles } from 'lucide-react';
 import type { GuidedEventDraft, GuidedQuestionId } from './guidedEventTypes';
 import { scheduleSummary } from './scheduleHelpers';
+import { attendanceSummary } from './guidedFormHelpers';
 
 interface SummaryContentProps {
   draft: GuidedEventDraft;
   onEdit: (question: GuidedQuestionId) => void;
-  availableQuestionIndex: number;
+  availableQuestionIds: GuidedQuestionId[];
 }
 
-function SummaryContent({ draft, onEdit, availableQuestionIndex }: SummaryContentProps) {
+function SummaryContent({ draft, onEdit, availableQuestionIds }: SummaryContentProps) {
   const locationValue = draft.venueMode === 'single'
     ? draft.singleVenue?.name || 'Not added yet'
     : draft.participatingVenues.length > 0
@@ -18,18 +19,22 @@ function SummaryContent({ draft, onEdit, availableQuestionIndex }: SummaryConten
     { id: 'title', label: 'Event name', value: draft.title.trim() || 'Not added yet' },
     { id: 'venue', label: draft.venueMode === 'single' ? 'Venue' : 'Venues', value: locationValue },
     { id: 'schedule', label: 'Schedule', value: scheduleSummary(draft) },
+    { id: 'attendance', label: 'Attendance', value: attendanceSummary(draft) },
+    ...(draft.attendanceMode === 'native' ? [{ id: 'tickets' as const, label: 'Tickets', value: draft.ticketTiers.length ? `${draft.ticketTiers.length} ${draft.ticketTiers.length === 1 ? 'tier' : 'tiers'}` : 'Not added yet' }] : []),
+    { id: 'details', label: 'Details', value: draft.categoryName || 'Not added yet' },
+    { id: 'finishing', label: 'Photo and extras', value: [draft.imageName ? 'Photo' : '', draft.tags.length ? `${draft.tags.length} tags` : '', draft.ageRestriction || ''].filter(Boolean).join(' · ') || 'Not added yet' },
   ];
 
   return (
     <div className="space-y-1" data-testid="guided-summary-content">
-      {items.map((item, index) => (
+      {items.map((item) => (
         <button
           key={item.id}
           type="button"
           onClick={() => onEdit(item.id)}
-          disabled={index > availableQuestionIndex}
+          disabled={!availableQuestionIds.includes(item.id)}
           className="group flex min-h-[64px] w-full items-center justify-between gap-4 rounded-xl px-3 py-3 text-left transition-colors enabled:hover:bg-emerald-50 enabled:focus-visible:bg-emerald-50 disabled:cursor-default"
-          aria-label={index > availableQuestionIndex ? `${item.label} comes later` : `Edit ${item.label}`}
+          aria-label={!availableQuestionIds.includes(item.id) ? `${item.label} comes later` : `Edit ${item.label}`}
         >
           <span className="min-w-0">
             <span className="block text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
@@ -40,14 +45,11 @@ function SummaryContent({ draft, onEdit, availableQuestionIndex }: SummaryConten
             </span>
           </span>
           <span className="text-xs font-semibold text-moss-green opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-            {index > availableQuestionIndex ? 'Later' : 'Edit'}
+            {!availableQuestionIds.includes(item.id) ? 'Later' : 'Edit'}
           </span>
         </button>
       ))}
-      <div className="mt-3 flex items-start gap-2 border-t border-gray-200 px-3 pt-4 text-xs leading-5 text-gray-500">
-        <MapPin aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-moss-green" />
-        <span>More event details will be added in later phases.</span>
-      </div>
+      <p className="mt-3 border-t border-gray-200 px-3 pt-4 text-xs leading-5 text-gray-500">Development preview · nothing is submitted.</p>
     </div>
   );
 }
@@ -56,7 +58,7 @@ interface GuidedEventSummaryProps extends SummaryContentProps {
   variant: 'mobile' | 'desktop';
 }
 
-export function GuidedEventSummary({ draft, onEdit, availableQuestionIndex, variant }: GuidedEventSummaryProps) {
+export function GuidedEventSummary({ draft, onEdit, availableQuestionIds, variant }: GuidedEventSummaryProps) {
   if (variant === 'mobile') {
     return (
       <details className="group rounded-2xl border border-gray-200 bg-white shadow-card lg:hidden" data-testid="mobile-summary">
@@ -68,7 +70,7 @@ export function GuidedEventSummary({ draft, onEdit, availableQuestionIndex, vari
           <ChevronDown aria-hidden="true" className="h-4 w-4 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none" />
         </summary>
         <div className="border-t border-gray-100 p-2">
-          <SummaryContent draft={draft} onEdit={onEdit} availableQuestionIndex={availableQuestionIndex} />
+          <SummaryContent draft={draft} onEdit={onEdit} availableQuestionIds={availableQuestionIds} />
         </div>
       </details>
     );
@@ -86,7 +88,7 @@ export function GuidedEventSummary({ draft, onEdit, availableQuestionIndex, vari
             <p className="text-xs text-gray-500">Updates as you type</p>
           </div>
         </div>
-        <SummaryContent draft={draft} onEdit={onEdit} availableQuestionIndex={availableQuestionIndex} />
+        <SummaryContent draft={draft} onEdit={onEdit} availableQuestionIds={availableQuestionIds} />
       </div>
     </aside>
   );

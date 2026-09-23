@@ -3,17 +3,23 @@ import { ArrowLeft, ArrowRight, Check, Mountain } from 'lucide-react';
 import { Button } from '@/components/common/Button';
 import { EventTitleQuestion } from './EventTitleQuestion';
 import { GuidedEventSummary } from './GuidedEventSummary';
-import { GUIDED_QUESTIONS, type GuidedQuestionId } from './guidedEventTypes';
+import { getGuidedQuestions, type GuidedQuestionId } from './guidedEventTypes';
 import { useGuidedEventPreview } from './useGuidedEventPreview';
 import { VenueQuestion } from './VenueQuestion';
 import { ScheduleQuestion } from './ScheduleQuestion';
+import { AttendanceQuestion } from './AttendanceQuestion';
+import { TicketsQuestion } from './TicketsQuestion';
+import { DetailsQuestion } from './DetailsQuestion';
+import { FinishingQuestion } from './FinishingQuestion';
+import { ReviewQuestion } from './ReviewQuestion';
+import { validateAttendance, validateDetails, validateFinishing, validateTickets } from './guidedFormHelpers';
 import { addLocalDay, validDate, validateInterval, validateRecurrence, validateSchedule } from './scheduleHelpers';
 import styles from './GuidedEventFormPreview.module.css';
 
 type Direction = 'forward' | 'backward';
 
 export default function GuidedEventFormPreview() {
-  const { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues, setScheduleMode, setOnce, setPerformances, setRecurrence } = useGuidedEventPreview();
+  const { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues, setScheduleMode, setOnce, setPerformances, setRecurrence, updateDraft } = useGuidedEventPreview();
   const [questionIndex, setQuestionIndex] = useState(0);
   const [schedulePart, setSchedulePart] = useState(0);
   const [direction, setDirection] = useState<Direction>('forward');
@@ -25,7 +31,9 @@ export default function GuidedEventFormPreview() {
   const venueInputRef = useRef<HTMLInputElement>(null);
   const transitionTimerRef = useRef<number | null>(null);
 
-  const currentQuestion = GUIDED_QUESTIONS[questionIndex];
+  const visibleQuestions = getGuidedQuestions(draft.attendanceMode);
+  const currentQuestion = visibleQuestions[questionIndex];
+  const availableQuestionIds = visibleQuestions.slice(0, questionIndex + 1).map((question) => question.id);
 
   useEffect(() => {
     const focusFrame = window.requestAnimationFrame(() => headingRef.current?.focus());
@@ -36,16 +44,16 @@ export default function GuidedEventFormPreview() {
     if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
   }, []);
 
-  const moveToQuestion = useCallback((targetIndex: number, nextDirection?: Direction) => {
-    if (isTransitioning || targetIndex === questionIndex || targetIndex < 0 || targetIndex >= GUIDED_QUESTIONS.length) return;
+  const moveToQuestion = useCallback((targetIndex: number, nextDirection?: Direction, targetSchedulePart = 0) => {
+    if (isTransitioning || targetIndex === questionIndex || targetIndex < 0 || targetIndex >= visibleQuestions.length) return;
     setDirection(nextDirection ?? (targetIndex > questionIndex ? 'forward' : 'backward'));
     setIsTransitioning(true);
     setIsComplete(false);
     setQuestionIndex(targetIndex);
-    if (targetIndex === 2) setSchedulePart(0);
+    if (visibleQuestions[targetIndex]?.id === 'schedule') setSchedulePart(targetSchedulePart);
     if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
     transitionTimerRef.current = window.setTimeout(() => setIsTransitioning(false), 260);
-  }, [isTransitioning, questionIndex]);
+  }, [isTransitioning, questionIndex, visibleQuestions.length]);
 
   const moveSchedulePart = (part: number, nextDirection: Direction) => {
     if (isTransitioning) return;
@@ -59,7 +67,7 @@ export default function GuidedEventFormPreview() {
   };
 
   const schedulePartCount = draft.scheduleMode === 'recurring' ? 3 : draft.scheduleMode === 'once' ? 2 : 1;
-  const progressTotal = GUIDED_QUESTIONS.length;
+  const progressTotal = visibleQuestions.length;
   const progressCurrent = questionIndex + 1;
 
   const validateSchedulePart = (): string | null => {
@@ -101,6 +109,15 @@ export default function GuidedEventFormPreview() {
       venueInputRef.current?.focus();
       return false;
     }
+    const issue = currentQuestion.id === 'attendance' ? validateAttendance(draft)
+      : currentQuestion.id === 'tickets' ? validateTickets(draft)
+        : currentQuestion.id === 'details' ? validateDetails(draft)
+          : currentQuestion.id === 'finishing' ? validateFinishing(draft) : null;
+    if (issue) {
+      setErrors((current) => ({ ...current, [currentQuestion.id]: issue }));
+      headingRef.current?.focus();
+      return false;
+    }
     return true;
   };
 
@@ -114,10 +131,10 @@ export default function GuidedEventFormPreview() {
         return;
       }
       if (schedulePart < schedulePartCount) moveSchedulePart(schedulePart + 1, 'forward');
-      else setIsComplete(true);
+      else moveToQuestion(questionIndex + 1, 'forward');
       return;
     }
-    if (questionIndex < GUIDED_QUESTIONS.length - 1) {
+    if (questionIndex < visibleQuestions.length - 1) {
       moveToQuestion(questionIndex + 1, 'forward');
     } else {
       setIsComplete(true);
@@ -126,7 +143,9 @@ export default function GuidedEventFormPreview() {
 
   const handleBack = () => {
     if (currentQuestion.id === 'schedule' && schedulePart > 0) { moveSchedulePart(schedulePart - 1, 'backward'); return; }
-    if (questionIndex > 0) moveToQuestion(questionIndex - 1, 'backward');
+    if (questionIndex > 0) {
+      moveToQuestion(questionIndex - 1, 'backward', visibleQuestions[questionIndex - 1]?.id === 'schedule' ? schedulePartCount : 0);
+    }
   };
 
   const handleSummaryEdit = (question: GuidedQuestionId) => {
@@ -134,18 +153,34 @@ export default function GuidedEventFormPreview() {
       moveSchedulePart(0, 'backward');
       return;
     }
-    const targetIndex = GUIDED_QUESTIONS.findIndex((item) => item.id === question);
+    const targetIndex = visibleQuestions.findIndex((item) => item.id === question);
     moveToQuestion(targetIndex);
+  };
+
+  const handleAdditionalChange = (patch: Parameters<typeof updateDraft>[0]) => {
+    updateDraft(patch);
+    setIsComplete(false);
+    setErrors((current) => ({ ...current, [currentQuestion.id]: undefined }));
   };
 
   const title = currentQuestion.id === 'title' ? 'What is your event called?'
     : currentQuestion.id === 'venue' ? 'Where is it happening?'
+      : currentQuestion.id === 'attendance' ? 'How can people attend?'
+        : currentQuestion.id === 'tickets' ? 'Set up your tickets'
+          : currentQuestion.id === 'details' ? 'Tell people about your event'
+            : currentQuestion.id === 'finishing' ? 'Add a photo and finishing details'
+              : currentQuestion.id === 'review' ? 'Review your event'
       : schedulePart === 0 ? 'When does your event happen?'
         : draft.scheduleMode === 'once' ? (schedulePart === 1 ? 'When does it start?' : 'When does it finish?')
           : draft.scheduleMode === 'recurring' ? ['','When is the first event?','How often does it happen?','When should it stop?'][schedulePart]
             : 'Add your dates and times';
   const help = currentQuestion.id === 'title' ? 'Start with the clearest name for people browsing events across the Highlands.'
     : currentQuestion.id === 'venue' ? 'Find the registered venue where visitors should arrive.'
+      : currentQuestion.id === 'attendance' ? 'Choose the route visitors will use. We will only show the fields that apply.'
+        : currentQuestion.id === 'tickets' ? 'Configure tickets for a single one-off event. Nothing is sold in this preview.'
+          : currentQuestion.id === 'details' ? 'Help visitors understand what to expect and who is hosting.'
+            : currentQuestion.id === 'finishing' ? 'Make your listing yours. The photo stays local to this preview.'
+              : currentQuestion.id === 'review' ? 'Check every answer and edit any section before leaving this preview.'
       : schedulePart === 0 ? 'Choose the pattern that best describes your event.'
         : 'Set the dates and times visitors will see. All times are in the UK event timezone.';
 
@@ -160,7 +195,7 @@ export default function GuidedEventFormPreview() {
             </span>
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss-green">Guided form preview</p>
-              <p className="text-sm font-semibold text-highland-green">Create an event · Scheduling preview</p>
+              <p className="text-sm font-semibold text-highland-green">Create an event · Full form preview</p>
             </div>
           </div>
           <span className="rounded-full border border-golden-heather/30 bg-golden-heather/10 px-3 py-1.5 text-xs font-bold text-highland-green">
@@ -181,7 +216,7 @@ export default function GuidedEventFormPreview() {
         </div>
 
         <div className="mb-5 lg:hidden">
-          <GuidedEventSummary variant="mobile" draft={draft} onEdit={handleSummaryEdit} availableQuestionIndex={questionIndex} />
+          <GuidedEventSummary variant="mobile" draft={draft} onEdit={handleSummaryEdit} availableQuestionIds={availableQuestionIds} />
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
@@ -229,13 +264,23 @@ export default function GuidedEventFormPreview() {
                       if (errors.venue) setErrors((current) => ({ ...current, venue: undefined }));
                     }}
                   />
-                ) : (
+                ) : currentQuestion.id === 'schedule' ? (
                   <ScheduleQuestion draft={draft} part={schedulePart} error={errors.schedule}
                     onModeChange={(mode) => { setScheduleMode(mode); setIsComplete(false); setErrors((current) => ({ ...current, schedule: undefined })); }}
                     onOnceChange={(patch) => { setOnce(patch); setIsComplete(false); setErrors((current) => ({ ...current, schedule: undefined })); }}
                     onPerformancesChange={(items) => { setPerformances(items); setIsComplete(false); setErrors((current) => ({ ...current, schedule: undefined })); }}
                     onRecurrenceChange={(patch) => { setRecurrence(patch); setIsComplete(false); setErrors((current) => ({ ...current, schedule: undefined })); }}
                   />
+                ) : currentQuestion.id === 'attendance' ? (
+                  <AttendanceQuestion draft={draft} error={errors.attendance} onChange={handleAdditionalChange} />
+                ) : currentQuestion.id === 'tickets' ? (
+                  <TicketsQuestion draft={draft} error={errors.tickets} onChange={handleAdditionalChange} onChooseAnotherMethod={() => moveToQuestion(visibleQuestions.findIndex((item) => item.id === 'attendance'), 'backward')} />
+                ) : currentQuestion.id === 'details' ? (
+                  <DetailsQuestion draft={draft} error={errors.details} onChange={handleAdditionalChange} />
+                ) : currentQuestion.id === 'finishing' ? (
+                  <FinishingQuestion draft={draft} error={errors.finishing} onChange={handleAdditionalChange} />
+                ) : (
+                  <ReviewQuestion draft={draft} onEdit={handleSummaryEdit} />
                 )}
               </div>
 
@@ -244,7 +289,7 @@ export default function GuidedEventFormPreview() {
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
                     <Check aria-hidden="true" className="h-4 w-4" />
                   </span>
-                  <span><strong>Scheduling preview complete.</strong> Your answers are ready to review. No event has been created.</span>
+                  <span><strong>Preview complete.</strong> Your answers are ready for manual review. No event has been created.</span>
                 </div>
               )}
             </div>
@@ -254,13 +299,13 @@ export default function GuidedEventFormPreview() {
                 <span className="inline-flex items-center gap-2"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</span>
               </Button>
               <Button type="button" onClick={handleContinue} disabled={isTransitioning} className="min-h-[48px] min-w-[132px] !rounded-xl">
-                <span className="inline-flex items-center gap-2">Continue<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
+                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? 'Finish preview' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
               </Button>
             </div>
           </section>
 
           <div className="hidden lg:block">
-            <GuidedEventSummary variant="desktop" draft={draft} onEdit={handleSummaryEdit} availableQuestionIndex={questionIndex} />
+            <GuidedEventSummary variant="desktop" draft={draft} onEdit={handleSummaryEdit} availableQuestionIds={availableQuestionIds} />
           </div>
         </div>
       </div>

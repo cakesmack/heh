@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { VenueResponse } from '@/types';
 import type { GuidedEventDraft, VenueMode, ScheduleMode, ScheduleDateTime, Performance, RecurrenceSchedule } from './guidedEventTypes';
 
@@ -17,10 +17,20 @@ const INITIAL_DRAFT: GuidedEventDraft = {
     monthlyMode: 'date', ordinal: 1, ordinalWeekday: 0,
     endsOn: 'date', endDate: '',
   },
+  attendanceMode: null,
+  doorPrice: '', doorReservationRequired: false, doorReservationUrl: '',
+  externalUrl: '', externalIsFree: null,
+  ticketTiers: [], passFeesToBuyer: false,
+  description: '', categoryId: '', categoryName: '', organizerId: '', organizerName: '',
+  tags: [], ageRestriction: '', websiteUrl: '', imageName: '', imagePreviewUrl: '',
 };
 
 export function useGuidedEventPreview() {
   const [draft, setDraft] = useState<GuidedEventDraft>(INITIAL_DRAFT);
+  useEffect(() => {
+    const previewUrl = draft.imagePreviewUrl;
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [draft.imagePreviewUrl]);
 
   const setTitle = useCallback((title: string) => {
     setDraft((current) => ({ ...current, title }));
@@ -55,5 +65,9 @@ export function useGuidedEventPreview() {
     setDraft((current) => ({ ...current, recurrence: { ...current.recurrence, ...patch } }));
   }, []);
 
-  return { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues, setScheduleMode, setOnce, setPerformances, setRecurrence };
+  const updateDraft = useCallback((patch: Partial<GuidedEventDraft>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+  }, []);
+
+  return { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues, setScheduleMode, setOnce, setPerformances, setRecurrence, updateDraft };
 }
