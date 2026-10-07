@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
-sqlmodel
+# Preserve the existing naive-datetime ORM behaviour across clean builds.
+sqlmodel==0.0.27
+SQLAlchemy==2.0.44
 pydantic
 pydantic-settings
 python-dotenv
