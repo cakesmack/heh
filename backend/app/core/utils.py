@@ -62,9 +62,20 @@ def simple_slugify(text: str) -> str:
     return generate_seo_slug(text)
 
 
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from typing import Optional
+
+
+def to_utc_aware(dt: datetime) -> datetime:
+    """Normalize UTC audit timestamps for arithmetic without changing storage.
+
+    Legacy naive audit timestamps represent UTC. Aware timestamps retain their
+    instant when converted to UTC. Event-local scheduling uses to_london_naive.
+    """
+    if dt.utcoffset() is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 def to_london_naive(dt: Optional[datetime]) -> Optional[datetime]:

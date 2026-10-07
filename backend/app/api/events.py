@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 from typing import Optional, List
@@ -12,7 +12,7 @@ from sqlalchemy import case
 
 from app.core.database import get_session, engine
 from app.core.security import get_current_user, get_current_user_optional
-from app.core.utils import normalize_uuid, to_london_naive
+from app.core.utils import normalize_uuid, to_london_naive, to_utc_aware
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
@@ -209,7 +209,6 @@ def build_event_response(
 
     # Resolve Next Occurrence for Display
     if event.is_recurring and event.parent_event_id is None and event.recurrence_group_id:
-        from datetime import timezone
         # Query all active/published instances of the recurrence group sorted by start date
         query = select(Event.date_start, Event.date_end).where(
             Event.recurrence_group_id == event.recurrence_group_id,
@@ -248,7 +247,6 @@ def build_event_response(
         # For a child instance, we just compare its own date_start to determine if it is upcoming
         now = datetime.utcnow()
         if start_date.tzinfo is not None:
-            from datetime import timezone
             now = datetime.now(timezone.utc)
         is_upcoming = start_date >= now
 
@@ -366,8 +364,8 @@ def build_event_response(
         (event.website_click_count * 5)
     )
     # Days Live = max(1, days since created_at)
-    now = datetime.utcnow()
-    duration = now - event.created_at
+    now = datetime.now(timezone.utc)
+    duration = now - to_utc_aware(event.created_at)
     days_live = max(1.0, duration.total_seconds() / 86400.0)
     response.popularity_score = round(raw_score / days_live, 2)
     
