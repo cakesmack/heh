@@ -3,7 +3,7 @@ Geolocation services for geocoding, distance calculations, and geohashing.
 Handles location validation and spatial operations.
 """
 import math
-import pygeohash as pgh
+import geohash2 as pgh
 from typing import Optional, Tuple
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
