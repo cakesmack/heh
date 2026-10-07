@@ -8,6 +8,19 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
+def normalize_database_url(url: Optional[str]) -> Optional[str]:
+    """Keep plain Render PostgreSQL URLs on the installed psycopg2 driver.
+
+    SQLAlchemy 2.1 changed the implicit PostgreSQL driver to psycopg v3.
+    Explicit driver URLs and non-PostgreSQL URLs are left unchanged.
+    """
+    if url:
+        for scheme in ("postgres://", "postgresql://"):
+            if url.startswith(scheme):
+                return "postgresql+psycopg2://" + url[len(scheme):]
+    return url
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
@@ -61,10 +74,8 @@ class Settings(BaseSettings):
     @field_validator('DATABASE_URL', 'DATABASE_URL_POOLER', mode='before')
     @classmethod
     def fix_postgres_scheme(cls, v: Optional[str]) -> Optional[str]:
-        """Fix postgres:// scheme for SQLAlchemy compatibility."""
-        if v and v.startswith("postgres://"):
-            return v.replace("postgres://", "postgresql://", 1)
-        return v
+        """Select the declared psycopg2 driver instead of SQLAlchemy's default."""
+        return normalize_database_url(v)
 
     # External Services
     GOOGLE_MAPS_API_KEY: Optional[str] = None

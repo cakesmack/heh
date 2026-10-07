@@ -13,7 +13,7 @@ if backend_dir not in sys.path:
 
 # Import all app models so SQLModel.metadata is fully populated
 import app.models  # noqa: F401
-from app.core.config import settings
+from app.core.config import normalize_database_url, settings
 
 # Alembic Config object
 config = context.config
@@ -40,9 +40,8 @@ def include_object(object, name, type_, reflected, compare_to):
 def get_url() -> str:
     """Dynamically retrieve database URL from environment variables or settings."""
     db_url = os.getenv("DATABASE_URL") or str(settings.DATABASE_URL)
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    return db_url
+    # Use the same driver as the application even when DATABASE_URL is raw.
+    return normalize_database_url(db_url)
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
