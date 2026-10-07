@@ -388,8 +388,8 @@ export const eventsAPI = {
   /**
    * Update event
    */
-  update: async (eventId: string, data: EventUpdate): Promise<EventResponse> => {
-    return apiFetch<EventResponse>(`/api/events/${eventId}`, {
+  update: async (eventId: string, data: EventUpdate, options?: { unlinkVenue?: boolean }): Promise<EventResponse> => {
+    return apiFetch<EventResponse>(`/api/events/${eventId}${options?.unlinkVenue ? '?unlink_venue=true' : ''}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });

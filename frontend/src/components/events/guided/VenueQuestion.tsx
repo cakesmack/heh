@@ -10,6 +10,7 @@ interface VenueQuestionProps {
   singleVenueId: string | null;
   singleVenue: VenueResponse | null;
   participatingVenues: VenueResponse[];
+  existingLocationName?: string;
   error?: string;
   inputRef: RefObject<HTMLInputElement | null>;
   onModeChange: (mode: VenueMode) => void;
@@ -27,6 +28,7 @@ export function VenueQuestion({
   singleVenueId,
   singleVenue,
   participatingVenues,
+  existingLocationName,
   error,
   inputRef,
   onModeChange,
@@ -73,8 +75,11 @@ export function VenueQuestion({
         </div>
       </fieldset>
 
+      {mode === 'multiple' && singleVenue && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-highland-green">Existing main venue: {singleVenue.name}. It will be preserved alongside the participating venues.</p>}
+
       {mode === 'single' ? (
         <div className="space-y-3">
+          {existingLocationName && !singleVenueId && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-highland-green">Current location: {existingLocationName}. Keep this location or choose a registered venue below.</p>}
           <label htmlFor="guided-event-venue" className="block text-sm font-semibold text-gray-800">
             Choose the venue
           </label>
@@ -107,7 +112,7 @@ export function VenueQuestion({
       <div id="guided-venue-help" className="flex items-start gap-2 rounded-xl bg-loch-blue/5 px-3.5 py-3 text-sm leading-5 text-gray-600">
         <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-loch-blue" />
         <span>
-          Preview mode searches existing venues only. It will not create or change venue records.
+          Search existing venues. This form will not create or change venue records.
         </span>
       </div>
     </div>

@@ -1699,6 +1699,8 @@ async def create_event(
         # Phase 2.3 fields
         organizer_profile_id=organizer_profile_id_normalized,
         recurrence_rule=recurrence_rule,
+        # Recurrence endings are calendar dates, not London-converted instants.
+        recurrence_end_date=event_data.recurrence_end_date.replace(tzinfo=None) if event_data.recurrence_end_date else None,
         is_recurring=event_data.is_recurring if event_data.is_recurring is not None else False,
         # For recurring events, set recurrence_group_id to own ID (will be shared with children)
         recurrence_group_id=normalize_uuid(uuid4()) if (event_data.is_recurring if event_data.is_recurring is not None else False) else None,
@@ -2256,7 +2258,7 @@ async def update_event(
                     detail="You must agree to the Organiser Terms of Service to enable ticketing for this event."
                 )
         effective_recurring = event_data.is_recurring if event_data.is_recurring is not None else event.is_recurring
-        effective_rrule = event_data.recurrence_rule if event_data.recurrence_rule is not None else event.recurrence_rule
+        effective_rrule = event_data.recurrence_rule if 'recurrence_rule' in event_data.model_fields_set else event.recurrence_rule
         effective_freq = event_data.frequency if event_data.frequency is not None else getattr(event, 'frequency', None)
         effective_showtimes = event_data.showtimes if event_data.showtimes is not None else []
         if effective_recurring or effective_rrule or effective_freq or len(effective_showtimes) > 0:
@@ -2302,8 +2304,8 @@ async def update_event(
         logger.info(f"[UPDATE_EVENT] explicit date_end: {event_data.date_end} -> local_naive: {local_end}")
         event.date_end = local_end
 
-    if event_data.recurrence_end_date is not None:
-        event.recurrence_end_date = to_london_naive(event_data.recurrence_end_date)
+    if 'recurrence_end_date' in event_data.model_fields_set:
+        event.recurrence_end_date = event_data.recurrence_end_date.replace(tzinfo=None) if event_data.recurrence_end_date else None
 
     # 2. Handle Recurring Status Logic
     # Check if recurrence details changed
@@ -2340,11 +2342,13 @@ async def update_event(
                 session.delete(child)
 
     # Detect changes in schedule keys if recurrence is ON
-    if event.is_recurring and (new_frequency or new_weekdays or new_recurrence_end):
+    if event.is_recurring and (new_frequency or new_weekdays or new_recurrence_end or 'recurrence_rule' in update_data or date_rescheduled or 'date_end' in update_data):
         recurrence_changed = True
         
     # Logic for Regenerating Recursion (The "Clean Slate" Strategy)
     if recurrence_changed and event.is_recurring:
+        if not event.recurrence_group_id:
+            event.recurrence_group_id = normalize_uuid(uuid4())
         # 1. Update RRULE string on parent
         # FIX: Only generate from frequency if NO new recurrence_rule is provided in this update
         # If the frontend sent a custom rule, we trust that above all else.

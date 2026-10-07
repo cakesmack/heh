@@ -9,7 +9,7 @@ export type CreationIssue = { question: GuidedQuestionId; message: string };
 
 export function validateGuidedCreation(draft: GuidedEventDraft): CreationIssue | null {
   if (!draft.title.trim() || draft.title.length > 255) return { question: 'title', message: 'Enter an event name of 255 characters or less.' };
-  if (draft.venueMode === 'single' ? !draft.singleVenueId : draft.participatingVenues.length === 0) return { question: 'venue', message: 'Choose at least one registered venue.' };
+  if (draft.venueMode === 'single' ? !draft.singleVenueId && !draft.existingLocationName : draft.participatingVenues.length === 0) return { question: 'venue', message: 'Choose at least one registered venue.' };
   const scheduleIssue = validateSchedule(draft);
   if (scheduleIssue) return { question: 'schedule', message: scheduleIssue };
   const attendanceIssue = validateAttendance(draft);
@@ -33,10 +33,10 @@ function priceForAttendance(draft: GuidedEventDraft): string {
 
 const rruleWeekdays = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU];
 
-function recurrenceFields(rule: RecurrenceSchedule): Pick<WizardFormData, 'is_recurring' | 'frequency' | 'recurrence_rule' | 'recurrence_end_date' | 'ends_on' | 'weekdays'> {
+export function recurrenceFields(rule: RecurrenceSchedule, explicitRule = false): Pick<WizardFormData, 'is_recurring' | 'frequency' | 'recurrence_rule' | 'recurrence_end_date' | 'ends_on' | 'weekdays'> {
   const simpleWeekly = rule.frequency === 'weekly' && (rule.interval === 1 || rule.interval === 2);
   const simpleMonthly = rule.frequency === 'monthly' && rule.interval === 1 && rule.monthlyMode === 'date';
-  const frequency = simpleWeekly ? rule.interval === 1 ? 'WEEKLY' : 'BIWEEKLY' : simpleMonthly ? 'MONTHLY' : 'CUSTOM';
+  const frequency = explicitRule ? 'CUSTOM' : simpleWeekly ? rule.interval === 1 ? 'WEEKLY' : 'BIWEEKLY' : simpleMonthly ? 'MONTHLY' : 'CUSTOM';
   const endDate = rule.endsOn === 'date' ? `${rule.endDate}T23:59:59Z` : '';
   let recurrenceRule = '';
   if (frequency === 'CUSTOM') {

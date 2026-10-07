@@ -135,7 +135,7 @@ function RecurringFields({ rule, part, onChange }: { rule: RecurrenceSchedule; p
       <label className="flex gap-3 rounded-xl border border-gray-200 p-4 text-sm"><input type="radio" name="recurrence-ending" checked={rule.endsOn === 'ongoing'} onChange={() => onChange({ endsOn: 'ongoing' })} /> Ongoing</label>
     </fieldset>
     {rule.endsOn === 'date' && <DateField id="recurrence-end-date" label="Last date *" value={rule.endDate} onChange={(endDate) => onChange({ endDate })} />}
-    {rule.endsOn === 'ongoing' && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">The existing service creates dates within a 90-day horizon. It does not automatically extend the series after that.</p>}
+    {rule.endsOn === 'ongoing' && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Ongoing dates are extended up to approximately 180 days ahead by the recurrence replenishment job.</p>}
     <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-highland-green"><strong>Selected rule</strong><p className="mt-1">{scheduleSummary({ scheduleMode: 'recurring', recurrence: rule } as GuidedEventDraft)}</p><p className="mt-2 text-xs text-gray-600">This describes your settings; it is not a generated list of dates.</p></div>
   </div>;
 }

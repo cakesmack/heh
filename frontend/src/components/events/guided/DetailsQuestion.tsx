@@ -37,10 +37,11 @@ export function DetailsQuestion({ draft, error, onChange }: Props) {
     <div>
       <label htmlFor="guided-category" className="mb-2 block text-sm font-semibold text-gray-800">Category *</label>
       <select id="guided-category" value={draft.categoryId} onChange={(event) => onChange({ categoryId: event.target.value, categoryName: categories.find((category) => category.id === event.target.value)?.name || '' })} className="min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-stone-dark focus:border-moss-green focus:ring-2 focus:ring-moss-green/30">
-        <option value="">Select a category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+        <option value="">Select a category</option>{draft.categoryId && !categories.some((category) => category.id === draft.categoryId) && <option value={draft.categoryId}>{draft.categoryName || 'Current category'}</option>}{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
       </select>
       {categoryIssue && <p className="mt-2 text-sm text-amber-800" role="status">Categories could not be loaded. Check that the local API is available.</p>}
     </div>
+    {draft.organizerId && !organizers.some((organizer) => organizer.id === draft.organizerId) && <p className="text-sm text-highland-green">Current host: {draft.organizerName || 'Selected organisation'}. This host is preserved unless you choose another.</p>}
     {user && <OrganizerSelector user={user} organizers={organizers} selectedId={draft.organizerId} onChange={(organizerId) => onChange({ organizerId, organizerName: organizers.find((organizer) => organizer.id === organizerId)?.name || user.username || user.email || 'Personal profile' })} />}
     {!user && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Sign in to choose who hosts this event. An event is created only when you submit.</p>}
     <div>

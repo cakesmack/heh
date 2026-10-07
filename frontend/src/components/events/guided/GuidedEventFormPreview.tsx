@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import { ArrowLeft, ArrowRight, Mountain } from 'lucide-react';
 import { Button } from '@/components/common/Button';
 import { api } from '@/lib/api';
@@ -17,15 +18,18 @@ import { FinishingQuestion } from './FinishingQuestion';
 import { ReviewQuestion } from './ReviewQuestion';
 import { GuidedCreationSuccess } from './GuidedCreationSuccess';
 import { buildGuidedEventPayload, validateGuidedCreation } from './guidedCreation';
+import { buildGuidedEventUpdate, parseGuidedEventData } from './guidedEdit';
 import { validateAttendance, validateDetails, validateFinishing, validateTickets } from './guidedFormHelpers';
 import { addLocalDay, applyOnceChange, validDate, validateInterval, validateRecurrence, validateSchedule } from './scheduleHelpers';
 import styles from './GuidedEventFormPreview.module.css';
 
 type Direction = 'forward' | 'backward';
 
-export default function GuidedEventFormPreview() {
+export default function GuidedEventFormPreview({ initialData, isEditMode = false, eventId }: { initialData?: EventResponse; isEditMode?: boolean; eventId?: string }) {
+  const router = useRouter();
+  const initialDraft = useMemo(() => initialData ? parseGuidedEventData(initialData) : undefined, [initialData]);
   const { user } = useAuth();
-  const { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues, setScheduleMode, setOnce, setPerformances, setRecurrence, updateDraft } = useGuidedEventPreview();
+  const { draft, setTitle, setVenueMode, setSingleVenue, setParticipatingVenues, setScheduleMode, setOnce, setPerformances, setRecurrence, updateDraft } = useGuidedEventPreview(initialDraft);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [schedulePart, setSchedulePart] = useState(0);
   const [direction, setDirection] = useState<Direction>('forward');
@@ -57,6 +61,12 @@ export default function GuidedEventFormPreview() {
   }, []);
 
   useEffect(() => { setTicketSellerReady(false); }, [draft.organizerId]);
+
+  useEffect(() => {
+    if (!isEditMode && router.isReady && typeof router.query.organizer_profile_id === 'string') {
+      updateDraft({ organizerId: router.query.organizer_profile_id });
+    }
+  }, [isEditMode, router.isReady, router.query.organizer_profile_id, updateDraft]);
 
   const handleSellerReadyChange = useCallback((ready: boolean) => {
     setTicketSellerReady(ready);
@@ -112,7 +122,7 @@ export default function GuidedEventFormPreview() {
       return false;
     }
     const hasValidVenue = draft.venueMode === 'single'
-      ? Boolean(draft.singleVenueId)
+      ? Boolean(draft.singleVenueId || draft.existingLocationName)
       : draft.participatingVenues.length > 0;
     if (currentQuestion.id === 'venue' && !hasValidVenue) {
       const message = draft.venueMode === 'single'
@@ -201,7 +211,7 @@ export default function GuidedEventFormPreview() {
         const seller = await api.sellers.getStatus(draft.organizerId || null);
         if (!seller.charges_enabled) throw new Error('Stripe payouts are not active for the selected host. Edit Tickets to connect Stripe before creating this event.');
       }
-      let imageUrl: string | undefined;
+      let imageUrl: string | undefined = draft.existingImageUrl;
       if (draft.imageFile) {
         if (uploadedImageRef.current?.file === draft.imageFile) imageUrl = uploadedImageRef.current.url;
         else {
@@ -211,13 +221,19 @@ export default function GuidedEventFormPreview() {
           uploadedImageRef.current = { file: draft.imageFile, url: imageUrl };
         }
       }
-      const payload = buildGuidedEventPayload(draft, imageUrl);
       setSubmissionPhase('creating');
       createAttempted = true;
-      const event = await api.events.create(payload);
-      setCreatedEvent(event);
+      if (isEditMode && initialData) {
+        const targetId = eventId || initialData.id;
+        const payload = buildGuidedEventUpdate(draft, initialData, imageUrl);
+        await api.events.update(targetId, payload, { unlinkVenue: Boolean(initialData.venue_id && payload.venue_id === null) });
+        await router.push(`/events/${targetId}`);
+      } else {
+        const event = await api.events.create(buildGuidedEventPayload(draft, imageUrl));
+        setCreatedEvent(event);
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Event creation failed.';
+      const message = error instanceof Error ? error.message : 'Event could not be saved.';
       setSubmissionError(createAttempted ? `${message} If the connection failed after submission, check your dashboard before trying again.` : message);
     } finally {
       submittingRef.current = false;
@@ -241,8 +257,8 @@ export default function GuidedEventFormPreview() {
       : currentQuestion.id === 'attendance' ? 'Choose the route visitors will use. We will only show the fields that apply.'
         : currentQuestion.id === 'tickets' ? 'Connect Stripe payouts and configure ticket tiers for your one-off event.'
           : currentQuestion.id === 'details' ? 'Help visitors understand what to expect and who is hosting.'
-            : currentQuestion.id === 'finishing' ? 'Make your listing yours. The photo uploads only when you create the event.'
-              : currentQuestion.id === 'review' ? 'Check every answer and edit any section before creating your event.'
+            : currentQuestion.id === 'finishing' ? 'Make your listing yours. New photos upload only when you submit.'
+              : currentQuestion.id === 'review' ? 'Check every answer and edit any section before saving your event.'
       : schedulePart === 0 ? 'Choose the pattern that best describes your event.'
         : 'Set the dates and times visitors will see. All times are in the UK event timezone.';
 
@@ -259,11 +275,11 @@ export default function GuidedEventFormPreview() {
             </span>
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss-green">Guided event form</p>
-              <p className="text-sm font-semibold text-highland-green">Create an event</p>
+              <p className="text-sm font-semibold text-highland-green">{isEditMode ? 'Edit your event' : 'Create an event'}</p>
             </div>
           </div>
           <span className="rounded-full border border-golden-heather/30 bg-golden-heather/10 px-3 py-1.5 text-xs font-bold text-highland-green">
-            Local development route · creates real events
+            {isEditMode ? 'Save changes to your event' : 'Share your event with the Highlands'}
           </span>
         </div>
 
@@ -309,6 +325,7 @@ export default function GuidedEventFormPreview() {
                     singleVenueId={draft.singleVenueId}
                     singleVenue={draft.singleVenue}
                     participatingVenues={draft.participatingVenues}
+                    existingLocationName={draft.existingLocationName}
                     error={errors.venue}
                     inputRef={venueInputRef}
                     onModeChange={(mode) => {
@@ -317,6 +334,7 @@ export default function GuidedEventFormPreview() {
                     }}
                     onSingleVenueChange={(venueId, venue) => {
                       setSingleVenue(venueId, venue);
+                      if (venueId) updateDraft({ existingLocationName: '' });
                       if (errors.venue) setErrors((current) => ({ ...current, venue: undefined }));
                     }}
                     onParticipatingVenuesChange={(venues) => {
@@ -340,7 +358,7 @@ export default function GuidedEventFormPreview() {
                 ) : currentQuestion.id === 'finishing' ? (
                   <FinishingQuestion draft={draft} error={errors.finishing} onChange={handleAdditionalChange} />
                 ) : (
-                  <ReviewQuestion draft={draft} onEdit={handleSummaryEdit} onChange={handleAdditionalChange} error={errors.review} />
+                  <ReviewQuestion draft={draft} isEditMode={isEditMode} onEdit={handleSummaryEdit} onChange={handleAdditionalChange} error={errors.review} />
                 )}
               </div>
 
@@ -352,7 +370,7 @@ export default function GuidedEventFormPreview() {
                 <span className="inline-flex items-center gap-2"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</span>
               </Button>
               <Button type="button" onClick={currentQuestion.id === 'review' ? handleCreateEvent : handleContinue} disabled={isTransitioning || submissionPhase !== 'idle'} className="min-h-[48px] min-w-[132px] !rounded-xl">
-                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? submissionPhase === 'checking-seller' ? 'Checking seller…' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Creating event…' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
+                <span className="inline-flex items-center gap-2">{currentQuestion.id === 'review' ? submissionPhase === 'checking-seller' ? 'Checking seller…' : submissionPhase === 'uploading' ? 'Uploading photo…' : submissionPhase === 'creating' ? 'Saving event…' : isEditMode ? 'Save Changes' : 'Create Event' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></span>
               </Button>
             </div>
           </section>

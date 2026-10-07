@@ -560,3 +560,10 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
 - **Dashboard Link & Status Parity:**
   - `GET /api/sellers/stripe-connect/dashboard-link` and `GET /api/sellers/status` utilize flexible organizer resolution and log clear warnings if an account has not yet connected Stripe.
 
+## 15. Guided Form Live-Route Cutover (2026-10-07)
+
+- `/create-event`, `/submit-event` and `/events/[id]/edit` now use the guided form through `EventForm`. Set `NEXT_PUBLIC_USE_LEGACY_EVENT_FORM=true` and rebuild to roll back to the preserved `EventWizardForm`; auth wrappers and backend permissions are unchanged.
+- Guided editing reuses legacy hydration and payload construction, preserves native tier IDs and existing photos, and omits unchanged schedule fields so metadata edits do not regenerate recurrence/showtimes. Recurring/multi-date native ticketing remains deliberately unsupported.
+- Ongoing recurrence uses a 180-day horizon. From `backend`, `python -m app.scripts.replenish_recurring_events` appends beyond the latest child, skips historical gaps and finite/cancelled parents, logs individual failures and exits non-zero on failure. Parent-row locking serializes PostgreSQL replenishment runs. No new columns or migrations.
+- The replenishment command still needs daily scheduling before deployment; no cron or production configuration was changed. Owner manual create/edit/recurrence/native-ticket checks remain required. Focused API regression testing is currently blocked locally by Windows Application Control blocking the existing `pygeohash` DLL.
+

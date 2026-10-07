@@ -7,7 +7,7 @@
 
 import Head from 'next/head';
 import { AuthGuard } from '@/components/common/AuthGuard';
-import EventWizardForm from '@/components/events/EventWizardForm';
+import EventForm from '@/components/events/EventForm';
 
 export default function CreateEventPage() {
   return (
@@ -17,7 +17,7 @@ export default function CreateEventPage() {
         <meta name="description" content="List your event and sell tickets directly to Highland audiences." />
       </Head>
 
-      <EventWizardForm isEditMode={false} />
+      <EventForm isEditMode={false} />
     </AuthGuard>
   );
 }

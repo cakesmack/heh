@@ -244,6 +244,7 @@ class EventResponse(BaseModel):
     is_recurring: bool = False
     parent_event_id: Optional[UUID] = None
     recurrence_group_id: Optional[UUID] = None
+    recurrence_end_date: Optional[datetime] = None
     next_occurrence: Optional[datetime] = None
     is_upcoming_occurrence: bool = False
 

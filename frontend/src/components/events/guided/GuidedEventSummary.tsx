@@ -11,7 +11,7 @@ interface SummaryContentProps {
 
 function SummaryContent({ draft, onEdit, availableQuestionIds }: SummaryContentProps) {
   const locationValue = draft.venueMode === 'single'
-    ? draft.singleVenue?.name || 'Not added yet'
+    ? draft.singleVenue?.name || draft.existingLocationName || 'Not added yet'
     : draft.participatingVenues.length > 0
       ? `${draft.participatingVenues.length} ${draft.participatingVenues.length === 1 ? 'venue' : 'venues'} · ${draft.participatingVenues.map((venue) => venue.name).join(', ')}`
       : 'Not added yet';
@@ -49,7 +49,7 @@ function SummaryContent({ draft, onEdit, availableQuestionIds }: SummaryContentP
           </span>
         </button>
       ))}
-      <p className="mt-3 border-t border-gray-200 px-3 pt-4 text-xs leading-5 text-gray-500">Development route · a real event is created only when you select Create Event.</p>
+      <p className="mt-3 border-t border-gray-200 px-3 pt-4 text-xs leading-5 text-gray-500">Your answers are saved only when you submit.</p>
     </div>
   );
 }

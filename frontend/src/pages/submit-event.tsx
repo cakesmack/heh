@@ -7,7 +7,7 @@
 
 import Head from 'next/head';
 import { AuthGuard } from '@/components/common/AuthGuard';
-import EventWizardForm from '@/components/events/EventWizardForm';
+import EventForm from '@/components/events/EventForm';
 
 export default function SubmitEventPage() {
   return (
@@ -17,7 +17,7 @@ export default function SubmitEventPage() {
         <meta name="description" content="Share your event with the Highland Events Hub community." />
       </Head>
 
-      <EventWizardForm isEditMode={false} />
+      <EventForm isEditMode={false} />
     </AuthGuard>
   );
 }

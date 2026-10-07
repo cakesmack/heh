@@ -5,7 +5,7 @@ export type GuidedQuestionId = 'title' | 'venue' | 'schedule' | 'attendance' | '
 export type VenueMode = 'single' | 'multiple';
 export type ScheduleMode = 'once' | 'recurring' | 'selected_dates';
 export type ScheduleDateTime = { start: string; end: string; allDay: boolean };
-export type Performance = { id: string; start: string; end: string };
+export type Performance = { id: string; start: string; end: string; ticket_url?: string; notes?: string };
 export type AttendanceMode = 'free' | 'door' | 'external' | 'native';
 export type RecurrenceSchedule = {
   startDate: string;
@@ -39,7 +39,7 @@ export interface GuidedEventDraft {
   doorReservationUrl: string;
   externalUrl: string;
   externalIsFree: boolean | null;
-  ticketTiers: Array<TicketTierCreate & { id: string }>;
+  ticketTiers: Array<TicketTierCreate & { id: string; serverId?: string }>;
   passFeesToBuyer: boolean;
   termsAccepted: boolean;
   description: string;
@@ -53,6 +53,8 @@ export interface GuidedEventDraft {
   imageName: string;
   imagePreviewUrl: string;
   imageFile: File | null;
+  existingImageUrl?: string;
+  existingLocationName?: string;
 }
 
 export const GUIDED_QUESTIONS: Array<{

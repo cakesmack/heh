@@ -14,7 +14,12 @@ def generate_recurring_instances(
     parent_event: Event,
     weekdays: Optional[List[int]] = None,
     recurrence_end_date: Optional[datetime] = None,
-    window_days: int = 90
+    window_days: int = 180,
+    *,
+    after: Optional[datetime] = None,
+    through: Optional[datetime] = None,
+    raise_errors: bool = False,
+    commit: bool = True,
 ) -> List[Event]:
     """
     Generate event instances for a recurring event using an inclusive loop.
@@ -41,7 +46,9 @@ def generate_recurring_instances(
     
     try:
         # Determine the effective end date (limit)
-        if recurrence_end_date:
+        if through is not None:
+            end_date_limit = through
+        elif recurrence_end_date:
             end_date_limit = recurrence_end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
         else:
             end_date_limit = datetime.utcnow() + timedelta(days=window_days)
@@ -54,6 +61,10 @@ def generate_recurring_instances(
         start_dt = parent_event.date_start
         if start_dt.tzinfo is None:
             start_dt = start_dt.replace(tzinfo=timezone.utc)
+
+        lower_bound = after or start_dt
+        if lower_bound.tzinfo is None:
+            lower_bound = lower_bound.replace(tzinfo=timezone.utc)
             
         # Align limit to UTC as well
         if end_date_limit.tzinfo is None:
@@ -78,10 +89,12 @@ def generate_recurring_instances(
                  # Generate dates within window (excluding start itself if matched)
                  # We use between() to be safe and efficient
                  # inc=True allows start date, we filter it out later
-                 dates_to_generate = list(rule.between(start_dt, end_date_limit, inc=True))
+                 dates_to_generate = list(rule.between(lower_bound, end_date_limit, inc=True))
                  
              except Exception as e:
                  logger.error(f"RRULE Parsing failed for event {parent_event.id}: {e}")
+                 if raise_errors:
+                     raise
                  # Fallback to empty or continue to legacy?
                  # Let's try legacy if parsing fails? Or just fail.
                  # Given the high risk of regression, let's just log and return empty for now.
@@ -102,11 +115,13 @@ def generate_recurring_instances(
              
              if by_days:
                  rule = rrule(WEEKLY, dtstart=start_dt, byweekday=by_days)
-                 dates_to_generate = list(rule.between(start_dt, end_date_limit, inc=True))
+                 dates_to_generate = list(rule.between(lower_bound, end_date_limit, inc=True))
+        elif raise_errors:
+            raise ValueError("Recurring parent has no supported recurrence rule")
 
         # Filter out the parent's own start date (avoid duplication) and past dates?
         # Only future instances? Or all? Usually we want future relative to parent.
-        filtered_dates = [d for d in dates_to_generate if d > start_dt]
+        filtered_dates = [d for d in dates_to_generate if d > max(start_dt, lower_bound)]
 
         # Convert back to Naive if original was Naive (to match DB field expectation)
         is_naive_db = parent_event.date_start.tzinfo is None
@@ -155,6 +170,7 @@ def generate_recurring_instances(
                 price_display=parent_event.price_display,
                 min_price=parent_event.min_price,
                 image_url=parent_event.image_url,
+                is_all_day=parent_event.is_all_day,
                 ticket_url=parent_event.ticket_url,
                 website_url=parent_event.website_url,
                 age_restriction=parent_event.age_restriction,
@@ -171,14 +187,58 @@ def generate_recurring_instances(
                 is_recurring=False 
             )
             session.add(child_event)
+            child_event.tags = list(parent_event.tags)
+            child_event.participating_venues = list(parent_event.participating_venues)
             new_instances.append(child_event)
+            existing_dates.add(dt_final.date())
 
         if new_instances:
-            session.commit()
+            if commit:
+                session.commit()
+            else:
+                session.flush()
             logger.info(f"Generated {len(new_instances)} recurring instances for event {parent_event.id}")
             
     except Exception as e:
         logger.error(f"Error generating recurring instances for {parent_event.id}: {e}")
+        if raise_errors:
+            raise
         traceback.print_exc() 
 
     return new_instances
+
+
+def is_ongoing_recurring(parent: Event) -> bool:
+    """Older finite parents may encode their end only in the stored RRULE."""
+    import re
+    return bool(
+        parent.is_recurring
+        and not parent.parent_event_id
+        and not parent.is_cancelled
+        and parent.recurrence_end_date is None
+        and not re.search(r"(?:^|[;:])(?:UNTIL|COUNT)=", parent.recurrence_rule or "", re.IGNORECASE)
+    )
+
+
+def replenish_recurring_parent(session: Session, parent_id: str, *, now: Optional[datetime] = None, horizon_days: int = 180) -> List[Event]:
+    """Append beyond the latest child, under a parent lock; never repair past gaps.
+
+    Event timestamps in this database are Europe/London wall times. Keeping the
+    original rule anchor preserves interval phase and times across clock changes.
+    The caller commits, retaining the row lock throughout generation.
+    """
+    from zoneinfo import ZoneInfo
+    from sqlalchemy import func
+
+    parent = session.exec(select(Event).where(Event.id == parent_id).with_for_update()).first()
+    if parent is None or not is_ongoing_recurring(parent):
+        return []
+    now = now or datetime.now(ZoneInfo("Europe/London"))
+    if now.tzinfo is not None:
+        now = now.astimezone(ZoneInfo("Europe/London")).replace(tzinfo=None)
+    latest = session.exec(select(func.max(Event.date_start)).where(Event.parent_event_id == parent.id)).one()
+    marker = max(parent.date_start, latest or parent.date_start, now)
+    return generate_recurring_instances(
+        session, parent, after=marker, through=now + timedelta(days=horizon_days),
+        raise_errors=True, commit=False,
+    )

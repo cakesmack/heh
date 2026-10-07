@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { VenueResponse } from '@/types';
 import type { GuidedEventDraft, VenueMode, ScheduleMode, ScheduleDateTime, Performance, RecurrenceSchedule } from './guidedEventTypes';
 
-const INITIAL_DRAFT: GuidedEventDraft = {
+export const INITIAL_DRAFT: GuidedEventDraft = {
   title: '',
   venueMode: 'single',
   singleVenueId: null,
@@ -25,11 +25,11 @@ const INITIAL_DRAFT: GuidedEventDraft = {
   tags: [], ageRestriction: '', websiteUrl: '', imageName: '', imagePreviewUrl: '', imageFile: null,
 };
 
-export function useGuidedEventPreview() {
-  const [draft, setDraft] = useState<GuidedEventDraft>(INITIAL_DRAFT);
+export function useGuidedEventPreview(initialDraft?: GuidedEventDraft) {
+  const [draft, setDraft] = useState<GuidedEventDraft>(initialDraft ?? INITIAL_DRAFT);
   useEffect(() => {
     const previewUrl = draft.imagePreviewUrl;
-    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+    return () => { if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl); };
   }, [draft.imagePreviewUrl]);
 
   const setTitle = useCallback((title: string) => {

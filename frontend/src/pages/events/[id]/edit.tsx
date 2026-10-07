@@ -12,7 +12,7 @@ import { api } from '@/lib/api';
 import { EventResponse } from '@/types';
 import { AuthGuard } from '@/components/common/AuthGuard';
 import { Spinner } from '@/components/common/Spinner';
-import EventWizardForm from '@/components/events/EventWizardForm';
+import EventForm from '@/components/events/EventForm';
 
 export default function EditEventPage() {
   const router = useRouter();
@@ -80,7 +80,7 @@ export default function EditEventPage() {
         <title>Edit {eventData.title || 'Event'} | Highland Events Hub</title>
       </Head>
 
-      <EventWizardForm
+      <EventForm
         initialData={eventData}
         isEditMode={true}
         eventId={eventData.id}
