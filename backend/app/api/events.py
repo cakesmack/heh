@@ -481,8 +481,14 @@ def list_events_map(
         venue_joined = True
 
     # 5. Date Filter (Simplified: Overlap logic)
-    effective_date_from = date_from
-    effective_date_to = date_to
+    effective_date_from = to_london_naive(date_from)
+    effective_date_to = to_london_naive(date_to)
+    # Date-only search parameters refer to whole London-local calendar days,
+    # not UTC instants. Preserve timestamp callers' explicit precision.
+    if date_to and len(request.query_params.get("date_to", "")) == 10:
+        effective_date_to = datetime.combine(date_to.date(), datetime.max.time())
+    if date_from and not date_to and len(request.query_params.get("date_from", "")) == 10:
+        effective_date_to = datetime.combine(date_from.date(), datetime.max.time())
     if selected_collection:
         if selected_collection.fixed_start_date and not date_from:
             effective_date_from = datetime.combine(selected_collection.fixed_start_date, datetime.min.time())
@@ -494,10 +500,10 @@ def list_events_map(
         
     if effective_date_to:
          # Overlap: start <= to AND end >= from
-        query = query.where((Event.date_start <= effective_date_to) & (Event.date_end >= effective_date_from))
+        query = query.where((Event.date_start <= effective_date_to) & (func.coalesce(Event.date_end, Event.date_start) >= effective_date_from))
     else:
         # Just upcoming
-        query = query.where(Event.date_end >= effective_date_from)
+        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= effective_date_from)
         
     # 6. Flexible Category and Keyword Logic
     filter_params = (selected_collection.filter_params or {}) if selected_collection else {}

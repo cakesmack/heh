@@ -250,10 +250,10 @@ export function ClusteredEventMarkers({
     useEffect(() => {
         if (!clusterer) return;
 
-        // Only update if we have markers and clusterer is ready
+        // Empty filtered results must remove the previous range's clusters too.
         const markerArray = Object.values(markers);
+        clusterer.clearMarkers();
         if (markerArray.length > 0) {
-            clusterer.clearMarkers();
             clusterer.addMarkers(markerArray);
         }
     }, [clusterer, markers]);

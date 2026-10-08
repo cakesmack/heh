@@ -17,6 +17,7 @@ import type { MapMarker } from '@/components/events/GoogleMapView';
 import MapDateFilter, { DateRange } from '@/components/map/MapDateFilter';
 import MapSidebar from '@/components/map/MapSidebar';
 import MapEventCard from '@/components/map/MapEventCard'; // For mobile modal
+import { calendarDate, parseCalendarDate, quickDateRange } from '@/lib/eventDateRange';
 // ErrorBoundary defined inline to resolve build import issues
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
@@ -80,13 +81,13 @@ export function MapPage() {
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const today = startOfDay(new Date());
+  const today = startOfDay(parseCalendarDate(quickDateRange('today').from)!);
 
   // Date Range State
   // Explicitly default to Next 7 Days (Backend no longer does this automatically)
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
     start: today,
-    end: endOfDay(addDays(today, 7)) // Optimized: Default to Next 7 Days for performance
+    end: endOfDay(addDays(today, 6)) // Same seven inclusive days as the Events page
   });
   const [selectedRangeId, setSelectedRangeId] = useState<string>('week');
 
@@ -132,6 +133,7 @@ export function MapPage() {
       setIsInitialized(true);
     }
 
+    let active = true;
     async function fetchData() {
       setLoading(true);
       setError(null);
@@ -145,8 +147,8 @@ export function MapPage() {
           // Build filter params
           const eventFilters: any = {
             limit: 500,
-            date_from: dateRange.start.toISOString(),
-            date_to: dateRange.end.toISOString(),
+            date_from: calendarDate(dateRange.start),
+            date_to: calendarDate(dateRange.end),
           };
 
           // Fetch categories and collections if not already loaded
@@ -155,6 +157,7 @@ export function MapPage() {
           if (collections.length === 0) promises.push(collectionsAPI.list({ show_on_map: true }));
 
           const results = await Promise.all(promises);
+          if (!active) return;
 
           // REFINED: Index-based handling is safer since we know the order we pushed
           let resultIdx = 0;
@@ -203,21 +206,22 @@ export function MapPage() {
           const eventsResponse = await eventsAPI.listMap(eventFilters);
 
           // Cast to EventResponse[] as MapEventResponse is a compatible subset
-          setEvents(eventsResponse as unknown as EventResponse[]);
+          if (active) setEvents(eventsResponse as unknown as EventResponse[]);
         } else {
           // Venues mode: fetch verified venues only
           const venuesResponse = await venuesAPI.listMap();
-          setVenues(venuesResponse);
+          if (active) setVenues(venuesResponse);
         }
       } catch (err) {
         console.error('Failed to fetch map data:', err);
-        setError('Failed to load map data. Please try again.');
+        if (active) setError('Failed to load map data. Please try again.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     fetchData();
+    return () => { active = false; };
   }, [router.isReady, isInitialized, dateRange, selectedCategory, selectedCollectionSlug, mapMode]); // Refetch when filters or mapMode change
 
   // Synchronize state back to URL (Two-way binding)

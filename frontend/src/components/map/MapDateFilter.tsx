@@ -3,6 +3,7 @@ import { addDays, startOfDay, endOfDay, nextSaturday, nextSunday, format } from 
 import { DayPicker, DateRange as DayPickerRange } from 'react-day-picker';
 import { ChevronDown, Calendar as CalendarIcon, X } from 'lucide-react';
 import 'react-day-picker/dist/style.css';
+import { parseCalendarDate, quickDateRange } from '@/lib/eventDateRange';
 
 export type DateRange = {
     label: string;
@@ -25,7 +26,7 @@ export default function MapDateFilter({ selectedRangeId, onRangeSelect, currentD
     });
 
     const popoverRef = useRef<HTMLDivElement>(null);
-    const today = startOfDay(new Date());
+    const today = startOfDay(parseCalendarDate(quickDateRange('today').from)!);
 
     // Close popover on outside click
     useEffect(() => {
