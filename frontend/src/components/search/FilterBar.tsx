@@ -5,9 +5,13 @@
  */
 import React from 'react';
 import { useCategories } from '@/hooks/useCategories';
+import EventDateRangePicker from './EventDateRangePicker';
+import type { EventDateRange } from '@/lib/eventDateRange';
 
 export interface FilterBarProps {
     activeDate?: string;
+    dateRange?: EventDateRange;
+    onDateRangeChange?: (range: EventDateRange) => void;
     activeRadius?: string;
     activeCategory?: string;
     onFilterChange: (filters: {
@@ -19,6 +23,8 @@ export interface FilterBarProps {
 
 export function FilterBar({
     activeDate = '',
+    dateRange,
+    onDateRangeChange,
     activeRadius = '',
     activeCategory = '',
     onFilterChange,
@@ -59,6 +65,7 @@ export function FilterBar({
                     
                     {/* Date Pill Dropdown */}
                     <div className="relative flex-shrink-0 snap-start">
+                        {dateRange && onDateRangeChange ? <EventDateRangePicker value={dateRange} onChange={onDateRangeChange} /> : <>
                         <select
                             aria-label="Filter by Date"
                             value={activeDate}
@@ -80,6 +87,7 @@ export function FilterBar({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                         </div>
+                        </>}
                     </div>
 
                     {/* Distance Pill Dropdown */}

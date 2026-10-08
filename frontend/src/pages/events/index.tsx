@@ -10,6 +10,7 @@ import PopularLocations from '@/components/PopularLocations';
 import { EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { eventsAPI } from '@/lib/api';
+import { mergeEventSearchQuery, rangeFromQuery, rangeApiFilters } from '@/lib/eventDateRange';
 
 const EVENTS_PER_PAGE = 12;
 
@@ -80,16 +81,19 @@ export default function EventsPage() {
     if (tag) filters.tag = tag as string;
     if (tag_names) filters.tag_names = (tag_names as string).split(',');
     if (age_restriction) filters.age_restriction = age_restriction as string;
+    if (typeof router.query.sort_by === 'string') filters.sort_by = router.query.sort_by;
     if (router.query.is_recurring) filters.is_recurring = router.query.is_recurring === 'true';
 
     // Handle date logic
     if (date || date_from || date_to) {
-      if (date && date !== 'custom') {
+      if (date_from && rangeFromQuery(router.query).from) {
+        Object.assign(filters, rangeApiFilters(rangeFromQuery(router.query)));
+      } else if (date && date !== 'custom') {
         // Phase 2 Fix: Pass predefined date filters to API's time_range mapping
         filters.date = date as string;
       } else {
         const dateRange = getDateRangeFromFilter(
-          (date as string) || '',
+          (date as string) || 'custom',
           date_from as string,
           date_to as string
         );
@@ -149,18 +153,7 @@ export default function EventsPage() {
   }) => {
 
     // Update URL with new filters (including GPS params if present)
-    const query: Record<string, string> = {};
-    if (filters.category) query.category = filters.category;
-    if (filters.q) query.q = filters.q;
-    if (filters.date) query.date = filters.date;
-    if (filters.dateFrom) query.date_from = filters.dateFrom;
-    if (filters.dateTo) query.date_to = filters.dateTo;
-    if (filters.location) query.location = filters.location;
-
-    // GPS coordinates from Near Me
-    if (filters.latitude) query.latitude = filters.latitude.toFixed(6);
-    if (filters.longitude) query.longitude = filters.longitude.toFixed(6);
-    if (filters.radius) query.radius = filters.radius;
+    const query = mergeEventSearchQuery(router.query, filters);
 
     router.push({ pathname: router.pathname, query }, undefined, { shallow: true, scroll: false });
   };
@@ -208,6 +201,8 @@ export default function EventsPage() {
         {/* Sticky Filter Bar */}
         <FilterBar
           activeDate={currentFilters.date}
+          dateRange={rangeFromQuery(router.query)}
+          onDateRangeChange={(range) => handleSearch({ dateFrom: range.from, dateTo: range.to })}
           activeRadius={currentFilters.radius_km ? String(currentFilters.radius_km) : undefined}
           activeCategory={currentFilters.category}
           onFilterChange={(newFilters) => {

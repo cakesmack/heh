@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import EventDateRangePicker from '@/components/search/EventDateRangePicker';
+import { withDateRange, type EventDateRange } from '@/lib/eventDateRange';
 
 interface HeroSectionProps {
     onSearch: (filters: {
@@ -18,6 +22,8 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ onSearch, isSearchLoading = false }: HeroSectionProps) {
+    const router = useRouter();
+    const [dates, setDates] = useState<EventDateRange>({});
 
     return (
         <section className="relative min-h-[60vh] md:min-h-[60vh] flex items-center justify-center overflow-hidden bg-gray-950">
@@ -52,10 +58,13 @@ export default function HeroSection({ onSearch, isSearchLoading = false }: HeroS
                 {/* Hero Search Bar */}
                 <div className="w-full max-w-3xl mx-auto relative z-20 mt-6">
                     <DiscoveryBar
-                        onSearch={onSearch}
+                        onSearch={(filters) => router.push({ pathname: '/events', query: withDateRange({ q: filters.q }, dates) })}
                         isLoading={isSearchLoading}
                         mode="embedded"
                     />
+                    <div className="mt-3 flex justify-center">
+                        <EventDateRangePicker value={dates} onChange={setDates} dark />
+                    </div>
                 </div>
 
                 {/* B2B CTA Link */}
