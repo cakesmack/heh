@@ -86,8 +86,7 @@ export function VenueQuestion({
           <UnifiedVenueSelect
             value={singleVenueId}
             onChange={(venueId, venue) => onSingleVenueChange(venueId || null, venue)}
-            placeholder="Search registered Highland venues..."
-            disableGoogle
+            placeholder="Search for a venue or place..."
             error={error}
             inputId="guided-event-venue"
             inputRef={inputRef}
@@ -100,7 +99,6 @@ export function VenueQuestion({
         <MultiVenueSelector
           selectedVenues={participatingVenues}
           onChange={onParticipatingVenuesChange}
-          disableGoogle
           inputId="guided-event-venue"
           inputRef={inputRef}
           error={error}
@@ -112,7 +110,7 @@ export function VenueQuestion({
       <div id="guided-venue-help" className="flex items-start gap-2 rounded-xl bg-loch-blue/5 px-3.5 py-3 text-sm leading-5 text-gray-600">
         <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-loch-blue" />
         <span>
-          Search existing venues. This form will not create or change venue records.
+          Search existing venues first, or choose a place from Google Maps to add it as an unverified venue.
         </span>
       </div>
     </div>
