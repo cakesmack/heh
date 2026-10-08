@@ -84,11 +84,14 @@ test('picker stages calendar changes until Apply, supports one day, ranges and C
   const render = load('components/search/EventDateRangePicker.tsx', {
     'react-dom': { createPortal: tree => tree }, 'lucide-react': { CalendarDays: 'icon' },
     'react-day-picker': { DayPicker: 'calendar' }, 'react-day-picker/dist/style.css': {},
-  }, { window: { innerWidth: 400, innerHeight: 800 }, document: { body: {} } });
+    './EventDateRangePicker.module.css': { calendar: 'heh-calendar' },
+  }, { window: { innerWidth: 400, innerHeight: 800, getComputedStyle: () => ({ fontFamily: 'Inter, sans-serif' }) }, document: { body: {} } });
   let applied;
   const props = { value: {}, onChange: value => { applied = value; } };
   nodes(render(props)).find(node => node.props['aria-haspopup']).props.onClick();
   let tree = nodes(render(props));
+  assert.equal(tree.find(node => node.props.role === 'dialog').props.style.fontFamily, 'Inter, sans-serif');
+  assert.equal(tree.find(node => node.type === 'calendar').props.className, 'heh-calendar');
   tree.find(node => node.type === 'calendar').props.onSelect({ from: new Date('2026-10-12T12:00:00') });
   assert.equal(applied, undefined);
   tree = nodes(render(props));

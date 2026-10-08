@@ -1,0 +1,93 @@
+.calendar {
+  @apply w-full text-sm text-stone-dark;
+  font-family: inherit;
+  --rdp-accent-color: theme('colors.highland-green');
+  --rdp-accent-background-color: theme('colors.emerald.50');
+  --rdp-range_middle-color: theme('colors.highland-green');
+  --rdp-day-height: 44px;
+  --rdp-day_button-height: 40px;
+  --rdp-day_button-width: 40px;
+  --rdp-selected-border: 2px solid transparent;
+  --rdp-weekday-opacity: 1;
+}
+
+.calendar :global(.rdp-months),
+.calendar :global(.rdp-month) {
+  width: 100%;
+  max-width: none;
+}
+
+.calendar :global(.rdp-month_grid) {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.calendar :global(.rdp-month_caption) {
+  @apply items-center text-base font-semibold text-highland-green;
+  padding-right: 80px;
+}
+
+.calendar :global(.rdp-caption_label),
+.calendar :global(.rdp-day_button) {
+  font-family: inherit;
+}
+
+.calendar :global(.rdp-weekday) {
+  @apply py-3 text-xs font-medium text-gray-500;
+}
+
+.calendar :global(.rdp-day) {
+  width: calc(100% / 7);
+  @apply text-sm font-medium;
+}
+
+.calendar :global(.rdp-day_button) {
+  width: 100%;
+  max-width: 40px;
+  margin-inline: auto;
+  @apply transition-colors;
+}
+
+.calendar :global(.rdp-day):not(:global(.rdp-disabled)):not(:global(.rdp-selected)) :global(.rdp-day_button):hover {
+  @apply bg-emerald-50 text-highland-green;
+}
+
+.calendar :global(.rdp-today):not(:global(.rdp-selected)) :global(.rdp-day_button) {
+  @apply border-moss-green font-semibold text-highland-green;
+}
+
+.calendar :global(.rdp-selected) {
+  @apply text-sm font-semibold;
+}
+
+.calendar :global(.rdp-range_start) :global(.rdp-day_button),
+.calendar :global(.rdp-range_end) :global(.rdp-day_button) {
+  @apply bg-highland-green text-white;
+}
+
+.calendar :global(.rdp-range_middle) {
+  @apply bg-emerald-50 text-highland-green;
+}
+
+.calendar :global(.rdp-disabled) :global(.rdp-day_button) {
+  @apply cursor-not-allowed;
+}
+
+.calendar :global(.rdp-nav) {
+  @apply gap-1;
+}
+
+.calendar :global(.rdp-button_previous),
+.calendar :global(.rdp-button_next) {
+  @apply rounded-lg border border-gray-200 bg-white text-highland-green transition-colors;
+}
+
+.calendar :global(.rdp-button_previous):not(:disabled):hover,
+.calendar :global(.rdp-button_next):not(:disabled):hover {
+  @apply border-emerald-200 bg-emerald-50;
+}
+
+.calendar :global(.rdp-chevron) {
+  fill: none;
+  stroke: currentColor;
+}
