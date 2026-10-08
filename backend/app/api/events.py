@@ -13,6 +13,7 @@ from sqlalchemy import case
 from app.core.database import get_session, engine
 from app.core.security import get_current_user, get_current_user_optional
 from app.core.utils import normalize_uuid, to_london_naive, to_utc_aware
+from app.core.occurrences import event_now, occurrence_filter, relevant_dates, matching_showtimes
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
@@ -200,55 +201,25 @@ def build_event_response(
     session: Session, 
     user_lat: float = None, 
     user_lon: float = None,
-    current_user: Optional[User] = None
+    current_user: Optional[User] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    resolve_series: bool = True,
 ) -> EventResponse:
     """Build EventResponse with computed fields."""
-    start_date = event.date_start
-    end_date = event.date_end
-    is_upcoming = False
-
-    # Resolve Next Occurrence for Display
-    if event.is_recurring and event.parent_event_id is None and event.recurrence_group_id:
-        # Query all active/published instances of the recurrence group sorted by start date
-        query = select(Event.date_start, Event.date_end).where(
+    start_date, end_date = relevant_dates(event, date_from, date_to)
+    # Discovery has already selected the matching row. Only direct series-parent
+    # access resolves other rows; never replace a date-filtered occurrence.
+    if resolve_series and event.is_recurring and event.parent_event_id is None and event.recurrence_group_id:
+        instances = session.exec(select(Event).where(
             Event.recurrence_group_id == event.recurrence_group_id,
-            Event.status == "published"
-        ).order_by(Event.date_start.asc())
-        
-        instances = session.exec(query).all()
-        if instances:
-            now = datetime.utcnow()
-            # Handle timezone awareness safely
-            first_inst_start = instances[0][0]
-            if first_inst_start.tzinfo is not None:
-                now = datetime.now(timezone.utc)
-                
-            # 1. Look for the closest upcoming instance (start_date >= now)
-            upcoming_instances = [inst for inst in instances if inst[0] >= now]
-            if upcoming_instances:
-                start_date, end_date = upcoming_instances[0][0], upcoming_instances[0][1]
-                is_upcoming = True
-            else:
-                # 2. Check if there is an ongoing instance (start_date <= now <= end_date)
-                ongoing_instances = [inst for inst in instances if inst[0] <= now <= inst[1]]
-                if ongoing_instances:
-                    start_date, end_date = ongoing_instances[0][0], ongoing_instances[0][1]
-                    is_upcoming = True
-                else:
-                    # 3. Fallback: all instances are in the past. Use the last occurrence (most recent past date)
-                    start_date, end_date = instances[-1][0], instances[-1][1]
-                    is_upcoming = False
-        else:
-            now = datetime.utcnow()
-            if start_date.tzinfo is not None:
-                now = datetime.now(timezone.utc)
-            is_upcoming = start_date >= now
-    elif event.is_recurring:
-        # For a child instance, we just compare its own date_start to determine if it is upcoming
-        now = datetime.utcnow()
-        if start_date.tzinfo is not None:
-            now = datetime.now(timezone.utc)
-        is_upcoming = start_date >= now
+            Event.status == "published", Event.is_cancelled == False,
+        ).order_by(Event.date_start.asc())).all()
+        dates = [relevant_dates(instance) for instance in instances]
+        active = [pair for pair in dates if pair[1] >= event_now()]
+        if dates:
+            start_date, end_date = active[0] if active else dates[-1]
+    is_upcoming = end_date >= event_now()
 
     # Get venue details and fallback coordinates
     venue_name = None
@@ -297,6 +268,11 @@ def build_event_response(
     # Override start and end dates with resolved occurrence values
     response.date_start = start_date
     response.date_end = end_date
+    if not resolve_series:
+        # Discovery cards must not display unrelated/expired performances.
+        # Direct detail/edit responses retain the complete showtime history.
+        matching_ids = {show.id for show in matching_showtimes(event, date_from, date_to)}
+        response.showtimes = [show for show in response.showtimes if show.id in matching_ids]
     
     # Override coordinates in response if we used fallback
     if event.latitude is None and venue_lat is not None:
@@ -496,14 +472,14 @@ def list_events_map(
             effective_date_to = datetime.combine(selected_collection.fixed_end_date, datetime.max.time())
 
     if not effective_date_from:
-        effective_date_from = datetime.utcnow()
+        effective_date_from = event_now()
         
     if effective_date_to:
          # Overlap: start <= to AND end >= from
-        query = query.where((Event.date_start <= effective_date_to) & (func.coalesce(Event.date_end, Event.date_start) >= effective_date_from))
+        query = query.where(occurrence_filter(effective_date_from, effective_date_to))
     else:
         # Just upcoming
-        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= effective_date_from)
+        query = query.where(occurrence_filter(effective_date_from))
         
     # 6. Flexible Category and Keyword Logic
     filter_params = (selected_collection.filter_params or {}) if selected_collection else {}
@@ -608,15 +584,13 @@ def list_events_map(
         )
 
     # 9. Select Limit (Safety)
-    query = query.limit(1000)
-
-    # 8. Execute
-    events = session.exec(query).all()
+    events, _ = deduplicate_recurring_events(session, query, limit=1000)
     
     # 8. Build lightweight responses
     responses = []
     for event in events:
         resp = MapEventResponse.model_validate(event)
+        resp.date_start, resp.date_end = relevant_dates(event, effective_date_from, effective_date_to)
         
         # Populate computed Venue Name if missing from event
         if not resp.venue_name and event.venue:
@@ -690,7 +664,7 @@ def list_events(
 
     # Define absolute now (for Python-side logic)
     from datetime import timezone, timedelta
-    now_utc = datetime.now(timezone.utc)
+    now_utc = event_now()
     today_date = now_utc.date()
 
     # Handle time_range shortcuts
@@ -709,28 +683,33 @@ def list_events(
         # Phase 3 Refactor: Elevated date parsing covers BOTH standard + SEO scenarios
         if time_range == "today":
             date_from = now_utc
-            date_to = datetime(today_date.year, today_date.month, today_date.day, 23, 59, 59, tzinfo=timezone.utc)
+            date_to = datetime(today_date.year, today_date.month, today_date.day, 23, 59, 59)
         elif time_range == "tomorrow":
             tmrw = today_date + timedelta(days=1)
-            date_from = datetime(tmrw.year, tmrw.month, tmrw.day, 0, 0, 0, tzinfo=timezone.utc)
-            date_to = datetime(tmrw.year, tmrw.month, tmrw.day, 23, 59, 59, tzinfo=timezone.utc)
+            date_from = datetime(tmrw.year, tmrw.month, tmrw.day, 0, 0, 0)
+            date_to = datetime(tmrw.year, tmrw.month, tmrw.day, 23, 59, 59)
         elif time_range in ["weekend", "this_weekend"]:
             weekday = today_date.weekday() # Mon=0, Sun=6
             if weekday >= 4: # Fri(4), Sat(5), Sun(6)
                 date_from = now_utc
                 days_until_sunday = 6 - weekday
                 sun = today_date + timedelta(days=days_until_sunday)
-                date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59, tzinfo=timezone.utc)
+                date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59)
             else: 
                 # Mon-Thu: Next Friday
                 days_until_friday = 4 - weekday
                 fri = today_date + timedelta(days=days_until_friday)
                 sun = fri + timedelta(days=2)
-                date_from = datetime(fri.year, fri.month, fri.day, 0, 0, 0, tzinfo=timezone.utc)
-                date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59, tzinfo=timezone.utc)
+                date_from = datetime(fri.year, fri.month, fri.day, 0, 0, 0)
+                date_to = datetime(sun.year, sun.month, sun.day, 23, 59, 59)
         include_past = True  # We have explicit bounds, don't force Upcoming 'func.now()' filter
     elif date_from is None and not include_past:
         date_from = now_utc
+
+    date_from, date_to = to_london_naive(date_from), to_london_naive(date_to)
+    if time_range in ["week", "month"]:
+        date_from = datetime.combine(today_date, datetime.min.time())
+        date_to = datetime.combine(today_date + timedelta(days=7 if time_range == "week" else 30), datetime.max.time())
 
     # Update sort_by for past events automatically if not already specified
     if time_range == "past" and sort_by == "date":
@@ -970,32 +949,15 @@ def list_events(
         # Time Range presets (today, tomorrow, weekend) are now resolved universally at the top of the function.
 
         if time_range == "past":
-            query = query.where(func.coalesce(Event.date_end, Event.date_start) < sql_now)
-        elif time_range == "week":
-            from sqlalchemy import text
-            query = query.where(Event.date_start >= func.current_date())
-            query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '7 days'"))
-        elif time_range == "month":
-            from sqlalchemy import text
-            query = query.where(Event.date_start >= func.current_date())
-            query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '30 days'"))
+            query = query.where(~occurrence_filter(now_utc))
         elif date_from or date_to:
              # Custom Range Logic (Overlap)
-            query = query.outerjoin(EventShowtime, Event.id == EventShowtime.event_id)
-            overlap_conditions = []
-            if date_from and date_to:
-                overlap_conditions.append((Event.date_start <= date_to) & (func.coalesce(Event.date_end, Event.date_start) >= date_from))
-            elif date_from:
-                overlap_conditions.append(func.coalesce(Event.date_end, Event.date_start) >= date_from)
-            elif date_to:
-                overlap_conditions.append(Event.date_start <= date_to)
-            
-            if overlap_conditions:
-                 query = query.where(or_(*overlap_conditions))
+            query = query.where(occurrence_filter(date_from, date_to))
         else:
             # Default "Upcoming" behavior if no specific range
             # (Matches standard feed behavior)
-            query = query.where(func.coalesce(Event.date_end, Event.date_start) >= sql_now)
+            if not include_past:
+                query = query.where(occurrence_filter(now_utc))
 
         # Apply organizer profile filters if provided in city_filter
         if organizer_profile_id:
@@ -1019,7 +981,7 @@ def list_events(
         
         # Build responses
         event_responses = [
-            build_event_response(event, session, latitude, longitude, current_user)
+            build_event_response(event, session, latitude, longitude, current_user, date_from, date_to, resolve_series=False)
             for event in events
         ]
         
@@ -1127,35 +1089,16 @@ def list_events(
         if excluded_ids:
             query = query.where(Event.id.notin_(excluded_ids))
 
-    # Filter by date range using OVERLAP logic
-    # We apply this directly to Event dates for simplicity and reliability in listings.
-    # Showtime-specific filtering is handled by the overall date_end filters above.
+    # Match actual occurrences, not the envelope between multiple performances.
     if date_from or date_to:
-        overlap_conditions = []
-        if date_from and date_to:
-            overlap_conditions.append((Event.date_start <= date_to) & (func.coalesce(Event.date_end, Event.date_start) >= date_from))
-        elif date_from:
-            overlap_conditions.append(func.coalesce(Event.date_end, Event.date_start) >= date_from)
-        elif date_to:
-            overlap_conditions.append(Event.date_start <= date_to)
-        
-        if overlap_conditions:
-            query = query.where(or_(*overlap_conditions))
+        query = query.where(occurrence_filter(date_from, date_to))
     
     # Handle explicit Time Range filters
     if time_range == "past":
-        query = query.where(func.coalesce(Event.date_end, Event.date_start) < func.now())
-    elif time_range == "week":
-        from sqlalchemy import text
-        query = query.where(Event.date_start >= func.current_date())
-        query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '7 days'"))
-    elif time_range == "month":
-        from sqlalchemy import text
-        query = query.where(Event.date_start >= func.current_date())
-        query = query.where(Event.date_start <= func.current_date() + text("INTERVAL '30 days'"))
+        query = query.where(~occurrence_filter(now_utc))
     elif not include_past:
         # For "Upcoming", we must be very strict: the event or its occurrences must happen in the future
-        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= func.now())
+        query = query.where(occurrence_filter(now_utc))
 
     # Filter by recurrence status
     if is_recurring is not None:
@@ -1295,7 +1238,7 @@ def list_events(
         events = filtered_events[skip : skip + limit]
 
     event_responses = [
-        build_event_response(event, session, latitude, longitude, current_user)
+        build_event_response(event, session, latitude, longitude, current_user, date_from, date_to, resolve_series=False)
         for event in events
     ]
 
@@ -1458,9 +1401,18 @@ def get_promoted_events(
     for event in raw_results:
         if event.id not in seen:
             seen[event.id] = event
-    promoted_events = list(seen.values())[:3]
-    
-    event_responses = [build_event_response(event, session, current_user=current_user) for event in promoted_events]
+    event_responses = []
+    for event in seen.values():
+        # A promoted series parent can be historical while its series is active.
+        # Use the shared read-only resolution before applying the homepage limit.
+        response = build_event_response(event, session, current_user=current_user)
+        if response.date_end < event_now():
+            continue
+        matching_ids = {show.id for show in matching_showtimes(event)}
+        response.showtimes = [show for show in response.showtimes if show.id in matching_ids]
+        event_responses.append(response)
+        if len(event_responses) == 3:
+            break
     
     return EventListResponse(
         events=event_responses,
@@ -1505,7 +1457,7 @@ def get_top_events(
     
     # Step 4: Filter by date_end >= today (now) and limit to top 10
     query = select(Event).where(
-        (Event.date_end >= func.now()) & # Include ongoing events until they finish
+        occurrence_filter(event_now()) &
         (Event.status == "published")
     ).order_by(
         velocity_score.desc(),
@@ -1515,7 +1467,7 @@ def get_top_events(
     top_events = session.exec(query).all()
     
     # Build responses
-    event_responses = [build_event_response(event, session, current_user=current_user) for event in top_events]
+    event_responses = [build_event_response(event, session, current_user=current_user, resolve_series=False) for event in top_events]
     
     return EventListResponse(
         events=event_responses,

@@ -19,6 +19,9 @@ from app.models.location import Location
 from app.models.event import Event
 from app.models.venue import Venue
 from app.schemas.event import EventResponse
+from app.api.events import build_event_response
+from app.core.occurrences import occurrence_filter, event_now
+from app.core.query_utils import deduplicate_recurring_events
 
 router = APIRouter(tags=["Locations"])
 
@@ -145,7 +148,7 @@ def get_location_feed(
     if location_record and location_record.name:
         formatted_name = location_record.name
 
-    now = datetime.utcnow()
+    now = event_now()
     tf = (timeframe or "all").lower().strip()
 
     is_fallback = False
@@ -206,12 +209,8 @@ def get_location_feed(
         )
     )
 
-    query = base_query.where(Event.date_start >= start_bound)
-    if end_bound:
-        query = query.where(Event.date_start <= end_bound)
-
-    query = query.order_by(Event.date_start.asc())
-    events = session.exec(query.limit(200)).all()
+    query = base_query.where(occurrence_filter(start_bound, end_bound))
+    events, _ = deduplicate_recurring_events(session, query, limit=200)
 
     # Thin Content / Empty State Protection
     if len(events) == 0 and timeframe_key in ["today", "this-weekend"]:
@@ -221,11 +220,12 @@ def get_location_feed(
         
         fallback_query = (
             base_query
-            .where(Event.date_start >= now)
+            .where(occurrence_filter(now))
             .order_by(Event.date_start.asc())
             .limit(5)
         )
-        events = session.exec(fallback_query).all()
+        events, _ = deduplicate_recurring_events(session, fallback_query.limit(None), limit=5)
+        start_bound, end_bound = now, None
 
     hero_image_url = location_record.hero_image_url if location_record else None
     anchor_text = location_record.seo_anchor_text if location_record else None
@@ -247,7 +247,7 @@ def get_location_feed(
         partner_name=partner_name,
         is_fallback=is_fallback,
         fallback_notice=fallback_notice,
-        events=[EventResponse.model_validate(e) for e in events]
+        events=[build_event_response(e, session, date_from=start_bound, date_to=end_bound, resolve_series=False) for e in events]
     )
 
 

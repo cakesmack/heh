@@ -160,18 +160,10 @@ def build_collection_events_query(collection: Collection, session: Session):
     if is_recurring is not None:
         query = query.where(Event.is_recurring == is_recurring)
 
-    now_utc = datetime.now(timezone.utc)
-    if collection.fixed_start_date:
-        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= collection.fixed_start_date)
-    elif filter_params.get("date_from"):
-        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= filter_params["date_from"])
-    else:
-        query = query.where(func.coalesce(Event.date_end, Event.date_start) >= now_utc)
-
-    if collection.fixed_end_date:
-        query = query.where(Event.date_start <= collection.fixed_end_date)
-    elif filter_params.get("date_to"):
-        query = query.where(Event.date_start <= filter_params["date_to"])
+    from app.core.occurrences import occurrence_filter, event_now
+    lower = collection.fixed_start_date or filter_params.get("date_from") or event_now()
+    upper = collection.fixed_end_date or filter_params.get("date_to")
+    query = query.where(occurrence_filter(lower, upper))
 
     return query
 
@@ -282,13 +274,13 @@ def get_collection_events(
 
     query = build_collection_events_query(collection, session)
 
-    count_query = select(func.count()).select_from(query.subquery())
-    total = session.exec(count_query).one()
-
-    events_query = query.order_by(Event.date_start).offset(skip).limit(limit)
-    events = session.exec(events_query).all()
-
-    return {"events": events, "total": total, "skip": skip, "limit": limit}
+    from app.core.query_utils import deduplicate_recurring_events
+    from app.core.occurrences import display_event, event_now
+    events, total = deduplicate_recurring_events(session, query, limit=limit, offset=skip)
+    params = collection.filter_params or {}
+    lower = collection.fixed_start_date or params.get("date_from") or event_now()
+    upper = collection.fixed_end_date or params.get("date_to")
+    return {"events": [display_event(e, lower, upper) for e in events], "total": total, "skip": skip, "limit": limit}
 
 @router.post("", response_model=CollectionSchema, status_code=status.HTTP_201_CREATED)
 def create_collection(

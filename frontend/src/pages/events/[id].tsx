@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
+import { eventHasEnded, upcomingPerformances as getUpcomingPerformances } from '@/lib/eventOccurrences';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import dynamic from 'next/dynamic';
 import { GetServerSideProps } from 'next';
@@ -295,7 +296,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   const venue = event?.venue;
 
   const isPastEvent = event
-    ? new Date(event.date_end || event.date_start) < new Date()
+    ? eventHasEnded(event)
     : false;
 
   const [upcomingEvents, setUpcomingEvents] = useState<EventResponse[]>([]);
@@ -325,17 +326,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   }, [event, isPastEvent]);
 
   // Filter out past performances and sort chronologically
-  const now = new Date();
-  const upcomingPerformances = (event?.showtimes || [])
-    .filter((st: any) => {
-      const timeToCompare = st.end_time ? new Date(st.end_time) : new Date(st.start_time);
-      return timeToCompare > now;
-    })
-    .sort((a: any, b: any) => {
-      const aTime = new Date(a.start_time).getTime();
-      const bTime = new Date(b.start_time).getTime();
-      return aTime - bTime;
-    });
+  const upcomingPerformances = event ? getUpcomingPerformances(event) : [];
 
   // Fetch locations once on mount
   useEffect(() => {
@@ -735,10 +726,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     {(() => {
-                      const rawDates = [
-                        { start: event.date_start, end: event.date_end },
-                        ...(event.showtimes || []).map(st => ({ start: st.start_time, end: st.end_time }))
-                      ];
+                      const rawDates = upcomingPerformances.map(st => ({ start: st.start_time, end: st.end_time || st.start_time }));
                       // Deduplicate by start date string
                       const uniqueDatesMap = new Map();
                       rawDates.forEach(d => {

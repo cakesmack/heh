@@ -15,6 +15,8 @@ from app.models.tag import Tag
 from app.schemas.event import EventResponse, GlobalSearchResponse
 from app.schemas.venue import VenueResponse
 from app.api.events import build_event_response
+from app.core.occurrences import occurrence_filter, event_now
+from app.core.query_utils import deduplicate_recurring_events
 from app.api.venues import build_venue_response
 
 router = APIRouter(tags=["Search"])
@@ -44,6 +46,7 @@ def get_suggestions(
         event_titles = session.exec(
             select(Event.title)
             .where(Event.title.ilike(search_term))
+            .where(Event.status == "published", Event.is_cancelled == False, occurrence_filter(event_now()))
             .limit(5)
         ).all()
         for title in event_titles:
@@ -138,9 +141,9 @@ def global_search(
             (Event.address_full.ilike(search_term)) |
             (Event.postcode.ilike(search_term))
         )
-    ).limit(limit)
-    events = session.exec(events_query).all()
-    event_responses = [build_event_response(e, session) for e in events]
+    ).where(occurrence_filter(event_now()))
+    events, _ = deduplicate_recurring_events(session, events_query, limit=limit)
+    event_responses = [build_event_response(e, session, resolve_series=False) for e in events]
 
     # Query venues (strict column filtering: name or city only, verified only)
     venues_query = select(Venue).where(

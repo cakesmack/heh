@@ -258,7 +258,8 @@ def list_admin_events(
     """List events for admin with pagination and filters."""
     from app.models.category import Category
     
-    now = datetime.utcnow()
+    from app.core.occurrences import event_now, occurrence_filter
+    now = event_now()
     
     # Base query
     query = select(Event)
@@ -299,17 +300,17 @@ def list_admin_events(
     # Filter out child events (show only parents/singles) for cleaner list
     # Unless searching, we might want to see everything? 
     # User requested: "recurring events only display the parent event here"
-    if not search:
+    if not search and not include_past:
         query = query.where(Event.parent_event_id == None)
 
     if not include_past:
         # Show event if it is in future OR if it is a parent of a future event (active series)
         # This handles the case where the "Series Parent" is past, but the series has future instances.
-        future_child_parents = select(Event.parent_event_id).where(Event.date_end >= now).where(Event.parent_event_id != None)
+        future_child_parents = select(Event.parent_event_id).where(occurrence_filter(now)).where(Event.parent_event_id != None)
         
         query = query.where(
             or_(
-                Event.date_end >= now,
+                occurrence_filter(now),
                 Event.id.in_(future_child_parents)
             )
         )

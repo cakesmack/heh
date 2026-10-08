@@ -121,8 +121,25 @@ def deduplicate_recurring_events(
         events = list(session.exec(events_query).all())
 
     else:
-        # SQLite approach
-        query = base_query.group_by(group_key)
+        # SQLite GROUP BY previously returned an arbitrary series member. Rank
+        # only the filtered candidates, matching PostgreSQL's DISTINCT ON rule.
+        candidates = base_query.order_by(None).subquery()
+        ranked = select(
+            candidates.c.id,
+            func.row_number().over(
+                partition_by=func.coalesce(candidates.c.recurrence_group_id, candidates.c.parent_event_id, candidates.c.id),
+                order_by=(candidates.c.date_start.desc() if sort_field == "date_desc" else candidates.c.date_start.asc(), candidates.c.id),
+            ).label("position"),
+        ).subquery()
+        ids = select(ranked.c.id).where(ranked.c.position == 1)
+        from datetime import date
+        today = date.today()
+        query = select(Event).where(Event.id.in_(ids)).outerjoin(
+            FeaturedBooking,
+            (FeaturedBooking.event_id == Event.id) &
+            (FeaturedBooking.status == BookingStatus.ACTIVE) &
+            (FeaturedBooking.start_date <= today) & (FeaturedBooking.end_date >= today),
+        ).group_by(Event.id)
 
         # Count total
         count_query = select(func.count()).select_from(query.subquery())

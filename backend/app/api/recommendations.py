@@ -6,6 +6,7 @@ from sqlmodel import Session, select, func, col, desc
 from app.core.database import get_session
 from app.core.security import get_current_user, get_current_user_optional
 from app.core.query_utils import deduplicate_recurring_events_simple
+from app.core.occurrences import occurrence_filter, event_now, display_event
 from app.models.user import User
 from app.models.event import Event
 from app.models.analytics import AnalyticsEvent
@@ -31,7 +32,7 @@ def get_recommendations(
     
     Note: Already bookmarked events are excluded from recommendations.
     """
-    now = datetime.utcnow()
+    now = event_now()
     recommendations: List[Event] = []
     
     # Track series IDs to avoid duplicates from the same recurring series
@@ -90,7 +91,7 @@ def get_recommendations(
             select(Event)
             .join(EventTag, EventTag.event_id == Event.id)
             .where(Event.status == "published", Event.is_cancelled == False)
-            .where(Event.date_start >= now)
+            .where(occurrence_filter(now))
             .where(col(EventTag.tag_id).in_(preferred_tag_ids))
         )
         tag_events = deduplicate_recurring_events_simple(
@@ -125,7 +126,7 @@ def get_recommendations(
             follow_events_query = (
                 select(Event)
                 .where(Event.status == "published", Event.is_cancelled == False)
-                .where(Event.date_start >= now)
+                .where(occurrence_filter(now))
                 .where(or_(*conditions) if conditions else True)
             )
             follow_events = deduplicate_recurring_events_simple(
@@ -163,7 +164,7 @@ def get_recommendations(
             cat_events_query = (
                 select(Event)
                 .where(Event.status == "published", Event.is_cancelled == False)
-                .where(Event.date_start >= now)
+                .where(occurrence_filter(now))
                 .where(col(Event.category_id).in_(preferred_categories))
             )
             cat_events = deduplicate_recurring_events_simple(
@@ -181,7 +182,7 @@ def get_recommendations(
         fallback_query = (
             select(Event)
             .where(Event.status == "published", Event.is_cancelled == False)
-            .where(Event.date_start >= now)
+            .where(occurrence_filter(now))
         )
         fallback_events = deduplicate_recurring_events_simple(
             session=session,
@@ -192,7 +193,7 @@ def get_recommendations(
         )
         recommendations.extend(fallback_events)
     
-    return recommendations[:limit]
+    return [display_event(event) for event in recommendations[:limit]]
 
 
 @router.get("/events/{event_id}/similar", response_model=List[Event])
@@ -217,7 +218,7 @@ def get_similar_events(
     if not event:
         return []
         
-    now = datetime.utcnow()
+    now = event_now()
     similar_events: List[Event] = []
 
     # Track series IDs to avoid duplicates from the same recurring series
@@ -233,7 +234,7 @@ def get_similar_events(
         category_query = (
             select(Event)
             .where(Event.status == "published", Event.is_cancelled == False)
-            .where(Event.date_start >= now)
+            .where(occurrence_filter(now))
             .where(Event.category_id == event.category_id)
         )
         cat_events = deduplicate_recurring_events_simple(
@@ -261,7 +262,7 @@ def get_similar_events(
                 select(Event)
                 .join(EventTag, EventTag.event_id == Event.id)
                 .where(Event.status == "published", Event.is_cancelled == False)
-                .where(Event.date_start >= now)
+                .where(occurrence_filter(now))
                 .where(col(EventTag.tag_id).in_(source_tag_ids))
             )
             tag_events = deduplicate_recurring_events_simple(
@@ -280,7 +281,7 @@ def get_similar_events(
         venue_query = (
             select(Event)
             .where(Event.status == "published", Event.is_cancelled == False)
-            .where(Event.date_start >= now)
+            .where(occurrence_filter(now))
             .where(Event.venue_id == event.venue_id)
         )
         venue_events = deduplicate_recurring_events_simple(
@@ -299,7 +300,7 @@ def get_similar_events(
         fallback_query = (
             select(Event)
             .where(Event.status == "published", Event.is_cancelled == False)
-            .where(Event.date_start >= now)
+            .where(occurrence_filter(now))
         )
         fallback_events = deduplicate_recurring_events_simple(
             session=session,
@@ -310,4 +311,4 @@ def get_similar_events(
         )
         similar_events.extend(fallback_events)
 
-    return similar_events[:limit]
+    return [display_event(event) for event in similar_events[:limit]]
