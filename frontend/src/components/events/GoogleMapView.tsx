@@ -251,7 +251,7 @@ export function GoogleMapView({
         style={{ width: '100%', height: '100%' }}
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
         onIdle={() => setMapReady(true)}
-        styles={MAP_STYLES}
+        styles={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID ? undefined : MAP_STYLES}
       >
         {/* Event Markers - Using MarkerClusterer for zoom-based clustering */}
         {mapReady && (

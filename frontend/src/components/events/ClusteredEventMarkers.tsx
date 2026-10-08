@@ -3,12 +3,27 @@
  * Integrates Google Maps markers with MarkerClusterer for zoom-based clustering.
  * Uses @googlemaps/markerclusterer library with @vis.gl/react-google-maps.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { MarkerClusterer, type Marker, GridAlgorithm } from '@googlemaps/markerclusterer';
 import { format } from 'date-fns';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import type { EventResponse } from '@/types';
+
+// GridAlgorithm needs the OverlayView projection, not just Map.getProjection().
+// Guard the library's own onAdd/idle renders as well as our marker updates.
+class ProjectionReadyClusterer extends MarkerClusterer {
+    render() {
+        const map = this.getMap();
+        if (!(map instanceof google.maps.Map) || !map.getProjection() || !this.getProjection()) return;
+        super.render();
+    }
+
+    draw() {
+        // Google invokes draw when the overlay projection is actually ready.
+        this.render();
+    }
+}
 
 export interface ClusteredEventMarkersProps {
     events: EventResponse[];
@@ -127,24 +142,23 @@ export function ClusteredEventMarkers({
 
     // State for the clusterer (now managed via state, not useMemo, to handle async init)
     const [clusterer, setClusterer] = useState<MarkerClusterer | null>(null);
+    const activeClusterer = useRef<MarkerClusterer | null>(null);
+    const latest = useRef({ validEvents, isMobile, onClusterClick });
+    latest.current = { validEvents, isMobile, onClusterClick };
 
     // Initialize MarkerClusterer only after map is fully ready (idle event)
     useEffect(() => {
         if (!map) return;
 
         let clustererInstance: MarkerClusterer | null = null;
+        let disposed = false;
 
         // Wait for map to be fully idle (projection available)
         const initClusterer = () => {
             // Double-check map projection is ready
-            const projection = map.getProjection();
-            if (!projection) {
-                // If projection not ready, wait a bit and retry
-                setTimeout(initClusterer, 100);
-                return;
-            }
+            if (disposed || clustererInstance || !map.getProjection()) return;
 
-            clustererInstance = new MarkerClusterer({
+            clustererInstance = new ProjectionReadyClusterer({
                 map,
                 // Use GridAlgorithm with settings tuned for the map
                 algorithm: new GridAlgorithm({
@@ -153,6 +167,8 @@ export function ClusteredEventMarkers({
                 }),
                 // Custom click handler to show popup or zoom
                 onClusterClick: (event, cluster, mapInstance) => {
+                    if (disposed || clustererInstance?.getMap() !== map) return;
+                    const { validEvents, isMobile, onClusterClick } = latest.current;
                     const clusterMarkers = cluster.markers || [];
                     const clusterPosition = cluster.position;
 
@@ -213,6 +229,7 @@ export function ClusteredEventMarkers({
                 },
             });
 
+            activeClusterer.current = clustererInstance;
             setClusterer(clustererInstance);
         };
 
@@ -229,34 +246,30 @@ export function ClusteredEventMarkers({
         }
 
         return () => {
+            disposed = true;
             idleListener.remove();
             if (clustererInstance) {
-                // During unmount the map's overlay projection is torn down before
-                // our cleanup runs.  clearMarkers() internally calls
-                // fromLatLngToDivPixel which throws if the projection is gone.
-                // A try-catch is the only reliable guard because getProjection()
-                // can return a non-null but internally-dead overlay object.
-                try {
-                    clustererInstance.clearMarkers();
-                } catch {
-                    // Projection already torn down — silently skip
-                }
+                if (activeClusterer.current === clustererInstance) activeClusterer.current = null;
+                // No drawing during teardown; setMap(null) removes the overlay,
+                // its idle listener and rendered cluster markers via onRemove.
+                clustererInstance.clearMarkers(true);
                 clustererInstance.setMap(null);
             }
         };
-    }, [map, validEvents, markerToEventId]);
+    }, [map, markerToEventId]);
 
     // Update clusterer when markers change
     useEffect(() => {
-        if (!clusterer) return;
+        if (!clusterer || clusterer !== activeClusterer.current || clusterer.getMap() !== map) return;
 
         // Empty filtered results must remove the previous range's clusters too.
         const markerArray = Object.values(markers);
-        clusterer.clearMarkers();
+        clusterer.clearMarkers(true);
         if (markerArray.length > 0) {
-            clusterer.addMarkers(markerArray);
+            clusterer.addMarkers(markerArray, true);
         }
-    }, [clusterer, markers]);
+        clusterer.render(); // ProjectionReadyClusterer waits for overlay readiness.
+    }, [clusterer, markers, map]);
 
     // Cleanup on unmount - handled in the init useEffect above
 
