@@ -20,6 +20,7 @@ def generate_recurring_instances(
     through: Optional[datetime] = None,
     raise_errors: bool = False,
     commit: bool = True,
+    dry_run: bool = False,
 ) -> List[Event]:
     """
     Generate event instances for a recurring event using an inclusive loop.
@@ -34,6 +35,7 @@ def generate_recurring_instances(
         weekdays: List of weekdays (0=Mon, 6=Sun) to repeat on.
         recurrence_end_date: Specific end date for the series.
         window_days: Fallback duration if no end date provided.
+        dry_run: Return transient proposed children without adding/flushing/committing them.
     """
     import traceback
     from dateutil.rrule import rrulestr, rrule, WEEKLY
@@ -186,13 +188,14 @@ def generate_recurring_instances(
                 # For now, keep child simple (not recurring itself).
                 is_recurring=False 
             )
-            session.add(child_event)
-            child_event.tags = list(parent_event.tags)
-            child_event.participating_venues = list(parent_event.participating_venues)
+            if not dry_run:
+                session.add(child_event)
+                child_event.tags = list(parent_event.tags)
+                child_event.participating_venues = list(parent_event.participating_venues)
             new_instances.append(child_event)
             existing_dates.add(dt_final.date())
 
-        if new_instances:
+        if new_instances and not dry_run:
             if commit:
                 session.commit()
             else:
@@ -220,19 +223,25 @@ def is_ongoing_recurring(parent: Event) -> bool:
     )
 
 
-def replenish_recurring_parent(session: Session, parent_id: str, *, now: Optional[datetime] = None, horizon_days: int = 180) -> List[Event]:
+def replenish_recurring_parent(session: Session, parent_id: str, *, now: Optional[datetime] = None, horizon_days: int = 180, dry_run: bool = False, preview_rule: Optional[str] = None) -> List[Event]:
     """Append beyond the latest child, under a parent lock; never repair past gaps.
 
     Event timestamps in this database are Europe/London wall times. Keeping the
     original rule anchor preserves interval phase and times across clock changes.
     The caller commits, retaining the row lock throughout generation.
+    dry_run uses the same boundaries and generator without persisting children;
+    preview_rule supplies a proposed rule on a detached copy, never the stored row.
     """
     from zoneinfo import ZoneInfo
     from sqlalchemy import func
 
+    if preview_rule is not None and not dry_run:
+        raise ValueError("A preview rule may only be used in dry-run mode")
     parent = session.exec(select(Event).where(Event.id == parent_id).with_for_update()).first()
     if parent is None or not is_ongoing_recurring(parent):
         return []
+    if preview_rule is not None:
+        parent = parent.model_copy(update={"recurrence_rule": preview_rule})
     now = now or datetime.now(ZoneInfo("Europe/London"))
     if now.tzinfo is not None:
         now = now.astimezone(ZoneInfo("Europe/London")).replace(tzinfo=None)
@@ -241,4 +250,5 @@ def replenish_recurring_parent(session: Session, parent_id: str, *, now: Optiona
     return generate_recurring_instances(
         session, parent, after=marker, through=now + timedelta(days=horizon_days),
         raise_errors=True, commit=False,
+        dry_run=dry_run,
     )
