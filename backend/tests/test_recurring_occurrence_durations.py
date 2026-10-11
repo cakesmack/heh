@@ -165,3 +165,107 @@ def test_apply_refuses_before_opening_database(capsys):
         main(['--apply'])
     assert error.value.code == 2
     assert 'No database connection or writes were made' in capsys.readouterr().err
+
+
+def corrupt_parent_and_children(session, parent):
+    parent.date_end += timedelta(days=308)
+    session.commit()
+    return generate_recurring_instances(session, parent, through=datetime(2026, 3, 12), raise_errors=True)
+
+
+@pytest.mark.parametrize('target', ['parent_id', 'recurrence_group_id'])
+def test_explicit_150_minutes_repairs_corrupt_parent_and_children_only(series, target):
+    session, parent, _ = series
+    children = corrupt_parent_and_children(session, parent)
+    unrelated_parent = Event(id=uuid4().hex, title='Other series', is_recurring=True,
+                             recurrence_group_id=uuid4().hex, date_start=parent.date_start, date_end=parent.date_end)
+    unrelated_child = Event(id=uuid4().hex, title='Other occurrence', parent_event_id=unrelated_parent.id,
+                            recurrence_group_id=unrelated_parent.recurrence_group_id,
+                            date_start=children[0].date_start, date_end=children[0].date_end)
+    session.add_all([unrelated_parent, unrelated_child])
+    session.commit()
+    rows = [parent, *children, unrelated_parent, unrelated_child]
+    snapshot = {row.id: row.model_dump() for row in rows}
+    output = []
+    counts = inspect_durations(session, **{target: getattr(parent, 'id' if target == 'parent_id' else target)},
+                               duration_minutes=150, apply=True, emit=output.append)
+    session.commit()
+    assert counts.inspected == counts.malformed == counts.repaired == 3
+    reports = [json.loads(line) for line in output[:-1]]
+    assert reports[0]['role'] == 'parent'
+    assert reports[0]['parent_duration_seconds'] == 26620200
+    assert reports[0]['existing_end'] == snapshot[parent.id]['date_end'].isoformat()
+    assert [report['expected_end'] for report in reports] == [
+        '2026-02-25T12:30:00', '2026-03-04T12:30:00', '2026-03-11T12:30:00']
+    for row in rows:
+        expected = dict(snapshot[row.id])
+        if row in [parent, *children]:
+            expected['date_end'] = row.date_start + timedelta(minutes=150)
+        assert row.model_dump() == expected
+    assert inspect_durations(session, parent_id=parent.id, duration_minutes=150,
+                             apply=True, emit=lambda _: None).repaired == 0
+
+
+def test_explicit_duration_dry_run_never_mutates_corrupt_parent_or_children(series):
+    session, parent, _ = series
+    children = corrupt_parent_and_children(session, parent)
+    snapshot = {row.id: row.model_dump() for row in [parent, *children]}
+    with patch.object(session, 'flush', side_effect=AssertionError('dry run flushed')):
+        counts = inspect_durations(session, parent_id=parent.id, duration_minutes=150, emit=lambda _: None)
+    assert (counts.inspected, counts.malformed, counts.repaired) == (3, 3, 0)
+    assert not session.dirty
+    assert {row.id: row.model_dump() for row in [parent, *children]} == snapshot
+    # Without an override the stored (corrupt) parent remains the source of truth.
+    assert inspect_durations(session, parent_id=parent.id, apply=True, emit=lambda _: None).repaired == 0
+    assert parent.date_end == snapshot[parent.id]['date_end']
+
+
+@pytest.mark.parametrize('minutes', [360, 3 * 1440 + 150], ids=['overnight', 'multi-day'])
+def test_explicit_duration_preserves_overnight_and_multi_day(series, minutes):
+    session, parent, _ = series
+    parent.date_start = datetime(2026, 2, 25, 20)
+    children = corrupt_parent_and_children(session, parent)
+    inspect_durations(session, parent_id=parent.id, duration_minutes=minutes, apply=True, emit=lambda _: None)
+    session.commit()
+    assert all(row.date_end == row.date_start + timedelta(minutes=minutes) for row in [parent, *children])
+    assert parent.date_end.date() > parent.date_start.date()
+
+
+@pytest.mark.parametrize('failure', ['ambiguous-child', 'flush-failure'])
+def test_explicit_duration_transaction_rolls_back_parent_and_all_children(series, failure):
+    session, parent, _ = series
+    children = corrupt_parent_and_children(session, parent)
+    if failure == 'ambiguous-child':
+        children[-1].recurrence_group_id = uuid4().hex
+        session.commit()
+    snapshot = {row.id: row.model_dump() for row in [parent, *children]}
+    parent_id = parent.id
+    session.rollback()
+    if failure == 'flush-failure':
+        with pytest.raises(RuntimeError, match='simulated write failure'):
+            with session.begin():
+                with patch.object(session, 'flush', side_effect=RuntimeError('simulated write failure')):
+                    inspect_durations(session, parent_id=parent_id, duration_minutes=150, apply=True, emit=lambda _: None)
+    else:
+        with pytest.raises(ValueError, match='unverifiable'):
+            with session.begin():
+                inspect_durations(session, parent_id=parent_id, duration_minutes=150, apply=True, emit=lambda _: None)
+    assert {row_id: session.get(Event, row_id).model_dump() for row_id in snapshot} == snapshot
+
+
+@pytest.mark.parametrize('args', [ ['--duration-minutes', '150'],
+    ['--parent-id', 'test', '--duration-minutes', '0'],
+    ['--parent-id', 'test', '--duration-minutes', '-1']])
+def test_duration_override_cli_rejects_unsafe_arguments_before_database(args, capsys):
+    with pytest.raises(SystemExit) as error:
+        main(args)
+    assert error.value.code == 2
+    assert 'No database connection or writes were made' in capsys.readouterr().err
+
+
+def test_duration_override_cannot_be_used_globally(series):
+    session, _, _ = series
+    with pytest.raises(ValueError, match='requires --parent-id'):
+        inspect_durations(session, duration_minutes=150, apply=True)
+    with pytest.raises(ValueError, match='requires --parent-id'):
+        inspect_durations(session, duration_minutes=150)
