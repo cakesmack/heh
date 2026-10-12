@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { MarkerClusterer, type Marker, GridAlgorithm } from '@googlemaps/markerclusterer';
-import { format } from 'date-fns';
+import { resolveEventDateDisplay, type EventDateContext } from '@/lib/eventDateDisplay';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import type { EventResponse } from '@/types';
 
@@ -26,6 +26,7 @@ class ProjectionReadyClusterer extends MarkerClusterer {
 }
 
 export interface ClusteredEventMarkersProps {
+    dateContext?: EventDateContext;
     events: EventResponse[];
     selectedMarkerId?: string;
     hoveredEventId?: string | null;
@@ -110,6 +111,7 @@ export function ClusteredEventMarkers({
     onMarkerClick,
     onClusterClick,
     isMobile = false,
+    dateContext,
 }: ClusteredEventMarkersProps) {
     // Robust mapping of Marker -> EventID using refs to avoid closure staleness
     const markerToEventId = useMemo(() => new Map<google.maps.marker.AdvancedMarkerElement, string>(), []);
@@ -379,9 +381,7 @@ export function ClusteredEventMarkers({
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                {selectedEvent.date_start
-                                    ? format(new Date(selectedEvent.date_start), 'EEE, MMM d \u2022 h:mm a')
-                                    : 'Date TBD'}
+                                {resolveEventDateDisplay(selectedEvent, dateContext).dateTimeLabel}
                             </p>
 
                             {/* Venue - with improved fallback logic */}
@@ -458,9 +458,7 @@ export function ClusteredEventMarkers({
                                             {event.title}
                                         </h4>
                                         <p className="text-xs text-emerald-600 mt-0.5">
-                                            {event.date_start
-                                                ? format(new Date(event.date_start), 'EEE, MMM d • h:mm a')
-                                                : 'Date TBD'}
+                                            {resolveEventDateDisplay(event, dateContext).dateTimeLabel}
                                         </p>
 
                                         {/* Venue */}

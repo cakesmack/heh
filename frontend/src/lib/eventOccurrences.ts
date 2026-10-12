@@ -7,9 +7,11 @@ type ScheduledEvent = {
 };
 
 // Compare London wall-clock schedules, not the browser's local timezone.
-function scheduleTime(value: string): number {
+export function scheduleTime(value: string): number {
+  if (!value) return NaN;
   if (/(Z|[+-]\d{2}:?\d{2})$/i.test(value)) {
     const instant = new Date(value);
+    if (!Number.isFinite(instant.getTime())) return NaN;
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
@@ -17,10 +19,10 @@ function scheduleTime(value: string): number {
     const part = (name: string) => Number(parts.find(p => p.type === name)?.value);
     return Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'), part('second'), instant.getUTCMilliseconds());
   }
-  return new Date(`${value}Z`).getTime();
+  return new Date(`${value.length === 10 ? `${value}T00:00:00` : value}Z`).getTime();
 }
 
-function performanceEnd(performance: Performance, allDay: boolean): number {
+export function performanceEnd(performance: Performance, allDay: boolean): number {
   const end = scheduleTime(performance.end_time || performance.start_time);
   if (!allDay) return end;
   const day = new Date(end);

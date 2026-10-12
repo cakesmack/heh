@@ -8,13 +8,15 @@ import { BookmarkButton } from '@/components/events/BookmarkButton';
 import { Badge } from '@/components/common/Badge';
 import { toast } from 'react-hot-toast';
 import { formatEventPrice } from '@/lib/formatPrice';
+import { resolveEventDateDisplay, type EventDateContext } from '@/lib/eventDateDisplay';
 
 interface EventCardProps {
   event: EventResponse;
   canManage?: boolean;
+  dateContext?: EventDateContext;
 }
 
-export function EventCard({ event, canManage = false }: EventCardProps) {
+export function EventCard({ event, canManage = false, dateContext }: EventCardProps) {
   const [imageLoading, setImageLoading] = useState(true);
 
   const handleShare = async (e: React.MouseEvent) => {
@@ -44,13 +46,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-    });
-  };
+  const dateDisplay = resolveEventDateDisplay(event, dateContext);
 
   const categoryObj = event.category || (event as any).category_rel;
   const categoryName = typeof categoryObj === 'object' ? categoryObj?.name : ((event as any).category_name || null);
@@ -109,20 +105,7 @@ export function EventCard({ event, canManage = false }: EventCardProps) {
           {/* Date & Category */}
           <div className="flex justify-between items-start mb-1">
             <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-              {event.showtimes && event.showtimes.length > 1 ? (() => {
-                const sorted = [...event.showtimes].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
-                const firstDate = formatDate(sorted[0].start_time);
-                const lastDate = formatDate(sorted[sorted.length - 1].start_time);
-                return firstDate === lastDate ? firstDate : `${firstDate} - ${lastDate}`;
-              })() : event.date_end &&
-                new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() &&
-                !event.is_recurring ? (() => {
-                  const startDate = formatDate(event.date_start);
-                  const endDate = formatDate(event.date_end);
-                  return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
-                })() : (
-                formatDate(event.date_start)
-              )}
+              {dateDisplay.displayLabel}
             </span>
             {categoryName && (
               <span

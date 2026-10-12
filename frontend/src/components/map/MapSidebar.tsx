@@ -1,5 +1,5 @@
 import React from 'react';
-import { format, startOfDay } from 'date-fns';
+import { formatDisplayDate, resolveEventDateDisplay, londonDisplayDay, type EventDateContext } from '@/lib/eventDateDisplay';
 import { EventResponse } from '@/types';
 import MapEventCard from './MapEventCard';
 
@@ -12,6 +12,7 @@ interface MapSidebarProps {
     onEventClick: (event: EventResponse) => void;
     onHover: (eventId: string | null) => void;
     onFocusEvent: (eventId: string) => void;
+    dateContext?: EventDateContext;
 }
 
 export default function MapSidebar({
@@ -22,7 +23,8 @@ export default function MapSidebar({
     hoveredEventId,
     onEventClick,
     onHover,
-    onFocusEvent
+    onFocusEvent,
+    dateContext
 }: MapSidebarProps) {
     if (loading) {
         return (
@@ -51,8 +53,7 @@ export default function MapSidebar({
     const sortedDates: string[] = [];
 
     events.forEach(event => {
-        if (!event.date_start) return;
-        const dateKey = startOfDay(new Date(event.date_start)).toISOString();
+        const dateKey = resolveEventDateDisplay(event, dateContext).groupingDate || 'unconfirmed';
         if (!groupedEvents[dateKey]) {
             groupedEvents[dateKey] = [];
             sortedDates.push(dateKey);
@@ -65,10 +66,9 @@ export default function MapSidebar({
     return (
         <aside className="hidden lg:flex lg:flex-col lg:w-[380px] xl:w-[420px] flex-shrink-0 overflow-y-auto bg-gray-50 border-r border-gray-200">
             {sortedDates.map(dateKey => {
-                const dateObj = new Date(dateKey);
                 // Header Format: "Wednesday, Jan 15"
-                const dateLabel = format(dateObj, 'EEEE, MMM d');
-                const isToday = new Date().toDateString() === dateObj.toDateString();
+                const dateLabel = formatDisplayDate(dateKey, { weekday: 'long', month: 'short', day: 'numeric' });
+                const isToday = dateKey === londonDisplayDay(dateContext?.now);
 
                 return (
                     <div key={dateKey}>
@@ -90,6 +90,7 @@ export default function MapSidebar({
                                 <MapEventCard
                                     key={event.id}
                                     event={event}
+                                    dateContext={dateContext}
                                     isSelected={selectedMarkerId === event.id}
                                     onClick={() => onEventClick(event)}
                                     onHover={(isHovering) => onHover(isHovering ? event.id : null)}

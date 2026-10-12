@@ -412,6 +412,7 @@ export function MapPage() {
         {/* Left Panel - Event List Sidebar */}
         {mapMode === 'events' && (
           <MapSidebar
+            dateContext={{ date_from: calendarDate(dateRange.start), date_to: calendarDate(dateRange.end) }}
             events={filteredEvents}
             loading={loading}
             error={error}
@@ -519,6 +520,7 @@ export function MapPage() {
         <div className="flex-1 relative">
           <ErrorBoundary>
             <GoogleMapView
+              dateContext={{ date_from: calendarDate(dateRange.start), date_to: calendarDate(dateRange.end) }}
               events={filteredEvents}
               venues={venues}
               showEvents={mapMode === 'events'}
@@ -581,6 +583,7 @@ export function MapPage() {
               <div className="overflow-y-auto flex-1 p-2 space-y-1">
                 {selectedEvents.map((event) => (
                   <MapEventCard
+                    dateContext={{ date_from: calendarDate(dateRange.start), date_to: calendarDate(dateRange.end) }}
                     key={event.id}
                     event={event}
                     onClick={() => router.push(`/events/${event.slug || event.id}`)}

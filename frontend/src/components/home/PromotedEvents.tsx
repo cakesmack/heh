@@ -2,26 +2,12 @@ import Link from 'next/link';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import { EventResponse } from '@/types';
 import { formatEventPrice } from '@/lib/formatPrice';
+import { resolveEventDateDisplay } from '@/lib/eventDateDisplay';
 
 interface PromotedEventsProps {
     events: EventResponse[];
     isLoading: boolean;
 }
-
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    });
-};
-
-const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
 
 export default function PromotedEvents({ events, isLoading }: PromotedEventsProps) {
     if (isLoading) {
@@ -120,7 +106,7 @@ export default function PromotedEvents({ events, isLoading }: PromotedEventsProp
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-stone-300 font-medium">
                                         <div className="flex items-center gap-1">
                                             <span>📅</span>
-                                            <span>{formatDate(event.date_start)} · {formatTime(event.date_start)}</span>
+                                            <span>{resolveEventDateDisplay(event).dateTimeLabel}</span>
                                         </div>
                                         {event.venue_name && (
                                             <div className="flex items-center gap-1">

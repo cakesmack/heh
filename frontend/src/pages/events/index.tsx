@@ -11,6 +11,7 @@ import { EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { eventsAPI } from '@/lib/api';
 import { mergeEventSearchQuery, rangeFromQuery, rangeApiFilters } from '@/lib/eventDateRange';
+import { eventDateContext } from '@/lib/eventDateDisplay';
 
 const EVENTS_PER_PAGE = 12;
 
@@ -226,7 +227,7 @@ export default function EventsPage() {
             </div>
           )}
 
-          <EventList events={displayedEvents} isLoading={isLoading} error={error} />
+          <EventList events={displayedEvents} isLoading={isLoading} error={error} dateContext={eventDateContext(currentFilters)} />
 
           {/* Infinite Scroll Sentinel & Loading Indicator */}
           {hasMore && !isLoading && !error && (

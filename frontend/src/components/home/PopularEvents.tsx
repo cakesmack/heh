@@ -9,34 +9,11 @@ import { eventsAPI, searchAPI } from '@/lib/api';
 import { EventResponse } from '@/types';
 import Link from 'next/link';
 import OptimizedImage from '@/components/ui/OptimizedImage';
+import { resolveEventDateDisplay } from '@/lib/eventDateDisplay';
 
 // Helper: Format event date with multi-day support
 function formatEventDate(event: EventResponse): string {
-    const formatShort = (date: Date) => date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
-
-    // Case 1: Multiple showtimes
-    if (event.showtimes && event.showtimes.length > 1) {
-        const first = new Date(event.showtimes[0].start_time);
-        const last = new Date(event.showtimes[event.showtimes.length - 1].start_time);
-        const firstStr = formatShort(first);
-        const lastStr = formatShort(last);
-        // Only show range if dates are different
-        return firstStr === lastStr ? firstStr : `${firstStr} - ${lastStr}`;
-    }
-
-    // Case 2: Multi-day span
-    if (event.date_end &&
-        new Date(event.date_start).toDateString() !== new Date(event.date_end).toDateString() &&
-        !event.is_recurring
-    ) {
-        const startStr = formatShort(new Date(event.date_start));
-        const endStr = formatShort(new Date(event.date_end));
-        // Only show range if dates are different
-        return startStr === endStr ? startStr : `${startStr} - ${endStr}`;
-    }
-
-    // Case 3: Single day
-    return formatShort(new Date(event.date_start));
+    return resolveEventDateDisplay(event).displayLabel;
 }
 
 export default function PopularEvents() {

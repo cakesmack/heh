@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MapPin, Building2, Users } from 'lucide-react';
 import { EventResponse } from '@/types';
 import { EventCard } from '@/components/events/EventCard';
+import { eventDateContext } from '@/lib/eventDateDisplay';
 import FilterBar from '@/components/search/FilterBar';
 
 interface VenueSearchCardProps {
@@ -265,7 +266,7 @@ export default function SearchResultsDrawer({
                             <>
                                 <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {results.map((event) => (
-                                        <EventCard key={event.id} event={event} />
+                                        <EventCard key={event.id} event={event} dateContext={eventDateContext(searchParams || {})} />
                                     ))}
                                 </div>
 

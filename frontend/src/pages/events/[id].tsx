@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { eventHasEnded, upcomingPerformances as getUpcomingPerformances } from '@/lib/eventOccurrences';
+import { resolveEventDateDisplay, formatDisplayDate } from '@/lib/eventDateDisplay';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import dynamic from 'next/dynamic';
 import { GetServerSideProps } from 'next';
@@ -440,8 +441,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   }, [isAuthenticated, event?.id, event?.is_attending]);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
+    return formatDisplayDate(dateString, {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -450,8 +450,7 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   };
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-GB', {
+    return formatDisplayDate(dateString, {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -481,11 +480,9 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
   }
 
   const isEventHappening = () => {
-    const now = new Date();
-    const start = new Date(event.date_start);
-    const end = new Date(event.date_end);
-    return now >= start && now <= end;
+    return resolveEventDateDisplay(event).isActive;
   };
+  const dateDisplay = resolveEventDateDisplay(event);
 
   const hasEditRights = user && (
     user.is_admin ||
@@ -762,13 +759,16 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
                       
                       return (
                         <>
-                          <span className="font-medium text-white">{formatDate(event.date_start)}</span>
-                          <span>{event.is_all_day ? 'All Day' : `${formatTime(event.date_start)} – ${formatTime(event.date_end)}`}</span>
+                          <span className="font-medium text-white">
+                            {dateDisplay.kind === 'continuous' ? dateDisplay.factualRangeLabel : formatDate(dateDisplay.displayStart || event.date_start)}
+                          </span>
+                          <span>{event.is_all_day ? 'All Day' : `${formatTime(dateDisplay.displayStart || event.date_start)} – ${formatTime(dateDisplay.displayEnd || event.date_end)}`}</span>
                         </>
                       );
                     })()}
                   </div>
                   
+                  {dateDisplay.isOngoing && <span className="ml-8 text-emerald-300 text-xs font-medium">Ongoing now</span>}
                   {/* Recurring Indicator */}
                   {event.is_recurring && (
                     <div className="flex items-center gap-1.5 ml-8 text-emerald-300/90 text-xs font-medium">

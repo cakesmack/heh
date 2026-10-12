@@ -370,6 +370,8 @@ export interface OrganizerProfileResponse {
 }
 
 export interface EventResponse extends Event {
+  next_occurrence?: string | null;
+  is_upcoming_occurrence?: boolean;
   venue_name?: string;
   distance_km?: number;
   checkin_count?: number;

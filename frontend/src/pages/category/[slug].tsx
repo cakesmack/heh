@@ -6,6 +6,7 @@ import { api, eventsAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 // Removed useEvents hook
 import { EventList } from '@/components/events/EventList';
+import { resolveEventDateDisplay, eventDateContext } from '@/lib/eventDateDisplay';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
 import { Category, EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
@@ -356,9 +357,7 @@ export default function CategoryPage() {
                                     </div>
                                     <div className="p-5">
                                         <div className="text-emerald-600 font-bold text-xs uppercase tracking-wide mb-2">
-                                            {new Date(event.date_start).toLocaleDateString('en-GB', {
-                                                weekday: 'long', day: 'numeric', month: 'long'
-                                            })}
+                                            {resolveEventDateDisplay(event, eventDateContext(currentFilters)).displayLabel}
                                         </div>
                                         <h3 className="font-bold text-xl text-gray-900 group-hover:text-emerald-700 transition-colors line-clamp-2 mb-2">
                                             {event.title}
@@ -387,7 +386,7 @@ export default function CategoryPage() {
                         )}
                     </div>
 
-                    <EventList events={displayedEvents} isLoading={isLoadingEvents} error={eventsError} />
+                    <EventList events={displayedEvents} isLoading={isLoadingEvents} error={eventsError} dateContext={eventDateContext(currentFilters)} />
 
                     {/* Infinite Scroll Sentinel & Loading Indicator */}
                     {hasMore && !isLoadingEvents && !eventsError && (

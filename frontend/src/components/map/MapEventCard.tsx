@@ -1,5 +1,5 @@
 import React from 'react';
-import { format } from 'date-fns';
+import { resolveEventDateDisplay, formatDisplayDate, londonDisplayDay, type EventDateContext } from '@/lib/eventDateDisplay';
 import { EventResponse } from '@/types';
 import { formatEventPrice } from '@/lib/formatPrice';
 
@@ -9,6 +9,7 @@ interface MapEventCardProps {
     onClick?: () => void;
     onHover?: (isHovering: boolean) => void;
     onFocus?: () => void;
+    dateContext?: EventDateContext;
 }
 
 export default function MapEventCard({
@@ -16,14 +17,14 @@ export default function MapEventCard({
     isSelected = false,
     onClick,
     onHover,
-    onFocus
+    onFocus,
+    dateContext
 }: MapEventCardProps) {
     // Format date
-    const startDate = new Date(event.date_start);
-    const month = format(startDate, 'MMM').toUpperCase();
-    const day = format(startDate, 'd');
-    const time = format(startDate, 'h:mm a');
-    const isToday = new Date().toDateString() === startDate.toDateString();
+    const display = resolveEventDateDisplay(event, dateContext);
+    const month = display.groupingDate ? formatDisplayDate(display.groupingDate, { month: 'short' }).toUpperCase() : 'TBC';
+    const day = display.groupingDate ? formatDisplayDate(display.groupingDate, { day: 'numeric' }) : '–';
+    const isToday = display.groupingDate === londonDisplayDay(dateContext?.now);
 
     return (
         <div
@@ -64,7 +65,7 @@ export default function MapEventCard({
                 {/* Details */}
                 <div className="space-y-0.5">
                     <div className="text-xs text-emerald-700 font-medium">
-                        {time}
+                        {display.dateTimeLabel}
                     </div>
                     <div className="flex items-center text-xs text-gray-500">
                         <svg className="w-3 h-3 mr-1 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

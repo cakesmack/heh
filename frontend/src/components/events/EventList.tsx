@@ -3,14 +3,16 @@
 import { EventResponse } from '@/types';
 import { EventCard } from '@/components/events/EventCard';
 import { EventCardSkeleton } from '@/components/events/EventCardSkeleton';
+import type { EventDateContext } from '@/lib/eventDateDisplay';
 
 interface EventListProps {
   events: EventResponse[];
   isLoading: boolean;
   error?: string | null;
+  dateContext?: EventDateContext;
 }
 
-export function EventList({ events, isLoading, error }: EventListProps) {
+export function EventList({ events, isLoading, error, dateContext }: EventListProps) {
   if (error) {
     return (
       <div className="py-12 text-center">
@@ -65,7 +67,7 @@ export function EventList({ events, isLoading, error }: EventListProps) {
         </div>
       ) : (
         events.map((event) => (
-          <EventCard key={event.id} event={event} />
+          <EventCard key={event.id} event={event} dateContext={dateContext} />
         ))
       )}
     </div>

@@ -133,6 +133,7 @@ test('Events page hydrates from the URL, sends full-day API bounds and responds 
     '@/components/home/DiscoveryBar': 'search', '@/components/search/FilterBar': { FilterBar: 'filters' },
     '@/components/categories/CategoryGrid': 'categories', '@/components/PopularLocations': 'locations',
     '@/lib/dateUtils': require('../src/lib/dateUtils.ts'),
+    '@/lib/eventDateDisplay': require('../src/lib/eventDateDisplay.ts'),
     '@/lib/api': { eventsAPI: { list: async filters => { request = filters; return { events: [], total: 0 }; } } },
   }, { console: { log() {} } });
   render({});
@@ -145,6 +146,9 @@ test('Events page hydrates from the URL, sends full-day API bounds and responds 
   assert.equal(request.radius_km, 10);
   assert.equal(request.category, 'music');
   assert.equal(request.sort_by, 'created');
+  const listing = nodes(render({})).find(node => node.type === 'list');
+  assert.equal(listing.props.dateContext.date_from, request.date_from);
+  assert.equal(listing.props.dateContext.date_to, request.date_to);
   let filter = nodes(render({})).find(node => node.type === 'filters');
   assert.equal(filter.props.dateRange.from, '2026-10-12');
   filter.props.onDateRangeChange({});

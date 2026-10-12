@@ -12,6 +12,7 @@ import type { EventResponse, VenueResponse } from '@/types';
 import ClusteredEventMarkers from './ClusteredEventMarkers';
 import ClusteredVenueMarkers from './ClusteredVenueMarkers';
 import { optimizeImage } from '@/utils/imageOptimizer';
+import type { EventDateContext } from '@/lib/eventDateDisplay';
 
 // GPS/Location icon component
 function LocationIcon({ className = 'w-5 h-5' }: { className?: string }) {
@@ -85,6 +86,7 @@ export interface MapMarker {
 }
 
 interface GoogleMapViewProps {
+  dateContext?: EventDateContext;
   events?: EventResponse[];
   venues?: any[];
   onMarkerClick?: (marker: MapMarker) => void;
@@ -123,6 +125,7 @@ export function GoogleMapView({
   focusEventId,
   onFocusComplete,
   onClusterClick,
+  dateContext,
 }: GoogleMapViewProps) {
   const [infoWindowMarkerId, setInfoWindowMarkerId] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -257,6 +260,7 @@ export function GoogleMapView({
         {mapReady && (
           <ClusteredEventMarkers
             events={validEvents}
+            dateContext={dateContext}
             selectedMarkerId={selectedMarkerId}
             hoveredEventId={hoveredEventId}
             onEventClick={onEventClick}

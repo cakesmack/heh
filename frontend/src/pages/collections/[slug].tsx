@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { collectionsAPI, eventsAPI, API_BASE_URL } from '@/lib/api';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { EventList } from '@/components/events/EventList';
+import { eventDateContext } from '@/lib/eventDateDisplay';
 import { Spinner } from '@/components/common/Spinner';
 import { DateFilterPills } from '@/components/events/DateFilterPills';
 import { CategoryFilterPills } from '@/components/categories/CategoryFilterPills';
@@ -697,7 +698,7 @@ export default function CollectionPage({ initialCollection }: CollectionPageProp
                     </div>
                 ) : (
                     <>
-                        <EventList events={displayedEvents} isLoading={eventsLoading} error={eventsError} />
+                        <EventList events={displayedEvents} isLoading={eventsLoading} error={eventsError} dateContext={selectedDateFilter !== 'all' ? eventDateContext({ date: selectedDateFilter === 'this-weekend' ? 'weekend' : selectedDateFilter }) : eventDateContext(currentFilters)} />
 
                         {/* Infinite Scroll Sentinel */}
                         {hasMore && !eventsLoading && !eventsError && (
