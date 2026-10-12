@@ -61,9 +61,15 @@ export function resolveEventDateDisplay(event: Schedule, context: EventDateConte
   };
   const { start, end, performance } = chosen;
   const isActive = start <= now && end >= now;
+  // Legacy responses can represent one uninterrupted event range as one
+  // showtime with exactly the same bounds. That is not a several-date envelope.
+  // Never collapse multiple showtimes or substitute dates for a recurring row.
+  const singleRange = event.showtimes?.length === 1
+    && start === scheduleTime(event.date_start)
+    && end === performanceEnd({ start_time: event.date_start, end_time: event.date_end }, !!event.is_all_day);
   // No separate continuous flag exists: an uninterrupted multi-day one-off is
   // eligible, but never a series/showtime envelope or a short overnight session.
-  const continuous = !recurring && !showtime && dayKey(start) !== dayKey(end) && end - start > 24 * 60 * 60 * 1000;
+  const continuous = !recurring && (!showtime || singleRange) && dayKey(start) !== dayKey(end) && end - start > 24 * 60 * 60 * 1000;
   const isOngoing = continuous && isActive;
   const short = (value: string) => formatDisplayDate(value).toUpperCase();
   const displayEnd = performance.end_time || performance.start_time;
@@ -74,8 +80,8 @@ export function resolveEventDateDisplay(event: Schedule, context: EventDateConte
   return {
     displayStart: performance.start_time, displayEnd, groupingDate: dayKey(grouping),
     displayLabel, timeLabel, dateTimeLabel: isOngoing ? displayLabel : `${displayLabel} • ${timeLabel}`,
-    isOngoing, isActive, representsPerformance: showtime || recurring,
-    kind: showtime ? 'showtime' : recurring ? 'occurrence' : continuous ? 'continuous' : 'one-off',
+    isOngoing, isActive, representsPerformance: !continuous && (showtime || recurring),
+    kind: continuous ? 'continuous' : showtime ? 'showtime' : recurring ? 'occurrence' : 'one-off',
     factualStart, factualEnd, factualRangeLabel,
   };
 }
