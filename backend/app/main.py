@@ -176,6 +176,8 @@ app.include_router(media.router, prefix="/api/media", tags=["Media"])
 app.include_router(geocode.router, prefix="/api/geocode", tags=["Geocoding"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+from app.api import admin_roundups
+app.include_router(admin_roundups.router, prefix="/api/admin", tags=["Admin Roundups"])
 
 app.include_router(bookmarks.router, prefix="/api/bookmarks", tags=["Bookmarks"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])

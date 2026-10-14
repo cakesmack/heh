@@ -567,3 +567,9 @@ Implemented on all Event Detail pages (`frontend/src/pages/events/[id].tsx`):
 - Ongoing recurrence uses a 180-day horizon. From `backend`, `python -m app.scripts.replenish_recurring_events` appends beyond the latest child, skips historical gaps and finite/cancelled parents, logs individual failures and exits non-zero on failure. Parent-row locking serializes PostgreSQL replenishment runs. No new columns or migrations.
 - The replenishment command still needs daily scheduling before deployment; no cron or production configuration was changed. Owner manual create/edit/recurrence/native-ticket checks remain required. Focused API regression testing is currently blocked locally by Windows Application Control blocking the existing `pygeohash` DLL.
 
+## 16. Admin Popular Events Posters (2026-10-14)
+
+- `/admin/event-roundups` uses the existing admin guard/layout and `html-to-image` DOM export to produce a reusable 1080×1350 PNG; selection is manual (10, or all available if fewer than 10), ordered with up/down controls. No automatic publishing or saved snapshots.
+- Admin-only `GET /api/admin/roundups/candidates` accepts London-local inclusive `start`, exclusive `end`, and optional existing hub `location_id`. Published, non-cancelled event starts are ranked by `views + 3×website clicks + 5×ticket clicks`, taking one per primary venue (venue-less events individually), then the top 20. Location matches exact structured primary/participating venue city to the hub name; no address guessing or new location relationship.
+- Poster rows reuse stored category colours, the image optimiser and `/images/og-preview.jpg` fallback. Cross-origin image hosts may require fallback during PNG export. Owner browser/PNG review remains required; no schema/migration changes.
+
