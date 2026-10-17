@@ -11,7 +11,7 @@ from app.core.database import get_session
 from app.core.utils import to_london_naive
 from app.models.location import Location
 from app.models.user import User
-from app.services.event_roundups import popularity_score, shortlist_query
+from app.services.event_roundups import popularity_score, shortlist_query, shortlist_diagnostics
 
 router = APIRouter()
 
@@ -38,11 +38,12 @@ class RoundupShortlist(BaseModel):
     end: datetime
     location_name: Optional[str] = None
     candidates: list[RoundupCandidate]
+    diagnostics: Optional[dict[str, int]] = None
 
 
 @router.get('/roundups/candidates', response_model=RoundupShortlist)
 def roundup_candidates(start: datetime, end: datetime, location_id: Optional[int] = None,
-                       admin: User = Depends(require_admin), session: Session = Depends(get_session)):
+                       admin: User = Depends(require_admin), session: Session = Depends(get_session), diagnostics: bool = False):
     start, end = to_london_naive(start), to_london_naive(end)
     if start >= end:
         raise HTTPException(422, 'End must be after start (exclusive)')
@@ -65,4 +66,5 @@ def roundup_candidates(start: datetime, end: datetime, location_id: Optional[int
             ticket_click_count=event.ticket_click_count or 0,
             popularity_score=popularity_score(event.view_count, event.website_click_count, event.ticket_click_count),
         ))
-    return RoundupShortlist(start=start, end=end, location_name=location.name if location else None, candidates=candidates)
+    return RoundupShortlist(start=start, end=end, location_name=location.name if location else None, candidates=candidates,
+                           diagnostics=shortlist_diagnostics(session, start, end, location.name if location else None) if diagnostics else None)

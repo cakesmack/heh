@@ -1346,7 +1346,7 @@ export interface UserEventSummary {
 }
 
 export const adminAPI = {
-  roundupCandidates: async (params: { start: string; end: string; location_id?: number }): Promise<import('./eventRoundups').RoundupShortlist> => {
+  roundupCandidates: async (params: { start: string; end: string; location_id?: number; diagnostics?: boolean }): Promise<import('./eventRoundups').RoundupShortlist> => {
     return apiFetch(`/api/admin/roundups/candidates${buildQueryString(params)}`);
   },
   /**

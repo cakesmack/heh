@@ -19,6 +19,8 @@ function RoundupTool() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [diagnosticsEnabled, setDiagnosticsEnabled] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<Record<string, number> | null>(null);
   const [error, setError] = useState('');
   const posterRef = useRef<HTMLDivElement>(null);
   const previewContainer = useRef<HTMLDivElement>(null);
@@ -40,17 +42,17 @@ function RoundupTool() {
     return () => observer.disconnect();
   }, [preview]);
   const reset = () => {
-    version.current += 1; setCandidates([]); setSelected([]); setPreview(null); setLoaded(false); setError(''); setLoading(false);
+    version.current += 1; setCandidates([]); setSelected([]); setPreview(null); setLoaded(false); setError(''); setLoading(false); setDiagnostics(null);
   };
   const load = async () => {
     if (!range.start || !range.end || range.start >= range.end) { setError('Choose a valid start and exclusive end date.'); return; }
     if (mode === 'location' && !locationId) { setError('Choose a location first.'); return; }
     const request = ++version.current;
-    setLoading(true); setError(''); setLoaded(false); setCandidates([]); setSelected([]); setPreview(null);
+    setLoading(true); setError(''); setLoaded(false); setCandidates([]); setSelected([]); setPreview(null); setDiagnostics(null);
     try {
       const response = await adminAPI.roundupCandidates({ start: `${range.start}T00:00:00`, end: `${range.end}T00:00:00`,
-        location_id: mode === 'location' ? Number(locationId) : undefined });
-      if (request === version.current) { setCandidates(response.candidates); setLoaded(true); }
+        location_id: mode === 'location' ? Number(locationId) : undefined, diagnostics: diagnosticsEnabled });
+      if (request === version.current) { setCandidates(response.candidates); setDiagnostics(response.diagnostics || null); setLoaded(true); }
     } catch (error) {
       if (request === version.current) setError(error instanceof Error ? error.message : 'Could not load candidates.');
     } finally { if (request === version.current) setLoading(false); }
@@ -95,8 +97,10 @@ function RoundupTool() {
       <label className="grid gap-1 text-sm font-medium">Start (London)<input className={control} type="date" value={range.start} readOnly={mode === 'weekly'} onChange={event => { reset(); setRange(previous => ({ ...previous, start: event.target.value })); }} /></label>
       <label className="grid gap-1 text-sm font-medium">End (exclusive)<input className={control} type="date" value={range.end} readOnly={mode === 'weekly'} onChange={event => { reset(); setRange(previous => ({ ...previous, end: event.target.value })); }} /></label>
       <button type="button" className="bg-emerald-800 text-white rounded-lg px-4 py-2 disabled:opacity-50" disabled={loading} onClick={load}>{loading ? 'Loading…' : 'Find top 20'}</button>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={diagnosticsEnabled} onChange={event => { setDiagnosticsEnabled(event.target.checked); setDiagnostics(null); }} />Temporary diagnostic counts</label>
     </fieldset>
-    <p className="text-sm text-gray-600 mb-3">{range.start && range.end && range.start < range.end ? roundupRangeLabel(range.start, range.end) : 'Choose a valid range'} · London-local starts, inclusive start / exclusive end. Location matches primary or participating venue city.</p>
+    <p className="text-sm text-gray-600 mb-3">{range.start && range.end && range.start < range.end ? roundupRangeLabel(range.start, range.end) : 'Choose a valid range'} · London-local starts, inclusive start / exclusive end. Location uses the public Events search matcher, including primary/participating venues and event location fields.</p>
+    {diagnostics && <div role="status" className="bg-gray-100 border rounded-lg p-3 mb-4 text-sm"><p className="font-semibold">Diagnostic counts before venue grouping/top-20 limit · location ID {mode === 'location' ? locationId : 'all'}</p><dl className="grid sm:grid-cols-2 gap-x-6 gap-y-1 mt-2">{Object.entries(diagnostics).map(([name, value]) => <div key={name} className="flex justify-between gap-3"><dt>{name.replaceAll('_', ' ')}</dt><dd className="font-mono">{value}</dd></div>)}</dl></div>}
     {error && <p role="alert" className="rounded-lg bg-red-50 border border-red-200 text-red-800 p-3 mb-4">{error}</p>}
     {loaded && <p role="status" className="mb-4 text-sm text-gray-700">{candidates.length} eligible candidates found.{candidates.length < 20 && ' Fewer than 20 qualified.'}{candidates.length > 0 && candidates.length < 10 && ` Only ${candidates.length} are available: select all ${candidates.length} for this smaller roundup.`}{!candidates.length && ' Try another range or location.'}</p>}
     <div className="grid xl:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">

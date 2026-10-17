@@ -99,3 +99,49 @@ test('real poster template handles absent optional data, long titles and editori
   assert.match(serialised, /Popular upcoming events based on views and ticket\/website clicks/);
   assert.match(JSON.stringify(module.exports.RoundupImage({ event: first })), /\/images\/og-preview.jpg/);
 });
+
+test('real admin form and API client send the hub numeric ID and exact November local bounds', async () => {
+  const api = require('../src/lib/api.ts');
+  const states = ['location', { start: '2026-11-01', end: '2026-12-01' }, '17', [{ id: 17, name: 'Inverness' }],
+    [], [], null, false, false, false, true, null, ''];
+  let cursor = 0, request;
+  const react = { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
+    useState(initial) { const i = cursor++; return [i in states ? states[i] : initial, () => {}]; },
+    useRef: initial => ({ current: initial }), useEffect() {} };
+  const module = { exports: {} };
+  const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/pages/admin/event-roundups.tsx'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React, esModuleInterop: true },
+  }).outputText;
+  vm.runInNewContext(code, { module, exports: module.exports, React: react, console, require(name) {
+    if (name === 'react') return react;
+    if (name === '@/lib/api') return api;
+    if (name === '@/lib/eventRoundups') return helpers;
+    if (name === '@/lib/eventDateDisplay') return require('../src/lib/eventDateDisplay.ts');
+    if (name === 'html-to-image') return { toPng() { throw new Error('Export must not run'); } };
+    if (name.includes('AdminGuard') || name.includes('AdminLayout')) return 'admin-container';
+    if (name.includes('RoundupPoster')) return { RoundupImage: 'img', RoundupPoster: 'poster' };
+    throw new Error(name);
+  } });
+  function expand(node) {
+    if (Array.isArray(node)) return node.flatMap(expand);
+    if (!node || typeof node !== 'object') return [];
+    if (typeof node.type === 'function') return expand(node.type(node.props));
+    return [node, ...expand(node.props?.children)];
+  }
+  const nodes = expand(module.exports.default({}));
+  const option = nodes.find(node => node.type === 'option' && node.props.children[0] === 'Inverness');
+  assert.equal(option.props.value, 17);
+  const previousFetch = global.fetch;
+  global.fetch = async (url, options) => {
+    request = new URL(url);
+    return { ok: true, status: 200, json: async () => ({ candidates: [], diagnostics: {} }) };
+  };
+  try {
+    await nodes.find(node => node.type === 'button' && node.props.children.includes('Find top 20')).props.onClick();
+    assert.equal(request.pathname, '/api/admin/roundups/candidates');
+    assert.equal(request.searchParams.get('location_id'), '17');
+    assert.equal(request.searchParams.get('start'), '2026-11-01T00:00:00');
+    assert.equal(request.searchParams.get('end'), '2026-12-01T00:00:00');
+    assert.equal(request.searchParams.get('diagnostics'), 'true');
+  } finally { global.fetch = previousFetch; }
+});

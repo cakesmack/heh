@@ -6,7 +6,7 @@ export interface RoundupCandidate {
   category_name?: string | null; category_color?: string | null;
   view_count: number; website_click_count: number; ticket_click_count: number; popularity_score: number;
 }
-export interface RoundupShortlist { start: string; end: string; location_name?: string | null; candidates: RoundupCandidate[] }
+export interface RoundupShortlist { start: string; end: string; location_name?: string | null; candidates: RoundupCandidate[]; diagnostics?: Record<string, number> | null }
 
 // London calendar arithmetic, independent of the admin computer's timezone/DST.
 export function upcomingMondayWindow(now = new Date()) {

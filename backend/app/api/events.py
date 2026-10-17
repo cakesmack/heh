@@ -14,6 +14,7 @@ from app.core.database import get_session, engine
 from app.core.security import get_current_user, get_current_user_optional
 from app.core.utils import normalize_uuid, to_london_naive, to_utc_aware
 from app.core.occurrences import event_now, occurrence_filter, relevant_dates, matching_showtimes
+from app.core.location_filters import event_location_filter
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
@@ -1056,20 +1057,11 @@ def list_events(
 
     # Location Search...
     if location and (latitude is None or longitude is None) and not city_filter:
-        loc_term = f"%{location}%"
         if not venue_joined:
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)
             venue_joined = True
             
-        query = query.where(
-            (Venue.name.ilike(loc_term)) |
-            (Venue.address.ilike(loc_term)) |
-            (Venue.postcode.ilike(loc_term)) |
-            (Venue.formatted_address.ilike(loc_term)) |
-            (Event.location_name.ilike(loc_term)) |
-            (Event.postcode.ilike(loc_term)) |
-            (Event.address_full.ilike(loc_term))
-        )
+        query = query.where(event_location_filter(location))
 
     # Filter by age restriction
     if age_restriction:
