@@ -212,3 +212,44 @@ def test_shared_location_query_compiles_for_postgres_without_losing_outer_join()
               .compile(dialect=postgresql.dialect()))
     assert 'LEFT OUTER JOIN venues' in sql and 'EXISTS' in sql
     assert 'venues.formatted_address' in sql and 'events.location_name' in sql
+
+
+def test_location_allows_same_venue_top20_without_changing_scores(session):
+    hall = venue(session, 'Inverness')
+    rows = [event(session, venue_id=hall.id, view_count=index) for index in range(25)]
+    assert [row.id for row in session.exec(shortlist_query(START, END, 'Inverness')).all()] == [row.id for row in rows[:4:-1]]
+    assert [row.id for row in session.exec(shortlist_query(START, END)).all()] == [rows[-1].id]
+
+
+def test_location_primary_and_multiple_participating_matches_return_one_event(session):
+    halls = [venue(session, 'Inverness') for _ in range(3)]
+    row = event(session, venue_id=halls[0].id)
+    row.participating_venues = halls
+    session.flush()
+    hub = Location(name='Inverness', slug='inverness')
+    session.add(hub)
+    session.flush()
+    response = roundup_candidates(START, END, hub.id, User(is_admin=True), session)
+    assert [candidate.id for candidate in response.candidates] == [row.id]
+    assert {v.id for v in response.candidates[0].venues} == {v.id for v in halls}
+    assert len(response.candidates[0].venues) == 3
+
+
+@pytest.mark.parametrize('location', [None, 'Inverness'])
+@pytest.mark.parametrize('has_group', [False, True])
+def test_recurring_identity_deduplicated_before_venue_and_top20(session, location, has_group):
+    halls = [venue(session, 'Inverness') for _ in range(3)]
+    group = uuid4().hex if has_group else None
+    parent = event(session, venue_id=halls[0].id, is_recurring=True, recurrence_group_id=group, view_count=10)
+    child = event(session, venue_id=halls[1].id, parent_event_id=parent.id,
+                  recurrence_group_id=group, view_count=30)
+    # Legacy child missing its group still shares the parent's identity.
+    event(session, venue_id=halls[2].id, parent_event_id=parent.id, view_count=20)
+    independent = event(session, venue_id=halls[2].id, view_count=5)
+    assert [row.id for row in session.exec(shortlist_query(START, END, location)).all()] == [child.id, independent.id]
+
+
+def test_identically_named_venues_are_distinct_in_weekly_mode(session):
+    first, second = venue(session), venue(session)
+    rows = [event(session, venue_id=first.id, view_count=2), event(session, venue_id=second.id, view_count=1)]
+    assert [row.id for row in session.exec(shortlist_query(START, END)).all()] == [row.id for row in rows]

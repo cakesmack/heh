@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from app.api.admin import require_admin
@@ -16,6 +16,11 @@ from app.services.event_roundups import popularity_score, shortlist_query, short
 router = APIRouter()
 
 
+class RoundupVenue(BaseModel):
+    id: str
+    name: str
+
+
 class RoundupCandidate(BaseModel):
     id: str
     title: str
@@ -23,6 +28,7 @@ class RoundupCandidate(BaseModel):
     date_end: Optional[datetime] = None
     image_url: Optional[str] = None
     venue_name: Optional[str] = None
+    venues: list[RoundupVenue] = Field(default_factory=list)
     venue_address: Optional[str] = None
     town: Optional[str] = None
     category_name: Optional[str] = None
@@ -59,6 +65,8 @@ def roundup_candidates(start: datetime, end: datetime, location_id: Optional[int
         candidates.append(RoundupCandidate(
             id=event.id, title=event.title, date_start=event.date_start, date_end=event.date_end,
             image_url=event.image_url, venue_name=venue.name if venue else event.location_name,
+            venues=[RoundupVenue(id=item.id, name=item.name) for item in
+                    {item.id: item for item in ([venue] if venue else []) + list(event.participating_venues)}.values()],
             venue_address=venue.address if venue else event.address_full,
             town=venue.city if venue else None, category_name=category.name if category else None,
             category_color=category.gradient_color if category else None,

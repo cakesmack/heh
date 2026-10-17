@@ -5,7 +5,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { RoundupImage, RoundupPoster, type RoundupPosterData } from '@/components/admin/RoundupPoster';
 import { adminAPI, locationsAPI } from '@/lib/api';
 import { formatDisplayDate } from '@/lib/eventDateDisplay';
-import { monthWindow, moveRoundupSelection, posterCategoryColor, roundupRangeLabel, toggleRoundupSelection, upcomingMondayWindow, type RoundupCandidate } from '@/lib/eventRoundups';
+import { monthWindow, moveRoundupSelection, posterCategoryColor, roundupRangeLabel, roundupVenueWarnings, toggleRoundupSelection, upcomingMondayWindow, type RoundupCandidate } from '@/lib/eventRoundups';
 
 // Kept inside AdminGuard so unauthorised visits do not load admin data.
 function RoundupTool() {
@@ -28,6 +28,7 @@ function RoundupTool() {
   const version = useRef(0);
   const required = Math.min(10, candidates.length);
   const selection = selected.map(id => candidates.find(event => event.id === id)!).filter(Boolean);
+  const venueWarnings = mode === 'location' ? roundupVenueWarnings(selection) : [];
 
   useEffect(() => {
     let active = true;
@@ -125,6 +126,11 @@ function RoundupTool() {
           <button className="border rounded px-2 py-1 disabled:opacity-30" aria-label={`Move ${event.title} down`} disabled={exporting || index === selected.length - 1} onClick={() => { setSelected(previous => moveRoundupSelection(previous, index, 1)); setPreview(null); }}>↓</button>
           <button className="text-red-700 px-1" aria-label={`Remove ${event.title}`} disabled={exporting} onClick={() => { setSelected(previous => previous.filter(id => id !== event.id)); setPreview(null); }}>×</button>
         </li>)}</ol>
+        {venueWarnings.length > 0 && <div role="status" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-medium">Venue coverage recommendation (optional)</p>
+          {venueWarnings.map(warning => <p key={warning} className="mt-1">{warning}</p>)}
+          <p className="mt-1">You can still generate and download this poster.</p>
+        </div>}
         <button className="w-full mt-4 bg-emerald-800 text-white rounded-lg px-4 py-2 disabled:opacity-40" disabled={exporting || !required || selected.length !== required} onClick={generate}>Generate / refresh preview</button>
       </section>
     </div>

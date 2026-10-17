@@ -4,9 +4,66 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const ts = require('typescript');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, filename);
 const helpers = require('../src/lib/eventRoundups.ts');
 const { upcomingMondayWindow, monthWindow, roundupRangeLabel, toggleRoundupSelection, moveRoundupSelection, posterCategoryColor } = helpers;
+
+test('venue recommendations count IDs, not names, and never alter selections', () => {
+  const candidate = id => ({ id, venues: [{ id: 'eden', name: 'Eden Court' }] });
+  const two = [candidate('1'), candidate('2')];
+  assert.deepEqual(helpers.roundupVenueWarnings(two), []);
+  const three = [...two, candidate('3')];
+  const before = JSON.stringify(three);
+  assert.deepEqual(helpers.roundupVenueWarnings(three), ['Three selected events are from Eden Court. Consider replacing one to give the roundup broader venue coverage.']);
+  assert.equal(JSON.stringify(three), before);
+  assert.equal(helpers.roundupVenueWarnings([...three, candidate('4')]).length, 1);
+  assert.deepEqual(helpers.roundupVenueWarnings(three.map((event, index) => ({ ...event,
+    venues: [{ id: String(index), name: 'Same name' }, { id: String(index), name: 'Same name' }] }))), []);
+  assert.deepEqual(helpers.roundupVenueWarnings(two.map(event => ({ ...event, venues: [...event.venues, ...event.venues] }))), []);
+});
+
+test('real location selection warning does not block preview or its download action', () => {
+  const candidates = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: `Event ${i}`,
+    date_start: '2026-11-10T10:00:00', venues: [{ id: i < 3 ? 'eden' : `venue-${i}`, name: i < 3 ? 'Eden Court' : `Venue ${i}` }] }));
+  const states = ['location', { start: '2026-11-01', end: '2026-12-01' }, '17', [{ id: 17, name: 'Inverness' }],
+    candidates, candidates.map(event => event.id), null, false, false, true, false, null, ''];
+  let cursor = 0;
+  const react = { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
+    useState(initial) { const i = cursor++; return [i in states ? states[i] : initial, value => { states[i] = typeof value === 'function' ? value(states[i]) : value; }]; },
+    useRef: initial => ({ current: initial }), useEffect() {} };
+  const module = { exports: {} };
+  const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/pages/admin/event-roundups.tsx'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React, esModuleInterop: true },
+  }).outputText;
+  vm.runInNewContext(code, { module, exports: module.exports, React: react, require(name) {
+    if (name === 'react') return react;
+    if (name === '@/lib/api') return {};
+    if (name === '@/lib/eventRoundups') return helpers;
+    if (name === '@/lib/eventDateDisplay') return require('../src/lib/eventDateDisplay.ts');
+    if (name === 'html-to-image') return {};
+    if (name.includes('AdminGuard') || name.includes('AdminLayout')) return 'admin-container';
+    if (name.includes('RoundupPoster')) return { RoundupImage: 'img', RoundupPoster: 'poster' };
+    throw new Error(name);
+  } });
+  function expand(node) {
+    if (Array.isArray(node)) return node.flatMap(expand);
+    if (!node || typeof node !== 'object') return [];
+    if (typeof node.type === 'function') return expand(node.type(node.props));
+    return [node, ...expand(node.props?.children)];
+  }
+  const render = () => { cursor = 0; return expand(module.exports.default({})); };
+  let nodes = render();
+  assert.match(JSON.stringify(nodes), /Three selected events are from Eden Court/);
+  const generate = nodes.find(node => node.type === 'button' && node.props.children.includes('Generate / refresh preview'));
+  assert.equal(generate.props.disabled, false);
+  generate.props.onClick();
+  nodes = render();
+  const poster = nodes.find(node => node.type === 'poster');
+  assert.deepEqual(Array.from(poster.props.events, event => event.id), candidates.map(event => event.id));
+  assert.equal(nodes.find(node => node.type === 'button' && node.props.children.includes('Download PNG')).props.disabled, false);
+  states[0] = 'weekly';
+  assert.doesNotMatch(JSON.stringify(render()), /Three selected events are from Eden Court/);
+});
 
 test('Sunday weekly window is upcoming Monday through next Monday exclusive', () => {
   assert.deepEqual(upcomingMondayWindow(new Date('2026-10-18T10:00:00Z')), { start: '2026-10-19', end: '2026-10-26' });

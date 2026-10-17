@@ -3,6 +3,7 @@ import { londonDisplayDay, formatDisplayDate } from './eventDateDisplay';
 export interface RoundupCandidate {
   id: string; title: string; date_start: string; date_end?: string | null;
   image_url?: string | null; venue_name?: string | null; venue_address?: string | null; town?: string | null;
+  venues?: { id: string; name: string }[];
   category_name?: string | null; category_color?: string | null;
   view_count: number; website_click_count: number; ticket_click_count: number; popularity_score: number;
 }
@@ -37,6 +38,18 @@ export function roundupRangeLabel(start: string, end: string) {
 export function toggleRoundupSelection(selected: string[], id: string): string[] {
   if (selected.includes(id)) return selected.filter(value => value !== id);
   return selected.length < 10 ? [...selected, id] : selected;
+}
+export function roundupVenueWarnings(events: RoundupCandidate[]): string[] {
+  const venues = new Map<string, { name: string; count: number }>();
+  for (const event of events) {
+    for (const venue of new Map((event.venues || []).map(venue => [venue.id, venue])).values()) {
+      const entry = venues.get(venue.id) || { name: venue.name, count: 0 };
+      entry.count += 1;
+      venues.set(venue.id, entry);
+    }
+  }
+  return [...venues.values()].filter(venue => venue.count > 2).map(venue =>
+    `${venue.count === 3 ? 'Three' : venue.count} selected events are from ${venue.name}. Consider replacing ${venue.count === 3 ? 'one' : 'some'} to give the roundup broader venue coverage.`);
 }
 export function moveRoundupSelection(selected: string[], index: number, direction: -1 | 1) {
   const next = [...selected], target = index + direction;

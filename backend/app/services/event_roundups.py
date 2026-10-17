@@ -24,17 +24,33 @@ def shortlist_query(start: datetime, end: datetime, location_name=None):
     # Venue-less events are separate candidates, not one shared NULL partition.
     venue_key = case((Event.venue_id.is_not(None), 'venue:' + Event.venue_id),
                      else_='event:' + Event.id)
-    query = select(Event.id.label('event_id'), score.label('score'), func.row_number().over(
-        partition_by=venue_key, order_by=(score.desc(), Event.date_start.asc(), Event.id.asc())
-    ).label('venue_rank')).outerjoin(Venue, Event.venue_id == Venue.id).where(
+    # Collapse occurrences before applying weekly venue variety or the top-20 limit.
+    parent = aliased(Event)
+    identity = func.coalesce(Event.recurrence_group_id, parent.recurrence_group_id, Event.parent_event_id, Event.id)
+    query = select(Event.id.label('event_id'), score.label('score'),
+                   Event.date_start.label('start'), venue_key.label('venue_key'), func.row_number().over(
+        partition_by=identity, order_by=(score.desc(), Event.date_start.asc(), Event.id.asc())
+    ).label('identity_rank')).outerjoin(Venue, Event.venue_id == Venue.id).outerjoin(
+        parent, Event.parent_event_id == parent.id
+    ).where(
         public_eligibility(),
         Event.date_start >= start, Event.date_start < end,
     )
     if location_name:
         query = query.where(event_location_filter(location_name))
-    ranked = query.subquery()
-    return (select(Event).join(ranked, Event.id == ranked.c.event_id).where(ranked.c.venue_rank == 1)
-            .options(selectinload(Event.venue), selectinload(Event.category_rel))
+    identities = query.subquery()
+    candidates = select(identities.c.event_id, identities.c.score, identities.c.start,
+                        identities.c.venue_key).where(identities.c.identity_rank == 1)
+    if not location_name:
+        unique_events = candidates.subquery()
+        by_venue = select(unique_events, func.row_number().over(
+            partition_by=unique_events.c.venue_key,
+            order_by=(unique_events.c.score.desc(), unique_events.c.start.asc(), unique_events.c.event_id.asc())
+        ).label('venue_rank')).subquery()
+        candidates = select(by_venue.c.event_id, by_venue.c.score).where(by_venue.c.venue_rank == 1)
+    ranked = candidates.subquery()
+    return (select(Event).join(ranked, Event.id == ranked.c.event_id)
+            .options(selectinload(Event.venue), selectinload(Event.category_rel), selectinload(Event.participating_venues))
             .order_by(ranked.c.score.desc(), Event.date_start.asc(), Event.id.asc()).limit(20))
 
 
