@@ -24,7 +24,7 @@ const RecommendedEvents = dynamic(() => import('@/components/home/RecommendedEve
 const PopularEvents = dynamic(() => import('@/components/home/PopularEvents'), { ssr: false });
 const CuratedCollections = dynamic(() => import('@/components/home/CuratedCollections'), { ssr: false });
 const FeaturedVenues = dynamic(() => import('@/components/home/FeaturedVenues'), { ssr: false });
-import { getDateRangeFromFilter } from '@/lib/dateUtils';
+import { rangeApiFilters } from '@/lib/eventDateRange';
 import { optimizeImage } from '@/utils/imageOptimizer';
 
 // Site constants
@@ -118,7 +118,7 @@ export default function HomePage() {
     radius?: string;
   }) => {
     // Check if all filters are empty (Clear was pressed)
-    const hasActiveFilters = filters.q || filters.location || filters.date ||
+    const hasActiveFilters = filters.q || filters.location || filters.date || filters.dateFrom || filters.dateTo ||
       filters.category || filters.latitude;
 
     if (!hasActiveFilters) {
@@ -135,7 +135,7 @@ export default function HomePage() {
     setIsSearchOpen(true);
 
     const dateRange = filters.date === 'custom'
-      ? getDateRangeFromFilter('custom', filters.dateFrom, filters.dateTo)
+      ? rangeApiFilters({ from: filters.dateFrom, to: filters.dateTo })
       : {};
 
     const searchFilters: any = {
@@ -204,7 +204,7 @@ export default function HomePage() {
     setSearchSort(newSort);
 
     const dateRange = activeFilters.date === 'custom'
-      ? getDateRangeFromFilter('custom', activeFilters.dateFrom, activeFilters.dateTo)
+      ? rangeApiFilters({ from: activeFilters.dateFrom, to: activeFilters.dateTo })
       : {};
 
     // Trigger search with new sort
@@ -234,7 +234,7 @@ export default function HomePage() {
     const skip = (newPage - 1) * SEARCH_ITEMS_PER_PAGE;
 
     const dateRange = activeFilters.date === 'custom'
-      ? getDateRangeFromFilter('custom', activeFilters.dateFrom, activeFilters.dateTo)
+      ? rangeApiFilters({ from: activeFilters.dateFrom, to: activeFilters.dateTo })
       : {};
 
     const searchFilters: any = {

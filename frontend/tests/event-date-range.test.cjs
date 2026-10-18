@@ -107,20 +107,19 @@ test('picker stages calendar changes until Apply, supports one day, ranges and C
   assert.deepEqual(JSON.parse(JSON.stringify(applied)), {});
 });
 
-test('homepage Search transfers text and dates, and also permits dates without text', () => {
-  let navigation;
+test('homepage Search keeps text and dates inline, and also permits dates without text', () => {
+  let submitted;
   const render = load('components/home/HeroSection.tsx', {
-    'next/link': 'link', 'next/image': 'image', 'next/router': { useRouter: () => ({ push: value => { navigation = value; } }) },
+    'next/link': 'link', 'next/image': 'image',
     '@/components/home/DiscoveryBar': 'search', '@/components/search/EventDateRangePicker': 'picker',
   });
-  const props = { onSearch() { throw new Error('Must navigate, not open the old drawer'); } };
+  const props = { onSearch(filters) { submitted = filters; } };
   nodes(render(props)).find(node => node.type === 'picker').props.onChange({ from: '2026-10-12', to: '2026-10-15' });
   nodes(render(props)).find(node => node.type === 'search').props.onSearch({ q: 'music' });
-  assert.equal(navigation.pathname, '/events');
-  assert.deepEqual(navigation.query, { q: 'music', date_from: '2026-10-12', date_to: '2026-10-15' });
+  assert.deepEqual(JSON.parse(JSON.stringify(submitted)), { q: 'music', date: 'custom', dateFrom: '2026-10-12', dateTo: '2026-10-15' });
   nodes(render(props)).find(node => node.type === 'search').props.onSearch({});
-  assert.equal(navigation.query.date_from, '2026-10-12');
-  assert.equal(navigation.query.q, undefined);
+  assert.equal(submitted.dateFrom, '2026-10-12');
+  assert.equal(submitted.q, undefined);
 });
 
 test('Events page hydrates from the URL, sends full-day API bounds and responds to back/forward changes', async () => {

@@ -8,6 +8,7 @@ import { MapPin, Building2, Users } from 'lucide-react';
 import { EventResponse } from '@/types';
 import { EventCard } from '@/components/events/EventCard';
 import { eventDateContext } from '@/lib/eventDateDisplay';
+import { rangeApiFilters, withDateRange } from '@/lib/eventDateRange';
 import FilterBar from '@/components/search/FilterBar';
 
 interface VenueSearchCardProps {
@@ -174,6 +175,9 @@ export default function SearchResultsDrawer({
 }: SearchResultsDrawerProps) {
     const drawerRef = useRef<HTMLDivElement>(null);
     const totalPages = Math.ceil(total / itemsPerPage);
+    const dateContext = eventDateContext(searchParams?.date === 'custom'
+        ? rangeApiFilters({ from: searchParams.dateFrom, to: searchParams.dateTo })
+        : { date: searchParams?.date });
 
     // Smooth scroll to top of drawer when results change or drawer opens
     useEffect(() => {
@@ -247,6 +251,9 @@ export default function SearchResultsDrawer({
                                 </div>
                             </div>
                         )}
+                        {searchParams?.q && venues.length === 0 && (
+                            <p className="text-sm text-gray-500 mb-6">No matching venues found.</p>
+                        )}
 
                         {/* Matching Groups Section */}
                         {groups.length > 0 && (
@@ -264,9 +271,10 @@ export default function SearchResultsDrawer({
 
                         {results.length > 0 ? (
                             <>
+                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Matching Events</h3>
                                 <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {results.map((event) => (
-                                        <EventCard key={event.id} event={event} dateContext={eventDateContext(searchParams || {})} />
+                                        <EventCard key={event.id} event={event} dateContext={dateContext} />
                                     ))}
                                 </div>
 
@@ -299,7 +307,9 @@ export default function SearchResultsDrawer({
                                         <Link
                                             href={{
                                                 pathname: '/events',
-                                                query: searchParams || {}
+                                                query: searchParams?.date === 'custom'
+                                                    ? withDateRange(searchParams, { from: searchParams.dateFrom, to: searchParams.dateTo })
+                                                    : searchParams || {}
                                             }}
                                             className="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
                                         >
