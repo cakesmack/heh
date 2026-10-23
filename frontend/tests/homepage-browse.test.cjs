@@ -212,24 +212,25 @@ test('empty/stale API records cannot omit browse categories; Events buttons pres
   assert.equal(selected, 'music');
 });
 
-test('shared panel uses compact padding and desktop 7:3 columns with a 40px gap, retaining stacked smaller layouts', () => {
+test('shared panel stacks full-width categories before locations at every breakpoint', () => {
   const callback = () => {};
   const panel = load('components/categories/BrowseEvents.tsx', { './CategoryGrid': 'categories' });
   const tree = nodes(panel.render({ activeCategory: 'music', onSelectCategory: callback, activeLocation: 'Inverness', locationCategorySlug: 'music' }));
   assert.ok(tree.some(node => node.type === 'h2' && node.props.children[0] === 'Browse events'));
   assert.equal(tree[0].props.className, 'rounded-2xl bg-stone-100/70 p-3 sm:p-4');
-  const layout = tree.find(node => /lg:grid-cols-10/.test(node.props.className || ''));
+  const layout = tree.find(node => node.props.className === 'mt-3 space-y-4');
   assert.ok(layout);
-  assert.match(layout.props.className, /lg:gap-x-10/);
-  assert.ok(!/(?:^| )(?:grid-cols-|sm:grid-cols-|md:grid-cols-)/.test(layout.props.className));
-  assert.ok(tree.some(node => /lg:col-span-7/.test(node.props.className || '')));
-  assert.ok(tree.some(node => /lg:col-span-3/.test(node.props.className || '')));
+  assert.ok(!tree.some(node => /grid-cols|col-span|flex-row/.test(node.props.className || '')));
   const category = tree.find(node => node.type === 'categories');
   assert.equal(category.props.browse, true);
   assert.equal(category.props.onSelectCategory, callback);
   const locations = tree.find(node => node.type === '@/components/PopularLocations');
   assert.equal(locations.props.browse, true);
   assert.equal(locations.props.categorySlug, 'music');
+  assert.ok(tree.indexOf(category) < tree.indexOf(locations));
+  const sections = layout.props.children.flat(Infinity);
+  assert.equal(sections.length, 2);
+  assert.ok(sections.every(section => section.props.className === 'min-w-0'));
 });
 
 test('browse location list preserves all returned hubs and category-specific API request without scrolling', async () => {
@@ -245,7 +246,7 @@ test('browse location list preserves all returned hubs and category-specific API
   const tree = form.render(props);
   assert.equal(query.category_slug, 'music');
   assert.deepEqual(links(tree, false).map(node => node.props.href), hubs.map(hub => `/locations/${hub.slug}`));
-  assert.ok(nodes(tree).some(node => /sm:grid-cols-2/.test(node.props.className || '')));
+  assert.ok(nodes(tree).some(node => node.props.className === 'flex flex-wrap gap-x-5 gap-y-0'));
   assert.ok(!nodes(tree).some(node => /overflow-x|rounded-full/.test(node.props.className || '')));
 });
 
