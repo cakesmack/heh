@@ -275,11 +275,13 @@ export default function HomePage() {
       {/* Categories & Locations Section (Only render when search is NOT active) */}
       {!isSearchOpen && (
         <>
-          <div id="categories" className="min-h-[66px]">
-            <CategoryGrid />
+          <div id="categories" className="min-h-[66px] bg-white pt-4 md:pt-5">
+            <h2 className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-xs font-semibold text-gray-500">Browse by category</h2>
+            <CategoryGrid compact />
           </div>
-          <div className="min-h-[66px]">
-            <PopularLocations />
+          <div className="min-h-[66px] bg-gray-50 border-t border-gray-200 pt-3">
+            <h2 className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-xs font-semibold text-gray-500">Popular locations</h2>
+            <PopularLocations compact />
           </div>
         </>
       )}

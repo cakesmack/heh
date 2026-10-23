@@ -13,6 +13,7 @@ interface PopularLocationsProps {
     activeLocation?: string;
     onSelectLocation?: (name: string) => void;
     categorySlug?: string;
+    compact?: boolean;
 }
 
 export function LocationPillSkeleton() {
@@ -24,9 +25,10 @@ export function LocationPillSkeleton() {
     );
 }
 
-export default function PopularLocations({ activeLocation, categorySlug }: PopularLocationsProps = {}) {
+export default function PopularLocations({ activeLocation, categorySlug, compact = false }: PopularLocationsProps = {}) {
     const [locations, setLocations] = useState<LocationHub[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const containerClass = compact ? 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8';
 
     useEffect(() => {
         let isMounted = true;
@@ -53,7 +55,7 @@ export default function PopularLocations({ activeLocation, categorySlug }: Popul
     if (loading) {
         return (
             <section className="py-1.5 md:py-3 bg-gray-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className={containerClass}>
                     <div className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible whitespace-nowrap scrollbar-hide snap-x gap-2 md:gap-3 pb-1 pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         {[1, 2, 3, 4, 5, 6].map((i) => (
                             <LocationPillSkeleton key={i} />
@@ -68,7 +70,7 @@ export default function PopularLocations({ activeLocation, categorySlug }: Popul
 
     return (
         <section className="py-1.5 md:py-3 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className={containerClass}>
                 <div className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible whitespace-nowrap scrollbar-hide snap-x gap-2 md:gap-3 pb-1 pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {locations.map((location) => {
                         const isActive = activeLocation === location.name || activeLocation === location.slug;
