@@ -15,6 +15,7 @@ from app.core.security import get_current_user, get_current_user_optional
 from app.core.utils import normalize_uuid, to_london_naive, to_utc_aware
 from app.core.occurrences import event_now, occurrence_filter, relevant_dates, matching_showtimes
 from app.core.location_filters import event_location_filter
+from app.core.category_filters import event_category_filter, validate_event_categories
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
@@ -515,7 +516,7 @@ def list_events_map(
                 if cat:
                     cat_ids.append(cat.id)
         if cat_ids:
-            category_conditions.append(Event.category_id.in_(cat_ids))
+            category_conditions.append(event_category_filter(cat_ids))
 
     # Keyword conditions
     collection_q = filter_params.get("q")
@@ -822,7 +823,7 @@ def list_events(
         cat_ids.extend([normalize_uuid(cid.strip()) for cid in category_ids.split(",") if cid.strip()])
         
     if cat_ids:
-        category_cond = Event.category_id.in_(cat_ids)
+        category_cond = event_category_filter(cat_ids)
 
     # 2. Tag filter condition
     tag_ids_list = []
@@ -941,7 +942,7 @@ def list_events(
             ).all()
             if cats:
                 cat_ids = [c.id for c in cats]
-                query = query.where(Event.category_id.in_(cat_ids))
+                query = query.where(event_category_filter(cat_ids))
             else:
                  return EventListResponse(events=[], total=0, skip=skip, limit=limit)
         
@@ -1546,15 +1547,9 @@ async def create_event(
         )
 
     # Validate category
-    category_id_normalized = None
-    if event_data.category_id:
-        category_id_normalized = normalize_uuid(event_data.category_id)
-        category = session.get(Category, category_id_normalized)
-        if not category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Category not found"
-            )
+    category_id_normalized, secondary_category_id = validate_event_categories(
+        session, event_data.category_id, event_data.secondary_category_id
+    )
 
     # Handle Recurrence Rule Translation
     recurrence_rule = event_data.recurrence_rule
@@ -1633,6 +1628,7 @@ async def create_event(
         longitude=longitude,
         geohash=geohash,
         category_id=category_id_normalized,
+        secondary_category_id=secondary_category_id,
         price=min_price,  # Backward compatibility (numeric)
         price_display=price_display,  # User-friendly text
         min_price=min_price,  # For filtering
@@ -2224,6 +2220,17 @@ async def update_event(
 
     # Update fields (exclude tags, participating_venue_ids, showtimes, explicit dates, and validation flags for special handling)
     update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring", "ticket_tiers", "terms_accepted"})
+    # Validate the effective pair before schedule/relationship writes. Omitted
+    # secondary preserves it; an explicit NULL removes it.
+    if "category_id" in update_data or "secondary_category_id" in update_data:
+        primary, secondary = validate_event_categories(
+            session, update_data.get("category_id", event.category_id),
+            update_data.get("secondary_category_id", event.secondary_category_id)
+        )
+        if "category_id" in update_data:
+            update_data["category_id"] = primary
+        if "secondary_category_id" in update_data:
+            update_data["secondary_category_id"] = secondary
 
     # Prevent destructive scraper wipes for venue_id
     if "venue_id" in update_data and update_data["venue_id"] is None:
@@ -2346,16 +2353,6 @@ async def update_event(
             # Safest is to treat it as "Use what's provided".
             recurrence_end_date=new_recurrence_end or event_data.recurrence_end_date
         )
-
-    # Validate category if being updated
-    if "category_id" in update_data:
-        category = session.get(Category, normalize_uuid(update_data["category_id"]))
-        if not category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Category not found"
-            )
-        update_data["category_id"] = normalize_uuid(update_data["category_id"])
 
     # Parse price if being updated
     if "price" in update_data:
@@ -2619,6 +2616,7 @@ async def update_event(
             venue_id=event.venue_id,
             location_name=event.location_name,
             category_id=event.category_id,
+            secondary_category_id=event.secondary_category_id,
             price=event.price,
             price_display=event.price_display,
             min_price=event.min_price,

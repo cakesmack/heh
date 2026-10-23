@@ -251,7 +251,7 @@ export default function StepBasics({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Category Selection */}
         <div className="space-y-1">
-          <label className="block text-sm font-semibold text-gray-700">Category *</label>
+          <label className="block text-sm font-semibold text-gray-700">Primary category *</label>
         <select
           name="category_id"
           required
@@ -262,11 +262,17 @@ export default function StepBasics({
           }`}
         >
           <option value="">Select a category</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {categories.map(c => <option key={c.id} value={c.id} disabled={c.id === formData.secondary_category_id}>{c.name}</option>)}
         </select>
           {errors.category_id && (
             <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
           )}
+          <label className="block text-sm font-semibold text-gray-700 pt-3">Secondary category (optional)</label>
+          <select name="secondary_category_id" value={formData.secondary_category_id} onChange={(e) => setValue('secondary_category_id', e.target.value)} className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-600">
+            <option value="">None</option>
+            {categories.map(c => <option key={c.id} value={c.id} disabled={c.id === formData.category_id}>{c.name}</option>)}
+          </select>
+          {errors.secondary_category_id && <p className="mt-1 text-sm text-red-600">{errors.secondary_category_id}</p>}
         </div>
 
         {/* Price */}

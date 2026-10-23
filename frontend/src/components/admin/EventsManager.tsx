@@ -52,6 +52,7 @@ export default function EventsManager() {
     venue_id: '',
     location_name: '',
     category_id: '',
+    secondary_category_id: '',
     price: 0,
     image_url: '',
     ticket_url: '',
@@ -150,6 +151,7 @@ export default function EventsManager() {
       venue_id: '',
       location_name: '',
       category_id: categories[0]?.id || '',
+      secondary_category_id: '',
       price: 0,
       image_url: '',
       ticket_url: '',
@@ -178,6 +180,7 @@ export default function EventsManager() {
         venue_id: fullEvent.venue_id || '',
         location_name: fullEvent.location_name || '',
         category_id: fullEvent.category_id || '',
+        secondary_category_id: fullEvent.secondary_category_id || '',
         price: fullEvent.price,
         image_url: fullEvent.image_url || '',
         ticket_url: fullEvent.ticket_url || '',
@@ -309,6 +312,7 @@ export default function EventsManager() {
         venue_id: useManualLocation ? '' : formData.venue_id,
         location_name: useManualLocation ? formData.location_name : undefined,
         category_id: formData.category_id,
+        secondary_category_id: formData.secondary_category_id || null,
         price: formData.price,
         image_url: formData.image_url || undefined,
         ticket_url: formData.ticket_url || undefined,
@@ -982,7 +986,7 @@ export default function EventsManager() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Primary category *</label>
                 <select
                   value={formData.category_id}
                   onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
@@ -991,8 +995,13 @@ export default function EventsManager() {
                 >
                   <option value="">Select category...</option>
                   {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id} disabled={c.id === formData.secondary_category_id}>{c.name}</option>
                   ))}
+                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">Secondary category (optional)</label>
+                <select value={formData.secondary_category_id} onChange={(e) => setFormData({ ...formData, secondary_category_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500">
+                  <option value="">None</option>
+                  {categories.map((c) => <option key={c.id} value={c.id} disabled={c.id === formData.category_id}>{c.name}</option>)}
                 </select>
               </div>
 

@@ -6,6 +6,7 @@ from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_session
+from app.core.category_filters import event_category_filter
 from app.core.security import get_current_user
 from app.core.utils import normalize_uuid, generate_seo_slug
 from app.models.user import User
@@ -96,7 +97,7 @@ def build_collection_events_query(collection: Collection, session: Session):
                 if cat:
                     cat_ids.append(cat.id)
         if cat_ids:
-            category_conditions.append(Event.category_id.in_(cat_ids))
+            category_conditions.append(event_category_filter(cat_ids))
 
     # Keyword conditions (search keywords in title, description, location_name)
     q = filter_params.get("q")

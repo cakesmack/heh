@@ -41,4 +41,5 @@ class Category(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    events: List["Event"] = Relationship(back_populates="category_rel")
+    events: List["Event"] = Relationship(back_populates="category_rel", sa_relationship_kwargs={"foreign_keys": "Event.category_id"})
+    secondary_events: List["Event"] = Relationship(back_populates="secondary_category_rel", sa_relationship_kwargs={"foreign_keys": "Event.secondary_category_id"})

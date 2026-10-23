@@ -56,7 +56,7 @@ def list_categories(
     category_responses = []
     for cat in categories:
         response = CategoryResponse.model_validate(cat)
-        response.event_count = len(cat.events) if cat.events else 0
+        response.event_count = len({event.id for event in [*cat.events, *cat.secondary_events]})
         category_responses.append(response)
 
     return CategoryListResponse(
@@ -132,7 +132,7 @@ def get_category(
         )
 
     response = CategoryResponse.model_validate(category)
-    response.event_count = len(category.events) if category.events else 0
+    response.event_count = len({event.id for event in [*category.events, *category.secondary_events]})
     return response
 
 
@@ -184,7 +184,7 @@ def update_category(
     session.refresh(category)
 
     response = CategoryResponse.model_validate(category)
-    response.event_count = len(category.events) if category.events else 0
+    response.event_count = len({event.id for event in [*category.events, *category.secondary_events]})
     return response
 
 

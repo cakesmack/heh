@@ -35,9 +35,13 @@ export function DetailsQuestion({ draft, error, onChange }: Props) {
   }, [user?.id]);
   return <div className="space-y-8">
     <div>
-      <label htmlFor="guided-category" className="mb-2 block text-sm font-semibold text-gray-800">Category *</label>
+      <label htmlFor="guided-category" className="mb-2 block text-sm font-semibold text-gray-800">Primary category *</label>
       <select id="guided-category" value={draft.categoryId} onChange={(event) => onChange({ categoryId: event.target.value, categoryName: categories.find((category) => category.id === event.target.value)?.name || '' })} className="min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-stone-dark focus:border-moss-green focus:ring-2 focus:ring-moss-green/30">
-        <option value="">Select a category</option>{draft.categoryId && !categories.some((category) => category.id === draft.categoryId) && <option value={draft.categoryId}>{draft.categoryName || 'Current category'}</option>}{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+        <option value="">Select a category</option>{draft.categoryId && !categories.some((category) => category.id === draft.categoryId) && <option value={draft.categoryId}>{draft.categoryName || 'Current category'}</option>}{categories.map((category) => <option key={category.id} value={category.id} disabled={category.id === draft.secondaryCategoryId}>{category.name}</option>)}
+      </select>
+      <label htmlFor="guided-secondary-category" className="mb-2 mt-4 block text-sm font-semibold text-gray-800">Secondary category (optional)</label>
+      <select id="guided-secondary-category" value={draft.secondaryCategoryId} onChange={(event) => onChange({ secondaryCategoryId: event.target.value, secondaryCategoryName: categories.find((category) => category.id === event.target.value)?.name || '' })} className="min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-stone-dark focus:border-moss-green focus:ring-2 focus:ring-moss-green/30">
+        <option value="">None</option>{draft.secondaryCategoryId && !categories.some((category) => category.id === draft.secondaryCategoryId) && <option value={draft.secondaryCategoryId}>{draft.secondaryCategoryName || 'Current secondary category'}</option>}{categories.map((category) => <option key={category.id} value={category.id} disabled={category.id === draft.categoryId}>{category.name}</option>)}
       </select>
       {categoryIssue && <p className="mt-2 text-sm text-amber-800" role="status">Categories could not be loaded. Check that the local API is available.</p>}
     </div>

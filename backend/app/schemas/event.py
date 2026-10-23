@@ -87,6 +87,7 @@ class EventCreate(BaseModel):
     venue_id: OptionalUUID = None
     location_name: Optional[str] = Field(None, max_length=255)
     category_id: str
+    secondary_category_id: Optional[str] = None
     tags: Optional[List[str]] = Field(None, max_length=5, description="List of tag names (max 5)")
     price: Optional[Union[str, float]] = Field(default="Free", description="Price as text (e.g., 'Free', '£5', '£5-£10') or number")
     image_url: Optional[str] = Field(None, max_length=500)
@@ -143,6 +144,7 @@ class EventUpdate(BaseModel):
     venue_id: OptionalUUID = None
     location_name: Optional[str] = Field(None, max_length=255)
     category_id: Optional[str] = None
+    secondary_category_id: Optional[str] = None
     tags: Optional[List[str]] = Field(None, description="List of tag names")
     # Map Display Point
     map_display_lat: Optional[float] = None
@@ -204,6 +206,7 @@ class EventResponse(BaseModel):
     longitude: Optional[float]
     geohash: Optional[str]
     category_id: Optional[str]
+    secondary_category_id: Optional[str] = None
     price: float
     price_display: Optional[str] = None  # User-friendly price text (e.g., "From £5")
     min_price: Optional[float] = None  # Numeric minimum for filtering
@@ -250,6 +253,7 @@ class EventResponse(BaseModel):
 
     # Nested related data
     category: Optional[CategoryResponse] = Field(default=None, validation_alias="category_rel")
+    secondary_category: Optional[CategoryResponse] = Field(default=None, validation_alias="secondary_category_rel")
     tags: Optional[List[TagResponse]] = None
     participating_venues: List[VenueResponse] = []
     showtimes: List[ShowtimeResponse] = []
@@ -324,6 +328,7 @@ class MapEventResponse(BaseModel):
     image_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
     category: Optional[CategoryResponse] = Field(default=None, validation_alias="category_rel")
+    secondary_category: Optional[CategoryResponse] = Field(default=None, validation_alias="secondary_category_rel")
     venue_name: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None

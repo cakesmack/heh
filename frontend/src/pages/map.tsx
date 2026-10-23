@@ -259,7 +259,7 @@ export function MapPage() {
   const filteredEvents = useMemo(() => {
     // Base list of events to filter
     const baseEvents = selectedCategory
-      ? events.filter(event => event.category?.id === selectedCategory)
+      ? events.filter(event => event.category?.id === selectedCategory || event.secondary_category?.id === selectedCategory)
       : events;
 
     // STRICT DEFENSIVE CODING: Filter out invalid coordinates to prevent map crashes

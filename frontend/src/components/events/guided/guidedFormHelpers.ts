@@ -72,6 +72,7 @@ export function validateNativeTerms(draft: GuidedEventDraft): string | null {
 
 export function validateDetails(draft: GuidedEventDraft): string | null {
   if (!draft.categoryId) return 'Choose a category.';
+  if (draft.secondaryCategoryId && draft.secondaryCategoryId === draft.categoryId) return 'Choose a different secondary category.';
   if (draft.description.length > 20000) return 'Description must be 20,000 characters or less.';
   return null;
 }

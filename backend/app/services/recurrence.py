@@ -168,6 +168,7 @@ def generate_recurring_instances(
                 longitude=parent_event.longitude,
                 geohash=parent_event.geohash,
                 category_id=parent_event.category_id,
+                secondary_category_id=parent_event.secondary_category_id,
                 price=parent_event.price,
                 price_display=parent_event.price_display,
                 min_price=parent_event.min_price,

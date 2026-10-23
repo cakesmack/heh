@@ -52,6 +52,7 @@
 |---|---|---|
 | `venue_id` | `venues.id` | SET NULL |
 | `category_id` | `categories.id` | SET NULL |
+| `secondary_category_id` | `categories.id` (optional) | SET NULL |
 | `organizer_id` (submitting user) | `users.id` | SET NULL |
 | `organizer_profile_id` (group) | `organizers.id` | SET NULL |
 
@@ -97,6 +98,7 @@
 - `organizer` → `User` (many-to-one)
 - `organizer_profile` → `Organizer` (many-to-one)
 - `category_rel` → `Category` (many-to-one)
+- `secondary_category_rel` → `Category` (optional many-to-one); primary remains required for creation and controls card styling. The two selected IDs must differ. Public event/map/collection category filters match either field without additional joins. Migration `0946aa625cd0` only adds the nullable secondary FK/index; no existing events are recategorised.
 - `tags` → `Tag[]` (many-to-many via `event_tags`)
 - `bookmarks` → `Bookmark[]`
 - `showtimes` → `EventShowtime[]` (cascade delete-orphan)

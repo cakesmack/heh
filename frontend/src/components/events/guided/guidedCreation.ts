@@ -85,6 +85,7 @@ export function buildGuidedEventPayload(draft: GuidedEventDraft, imageUrl?: stri
     ...WIZARD_DEFAULTS,
     title: draft.title.trim(),
     category_id: draft.categoryId,
+    secondary_category_id: draft.secondaryCategoryId,
     selectedOrganizer: draft.organizerId,
     organizer_profile_id: draft.organizerId,
     locationTab: draft.venueMode === 'single' ? 'main' : 'multi',

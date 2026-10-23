@@ -55,6 +55,7 @@ export interface WizardFormData {
   // Step 1: Core Info & Location
   title: string;
   category_id: string;
+  secondary_category_id: string;
   price: string;
   organizer_profile_id: string;  // '' = Myself, 'uuid' = Group
   selectedOrganizer: string | null; // null = not yet chosen (validation gate)
@@ -107,6 +108,7 @@ export const WIZARD_DEFAULTS: WizardFormData = {
   // Step 1
   title: '',
   category_id: '',
+  secondary_category_id: '',
   price: '0',
   organizer_profile_id: '',
   selectedOrganizer: null,
@@ -172,6 +174,9 @@ const validateStep1: StepValidator = (data) => {
   }
   if (!data.category_id) {
     errors.category_id = 'Please select a category.';
+  }
+  if (data.secondary_category_id && data.secondary_category_id === data.category_id) {
+    errors.secondary_category_id = 'Choose a different secondary category.';
   }
   if (data.locationTab === 'main' && !data.venue_id && !data.location_name) {
     errors.venue_id = 'Please select a venue or enter a location.';
@@ -328,6 +333,7 @@ export function buildEventPayload(data: WizardFormData, isAdmin: boolean = true)
     title: data.title,
     description: data.description || undefined,
     category_id: data.category_id,
+    secondary_category_id: data.secondary_category_id || null,
     venue_id: data.locationTab === 'main' ? (data.venue_id || null) : null,
     location_name: (data.locationTab === 'main' && data.locationMode === 'custom') ? data.location_name : null,
     latitude: (data.locationTab === 'main' && data.locationMode === 'custom') ? data.latitude : null,
@@ -414,6 +420,7 @@ export function parseInitialEventData(data: any): WizardFormData {
   return {
     title: data.title || '',
     category_id: categoryId,
+    secondary_category_id: data.secondary_category_id || '',
     price: data.price !== undefined && data.price !== null ? String(data.price) : '0',
     organizer_profile_id: organizerId,
     selectedOrganizer: organizerId || null,

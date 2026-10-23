@@ -21,7 +21,7 @@ function SummaryContent({ draft, onEdit, availableQuestionIds }: SummaryContentP
     { id: 'schedule', label: 'Schedule', value: scheduleSummary(draft) },
     { id: 'attendance', label: 'Attendance', value: attendanceSummary(draft) },
     ...(draft.attendanceMode === 'native' ? [{ id: 'tickets' as const, label: 'Tickets', value: draft.ticketTiers.length ? `${draft.ticketTiers.length} ${draft.ticketTiers.length === 1 ? 'tier' : 'tiers'}` : 'Not added yet' }] : []),
-    { id: 'details', label: 'Details', value: draft.categoryName || 'Not added yet' },
+    { id: 'details', label: 'Details', value: [draft.categoryName, draft.secondaryCategoryName].filter(Boolean).join(' · ') || 'Not added yet' },
     { id: 'finishing', label: 'Photo and extras', value: [draft.imageName ? 'Photo' : '', draft.tags.length ? `${draft.tags.length} tags` : '', draft.ageRestriction || ''].filter(Boolean).join(' · ') || 'Not added yet' },
   ];
 

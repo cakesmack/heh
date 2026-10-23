@@ -325,6 +325,7 @@ export interface Event {
   latitude: number;
   longitude: number;
   category_id?: string;
+  secondary_category_id?: string | null;
   price: number;
   price_display?: string;  // User-friendly text like "Free", "£5-£10"
   min_price?: number;      // Numeric for filtering
@@ -381,6 +382,7 @@ export interface EventResponse extends Event {
   website_click_count?: number;
   popularity_score?: number;
   category?: Category;
+  secondary_category?: Category | null;
   tags?: Tag[];
   organizer_email?: string;
   organizer_username?: string;
@@ -413,6 +415,7 @@ export interface EventCreate {
   date_end: string | null;
   venue_id: string | null;
   category_id: string;
+  secondary_category_id?: string | null;
   price?: number | string;  // Can be number or text like "Free", "£5-£10"
   image_url?: string | null;
   tags?: string[];
@@ -448,6 +451,7 @@ export interface EventUpdate {
   date_end?: string | null;
   venue_id?: string | null;  // Allow null to clear venue
   category_id?: string;
+  secondary_category_id?: string | null;
   price?: number | string;
   image_url?: string | null;
   featured?: boolean;
@@ -533,6 +537,7 @@ export interface MapEventResponse {
   image_url?: string;
   thumbnail_url?: string;
   category?: Category;
+  secondary_category?: Category | null;
   venue_name?: string;
   location_name?: string;
   latitude?: number;

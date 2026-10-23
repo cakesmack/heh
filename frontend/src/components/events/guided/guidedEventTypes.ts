@@ -45,6 +45,8 @@ export interface GuidedEventDraft {
   description: string;
   categoryId: string;
   categoryName: string;
+  secondaryCategoryId: string;
+  secondaryCategoryName: string;
   organizerId: string;
   organizerName: string;
   tags: string[];

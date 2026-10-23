@@ -1126,12 +1126,19 @@ export default function EventDetailPage({ initialEvent, serverError, baseUrl }: 
           {/* Flat Editorial Container (No white box / no card borders) */}
           <div className="md:col-span-8 space-y-4 pb-2 max-w-3xl">
               {/* Front-Loaded Context: Category Badges, Age Restriction & Event Tags */}
-              {((event.category || event.age_restriction || (event.tags && event.tags.length > 0))) && (
+              {((event.category || event.secondary_category || event.age_restriction || (event.tags && event.tags.length > 0))) && (
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   {event.category && (
                     <Link href={`/category/${event.category.slug}`}>
                       <Badge variant="info" size="sm" className="hover:opacity-80 transition-opacity cursor-pointer">
                         {event.category.name}
+                      </Badge>
+                    </Link>
+                  )}
+                  {event.secondary_category && (
+                    <Link href={`/category/${event.secondary_category.slug}`}>
+                      <Badge variant="default" size="sm" className="hover:opacity-80 transition-opacity cursor-pointer">
+                        {event.secondary_category.name}
                       </Badge>
                     </Link>
                   )}

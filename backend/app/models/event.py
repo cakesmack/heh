@@ -88,6 +88,10 @@ class Event(SQLModel, table=True):
         default=None,
         sa_column=Column(String, ForeignKey("categories.id", ondelete="SET NULL"), index=True, nullable=True)
     )
+    secondary_category_id: Optional[str] = Field(
+        default=None,
+        sa_column=Column(String, ForeignKey("categories.id", name="fk_events_secondary_category_id_categories", ondelete="SET NULL"), index=True, nullable=True)
+    )
     price: float = Field(default=0.0, ge=0.0)  # Legacy - keeping for backward compatibility
     price_display: Optional[str] = Field(default=None, max_length=100)  # User-friendly price text
     min_price: float = Field(default=0.0, ge=0.0)  # For search filtering (parsed from price_display)
@@ -166,7 +170,8 @@ class Event(SQLModel, table=True):
     )
     organizer: "User" = Relationship(back_populates="submitted_events")
     organizer_profile: Optional["Organizer"] = Relationship(back_populates="events")
-    category_rel: Optional["Category"] = Relationship(back_populates="events")
+    category_rel: Optional["Category"] = Relationship(back_populates="events", sa_relationship_kwargs={"foreign_keys": "Event.category_id"})
+    secondary_category_rel: Optional["Category"] = Relationship(back_populates="secondary_events", sa_relationship_kwargs={"foreign_keys": "Event.secondary_category_id"})
     tags: List["Tag"] = Relationship(back_populates="events", link_model=EventTag)
     bookmarks: List["Bookmark"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     showtimes: List["EventShowtime"] = Relationship(back_populates="event", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

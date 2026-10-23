@@ -39,6 +39,26 @@ test('legacy hydration populates venues, host, metadata and current image; metad
   assert.equal(payload.is_recurring, undefined);
 });
 
+test('organiser create/edit round-trips optional secondary category and explicit clears', () => {
+  const { buildGuidedEventPayload } = require('../src/components/events/guided/guidedCreation.ts');
+  const original = event();
+  const draft = parseGuidedEventData(original);
+  assert.equal(draft.secondaryCategoryId, '');
+  assert.equal(buildGuidedEventPayload(draft).secondary_category_id, null);
+  Object.assign(draft, { secondaryCategoryId: 'food', secondaryCategoryName: 'Food & Drink' });
+  assert.equal(buildGuidedEventPayload(draft).secondary_category_id, 'food');
+  assert.equal(buildGuidedEventUpdate(draft, original).secondary_category_id, 'food');
+  const withSecondary = event({ secondary_category_id: 'food', secondary_category: { id: 'food', name: 'Food & Drink' } });
+  const editing = parseGuidedEventData(withSecondary);
+  assert.equal(editing.secondaryCategoryName, 'Food & Drink');
+  editing.secondaryCategoryId = 'music';
+  assert.equal(buildGuidedEventUpdate(editing, withSecondary).secondary_category_id, 'music');
+  editing.secondaryCategoryId = '';
+  assert.equal(buildGuidedEventUpdate(editing, withSecondary).secondary_category_id, null);
+  editing.secondaryCategoryId = editing.categoryId;
+  assert.throws(() => buildGuidedEventUpdate(editing, withSecondary), /different secondary category/);
+});
+
 test('clearing optional values produces explicit update clears; door text never becomes URL', () => {
   const original = event({ price: 12.5, price_display: '£12.50 at the door', ticket_url: 'https://example.org/reserve' });
   const draft = parseGuidedEventData(original);

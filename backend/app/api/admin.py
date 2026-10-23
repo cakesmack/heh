@@ -17,7 +17,8 @@ from app.models.event import Event
 from app.models.venue import Venue, VenueStatus
 from app.models.category import Category
 from app.models.pending_event import PendingEvent
-from app.core.utils import to_london_naive
+from app.core.utils import to_london_naive, normalize_uuid
+from app.core.category_filters import event_category_filter
 
 from app.models.venue_claim import VenueClaim
 from app.models.venue_invite import VenueInvite
@@ -266,7 +267,7 @@ def list_admin_events(
     
     # Apply filters
     if category_id:
-        query = query.where(Event.category_id == category_id)
+        query = query.where(event_category_filter([normalize_uuid(category_id)]))
     
     if venue_id:
         try:

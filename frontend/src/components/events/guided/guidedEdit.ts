@@ -61,6 +61,7 @@ export function parseGuidedEventData(event: EventResponse): GuidedEventDraft {
     ticketTiers: data.ticket_tiers.map((tier, index) => ({ ...tier, id: event.ticket_tiers?.[index]?.id || `existing-${index}`, serverId: event.ticket_tiers?.[index]?.id })),
     passFeesToBuyer: Boolean(data.pass_fees_to_buyer), termsAccepted: Boolean(data.terms_accepted),
     description: data.description, categoryId: data.category_id, categoryName: event.category?.name || '',
+    secondaryCategoryId: data.secondary_category_id, secondaryCategoryName: event.secondary_category?.name || '',
     organizerId: data.organizer_profile_id, organizerName: event.organizer_profile?.name || event.organizer_profile_name || '',
     tags: data.tags, ageRestriction: String(data.age_restriction || ''), websiteUrl: data.website_url,
     existingImageUrl: data.image_url, imagePreviewUrl: data.image_url, imageName: data.image_url ? 'Current event photo' : '', imageFile: null,
