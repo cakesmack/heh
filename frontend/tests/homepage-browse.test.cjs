@@ -14,7 +14,7 @@ function load(file, imports = {}, initial = []) {
     createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
     useState(value) { const i = cursor++; if (!(i in state)) state[i] = typeof value === 'function' ? value() : value;
       return [state[i], next => { state[i] = typeof next === 'function' ? next(state[i]) : next; }]; },
-    useEffect: callback => effects.push(callback), useRef: value => ({ current: value }),
+    useEffect: callback => effects.push(callback), useRef: value => ({ current: value }), useCallback: callback => callback,
   };
   const module = { exports: {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src', file), 'utf8'), {
@@ -28,7 +28,7 @@ function load(file, imports = {}, initial = []) {
     if (name.startsWith('@/components/')) return name;
     throw new Error(`Unexpected import ${name}`);
   } });
-  return { component: module.exports.default, render(props) { cursor = 0; effects = []; return module.exports.default(props); },
+  return { exports: module.exports, component: module.exports.default, render(props) { cursor = 0; effects = []; return module.exports.default(props); },
     effect: index => effects[index]() };
 }
 function nodes(tree, desktop) {
@@ -45,7 +45,8 @@ const names = ['Music', 'Arts, Theatre & Dance', 'Family & Kids', 'Festivals', '
 const categories = names.map((name, index) => ({ id: `api-id-${index}`, name, slug: `existing-slug-${index}`,
   gradient_color: `#${(0x123450 + index).toString(16)}`, description: 'API metadata' }));
 const card = load('components/categories/CategoryCard.tsx').component;
-const grid = () => load('components/categories/CategoryGrid.tsx', { '@/lib/api': {}, './CategoryCard': card });
+const browseCategories = load('components/categories/browseCategories.ts').exports;
+const grid = () => load('components/categories/CategoryGrid.tsx', { '@/lib/api': {}, './CategoryCard': card, './browseCategories': browseCategories });
 const links = (tree, desktop) => nodes(tree, desktop).filter(node => node.type === 'link');
 const labels = list => list.map(node => node.props.children.at(-1));
 
@@ -115,6 +116,7 @@ test('homepage locations wrap as text navigation; API sources, destinations and 
   let categoryCalls = 0, locationQuery;
   const form = load('components/categories/CategoryGrid.tsx', {
     './CategoryCard': card,
+    './browseCategories': browseCategories,
     '@/lib/api': { api: { categories: { list: async () => { categoryCalls++; return { categories }; } } } },
   });
   form.render({ compact: true });
@@ -147,26 +149,112 @@ test('homepage locations wrap as text navigation; API sources, destinations and 
   assert.ok(nodes(compact).some(node => (node.props.className || '').includes('max-w-5xl')));
 });
 
-test('homepage opts into compact controls and small separate headings only while search is closed', () => {
+test('homepage uses one shared browse panel without changing hero/search', () => {
   const page = load('pages/index.tsx', {
     '@/hooks/useAuth': { useAuth: () => ({}) }, '@/hooks/useEvents': { useEvents: () => ({ events: [], total: 0 }) },
     '@/lib/api': {}, '@/lib/eventDateRange': {}, '@/utils/imageOptimizer': { optimizeImage: () => '' },
   });
   const all = nodes(page.render());
-  assert.equal(all.find(node => node.type === '@/components/categories/CategoryGrid').props.compact, true);
-  assert.equal(all.find(node => node.type === '@/components/PopularLocations').props.compact, true);
-  for (const label of ['Browse by category', 'Browse by location']) {
-    const heading = all.find(node => node.type === 'h2' && node.props.children[0] === label);
-    assert.match(heading.props.className, /text-xs/);
-    assert.match(heading.props.className, /max-w-5xl/);
-  }
+  assert.equal(all.filter(node => node.type === '@/components/categories/BrowseEvents').length, 1);
   const browse = all.find(node => node.props.id === 'categories');
-  assert.equal(browse.props.className, 'bg-white pt-3');
+  assert.equal(browse.props.className, 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4');
   assert.ok(!all.some(node => (node.props.className || '').includes('min-h-[66px]')));
   assert.ok(!all.some(node => (node.props.className || '').includes('border-t border-gray-200')));
   const hero = all.find(node => node.type === '@/components/home/HeroSection');
   hero.props.onSearch({ q: undefined }); // Existing clear path: must not navigate or fetch.
   assert.ok(nodes(page.render()).some(node => node.type === '@/components/home/HeroSection'));
+});
+
+test('browse tiles show the same initial eight on mobile/desktop, expand all 14, and preserve colours and URLs', () => {
+  const form = grid(), props = { browse: true, initialCategories: [...categories].reverse() };
+  let tree = form.render(props);
+  for (const desktop of [false, true]) assert.deepEqual(labels(links(tree, desktop)), names.slice(0, 8));
+  assert.ok(nodes(tree).some(node => /sm:grid-cols-2 xl:grid-cols-4/.test(node.props.className || '')));
+  for (const link of links(tree, false)) {
+    assert.match(link.props.className, /min-h-14/);
+    assert.match(link.props.className, /focus-visible:ring-2/);
+  }
+  let button = nodes(tree).find(node => node.type === 'button');
+  assert.equal(button.props.children[0], 'View all 14 categories');
+  assert.ok(!nodes(tree).find(node => node.props.id === 'browse-event-categories').props.children.flat(Infinity).includes(button));
+  button.props.onClick();
+  tree = form.render(props);
+  assert.deepEqual(labels(links(tree, false)), Array.from(browseCategories.browseCategoryNames));
+  for (const link of links(tree, false)) {
+    const category = categories.find(item => `/category/${item.slug}` === link.props.href);
+    assert.ok(category);
+    assert.equal(link.props.style.color, category.gradient_color);
+  }
+  button = nodes(tree).find(node => node.type === 'button');
+  assert.equal(button.props['aria-expanded'], true);
+  button.props.onClick();
+  assert.equal(links(form.render(props), false).length, 8);
+});
+
+test('browse uses exact current labels, maps canonical slugs without changing identity, and does not fabricate missing categories', () => {
+  const canonical = { ...categories[1], name: 'Stale label', slug: 'arts-theatre-dance' };
+  const obsolete = { ...categories[0], id: 'legacy', name: 'Festivals & Markets', slug: 'festivals-markets' };
+  const mapped = browseCategories.currentBrowseCategories([canonical, obsolete]);
+  assert.equal(mapped.length, 1);
+  assert.equal(mapped[0].name, 'Arts, Theatre & Dance');
+  assert.equal(mapped[0].id, canonical.id);
+  assert.equal(mapped[0].slug, canonical.slug);
+  const tree = grid().render({ browse: true, initialCategories: [canonical, obsolete] });
+  assert.deepEqual(labels(links(tree, false)), ['Arts, Theatre & Dance']);
+  assert.ok(nodes(tree).some(node => node.props.role === 'status'));
+});
+
+test('shared panel lays out categories and locations 2:1 without changing location source or category actions', () => {
+  const callback = () => {};
+  const panel = load('components/categories/BrowseEvents.tsx', { './CategoryGrid': 'categories' });
+  const tree = nodes(panel.render({ activeCategory: 'music', onSelectCategory: callback, activeLocation: 'Inverness', locationCategorySlug: 'music' }));
+  assert.ok(tree.some(node => node.type === 'h2' && node.props.children[0] === 'Browse events'));
+  assert.ok(tree.some(node => /lg:grid-cols-3/.test(node.props.className || '')));
+  assert.ok(tree.some(node => /lg:col-span-2/.test(node.props.className || '')));
+  const category = tree.find(node => node.type === 'categories');
+  assert.equal(category.props.browse, true);
+  assert.equal(category.props.onSelectCategory, callback);
+  const locations = tree.find(node => node.type === '@/components/PopularLocations');
+  assert.equal(locations.props.browse, true);
+  assert.equal(locations.props.categorySlug, 'music');
+});
+
+test('browse location list preserves all returned hubs and category-specific API request without scrolling', async () => {
+  let query;
+  const hubs = ['Aviemore', 'Dingwall', 'Dornoch', 'Fort William', 'Inverness', 'Nairn', 'Thurso', 'Ullapool', 'Wick', 'Portree']
+    .map((name, id) => ({ id, name, slug: name.toLowerCase().replaceAll(' ', '-') }));
+  const form = load('components/PopularLocations.tsx', {
+    '@/lib/api': { locationsAPI: { list: async value => { query = value; return hubs; } } },
+  });
+  const props = { browse: true, categorySlug: 'music' };
+  form.render(props); form.effect(0);
+  await new Promise(resolve => setImmediate(resolve));
+  const tree = form.render(props);
+  assert.equal(query.category_slug, 'music');
+  assert.deepEqual(links(tree, false).map(node => node.props.href), hubs.map(hub => `/locations/${hub.slug}`));
+  assert.ok(nodes(tree).some(node => /sm:grid-cols-2/.test(node.props.className || '')));
+  assert.ok(!nodes(tree).some(node => /overflow-x|rounded-full/.test(node.props.className || '')));
+});
+
+test('Events page shares panel while preserving category toggle, URL state, and category-specific locations', () => {
+  let pushed;
+  const current = { category: 'music', location: 'Inverness', q: 'concert' };
+  const page = load('pages/events/index.tsx', {
+    'next/router': { useRouter: () => ({ pathname: '/events', query: { q: 'concert' }, push: (...args) => { pushed = args; } }) },
+    '@/hooks/useGeolocation': { useGeolocation: () => ({}) }, '@/context/SearchContext': { useSearch: () => ({}) },
+    '@/lib/api': {}, '@/lib/dateUtils': {}, '@/lib/eventDateDisplay': { eventDateContext: value => value },
+    '@/lib/eventDateRange': { rangeFromQuery: () => ({}), mergeEventSearchQuery: (query, filters) => ({ ...query, ...filters }) },
+  }, [[], 0, false, false, null, current, {}]);
+  const panel = nodes(page.render()).find(node => node.type === '@/components/categories/BrowseEvents');
+  assert.equal(panel.props.locationCategorySlug, 'music');
+  assert.equal(panel.props.activeLocation, 'Inverness');
+  panel.props.onSelectCategory('music');
+  assert.equal(pushed[0].query.category, undefined);
+  assert.equal(pushed[0].query.q, 'concert');
+  assert.equal(pushed[0].query.location, 'Inverness');
+  panel.props.onSelectCategory('comedy');
+  assert.equal(pushed[0].query.category, 'comedy');
+  assert.equal(pushed[2].shallow, true);
 });
 
 test('homepage loading rows wrap without pill scrolling and Happening Next has tighter top spacing', () => {

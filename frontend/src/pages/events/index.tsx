@@ -5,8 +5,7 @@ import { useSearch } from '@/context/SearchContext';
 import { EventList } from '@/components/events/EventList';
 import DiscoveryBar from '@/components/home/DiscoveryBar';
 import { FilterBar } from '@/components/search/FilterBar';
-import CategoryGrid from '@/components/categories/CategoryGrid';
-import PopularLocations from '@/components/PopularLocations';
+import BrowseEvents from '@/components/categories/BrowseEvents';
 import { EventFilter, EventResponse } from '@/types';
 import { getDateRangeFromFilter } from '@/lib/dateUtils';
 import { eventsAPI } from '@/lib/api';
@@ -184,18 +183,16 @@ export default function EventsPage() {
           />
         </div>
 
-        {/* Category & Location scrolling pills */}
-        <div className="space-y-1.5 md:space-y-4 mb-3 md:mb-8">
-          <CategoryGrid
+        {/* Shared category and location navigation; existing filter semantics. */}
+        <div className="mb-4 md:mb-6">
+          <BrowseEvents
             activeCategory={currentFilters.category}
             onSelectCategory={(slug) => {
               const newCategory = currentFilters.category === slug ? undefined : slug;
               handleSearch({ ...currentFilters, category: newCategory });
             }}
-          />
-          <PopularLocations
             activeLocation={currentFilters.location}
-            categorySlug={currentFilters.category}
+            locationCategorySlug={currentFilters.category}
           />
         </div>
 

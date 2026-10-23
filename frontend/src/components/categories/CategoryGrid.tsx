@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Category } from '@/types';
 import { api } from '@/lib/api';
 import CategoryCard from './CategoryCard';
+import { browseCategoryNames, currentBrowseCategories } from './browseCategories';
 
 interface CategoryGridProps {
   activeCategory?: string;
   onSelectCategory?: (slug: string) => void;
   initialCategories?: Category[];
   compact?: boolean;
+  browse?: boolean;
 }
 
 // Presentation order on the homepage only; records/colours/URLs remain API-owned.
@@ -17,7 +19,7 @@ const homepageOrder = [
   'Markets & Fairs', 'Nature & Outdoors', 'Talks, Lectures & Business', 'Film & Cinema',
 ];
 
-export default function CategoryGrid({ activeCategory, onSelectCategory, initialCategories, compact = false }: CategoryGridProps = {}) {
+export default function CategoryGrid({ activeCategory, onSelectCategory, initialCategories, compact = false, browse = false }: CategoryGridProps = {}) {
   const [categories, setCategories] = useState<Category[]>(initialCategories || []);
   const [loading, setLoading] = useState(initialCategories ? false : true);
   const [expanded, setExpanded] = useState(false);
@@ -45,6 +47,27 @@ export default function CategoryGrid({ activeCategory, onSelectCategory, initial
 
     fetchCategories();
   }, [initialCategories]);
+
+  if (browse) {
+    const current = currentBrowseCategories(categories);
+    const initial = new Set<string>(browseCategoryNames.slice(0, 8));
+    const showAll = expanded;
+    return <div>
+      <div id="browse-event-categories" className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-busy={loading}>
+        {loading ? Array.from({ length: 8 }, (_, index) => <div key={index} className="h-14 animate-pulse rounded-xl bg-gray-200" />)
+          : current.map(category => <div key={category.id} className={!showAll && !initial.has(category.name) ? 'hidden' : ''}>
+            <CategoryCard category={category} tile isActive={activeCategory === category.slug} onClick={onSelectCategory} />
+          </div>)}
+      </div>
+      {!loading && current.length < browseCategoryNames.length && <p role="status" className="mt-3 text-xs text-gray-500">Some current categories are unavailable in the site’s category data.</p>}
+      {!loading && current.some(category => !initial.has(category.name)) && <button type="button"
+        aria-expanded={showAll} aria-controls="browse-event-categories"
+        onClick={() => setExpanded(!showAll)}
+        className="mt-2 inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-gray-500 underline-offset-4 hover:text-highland-green hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">
+        {showAll ? 'Show fewer categories' : 'View all 14 categories'}<span aria-hidden="true">{showAll ? '↑' : '→'}</span>
+      </button>}
+    </div>;
+  }
 
   if (loading) {
     return (
