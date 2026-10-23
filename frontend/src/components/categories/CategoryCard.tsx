@@ -5,11 +5,14 @@ interface CategoryCardProps {
     category: Category;
     isActive?: boolean;
     onClick?: (slug: string) => void;
+    compact?: boolean;
 }
 
-export default function CategoryCard({ category, isActive = false, onClick }: CategoryCardProps) {
+export default function CategoryCard({ category, isActive = false, onClick, compact = false }: CategoryCardProps) {
     const color = category.gradient_color || '#059669';
-    const baseClass = "group inline-flex items-center gap-1.5 md:gap-2.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 flex-shrink-0 snap-start";
+    const baseClass = compact
+        ? 'group inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs md:text-sm font-semibold transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2'
+        : "group inline-flex items-center gap-1.5 md:gap-2.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 flex-shrink-0 snap-start";
 
     if (onClick) {
         return (

@@ -53,14 +53,21 @@ test('desktop defaults to eight requested categories and mobile to six, using on
   const tree = grid().render({ compact: true, initialCategories: [...categories].reverse() });
   assert.deepEqual(labels(links(tree, true)), names.slice(0, 8));
   assert.deepEqual(labels(links(tree, false)), names.slice(0, 6));
-  assert.ok(nodes(tree).some(node => node.props.className === 'flex flex-wrap gap-2 md:gap-3 pb-1'));
+  assert.ok(nodes(tree).some(node => node.props.className === 'flex flex-wrap gap-1.5 md:gap-2'));
+  for (const link of links(tree, true)) {
+    assert.match(link.props.className, /min-h-9/);
+    assert.match(link.props.className, /rounded-lg/);
+    assert.ok(!link.props.className.includes('md:px-5'));
+    assert.match(link.props.className, /focus-visible:ring-2/);
+  }
   const button = nodes(tree).find(node => node.type === 'button');
   assert.equal(button.props.type, 'button');
   assert.equal(button.props['aria-expanded'], false);
   assert.equal(button.props['aria-controls'], 'homepage-category-pills');
-  assert.equal(button.props.children[0], 'More categories');
+  assert.equal(button.props.children[0], 'View all categories');
+  assert.equal(button.props.children[1].props.children[0], '↓');
   assert.equal(button.props.style, undefined);
-  assert.match(button.props.className, /bg-white/);
+  assert.ok(!/border|bg-white|rounded-full/.test(button.props.className));
   assert.match(button.props.className, /focus-visible:ring-2/);
 });
 
@@ -79,7 +86,8 @@ test('native button expands/collapses all categories inline on desktop and mobil
   }
   const button = nodes(tree).find(node => node.type === 'button');
   assert.equal(button.props['aria-expanded'], true);
-  assert.equal(button.props.children[0], 'Fewer categories');
+  assert.equal(button.props.children[0], 'Show fewer categories');
+  assert.equal(button.props.children[1].props.children[0], '↑');
   button.props.onClick();
   tree = form.render(props);
   assert.equal(links(tree, true).length, 8);
@@ -93,6 +101,8 @@ test('unknown API categories stay accessible; shared non-homepage ordering/selec
   assert.equal(links(form.render({ compact: true, initialCategories: input }), true).at(-1).props.href, '/category/future-category');
   const shared = grid();
   assert.deepEqual(labels(links(shared.render({ initialCategories: input }), false)), input.map(category => category.name));
+  assert.match(links(shared.render({ initialCategories: input }), false)[0].props.className, /rounded-full/);
+  assert.match(links(shared.render({ initialCategories: input }), false)[0].props.className, /md:px-5/);
   let selected;
   const tree = grid().render({ initialCategories: categories, onSelectCategory: slug => { selected = slug; }, activeCategory: categories[0].slug });
   const buttons = nodes(tree).filter(node => node.type === 'button');
@@ -101,7 +111,7 @@ test('unknown API categories stay accessible; shared non-homepage ordering/selec
   assert.equal(selected, categories[0].slug);
 });
 
-test('existing category/location API sources, links, active styling and mobile location scrolling are preserved', async () => {
+test('homepage locations wrap as text navigation; API sources, destinations and other-page pills stay intact', async () => {
   let categoryCalls = 0, locationQuery;
   const form = load('components/categories/CategoryGrid.tsx', {
     './CategoryCard': card,
@@ -112,7 +122,8 @@ test('existing category/location API sources, links, active styling and mobile l
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(categoryCalls, 1);
   assert.equal(links(form.render({ compact: true }), true).length, 8);
-  const locationData = [{ id: 1, name: 'Inverness', slug: 'inverness' }, { id: 2, name: 'Thurso', slug: 'thurso' }];
+  const locationData = ['Aviemore', 'Dingwall', 'Dornoch', 'Fort William', 'Inverness', 'Nairn', 'Thurso', 'Ullapool', 'Wick']
+    .map((name, id) => ({ id, name, slug: name.toLowerCase().replaceAll(' ', '-') }));
   const locations = load('components/PopularLocations.tsx', { '@/lib/api': { locationsAPI: { list: async query => { locationQuery = query; return locationData; } } } });
   locations.render({ compact: true, activeLocation: 'Inverness' });
   locations.effect(0);
@@ -120,10 +131,19 @@ test('existing category/location API sources, links, active styling and mobile l
   const compact = locations.render({ compact: true, activeLocation: 'Inverness' });
   const normal = locations.render({ activeLocation: 'Inverness' });
   assert.equal(locationQuery.category_slug, undefined);
-  assert.deepEqual(links(compact, false).map(node => node.props.href), ['/locations/inverness', '/locations/thurso']);
-  assert.equal(JSON.stringify(links(compact, false)), JSON.stringify(links(normal, false)));
-  assert.match(links(compact, false)[0].props.className, /bg-emerald-600/);
-  assert.ok(nodes(compact).some(node => (node.props.className || '').includes('overflow-x-auto')));
+  const expected = locationData.map(location => `/locations/${location.slug}`);
+  assert.deepEqual(links(compact, false).map(node => node.props.href), expected);
+  assert.deepEqual(links(normal, false).map(node => node.props.href), expected);
+  assert.match(links(compact, false)[4].props.className, /text-emerald-700 underline/);
+  assert.match(links(normal, false)[4].props.className, /bg-emerald-600/);
+  for (const link of links(compact, false)) {
+    assert.match(link.props.className, /min-h-9/);
+    assert.match(link.props.className, /focus-visible:ring-2/);
+    assert.ok(!/rounded-full|border|bg-white/.test(link.props.className));
+  }
+  assert.ok(nodes(compact).some(node => (node.props.className || '').includes('flex-wrap gap-x-4')));
+  assert.ok(!nodes(compact).some(node => (node.props.className || '').includes('overflow-x-auto')));
+  assert.ok(nodes(normal).some(node => (node.props.className || '').includes('overflow-x-auto')));
   assert.ok(nodes(compact).some(node => (node.props.className || '').includes('max-w-5xl')));
 });
 
@@ -135,13 +155,32 @@ test('homepage opts into compact controls and small separate headings only while
   const all = nodes(page.render());
   assert.equal(all.find(node => node.type === '@/components/categories/CategoryGrid').props.compact, true);
   assert.equal(all.find(node => node.type === '@/components/PopularLocations').props.compact, true);
-  for (const label of ['Browse by category', 'Popular locations']) {
+  for (const label of ['Browse by category', 'Browse by location']) {
     const heading = all.find(node => node.type === 'h2' && node.props.children[0] === label);
     assert.match(heading.props.className, /text-xs/);
     assert.match(heading.props.className, /max-w-5xl/);
   }
-  assert.ok(all.some(node => (node.props.className || '').includes('border-t border-gray-200')));
+  const browse = all.find(node => node.props.id === 'categories');
+  assert.equal(browse.props.className, 'bg-white pt-3');
+  assert.ok(!all.some(node => (node.props.className || '').includes('min-h-[66px]')));
+  assert.ok(!all.some(node => (node.props.className || '').includes('border-t border-gray-200')));
   const hero = all.find(node => node.type === '@/components/home/HeroSection');
   hero.props.onSearch({ q: undefined }); // Existing clear path: must not navigate or fetch.
   assert.ok(nodes(page.render()).some(node => node.type === '@/components/home/HeroSection'));
+});
+
+test('homepage loading rows wrap without pill scrolling and Happening Next has tighter top spacing', () => {
+  const categoriesLoading = grid().render({ compact: true });
+  const locationsLoading = load('components/PopularLocations.tsx', { '@/lib/api': {} }).render({ compact: true });
+  for (const tree of [categoriesLoading, locationsLoading]) {
+    assert.ok(nodes(tree).some(node => (node.props.className || '').includes('flex-wrap')));
+    assert.ok(!nodes(tree).some(node => (node.props.className || '').includes('overflow-x-auto')));
+    assert.equal(tree.props.className, tree === categoriesLoading ? 'py-1 bg-white' : 'py-1 bg-gray-50');
+  }
+  const upcoming = load('components/home/HappeningNextEvents.tsx', { 'lucide-react': {}, '@/types': {} });
+  const loading = upcoming.render({ events: [], isLoading: true });
+  const populated = upcoming.render({ events: [{ id: 'unchanged-event-card' }], isLoading: false });
+  assert.equal(loading.props.className, 'pt-6 pb-10 bg-gray-50 border-b border-gray-100');
+  assert.equal(populated.props.className, loading.props.className);
+  assert.ok(nodes(populated).some(node => node.props.event?.id === 'unchanged-event-card'));
 });

@@ -25,7 +25,7 @@ export default function HappeningNextEvents({ events, isLoading }: HappeningNext
 
     if (isLoading) {
         return (
-            <section className="py-10 bg-gray-50 border-b border-gray-100">
+            <section className="pt-6 pb-10 bg-gray-50 border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
                     <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse" />
                     <div className="h-4 bg-gray-200 rounded w-80 animate-pulse" />
@@ -49,7 +49,7 @@ export default function HappeningNextEvents({ events, isLoading }: HappeningNext
     if (events.length === 0) return null;
 
     return (
-        <section className="py-10 bg-gray-50 border-b border-gray-100">
+        <section className="pt-6 pb-10 bg-gray-50 border-b border-gray-100">
             {/* Header */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 flex items-center justify-between">
                 <div>
