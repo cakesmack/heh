@@ -212,13 +212,18 @@ test('empty/stale API records cannot omit browse categories; Events buttons pres
   assert.equal(selected, 'music');
 });
 
-test('shared panel lays out categories and locations 2:1 without changing location source or category actions', () => {
+test('shared panel uses compact padding and desktop 7:3 columns with a 40px gap, retaining stacked smaller layouts', () => {
   const callback = () => {};
   const panel = load('components/categories/BrowseEvents.tsx', { './CategoryGrid': 'categories' });
   const tree = nodes(panel.render({ activeCategory: 'music', onSelectCategory: callback, activeLocation: 'Inverness', locationCategorySlug: 'music' }));
   assert.ok(tree.some(node => node.type === 'h2' && node.props.children[0] === 'Browse events'));
-  assert.ok(tree.some(node => /lg:grid-cols-3/.test(node.props.className || '')));
-  assert.ok(tree.some(node => /lg:col-span-2/.test(node.props.className || '')));
+  assert.equal(tree[0].props.className, 'rounded-2xl bg-stone-100/70 p-3 sm:p-4');
+  const layout = tree.find(node => /lg:grid-cols-10/.test(node.props.className || ''));
+  assert.ok(layout);
+  assert.match(layout.props.className, /lg:gap-x-10/);
+  assert.ok(!/(?:^| )(?:grid-cols-|sm:grid-cols-|md:grid-cols-)/.test(layout.props.className));
+  assert.ok(tree.some(node => /lg:col-span-7/.test(node.props.className || '')));
+  assert.ok(tree.some(node => /lg:col-span-3/.test(node.props.className || '')));
   const category = tree.find(node => node.type === 'categories');
   assert.equal(category.props.browse, true);
   assert.equal(category.props.onSelectCategory, callback);
