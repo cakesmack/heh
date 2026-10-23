@@ -166,53 +166,50 @@ test('homepage uses one shared browse panel without changing hero/search', () =>
   assert.ok(nodes(page.render()).some(node => node.type === '@/components/home/HeroSection'));
 });
 
-test('browse pills show the same initial eight on mobile/desktop, expand all 14, and preserve colours and URLs', () => {
-  const form = grid(), props = { browse: true, initialCategories: [...categories].reverse() };
-  let tree = form.render(props);
-  for (const desktop of [false, true]) assert.deepEqual(labels(links(tree, desktop)), names.slice(0, 8));
+test('browse always shows all 14 canonical pills on mobile/desktop without expansion or an API lookup', () => {
+  const expectedNames = ['Nature & Outdoors', 'Classes & Workshops', 'Talks, Lectures & Business',
+    'Nightlife & Social', 'Comedy', 'Culture & Heritage', 'Food & Drink', 'Music', 'Family & Kids',
+    'Arts, Theatre & Dance', 'Festivals', 'Markets & Fairs', 'Sports & Fitness', 'Film & Cinema'];
+  let categoryCalls = 0;
+  const form = load('components/categories/CategoryGrid.tsx', {
+    './CategoryCard': card, './browseCategories': browseCategories,
+    '@/lib/api': { api: { categories: { list: async () => { categoryCalls++; return { categories: [] }; } } } },
+  }), props = { browse: true };
+  const tree = form.render(props);
+  form.effect(0);
+  assert.equal(categoryCalls, 0);
+  for (const desktop of [false, true]) assert.deepEqual(labels(links(tree, desktop)), expectedNames);
   assert.ok(nodes(tree).some(node => node.props.className === 'flex flex-wrap gap-2'));
+  assert.ok(!nodes(tree).some(node => /hidden|overflow-x/.test(node.props.className || '')));
+  assert.ok(!nodes(tree).some(node => node.type === 'button' || node.props['aria-expanded'] !== undefined));
+  assert.ok(!nodes(tree).some(node => node.props.role === 'status'));
   for (const link of links(tree, false)) {
     assert.match(link.props.className, /min-h-10/);
     assert.match(link.props.className, /rounded-full/);
     assert.ok(!/w-full|grid-cols|rounded-xl/.test(link.props.className));
     assert.match(link.props.className, /focus-visible:ring-2/);
-  }
-  let button = nodes(tree).find(node => node.type === 'button');
-  assert.equal(button.props.children[0], 'View all 14 categories');
-  assert.ok(!/mt-|bg-|rounded-full/.test(button.props.className));
-  assert.ok(!nodes(tree).find(node => node.props.id === 'browse-event-categories').props.children.flat(Infinity).includes(button));
-  button.props.onClick();
-  tree = form.render(props);
-  assert.deepEqual(labels(links(tree, false)), Array.from(browseCategories.browseCategoryNames));
-  for (const link of links(tree, false)) {
-    const category = categories.find(item => `/category/${item.slug}` === link.props.href);
+    const category = browseCategories.browseCategories.find(item => `/category/${item.slug}` === link.props.href);
     assert.ok(category);
     assert.equal(link.props.style.color, category.gradient_color);
+    assert.equal(link.props.style.backgroundColor, `${category.gradient_color}10`);
   }
-  button = nodes(tree).find(node => node.type === 'button');
-  assert.equal(button.props['aria-expanded'], true);
-  button.props.onClick();
-  assert.equal(links(form.render(props), false).length, 8);
 });
 
-test('browse uses exact current labels, maps canonical slugs without changing identity, and does not fabricate missing categories', () => {
-  const canonical = { ...categories[1], name: 'Stale label', slug: 'arts-theatre-dance' };
-  const obsolete = { ...categories[0], id: 'legacy', name: 'Festivals & Markets', slug: 'festivals-markets' };
-  const mapped = browseCategories.currentBrowseCategories([canonical, obsolete]);
-  assert.equal(mapped.length, 1);
-  assert.equal(mapped[0].name, 'Arts, Theatre & Dance');
-  assert.equal(mapped[0].id, canonical.id);
-  assert.equal(mapped[0].slug, canonical.slug);
-  const tree = grid().render({ browse: true, initialCategories: [canonical, obsolete] });
-  assert.deepEqual(labels(links(tree, false)), ['Arts, Theatre & Dance']);
-  assert.ok(!nodes(tree).some(node => node.props.role === 'status'));
-});
-
-test('current category names resolve despite casing/spacing differences without altering API IDs or slugs', () => {
-  const current = categories.map(category => ({ ...category, name: ` ${category.name.toUpperCase().replaceAll(' ', '  ')} ` }));
-  const mapped = browseCategories.currentBrowseCategories(current);
-  assert.deepEqual(Array.from(mapped, category => category.name), Array.from(browseCategories.browseCategoryNames));
-  mapped.forEach(category => assert.equal(category.slug, categories.find(original => original.id === category.id).slug));
+test('empty/stale API records cannot omit browse categories; Events buttons preserve slug selection and active state', () => {
+  const obsolete = [{ ...categories[0], name: 'Festivals & Markets', slug: 'festivals-markets' }];
+  for (const initialCategories of [[], obsolete]) {
+    const tree = grid().render({ browse: true, initialCategories });
+    assert.equal(links(tree, false).length, 14);
+    assert.ok(!labels(links(tree, false)).includes('Festivals & Markets'));
+  }
+  let selected;
+  const tree = grid().render({ browse: true, activeCategory: 'music', onSelectCategory: slug => { selected = slug; } });
+  const buttons = nodes(tree).filter(node => node.type === 'button');
+  assert.equal(buttons.length, 14); // All category actions; no expansion action.
+  const music = buttons.find(node => node.props.children.at(-1) === 'Music');
+  assert.equal(music.props['aria-pressed'], true);
+  music.props.onClick();
+  assert.equal(selected, 'music');
 });
 
 test('shared panel lays out categories and locations 2:1 without changing location source or category actions', () => {

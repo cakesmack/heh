@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Category } from '@/types';
 import { api } from '@/lib/api';
 import CategoryCard from './CategoryCard';
-import { browseCategoryNames, currentBrowseCategories } from './browseCategories';
+import { browseCategories } from './browseCategories';
 
 interface CategoryGridProps {
   activeCategory?: string;
@@ -33,7 +33,7 @@ export default function CategoryGrid({ activeCategory, onSelectCategory, initial
   const displayedCategories = compact ? [...categories].sort((a, b) => order(a) - order(b)) : categories;
 
   useEffect(() => {
-    if (initialCategories) return;
+    if (initialCategories || browse) return;
     const fetchCategories = async () => {
       try {
         const response = await api.categories.list();
@@ -46,25 +46,12 @@ export default function CategoryGrid({ activeCategory, onSelectCategory, initial
     };
 
     fetchCategories();
-  }, [initialCategories]);
+  }, [initialCategories, browse]);
 
   if (browse) {
-    const current = currentBrowseCategories(categories);
-    const initial = new Set<string>(browseCategoryNames.slice(0, 8));
-    const showAll = expanded;
-    return <div>
-      <div id="browse-event-categories" className="flex flex-wrap gap-2" aria-busy={loading}>
-        {loading ? Array.from({ length: 8 }, (_, index) => <div key={index} className="h-10 w-28 animate-pulse rounded-full bg-gray-200" />)
-          : current.map(category => <div key={category.id} className={!showAll && !initial.has(category.name) ? 'hidden' : 'contents'}>
-            <CategoryCard category={category} browsePill isActive={activeCategory === category.slug} onClick={onSelectCategory} />
-          </div>)}
-      </div>
-      {!loading && current.some(category => !initial.has(category.name)) && <button type="button"
-        aria-expanded={showAll} aria-controls="browse-event-categories"
-        onClick={() => setExpanded(!showAll)}
-        className="inline-flex min-h-10 items-center gap-1 rounded text-sm font-medium text-gray-500 underline-offset-4 hover:text-highland-green hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">
-        {showAll ? 'Show fewer categories' : 'View all 14 categories'}<span aria-hidden="true">{showAll ? '↑' : '→'}</span>
-      </button>}
+    return <div id="browse-event-categories" className="flex flex-wrap gap-2">
+      {browseCategories.map(category => <CategoryCard key={category.slug} category={category} browsePill
+        isActive={activeCategory === category.slug} onClick={onSelectCategory} />)}
     </div>;
   }
 

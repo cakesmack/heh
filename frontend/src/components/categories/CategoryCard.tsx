@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Category } from '@/types';
 
 interface CategoryCardProps {
-    category: Category;
+    category: Pick<Category, 'name' | 'slug' | 'gradient_color'>;
     isActive?: boolean;
     onClick?: (slug: string) => void;
     compact?: boolean;
