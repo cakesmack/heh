@@ -49,9 +49,12 @@ export default function CategoryGrid({ activeCategory, onSelectCategory, initial
   }, [initialCategories, browse]);
 
   if (browse) {
-    return <div id="browse-event-categories" className="flex flex-wrap gap-2">
-      {browseCategories.map(category => <CategoryCard key={category.slug} category={category} browsePill
-        isActive={activeCategory === category.slug} onClick={onSelectCategory} />)}
+    return <div id="browse-event-categories" className="flex flex-wrap gap-2 xl:block xl:space-y-2">
+      {[browseCategories.slice(0, 7), browseCategories.slice(7)].map((row, index) =>
+        <div key={index} className="contents xl:flex xl:w-full xl:items-center xl:justify-between xl:gap-2 xl:[&>*]:shrink-0">
+          {row.map(category => <CategoryCard key={category.slug} category={category} browsePill
+            isActive={activeCategory === category.slug} onClick={onSelectCategory} />)}
+        </div>)}
     </div>;
   }
 

@@ -179,7 +179,7 @@ test('browse always shows all 14 canonical pills on mobile/desktop without expan
   form.effect(0);
   assert.equal(categoryCalls, 0);
   for (const desktop of [false, true]) assert.deepEqual(labels(links(tree, desktop)), expectedNames);
-  assert.ok(nodes(tree).some(node => node.props.className === 'flex flex-wrap gap-2'));
+  assert.equal(tree.props.className, 'flex flex-wrap gap-2 xl:block xl:space-y-2');
   assert.ok(!nodes(tree).some(node => /hidden|overflow-x/.test(node.props.className || '')));
   assert.ok(!nodes(tree).some(node => node.type === 'button' || node.props['aria-expanded'] !== undefined));
   assert.ok(!nodes(tree).some(node => node.props.role === 'status'));
@@ -193,6 +193,25 @@ test('browse always shows all 14 canonical pills on mobile/desktop without expan
     assert.equal(link.props.style.color, category.gradient_color);
     assert.equal(link.props.style.backgroundColor, `${category.gradient_color}10`);
   }
+});
+
+test('wide desktop categories form two independent space-between rows of seven without stretching pills', () => {
+  const tree = grid().render({ browse: true });
+  const rows = tree.props.children.flat(Infinity);
+  assert.equal(rows.length, 2);
+  for (const row of rows) {
+    const classes = row.props.className;
+    assert.match(classes, /^contents /); // One wrapping flow below the wide-desktop breakpoint.
+    assert.match(classes, /xl:flex/);
+    assert.match(classes, /xl:w-full/);
+    assert.match(classes, /xl:justify-between/);
+    assert.ok(classes.includes('xl:[&>*]:shrink-0'));
+    assert.ok(!/grid|grow|justify-stretch/.test(classes));
+    assert.equal(links(row, true).length, 7);
+    assert.ok(links(row, true).every(link => !/w-full|flex-1|grow/.test(link.props.className)));
+  }
+  assert.deepEqual(labels(links(rows[0], true)), Array.from(browseCategories.browseCategories.slice(0, 7), category => category.name));
+  assert.deepEqual(labels(links(rows[1], true)), Array.from(browseCategories.browseCategories.slice(7), category => category.name));
 });
 
 test('empty/stale API records cannot omit browse categories; Events buttons preserve slug selection and active state', () => {
@@ -246,7 +265,7 @@ test('browse location list preserves all returned hubs and category-specific API
   const tree = form.render(props);
   assert.equal(query.category_slug, 'music');
   assert.deepEqual(links(tree, false).map(node => node.props.href), hubs.map(hub => `/locations/${hub.slug}`));
-  assert.ok(nodes(tree).some(node => node.props.className === 'flex flex-wrap gap-x-5 gap-y-0'));
+  assert.ok(nodes(tree).some(node => node.props.className === 'flex flex-wrap gap-x-5 gap-y-0 xl:justify-between'));
   assert.ok(!nodes(tree).some(node => /overflow-x|rounded-full/.test(node.props.className || '')));
 });
 

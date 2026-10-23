@@ -34,7 +34,7 @@ export default function PopularLocations({ activeLocation, categorySlug, compact
     const [loading, setLoading] = useState<boolean>(true);
     const containerClass = browse ? '' : compact ? 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8';
     const sectionClass = browse ? '' : compact ? 'py-1 bg-gray-50' : 'py-1.5 md:py-3 bg-gray-50';
-    const linksClass = browse ? 'flex flex-wrap gap-x-5 gap-y-0' : compact ? 'flex flex-wrap gap-x-4 gap-y-0' : 'flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible whitespace-nowrap scrollbar-hide snap-x gap-2 md:gap-3 pb-1 pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+    const linksClass = browse ? 'flex flex-wrap gap-x-5 gap-y-0 xl:justify-between' : compact ? 'flex flex-wrap gap-x-4 gap-y-0' : 'flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible whitespace-nowrap scrollbar-hide snap-x gap-2 md:gap-3 pb-1 pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
     useEffect(() => {
         let isMounted = true;
