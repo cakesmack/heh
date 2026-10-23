@@ -15,7 +15,10 @@ interface PopularLocationsProps {
     categorySlug?: string;
     compact?: boolean;
     browse?: boolean;
+    homepageShortlist?: boolean;
 }
+
+const homepageLocationNames = ['Aviemore', 'Dingwall', 'Dornoch', 'Fort William', 'Inverness', 'Nairn', 'Thurso', 'Ullapool', 'Wick'];
 
 export function LocationPillSkeleton() {
     return (
@@ -26,7 +29,7 @@ export function LocationPillSkeleton() {
     );
 }
 
-export default function PopularLocations({ activeLocation, categorySlug, compact = false, browse = false }: PopularLocationsProps = {}) {
+export default function PopularLocations({ activeLocation, categorySlug, compact = false, browse = false, homepageShortlist = false }: PopularLocationsProps = {}) {
     const [locations, setLocations] = useState<LocationHub[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const containerClass = browse ? '' : compact ? 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8';
@@ -69,18 +72,24 @@ export default function PopularLocations({ activeLocation, categorySlug, compact
         );
     }
 
-    if (!locations || locations.length === 0) return null;
+    // Location feeds already resolve names from slugs without requiring a hub
+    // metadata record. Keep these navigation shortcuts even when metadata is absent.
+    const displayedLocations: Array<Pick<LocationHub, 'name' | 'slug'>> = homepageShortlist
+        ? homepageLocationNames.map(name => locations.find(location => location.name.toLowerCase() === name.toLowerCase())
+            || { name, slug: name.toLowerCase().replace(/\s+/g, '-') })
+        : locations;
+    if (displayedLocations.length === 0) return null;
 
     return (
         <section className={sectionClass}>
             <div className={containerClass}>
                 <div className={linksClass}>
-                    {locations.map((location) => {
+                    {displayedLocations.map((location) => {
                         const isActive = activeLocation === location.name || activeLocation === location.slug;
 
                         return (
                             <Link
-                                key={location.id || location.slug}
+                                key={location.slug}
                                 href={`/locations/${location.slug}`}
                                 className={compact || browse ? `group inline-flex min-h-9 items-center gap-1.5 rounded py-1.5 text-sm font-medium underline-offset-4 transition-colors hover:text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${isActive ? 'text-emerald-700 underline' : 'text-gray-600'}` : `group inline-flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-200 active:translate-y-0 flex-shrink-0 snap-start ${
                                     isActive

@@ -273,8 +273,8 @@ export default function HomePage() {
 
       {/* Categories & Locations Section (Only render when search is NOT active) */}
       {!isSearchOpen && (
-        <div id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <BrowseEvents />
+        <div id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
+          <BrowseEvents homepageLocations />
         </div>
       )}
 

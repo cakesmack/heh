@@ -8,10 +8,11 @@ export const browseCategoryNames = [
 ] as const;
 
 export function currentBrowseCategories(categories: Category[]): Category[] {
+  const normalise = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
   return browseCategoryNames.flatMap(name => {
     const slug = name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
-    const category = categories.find(item => item.name === name)
-      || categories.find(item => item.slug === slug);
+    const category = categories.find(item => normalise(item.name) === normalise(name))
+      || categories.find(item => normalise(item.slug) === slug);
     // A combined legacy record cannot safely stand in for multiple categories.
     return category ? [{ ...category, name }] : [];
   });

@@ -53,17 +53,16 @@ export default function CategoryGrid({ activeCategory, onSelectCategory, initial
     const initial = new Set<string>(browseCategoryNames.slice(0, 8));
     const showAll = expanded;
     return <div>
-      <div id="browse-event-categories" className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-busy={loading}>
-        {loading ? Array.from({ length: 8 }, (_, index) => <div key={index} className="h-14 animate-pulse rounded-xl bg-gray-200" />)
-          : current.map(category => <div key={category.id} className={!showAll && !initial.has(category.name) ? 'hidden' : ''}>
-            <CategoryCard category={category} tile isActive={activeCategory === category.slug} onClick={onSelectCategory} />
+      <div id="browse-event-categories" className="flex flex-wrap gap-2" aria-busy={loading}>
+        {loading ? Array.from({ length: 8 }, (_, index) => <div key={index} className="h-10 w-28 animate-pulse rounded-full bg-gray-200" />)
+          : current.map(category => <div key={category.id} className={!showAll && !initial.has(category.name) ? 'hidden' : 'contents'}>
+            <CategoryCard category={category} browsePill isActive={activeCategory === category.slug} onClick={onSelectCategory} />
           </div>)}
       </div>
-      {!loading && current.length < browseCategoryNames.length && <p role="status" className="mt-3 text-xs text-gray-500">Some current categories are unavailable in the site’s category data.</p>}
       {!loading && current.some(category => !initial.has(category.name)) && <button type="button"
         aria-expanded={showAll} aria-controls="browse-event-categories"
         onClick={() => setExpanded(!showAll)}
-        className="mt-2 inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-gray-500 underline-offset-4 hover:text-highland-green hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">
+        className="inline-flex min-h-10 items-center gap-1 rounded text-sm font-medium text-gray-500 underline-offset-4 hover:text-highland-green hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">
         {showAll ? 'Show fewer categories' : 'View all 14 categories'}<span aria-hidden="true">{showAll ? '↑' : '→'}</span>
       </button>}
     </div>;

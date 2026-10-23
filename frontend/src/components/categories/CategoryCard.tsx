@@ -6,13 +6,13 @@ interface CategoryCardProps {
     isActive?: boolean;
     onClick?: (slug: string) => void;
     compact?: boolean;
-    tile?: boolean;
+    browsePill?: boolean;
 }
 
-export default function CategoryCard({ category, isActive = false, onClick, compact = false, tile = false }: CategoryCardProps) {
+export default function CategoryCard({ category, isActive = false, onClick, compact = false, browsePill = false }: CategoryCardProps) {
     const color = category.gradient_color || '#059669';
-    const baseClass = tile
-        ? 'group flex min-h-14 w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold leading-snug transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2'
+    const baseClass = browsePill
+        ? 'group inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-left text-sm font-semibold leading-snug transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2'
         : compact
         ? 'group inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs md:text-sm font-semibold transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2'
         : "group inline-flex items-center gap-1.5 md:gap-2.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 flex-shrink-0 snap-start";
@@ -21,7 +21,7 @@ export default function CategoryCard({ category, isActive = false, onClick, comp
         return (
             <button
                 type="button"
-                aria-pressed={tile ? isActive : undefined}
+                aria-pressed={browsePill ? isActive : undefined}
                 onClick={() => onClick(category.slug)}
                 className={`${baseClass} cursor-pointer ${isActive ? 'ring-2 ring-emerald-500 ring-offset-1' : ''}`}
                 style={{
