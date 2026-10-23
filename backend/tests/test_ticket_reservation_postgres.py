@@ -23,6 +23,7 @@ from app.models import (
     PromoCode,
     TicketReservation,
     TicketTier,
+    Ticket,
     User,
 )
 
@@ -171,6 +172,45 @@ def run_competitors(left, right):
         first = executor.submit(left)
         second = executor.submit(right)
         return first.result(timeout=15), second.result(timeout=15)
+
+
+def test_free_no_connect_buyers_cannot_claim_the_last_ticket(pg_engine, monkeypatch):
+    """Exercise the real free handler concurrently, without Stripe or HTTP setup."""
+    from threading import Barrier
+    from fastapi import HTTPException
+    from app.api.checkout import CheckoutRequest, create_payment_intent
+
+    monkeypatch.setattr(settings, 'NATIVE_TICKET_SALES_ENABLED', True)
+    monkeypatch.setattr(settings, 'STRIPE_SECRET_KEY', '')
+    event_id, tiers, _, _ = seed_inventory(pg_engine, 'pg_free_no_connect')
+    with Session(pg_engine) as session:
+        event = session.get(Event, event_id)
+        account = session.exec(select(OrganizerStripeAccount).where(
+            OrganizerStripeAccount.organizer_profile_id == event.organizer_profile_id)).one()
+        session.delete(account)
+        session.get(TicketTier, tiers[0]).price = 0
+        session.commit()
+    barrier = Barrier(2)
+
+    def claim():
+        with Session(pg_engine) as session:
+            barrier.wait(timeout=10)
+            try:
+                return create_payment_intent(CheckoutRequest(checkout_attempt_id=uuid4().hex,
+                    event_id=event_id, buyer_email='free@example.org', buyer_name='Free visitor',
+                    items=[{'tier_id': tiers[0], 'quantity': 1}]), session)
+            except HTTPException as error:
+                session.rollback()
+                return error.status_code
+
+    with patch('stripe.PaymentIntent.create', side_effect=AssertionError('No Stripe for free tickets')), \
+         patch('app.services.stripe_service.trigger_order_confirmation_emails'):
+        results = run_competitors(claim, claim)
+    assert sum(isinstance(result, dict) and result.get('free_order') is True for result in results) == 1
+    assert 400 in results
+    assert committed(pg_engine, tiers[0]) == 1
+    with Session(pg_engine) as session:
+        assert session.exec(select(func.count(Ticket.id)).join(Order).where(Order.event_id == event_id)).one() == 1
 
 
 def test_two_paid_buyers_cannot_reserve_the_last_ticket(postgres_app):

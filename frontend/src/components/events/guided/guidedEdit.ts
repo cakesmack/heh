@@ -57,7 +57,8 @@ export function parseGuidedEventData(event: EventResponse): GuidedEventDraft {
     doorReservationRequired: attendanceMode === 'door' && booking,
     doorReservationUrl: attendanceMode === 'door' && booking ? data.ticket_url : '',
     externalUrl: attendanceMode === 'external' ? data.ticket_url : '',
-    externalIsFree: attendanceMode === 'external' ? Number(data.price) === 0 && !/paid/i.test(event.price_display || '') : null,
+    externalPrice: attendanceMode === 'external' ? event.price_display || String(event.price ?? '') : '',
+    nativeTicketMode: data.is_ticketing_enabled ? data.ticket_tiers.some((tier) => tier.price > 0) ? 'paid' : 'free' : null,
     ticketTiers: data.ticket_tiers.map((tier, index) => ({ ...tier, id: event.ticket_tiers?.[index]?.id || `existing-${index}`, serverId: event.ticket_tiers?.[index]?.id })),
     passFeesToBuyer: Boolean(data.pass_fees_to_buyer), termsAccepted: Boolean(data.terms_accepted),
     description: data.description, categoryId: data.category_id, categoryName: event.category?.name || '',
@@ -113,6 +114,6 @@ export function buildGuidedEventUpdate(draft: GuidedEventDraft, event: EventResp
     });
   }
   // Do not replace display-price text on an unrelated metadata edit.
-  if (draft.attendanceMode !== 'native' && JSON.stringify([draft.attendanceMode, draft.doorPrice, draft.externalIsFree]) === JSON.stringify([original.attendanceMode, original.doorPrice, original.externalIsFree])) delete payload.price;
+  if (draft.attendanceMode !== 'native' && JSON.stringify([draft.attendanceMode, draft.doorPrice, draft.externalPrice]) === JSON.stringify([original.attendanceMode, original.doorPrice, original.externalPrice])) delete payload.price;
   return payload;
 }

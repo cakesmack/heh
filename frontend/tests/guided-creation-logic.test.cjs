@@ -23,7 +23,7 @@ const draft = () => ({
   title: 'Highland Market', venueMode: 'single', singleVenueId: 'venue-1', participatingVenues: [],
   scheduleMode: 'once', once: { start: '2026-07-01T10:00', end: '2026-07-01T12:00', allDay: false }, performances: [],
   recurrence: { startDate: '2026-07-01', startTime: '10:00', endTime: '12:00', endsNextDay: false, allDay: false, frequency: 'weekly', interval: 1, weekdays: [2], monthlyMode: 'date', ordinal: 1, ordinalWeekday: 2, endsOn: 'date', endDate: '2026-07-31' },
-  attendanceMode: 'free', doorPrice: '', doorReservationRequired: false, doorReservationUrl: '', externalUrl: '', externalIsFree: null,
+  attendanceMode: 'free', doorPrice: '', doorReservationRequired: false, doorReservationUrl: '', externalUrl: '', externalPrice: '', nativeTicketMode: 'paid',
   ticketTiers: [{ id: 'inactive', name: 'Not for sale', price: 50, quantity_available: 1, max_per_order: 1 }], passFeesToBuyer: true, termsAccepted: false,
   description: '<p>Local stalls</p>', categoryId: 'category-1', organizerId: '', tags: ['market'], ageRestriction: '18+', websiteUrl: 'https://example.org',
 });
@@ -78,7 +78,7 @@ test('external and several-date events map booking, venues, image and showtimes'
     scheduleMode: 'selected_dates', performances: [
       { id: 'later', start: '2026-07-03T20:00', end: '2026-07-03T22:00' },
       { id: 'earlier', start: '2026-07-02T19:00', end: '2026-07-02T21:00' },
-    ], attendanceMode: 'external', externalUrl: 'https://example.org/book', externalIsFree: false,
+    ], attendanceMode: 'external', externalUrl: 'https://example.org/book', externalPrice: 'From £8',
   });
   const payload = buildGuidedEventPayload(input, 'image-id');
   assert.equal(payload.venue_id, null);
@@ -88,7 +88,7 @@ test('external and several-date events map booking, venues, image and showtimes'
   assert.equal(payload.showtimes.length, 2);
   assert.equal(payload.showtimes[0].start_time, '2026-07-02T19:00:00');
   assert.equal(payload.ticket_url, 'https://example.org/book');
-  assert.equal(payload.price, 'Paid — see booking site');
+  assert.equal(payload.price, 'From £8');
   assert.equal(payload.image_url, 'image-id');
   assert.deepEqual(payload.tags, ['market']);
   assert.equal(payload.age_restriction, '18+');
@@ -217,4 +217,20 @@ test('native ticket constraints and tier validation remain enforced', () => {
   native.scheduleMode = 'selected_dates';
   native.performances = [{ id: 'one', start: '2026-07-01T10:00', end: '2026-07-01T12:00' }];
   assert.match(validateGuidedCreation(native).message, /one-off/);
+});
+
+test('free native bookings use existing ticket payload with zero prices and no fees', () => {
+  const free = draft();
+  free.attendanceMode = 'native';
+  free.nativeTicketMode = 'free';
+  free.termsAccepted = true;
+  free.passFeesToBuyer = true; // Inactive paid setting cannot leak into free setup.
+  free.ticketTiers = [{ id: 'free', name: 'Registration', price: 0, quantity_available: 25, max_per_order: 2 }];
+  assert.equal(validateGuidedCreation(free), null);
+  const payload = buildGuidedEventPayload(free);
+  assert.equal(payload.is_ticketing_enabled, true);
+  assert.equal(payload.pass_fees_to_buyer, false);
+  assert.equal(payload.price, 'Free');
+  assert.equal(payload.ticket_tiers[0].price, 0);
+  assert.equal(payload.ticket_tiers[0].quantity_available, 25);
 });

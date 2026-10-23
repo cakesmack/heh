@@ -27,7 +27,7 @@ export function validateGuidedCreation(draft: GuidedEventDraft): CreationIssue |
 
 function priceForAttendance(draft: GuidedEventDraft): string {
   if (draft.attendanceMode === 'door') return `£${Number(draft.doorPrice).toFixed(2)} at the door`;
-  if (draft.attendanceMode === 'external' && !draft.externalIsFree) return 'Paid — see booking site';
+  if (draft.attendanceMode === 'external') return draft.externalPrice.trim();
   return 'Free';
 }
 
@@ -107,7 +107,7 @@ export function buildGuidedEventPayload(draft: GuidedEventDraft, imageUrl?: stri
     tags: draft.tags,
     is_ticketing_enabled: draft.attendanceMode === 'native',
     ticket_tiers: draft.attendanceMode === 'native' ? draft.ticketTiers.map(({ name, price, quantity_available, max_per_order }) => ({ name, price, quantity_available, max_per_order })) : [],
-    pass_fees_to_buyer: draft.attendanceMode === 'native' && draft.passFeesToBuyer,
+    pass_fees_to_buyer: draft.attendanceMode === 'native' && draft.nativeTicketMode !== 'free' && draft.passFeesToBuyer,
     terms_accepted: draft.attendanceMode === 'native' && draft.termsAccepted,
   };
   const payload = buildEventPayload(data);

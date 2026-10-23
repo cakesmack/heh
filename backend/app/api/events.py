@@ -55,7 +55,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 from app.core.config import settings
-from app.core.ticketing import require_native_ticket_sales_enabled
+from app.core.ticketing import require_native_ticket_sales_enabled, require_stripe_for_paid_tiers, require_paid_ticket_account
 from app.services.ticket_inventory import committed_quantity, ensure_capacity
 from app.schemas.ticketing import TicketTierCreate, TicketTierUpdate, TicketTierResponse
 from app.models.organizer import Organizer
@@ -1607,6 +1607,9 @@ async def create_event(
                     detail="Native ticketing is currently restricted to single-session events up to 36 hours."
                 )
 
+    if event_data.is_ticketing_enabled:
+        require_stripe_for_paid_tiers(session, event_data.ticket_tiers or [], organizer_profile_id_normalized, current_user.id)
+
     # Parse price and age inputs
     price_display, min_price = parse_price_input(event_data.price)
     if event_data.is_ticketing_enabled and event_data.ticket_tiers:
@@ -2217,6 +2220,13 @@ async def update_event(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Native ticketing is currently restricted to single-session events up to 36 hours."
             )
+
+    if effective_ticketing:
+        effective_tiers = event_data.ticket_tiers if event_data.ticket_tiers is not None else event.ticket_tiers
+        effective_host = normalize_uuid(event_data.organizer_profile_id) if event_data.organizer_profile_id else None
+        if 'organizer_profile_id' not in event_data.model_fields_set:
+            effective_host = event.organizer_profile_id
+        require_stripe_for_paid_tiers(session, effective_tiers, effective_host, event.organizer_id)
 
     # Update fields (exclude tags, participating_venue_ids, showtimes, explicit dates, and validation flags for special handling)
     update_data = event_data.model_dump(exclude_unset=True, exclude={"tags", "participating_venue_ids", "showtimes", "date_start", "date_end", "is_recurring", "ticket_tiers", "terms_accepted"})
@@ -3048,6 +3058,7 @@ def create_event_ticket_tier(
     if not is_owner:
         raise HTTPException(status_code=403, detail="Not authorized to manage ticket tiers for this event")
 
+    require_stripe_for_paid_tiers(session, [tier_data], event.organizer_profile_id, event.organizer_id)
     tier_id = tier_data.id or normalize_uuid(uuid4())
     new_tier = TicketTier(
         id=tier_id,
@@ -3117,6 +3128,8 @@ def update_event_ticket_tier(
         raise HTTPException(status_code=404, detail="Ticket tier not found for this event")
 
     update_dict = tier_data.model_dump(exclude_unset=True)
+    if update_dict.get('price', tier.price) > 0:
+        require_paid_ticket_account(session, event.organizer_profile_id, event.organizer_id)
     if "quantity_available" in update_dict:
         ensure_capacity(
             session,

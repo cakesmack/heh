@@ -15,6 +15,8 @@ from app.models.event import Event
 from app.models.venue import Venue
 from app.models.category import Category
 from app.models.ticket_tier import TicketTier
+from app.models.organizer import Organizer
+from app.models.organizer_stripe_account import OrganizerStripeAccount
 
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
@@ -22,6 +24,15 @@ from sqlalchemy.ext.compiler import compiles
 @compiles(JSONB, 'sqlite')
 def compile_jsonb_sqlite(type_, compiler, **kw):
     return 'JSON'
+
+
+def connect_paid_test_host(session, user):
+    organizer = Organizer(id=uuid4().hex, name='Paid test host', slug=uuid4().hex, user_id=user.id)
+    session.add(organizer)
+    session.flush()
+    session.add(OrganizerStripeAccount(organizer_profile_id=organizer.id,
+        stripe_account_id='acct_test_ready', charges_enabled=True, payouts_enabled=True))
+    session.commit()
 
 @pytest.fixture(name='test_db')
 def test_db_fixture():
@@ -89,6 +100,7 @@ def test_non_admin_allowed_creating_event_with_ticket_tiers(client: TestClient, 
         is_admin=False,
     )
     test_db.add(user)
+    connect_paid_test_host(test_db, user)
 
     cat = Category(id=str(uuid4()).replace('-', ''), name='Theatre', slug='theatre')
     test_db.add(cat)
@@ -141,6 +153,7 @@ def test_non_admin_allowed_direct_tier_management_for_own_event(client: TestClie
         is_admin=False,
     )
     test_db.add(user)
+    connect_paid_test_host(test_db, user)
 
     event = Event(
         id=str(uuid4()).replace('-', ''),

@@ -19,7 +19,7 @@ import { ReviewQuestion } from './ReviewQuestion';
 import { GuidedCreationSuccess } from './GuidedCreationSuccess';
 import { buildGuidedEventPayload, validateGuidedCreation } from './guidedCreation';
 import { buildGuidedEventUpdate, parseGuidedEventData } from './guidedEdit';
-import { validateAttendance, validateDetails, validateFinishing, validateTickets } from './guidedFormHelpers';
+import { validateAttendance, validateDetails, validateFinishing, validateTickets, nativeTicketsRequireStripe } from './guidedFormHelpers';
 import { addLocalDay, applyOnceChange, validDate, validateInterval, validateRecurrence, validateSchedule } from './scheduleHelpers';
 import styles from './GuidedEventFormPreview.module.css';
 
@@ -132,7 +132,7 @@ export default function GuidedEventFormPreview({ initialData, isEditMode = false
       venueInputRef.current?.focus();
       return false;
     }
-    if (currentQuestion.id === 'tickets' && !ticketSellerReady) {
+    if (currentQuestion.id === 'tickets' && nativeTicketsRequireStripe(draft) && !ticketSellerReady) {
       setErrors((current) => ({ ...current, tickets: 'Connect Stripe payouts for the selected host before continuing.' }));
       headingRef.current?.focus();
       return false;
@@ -206,7 +206,7 @@ export default function GuidedEventFormPreview({ initialData, isEditMode = false
     submittingRef.current = true;
     let createAttempted = false;
     try {
-      if (draft.attendanceMode === 'native') {
+      if (nativeTicketsRequireStripe(draft)) {
         setSubmissionPhase('checking-seller');
         const seller = await api.sellers.getStatus(draft.organizerId || null);
         if (!seller.charges_enabled) throw new Error('Stripe payouts are not active for the selected host. Edit Tickets to connect Stripe before creating this event.');
@@ -255,7 +255,7 @@ export default function GuidedEventFormPreview({ initialData, isEditMode = false
   const help = currentQuestion.id === 'title' ? 'Start with the clearest name for people browsing events across the Highlands.'
     : currentQuestion.id === 'venue' ? 'Find the registered venue where visitors should arrive.'
       : currentQuestion.id === 'attendance' ? 'Choose the route visitors will use. We will only show the fields that apply.'
-        : currentQuestion.id === 'tickets' ? 'Connect Stripe payouts and configure ticket tiers for your one-off event.'
+        : currentQuestion.id === 'tickets' ? 'Choose free reservations or paid tickets, then configure capacity for your one-off event.'
           : currentQuestion.id === 'details' ? 'Help visitors understand what to expect and who is hosting.'
             : currentQuestion.id === 'finishing' ? 'Make your listing yours. New photos upload only when you submit.'
               : currentQuestion.id === 'review' ? 'Check every answer and edit any section before saving your event.'

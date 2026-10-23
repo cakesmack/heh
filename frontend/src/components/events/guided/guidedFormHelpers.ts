@@ -40,7 +40,8 @@ export function validateAttendance(draft: GuidedEventDraft): string | null {
     case 'external':
       if (!isHttpUrl(draft.externalUrl)) return 'Enter a valid HTTP(S) booking URL.';
       if (draft.externalUrl.length > 500) return 'Booking URL must be 500 characters or less.';
-      if (draft.externalIsFree === null) return 'Choose whether external booking is free or paid.';
+      if (!draft.externalPrice?.trim()) return 'Enter the ticket price shown on Highland Events Hub (or Free).';
+      if (draft.externalPrice.length > 100) return 'Price information must be 100 characters or less.';
       return null;
     case 'native': return nativeTicketIssue(draft);
     default: return 'Choose how people can attend.';
@@ -51,6 +52,8 @@ export function validateTickets(draft: GuidedEventDraft): string | null {
   if (draft.attendanceMode !== 'native') return null;
   const eligibilityIssue = nativeTicketIssue(draft);
   if (eligibilityIssue) return eligibilityIssue;
+  if (!draft.nativeTicketMode) return 'Choose free or paid tickets.';
+  if (draft.nativeTicketMode === 'free' && draft.ticketTiers.some((tier) => tier.price !== 0)) return 'Free tickets must all cost £0. Choose paid tickets to charge money.';
   const wizardErrors = getStepValidator(4, true)({ ...WIZARD_DEFAULTS, is_ticketing_enabled: true, ticket_tiers: draft.ticketTiers });
   if (wizardErrors) return Object.values(wizardErrors)[0];
   if (!draft.ticketTiers.length) return 'Add at least one ticket tier.';
@@ -62,6 +65,10 @@ export function validateTickets(draft: GuidedEventDraft): string | null {
     if (!Number.isInteger(tier.max_per_order) || tier.max_per_order < 1 || tier.max_per_order > tier.quantity_available) return `${label}: max per order must be between 1 and its capacity.`;
   }
   return null;
+}
+
+export function nativeTicketsRequireStripe(draft: GuidedEventDraft): boolean {
+  return draft.attendanceMode === 'native' && (draft.nativeTicketMode === 'paid' || draft.ticketTiers.some((tier) => tier.price > 0));
 }
 
 export function validateNativeTerms(draft: GuidedEventDraft): string | null {
@@ -88,8 +95,8 @@ export function attendanceSummary(draft: GuidedEventDraft): string {
   switch (draft.attendanceMode) {
     case 'free': return 'Free entry · just turn up';
     case 'door': return `Pay at door${draft.doorPrice ? ` · £${draft.doorPrice}` : ''}${draft.doorReservationRequired ? ' · reservation required' : ''}`;
-    case 'external': return `Book elsewhere · ${draft.externalIsFree === null ? 'price to add' : draft.externalIsFree ? 'free' : 'paid'}`;
-    case 'native': return nativeTicketIssue(draft) ? 'Highland Events Hub tickets · schedule incompatible' : 'Highland Events Hub tickets';
+    case 'external': return `Book elsewhere · ${draft.externalPrice?.trim() || 'price to add'}`;
+    case 'native': return nativeTicketIssue(draft) ? 'Highland Events Hub tickets · schedule incompatible' : `Highland Events Hub tickets${draft.nativeTicketMode === 'free' ? ' · Free · booking required' : draft.nativeTicketMode === 'paid' ? ' · Paid' : ''}`;
     default: return 'Not added yet';
   }
 }

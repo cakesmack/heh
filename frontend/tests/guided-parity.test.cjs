@@ -20,6 +20,7 @@ function loadComponent(file, imports = {}, initialState = [], globals = {}) {
     },
     useEffect: (effect) => { effects.push(effect); },
     useRef: (value) => ({ current: value }),
+    useCallback: callback => callback,
   };
   const filename = path.join(__dirname, '../src', file);
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
@@ -49,6 +50,33 @@ function nodes(tree) {
 }
 const icons = { Building2: 'building', MapPin: 'pin', Milestone: 'milestone', Check: 'check', Clock3: 'clock' };
 const venue = { id: 'new-venue', name: 'Highland Hall', address: 'Inverness IV1 1AA', status: 'UNVERIFIED', latitude: 57.48, longitude: -4.22 };
+
+test('free native configuration bypasses Stripe services; paid mode still checks readiness before tiers unlock', async () => {
+  let checks = 0;
+  const make = mode => {
+    const draft = { organizerId: '', organizerName: '', nativeTicketMode: mode, ticketTiers: [{ id: 'free', name: 'Registration', price: 0, quantity_available: 25, max_per_order: 2 }] };
+    const harness = loadComponent('components/events/guided/TicketsQuestion.tsx', {
+      'lucide-react': { Plus: 'plus', Trash2: 'trash' }, '@/hooks/useAuth': { useAuth: () => ({ user: { id: 'host' } }) },
+      '@/components/events/OrganizerSelector': 'host-selector', './guidedFormHelpers': { nativeTicketIssue: () => null },
+      '@/lib/api': { api: { organizers: { list: async () => ({ organizers: [] }) }, sellers: { getStatus: async () => { checks++; return { charges_enabled: false }; } } } },
+    }, [], { window: { addEventListener() {}, removeEventListener() {} }, document: { addEventListener() {}, removeEventListener() {} } });
+    const props = { draft, onChange: patch => Object.assign(draft, patch), onChooseAnotherMethod() {}, onSellerReadyChange() {} };
+    return { harness, props, render: () => harness.render(harness.exports.TicketsQuestion, props) };
+  };
+  const free = make('free');
+  let tree = nodes(free.render());
+  assert.ok(tree.some(node => node.type === 'input' && node.props.type === 'number' && node.props.readOnly));
+  free.harness.runEffects();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(checks, 0);
+  const paid = make('paid');
+  paid.render(); paid.harness.runEffects();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(checks, 1);
+  tree = nodes(paid.render());
+  assert.ok(!tree.some(node => node.type === 'input' && node.props.type === 'number'));
+  assert.ok(tree.some(node => node.type === 'button' && node.props.children.includes('Connect Stripe Payouts')));
+});
 
 test('guided single and participating selectors enable legacy Google discovery and preserve selected objects', () => {
   const harness = loadComponent('components/events/guided/VenueQuestion.tsx', {

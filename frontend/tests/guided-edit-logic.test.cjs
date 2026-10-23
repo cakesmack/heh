@@ -59,6 +59,29 @@ test('organiser create/edit round-trips optional secondary category and explicit
   assert.throws(() => buildGuidedEventUpdate(editing, withSecondary), /different secondary category/);
 });
 
+test('free native mode hydrates without Stripe; introducing paid prices requires Stripe and external prices round-trip', () => {
+  const { nativeTicketsRequireStripe, validateTickets } = require('../src/components/events/guided/guidedFormHelpers.ts');
+  const original = event({ is_ticketing_enabled: true, ticket_tiers: [{ id: 'free-tier', name: 'Registration', price: 0, quantity_available: 25, max_per_order: 2 }] });
+  const draft = parseGuidedEventData(original);
+  assert.equal(draft.nativeTicketMode, 'free');
+  assert.equal(nativeTicketsRequireStripe(draft), false);
+  assert.equal(validateTickets(draft), null);
+  draft.ticketTiers[0].price = 5;
+  assert.match(validateTickets(draft), /must all cost/);
+  assert.equal(nativeTicketsRequireStripe(draft), true);
+  draft.nativeTicketMode = 'paid';
+  assert.equal(validateTickets(draft), null);
+  for (const price of ['£12', '£10 – £15', 'From £8', 'Free', 'Check booking site']) {
+    const external = event({ ticket_url: 'https://example.org/book', price_display: price });
+    const editing = parseGuidedEventData(external);
+    assert.equal(editing.externalPrice, price);
+    assert.equal(buildGuidedEventUpdate(editing, external).price, undefined); // Unchanged text is preserved server-side.
+    editing.externalPrice = `${price} (advance booking)`;
+    assert.equal(buildGuidedEventUpdate(editing, external).price, editing.externalPrice);
+    assert.equal(buildGuidedEventUpdate(editing, external).ticket_url, external.ticket_url);
+  }
+});
+
 test('clearing optional values produces explicit update clears; door text never becomes URL', () => {
   const original = event({ price: 12.5, price_display: '£12.50 at the door', ticket_url: 'https://example.org/reserve' });
   const draft = parseGuidedEventData(original);

@@ -2,6 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
+const path = require('node:path');
+const Module = require('node:module');
+const resolveFilename = Module._resolveFilename;
+Module._resolveFilename = function (request, parent, ...rest) {
+  return resolveFilename.call(this, request.startsWith('@/') ? path.join(__dirname, '../src', request.slice(2)) : request, parent, ...rest);
+};
 
 // Run the preview's pure TypeScript helpers without a browser or a new dependency.
 require.extensions['.ts'] = (module, filename) => {
@@ -16,7 +22,7 @@ const { attendanceSummary, nativeTicketIssue, validateAttendance, validateTicket
 const base = () => ({
   scheduleMode: 'once', once: { start: '2026-10-02T10:00', end: '2026-10-02T12:00', allDay: false },
   attendanceMode: null, doorPrice: '', doorReservationRequired: false, doorReservationUrl: '',
-  externalUrl: '', externalIsFree: null, ticketTiers: [], categoryId: '', description: '', websiteUrl: '', tags: [],
+  externalUrl: '', externalPrice: '', nativeTicketMode: 'paid', ticketTiers: [], categoryId: '', description: '', websiteUrl: '', tags: [],
 });
 
 test('ticket question is visible only for native attendance', () => {
@@ -37,14 +43,16 @@ test('door fields validate only when active; inactive URLs do not appear in summ
   assert.equal(draft.doorPrice, '8.50');
 });
 
-test('external booking requires HTTP(S) URL and a free/paid answer', () => {
+test('external booking requires HTTP(S) URL and editable price information', () => {
   const draft = { ...base(), attendanceMode: 'external', externalUrl: 'javascript:alert(1)' };
   assert.match(validateAttendance(draft), /HTTP\(S\)/);
   draft.externalUrl = 'https://example.org/book';
-  assert.match(validateAttendance(draft), /free or paid/);
-  draft.externalIsFree = false;
-  assert.equal(validateAttendance(draft), null);
-  assert.match(attendanceSummary(draft), /paid/);
+  assert.match(validateAttendance(draft), /ticket price/);
+  for (const price of ['£12', '£10 – £15', 'From £8', 'Free', 'Check booking site']) {
+    draft.externalPrice = price;
+    assert.equal(validateAttendance(draft), null);
+    assert.ok(attendanceSummary(draft).includes(price));
+  }
 });
 
 test('native tickets reject multiple dates, recurrence and events over 36 hours', () => {

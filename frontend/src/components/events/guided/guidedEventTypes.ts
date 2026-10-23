@@ -38,7 +38,8 @@ export interface GuidedEventDraft {
   doorReservationRequired: boolean;
   doorReservationUrl: string;
   externalUrl: string;
-  externalIsFree: boolean | null;
+  externalPrice: string;
+  nativeTicketMode: 'free' | 'paid' | null;
   ticketTiers: Array<TicketTierCreate & { id: string; serverId?: string }>;
   passFeesToBuyer: boolean;
   termsAccepted: boolean;

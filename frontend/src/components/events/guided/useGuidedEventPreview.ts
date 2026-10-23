@@ -19,7 +19,7 @@ export const INITIAL_DRAFT: GuidedEventDraft = {
   },
   attendanceMode: null,
   doorPrice: '', doorReservationRequired: false, doorReservationUrl: '',
-  externalUrl: '', externalIsFree: null,
+  externalUrl: '', externalPrice: '', nativeTicketMode: null,
   ticketTiers: [], passFeesToBuyer: false, termsAccepted: false,
   description: '', categoryId: '', categoryName: '', secondaryCategoryId: '', secondaryCategoryName: '', organizerId: '', organizerName: '',
   tags: [], ageRestriction: '', websiteUrl: '', imageName: '', imagePreviewUrl: '', imageFile: null,

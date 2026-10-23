@@ -14,7 +14,7 @@ import logging
 
 from app.core.database import get_session
 from app.core.config import settings
-from app.core.ticketing import require_native_ticket_sales_enabled
+from app.core.ticketing import require_native_ticket_sales_enabled, require_paid_ticket_account
 from app.core.utils import normalize_uuid
 from app.models import Event, TicketTier, Order, PromoCode
 from app.services import fee_service, promo_service
@@ -107,12 +107,11 @@ def _mark_payment_intent_uncertain(session: Session, order_id: str) -> None:
 
 
 def _create_or_reuse_payment_intent(order: Order, session: Session) -> dict:
-    if not settings.STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=500, detail="Stripe is not configured.")
-
     completed = _existing_checkout_response(order)
     if completed:
         return completed
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe is not configured.")
 
     order_id = order.id
     total_amount = order.total_amount
@@ -263,7 +262,7 @@ def get_order(order_ref: str, session: Session = Depends(get_session)):
         else:
             venue_name = event.location_name or ""
             venue_town = getattr(event, "location_town", "") or ""
-            venue_address = event.location_address or ""
+            venue_address = event.address_full or ""
             
         if event.organizer_profile and event.organizer_profile.name:
             organizer_name = event.organizer_profile.name
@@ -392,26 +391,6 @@ def create_payment_intent(
             ),
         )
         
-    # Resolve organizer Stripe account
-    from app.models.organizer_stripe_account import OrganizerStripeAccount
-    from app.models.organizer import Organizer
-
-    stripe_account = None
-    if event.organizer_profile and event.organizer_profile.stripe_account and event.organizer_profile.stripe_account.charges_enabled:
-        stripe_account = event.organizer_profile.stripe_account
-    elif event.organizer_id:
-        stmt = (
-            select(OrganizerStripeAccount)
-            .join(Organizer, OrganizerStripeAccount.organizer_profile_id == Organizer.id)
-            .where(Organizer.user_id == event.organizer_id, OrganizerStripeAccount.charges_enabled == True)
-        )
-        stripe_account = session.exec(stmt).first()
-
-    if not stripe_account:
-        raise HTTPException(status_code=400, detail="Organizer is not ready to accept payments.")
-        
-    stripe_account_id = stripe_account.stripe_account_id
-
     # 2. Promo Code Validation
     promo = None
     if request.promo_code:
@@ -442,7 +421,6 @@ def create_payment_intent(
         platform_fee_amount=0.0,
         checkout_attempt_id=request.checkout_attempt_id,
         checkout_payload_hash=payload_hash,
-        stripe_account_id=stripe_account_id,
         promo_code=request.promo_code,
         status="initializing",
         attendee_responses=request.attendee_responses,
@@ -492,6 +470,11 @@ def create_payment_intent(
 
     # 4. Calculate Fees
     fee_breakdown = fee_service.calculate_order_fees(event, tier_items, promo, session)
+    # A genuine zero-payable booking needs neither an account nor Stripe objects.
+    # Resolve the same existing paid destination only after fees/discounts are known.
+    if fee_breakdown.gross_amount > 0:
+        account = require_paid_ticket_account(session, event.organizer_profile_id, event.organizer_id)
+        order.stripe_account_id = account.stripe_account_id
     order.subtotal_amount = fee_breakdown.subtotal_amount
     order.total_amount = fee_breakdown.gross_amount
     order.platform_fee_amount = fee_breakdown.platform_fee_amount

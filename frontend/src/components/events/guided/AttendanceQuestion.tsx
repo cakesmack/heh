@@ -5,7 +5,7 @@ const choices: Array<{ id: AttendanceMode; title: string; description: string }>
   { id: 'free', title: 'Free entry', description: 'Just turn up. No booking needed.' },
   { id: 'door', title: 'Pay at the door', description: 'Visitors pay when they arrive.' },
   { id: 'external', title: 'Book or buy tickets elsewhere', description: 'Send visitors to your external booking page.' },
-  { id: 'native', title: 'Get tickets on Highland Events Hub', description: 'Sell tickets for a one-off event through Highland Events Hub.' },
+  { id: 'native', title: 'Get tickets on Highland Events Hub', description: 'Offer free reservations or paid tickets for a one-off event.' },
 ];
 
 const fieldClass = 'min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-stone-dark focus:border-moss-green focus:ring-2 focus:ring-moss-green/30';
@@ -38,14 +38,14 @@ export function AttendanceQuestion({ draft, error, onChange }: Props) {
 
     {draft.attendanceMode === 'external' && <div className="space-y-5 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-5">
       <label className="block space-y-2 text-sm font-semibold text-gray-800"><span>Booking or ticket URL *</span><input id="guided-external-url" className={fieldClass} type="url" inputMode="url" placeholder="https://example.com/book" value={draft.externalUrl} onChange={(event) => onChange({ externalUrl: event.target.value })} /></label>
-      <fieldset><legend className="mb-2 text-sm font-semibold text-gray-800">Is external booking free or paid? *</legend><div className="flex flex-wrap gap-4">{[{ value: true, label: 'Free' }, { value: false, label: 'Paid' }].map((choice) => <label key={choice.label} className="flex min-h-[44px] items-center gap-2 text-sm text-gray-800"><input type="radio" name="guided-external-price" checked={draft.externalIsFree === choice.value} onChange={() => onChange({ externalIsFree: choice.value })} className="h-4 w-4 accent-emerald-700" />{choice.label}</label>)}</div></fieldset>
+      <label className="block space-y-2 text-sm font-semibold text-gray-800"><span>Ticket price shown on HEH *</span><input id="guided-external-price" className={fieldClass} type="text" maxLength={100} placeholder="e.g. £12, £10 – £15, From £8, or Free" value={draft.externalPrice} onChange={(event) => onChange({ externalPrice: event.target.value })} /></label>
     </div>}
 
     {draft.attendanceMode === 'native' && nativeIssue && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm leading-6 text-amber-950" role="status">
       <strong className="block">Native tickets are not available for this schedule</strong>
       {nativeIssue} Choose Free entry, Pay at the door or Book elsewhere above, or go Back to change the schedule. Your ticket answers are kept if you switch back.
     </div>}
-    {draft.attendanceMode === 'native' && !nativeIssue && <p className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-gray-700">Next, connect Stripe payouts if needed and configure your ticket tiers. You can create the ticketed event after reviewing the organiser terms.</p>}
+    {draft.attendanceMode === 'native' && !nativeIssue && <p className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-gray-700">Next, choose free reservations or paid tickets and configure capacity. Only paid tickets require Stripe. You can create the ticketed event after reviewing the organiser terms.</p>}
     {error && <p role="alert" className="text-sm font-semibold text-red-700">{error}</p>}
   </div>;
 }
