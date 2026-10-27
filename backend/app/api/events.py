@@ -16,6 +16,7 @@ from app.core.utils import normalize_uuid, to_london_naive, to_utc_aware
 from app.core.occurrences import event_now, occurrence_filter, relevant_dates, matching_showtimes
 from app.core.location_filters import event_location_filter
 from app.core.category_filters import event_category_filter, validate_event_categories
+from app.core.event_text_search import event_text_search_condition
 from app.models.user import User
 from app.models.event import Event
 from app.models.venue import Venue
@@ -855,9 +856,6 @@ def list_events(
 
     # 3. Search query (q) filter condition (Scenario A)
     if q and not city_filter:
-        search_term = f"%{q}%"
-        search_slug = normalize_tag_name(q)
-        
         if not venue_joined:
             query = query.outerjoin(Venue, Event.venue_id == Venue.id)
             venue_joined = True
@@ -870,28 +868,7 @@ def list_events(
             event_tag_joined = True
             tag_joined = True
             
-        search_conditions = [
-            Event.title.ilike(search_term),
-            Event.description.ilike(search_term),
-            Event.location_name.ilike(search_term),
-            Event.address_full.ilike(search_term),
-            Event.postcode.ilike(search_term),
-            Venue.name.ilike(search_term),
-            Venue.address.ilike(search_term),
-            Venue.formatted_address.ilike(search_term),
-            Venue.postcode.ilike(search_term)
-        ]
-        if tag_joined:
-            search_conditions.extend([
-                Tag.name == search_slug,
-                Tag.name.ilike(f"%{search_slug}%")
-            ])
-        if category_joined:
-            search_conditions.extend([
-                Category.name.ilike(search_term),
-                Category.slug.ilike(search_term)
-            ])
-        q_cond = or_(*search_conditions)
+        q_cond = event_text_search_condition(q, joined=True)
 
     # Combine the filters based on combine_operator
     if combine_operator == "or":

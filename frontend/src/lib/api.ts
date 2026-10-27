@@ -1578,6 +1578,10 @@ export const eventClaimsAPI = {
 // ============================================================
 
 export const collectionsAPI = {
+  /** Read-only admin preview of an unsaved collection, using collection rules. */
+  preview: async (data: CollectionCreate): Promise<{ events: EventResponse[]; total: number }> => {
+    return apiFetch('/api/collections/preview-events', { method: 'POST', body: JSON.stringify(data) });
+  },
   /**
    * List curated collections (supports include_inactive for admin views)
    */

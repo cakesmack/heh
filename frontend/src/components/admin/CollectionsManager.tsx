@@ -8,9 +8,11 @@ import { useEffect, useState, useRef } from 'react';
 
 import DataTable from '@/components/admin/DataTable';
 import Modal from '@/components/admin/Modal';
+import CollectionKeywordInput from './CollectionKeywordInput';
+import { readCollectionKeywords, withCollectionKeywords, collectionDateAndBounds } from '@/lib/collectionKeywords';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import ImageUpload from '@/components/common/ImageUpload';
-import { collectionsAPI, categoriesAPI, tagsAPI, eventsAPI, organizersAPI } from '@/lib/api';
+import { collectionsAPI, categoriesAPI, tagsAPI, organizersAPI } from '@/lib/api';
 import { AGE_RESTRICTION_OPTIONS } from '@/lib/ageRestriction';
 import type { Collection, Category, EventResponse, Organizer } from '@/types';
 
@@ -68,7 +70,7 @@ export default function CollectionsManager() {
     const [organizerSearch, setOrganizerSearch] = useState('');
     const [qbState, setQbState] = useState({
         category: [] as string[],
-        q: '',
+        keywords: [] as string[],
         age: '',
         price: 'any', // 'any', 'free', 'paid'
         recurrence: 'any', // 'any', 'recurring', 'single'
@@ -152,7 +154,7 @@ export default function CollectionsManager() {
         setOrganizerSearch('');
         setQbState({
             category: [],
-            q: '',
+            keywords: [],
             age: '',
             price: 'any',
             recurrence: 'any',
@@ -226,7 +228,7 @@ export default function CollectionsManager() {
             const mappedCats = mapToCategoryIds(Array.isArray(rawCats) ? rawCats : [rawCats]);
             setQbState({
                 category: mappedCats,
-                q: collection.filter_params.q || '',
+                keywords: readCollectionKeywords(collection.filter_params),
                 age: collection.filter_params.age_restriction || '',
                 price: collection.filter_params.price === 'free' ? 'free' : (collection.filter_params.price === 'paid' ? 'paid' : 'any'),
                 recurrence: collection.filter_params.is_recurring === true ? 'recurring' : (collection.filter_params.is_recurring === false ? 'single' : 'any'),
@@ -240,7 +242,7 @@ export default function CollectionsManager() {
             parseLinkToBuilder(collection.target_link);
         } else {
             // Reset to default
-            setQbState({ category: [], q: '', age: '', price: 'any', recurrence: 'any', combine_operator: 'and', exclude_age_restrictions: [], exclude_event_ids: [] });
+            setQbState({ category: [], keywords: [], age: '', price: 'any', recurrence: 'any', combine_operator: 'and', exclude_age_restrictions: [], exclude_event_ids: [] });
         }
 
         setError(null);
@@ -289,7 +291,7 @@ export default function CollectionsManager() {
 
             setQbState({
                 category: mappedCats,
-                q: searchParams.get('q') || '',
+                keywords: readCollectionKeywords({ q: searchParams.get('q') }),
                 age: searchParams.get('age_restriction') || '',
                 price: searchParams.get('price') === 'free' ? 'free' : (searchParams.get('price') === 'paid' ? 'paid' : 'any'),
                 recurrence: searchParams.get('is_recurring') === 'true' ? 'recurring' : (searchParams.get('is_recurring') === 'false' ? 'single' : 'any'),
@@ -313,7 +315,7 @@ export default function CollectionsManager() {
             filterObj.category_ids = qbState.category;
         }
 
-        if (qbState.q) filterObj.q = qbState.q;
+        if (qbState.keywords.length) filterObj.keywords = qbState.keywords;
         
         if (qbState.combine_operator) {
             filterObj.combine_operator = qbState.combine_operator;
@@ -359,21 +361,11 @@ export default function CollectionsManager() {
         setSaving(true);
         setError(null);
 
-        const parseCoord = (val: any): number | null => {
-            if (val === '' || val === null || val === undefined) return null;
-            const parsed = parseFloat(val);
-            return isNaN(parsed) ? null : parsed;
-        };
-
         try {
             const finalFormData = {
                 ...formData,
-                fixed_start_date: formData.fixed_start_date ? formData.fixed_start_date : null,
-                fixed_end_date: formData.fixed_end_date ? formData.fixed_end_date : null,
-                min_lat: parseCoord(formData.min_lat),
-                max_lat: parseCoord(formData.max_lat),
-                min_lng: parseCoord(formData.min_lng),
-                max_lng: parseCoord(formData.max_lng),
+                ...collectionDateAndBounds(formData),
+                filter_params: withCollectionKeywords(formData.filter_params, qbState.keywords),
             };
             if (finalFormData.organizer_profile_ids && finalFormData.organizer_profile_ids.length === 0) {
                 finalFormData.organizer_profile_ids = null as any;
@@ -888,16 +880,7 @@ export default function CollectionsManager() {
                                 </div>
 
                                 {/* Search Query */}
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Search Keywords (Title/Desc)</label>
-                                    <input
-                                        type="text"
-                                        value={qbState.q}
-                                        onChange={(e) => setQbState({ ...qbState, q: e.target.value })}
-                                        className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-emerald-500"
-                                        placeholder="e.g. workshop, gala"
-                                    />
-                                </div>
+                                <CollectionKeywordInput keywords={qbState.keywords} onChange={keywords => setQbState(previous => ({ ...previous, keywords }))} />
 
 
                                 {/* Age Restriction */}
@@ -1016,18 +999,13 @@ export default function CollectionsManager() {
                                             onClick={async () => {
                                                 setPreviewLoading(true);
                                                 try {
-                                                    // Build filters from current qbState (without excludes, so we see all matches)
-                                                    const filters: Record<string, any> = { limit: 100 };
-                                                    if (qbState.category.length > 0) filters.category_ids = qbState.category;
-                                                    if (formData.organizer_profile_ids && formData.organizer_profile_ids.length > 0) {
-                                                        filters.organizer_profile_ids = formData.organizer_profile_ids.join(',');
-                                                    }
-                                                    if (qbState.q) filters.q = qbState.q;
-                                                    if (qbState.combine_operator) filters.combine_operator = qbState.combine_operator;
-                                                    if (qbState.age) filters.age_restriction = qbState.age;
-                                                    if (qbState.price === 'free') filters.price_max = 0;
-                                                    if (qbState.exclude_age_restrictions.length > 0) filters.exclude_age_restrictions = qbState.exclude_age_restrictions;
-                                                    const res = await eventsAPI.list(filters);
+                                                    // Use the saved collection query, without event exclusions
+                                                    // so admins can still see/remove their current exclusions.
+                                                    const payload = {
+                                                        ...formData, ...collectionDateAndBounds(formData),
+                                                        filter_params: { ...withCollectionKeywords(formData.filter_params, qbState.keywords), exclude_event_ids: [] },
+                                                    };
+                                                    const res = await collectionsAPI.preview(payload);
                                                     setPreviewEvents(res.events);
                                                     setPreviewLoaded(true);
                                                 } catch (err) {

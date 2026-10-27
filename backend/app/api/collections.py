@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_session
 from app.core.category_filters import event_category_filter
+from app.core.event_text_search import collection_keywords, event_text_search_condition
 from app.core.security import get_current_user
 from app.core.utils import normalize_uuid, generate_seo_slug
 from app.models.user import User
@@ -99,24 +100,16 @@ def build_collection_events_query(collection: Collection, session: Session):
         if cat_ids:
             category_conditions.append(event_category_filter(cat_ids))
 
-    # Keyword conditions (search keywords in title, description, location_name)
-    q = filter_params.get("q")
-    if q and str(q).strip():
-        search_term = f"%{str(q).strip()}%"
-        keyword_conditions.append(
-            or_(
-                Event.title.ilike(search_term),
-                Event.description.ilike(search_term),
-                Event.location_name.ilike(search_term),
-            )
-        )
+    # Correlated predicates avoid duplicate rows and allow ALL keywords to
+    # match different tags on one event, using public search's text semantics.
+    keyword_conditions = [event_text_search_condition(term) for term in collection_keywords(filter_params)]
 
     # 3. Apply the flexible Keyword/Category logic inside their own isolated blocks
     match_mode = getattr(collection, "match_mode", None)
     if not match_mode:
         match_mode = (filter_params.get("combine_operator") or filter_params.get("match_mode") or "and").upper()
 
-    keyword_block = or_(*keyword_conditions) if len(keyword_conditions) > 1 else (keyword_conditions[0] if keyword_conditions else None)
+    keyword_block = (or_(*keyword_conditions) if match_mode == 'OR' else and_(*keyword_conditions)) if keyword_conditions else None
     category_block = or_(*category_conditions) if len(category_conditions) > 1 else (category_conditions[0] if category_conditions else None)
 
     if keyword_block is not None and category_block is not None:
@@ -255,6 +248,30 @@ def get_collection_by_slug(
     return CollectionSchema(**data)
 
 
+def collection_event_results(collection: Collection, session: Session, skip: int, limit: int):
+    query = build_collection_events_query(collection, session)
+    from app.core.query_utils import deduplicate_recurring_events
+    from app.core.occurrences import display_event, event_now
+    events, total = deduplicate_recurring_events(session, query, limit=limit, offset=skip)
+    params = collection.filter_params or {}
+    lower = collection.fixed_start_date or params.get("date_from") or event_now()
+    upper = collection.fixed_end_date or params.get("date_to")
+    return {"events": [display_event(e, lower, upper) for e in events], "total": total, "skip": skip, "limit": limit}
+
+
+@router.post("/preview-events")
+def preview_collection_events(
+    collection_data: CollectionCreate,
+    limit: int = Query(default=100, ge=1, le=1000),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Read-only preview of an unsaved collection using its real matching rules."""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    return collection_event_results(Collection.model_validate(collection_data), session, 0, limit)
+
+
 @router.get("/slug/{slug}/events")
 def get_collection_events(
     slug: str,
@@ -273,15 +290,7 @@ def get_collection_events(
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
 
-    query = build_collection_events_query(collection, session)
-
-    from app.core.query_utils import deduplicate_recurring_events
-    from app.core.occurrences import display_event, event_now
-    events, total = deduplicate_recurring_events(session, query, limit=limit, offset=skip)
-    params = collection.filter_params or {}
-    lower = collection.fixed_start_date or params.get("date_from") or event_now()
-    upper = collection.fixed_end_date or params.get("date_to")
-    return {"events": [display_event(e, lower, upper) for e in events], "total": total, "skip": skip, "limit": limit}
+    return collection_event_results(collection, session, skip, limit)
 
 @router.post("", response_model=CollectionSchema, status_code=status.HTTP_201_CREATED)
 def create_collection(
