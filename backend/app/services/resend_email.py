@@ -1,32 +1,16 @@
 from __future__ import annotations
-import logging
 from typing import Any, Dict, List, Optional, Union, Tuple
-import resend
 
 from app.core.config import settings
-from app.utils.pii import mask_email
 from app.services.email_service import smart_email_service, EmailType
-
-logger = logging.getLogger(__name__)
-
 
 class ResendEmailService:
     """Email service abstraction using SmartEmailService."""
 
-    def __init__(self):
-        # We now use smart_email_service for actual sending
-        # Keeping initialization logic for legacy support/enabled check
-        self.enabled = smart_email_service.resend_enabled or smart_email_service.smtp_enabled
-        self.from_address = smart_email_service.from_address
-
     async def send_welcome(self, to_email: str, username: str) -> bool:
         """
-        Send welcome email to new user (Type: WELCOME -> SMTP).
+        Send welcome email to new user (type: WELCOME).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send welcome email to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
 
         html_content = f"""
@@ -111,12 +95,8 @@ class ResendEmailService:
         unsubscribe_token: str
     ) -> bool:
         """
-        Send modern weekly digest (Type: WELCOME -> SMTP).
+        Send modern weekly digest (type: WELCOME).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send weekly digest to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
         # Ensure URLs have no trailing slashes consistency
         site_url = settings.FRONTEND_URL.rstrip('/')
@@ -257,12 +237,8 @@ class ResendEmailService:
         unsubscribe_token: str
     ) -> bool:
         """
-        Send organizer alert (Type: MODERATION -> SMTP).
+        Send organizer alert (type: MODERATION).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send organizer alert to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
         unsubscribe_url = f"{settings.FRONTEND_URL}/unsubscribe?token={unsubscribe_token}&type=organizer_alerts"
 
@@ -327,12 +303,8 @@ class ResendEmailService:
         is_auto_approved: bool = False
     ) -> bool:
         """
-        Send notification when an event is approved (Type: MODERATION -> SMTP).
+        Send notification when an event is approved (type: MODERATION).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send event approved email to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
         event_url = f"{settings.FRONTEND_URL}/events/{event_id}"
 
@@ -466,12 +438,8 @@ class ResendEmailService:
         username: Optional[str] = None
     ) -> bool:
         """
-        Send notification when an event is rejected (Type: MODERATION -> SMTP).
+        Send notification when an event is rejected (type: MODERATION).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send event rejected email to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
         edit_url = f"{settings.FRONTEND_URL}/events/{event_id}/edit"
 
@@ -549,10 +517,6 @@ class ResendEmailService:
             featured_events: 3 featured/top pick events
             trending_events: Trending events list
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send welcome email with events to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
         featured_events = featured_events or []
         trending_events = trending_events or []
@@ -726,12 +690,8 @@ class ResendEmailService:
         message_body: str
     ) -> bool:
         """
-        Send a system alert email (Type: MODERATION -> SMTP).
+        Send a system alert email (type: MODERATION).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send system alert to {mask_email(to_email)}")
-            return True
-
         logo_url = f"{settings.FRONTEND_URL}/icons/logo_knot.jpg"
         
         html_content = f"""
@@ -785,12 +745,8 @@ class ResendEmailService:
         reset_token: str
     ) -> bool:
         """
-        Send password reset email (Type: SECURITY -> Resend).
+        Send password reset email (type: SECURITY).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send password reset to {mask_email(to_email)}")
-            return True
-
         # Build reset URL with www fix
         site_url = settings.FRONTEND_URL.rstrip('/')
         if "highlandeventshub.co.uk" in site_url and "www." not in site_url:
@@ -855,12 +811,8 @@ class ResendEmailService:
         invite_url: str
     ) -> bool:
         """
-        Send a personalized group invitation (Type: INVITE -> SMTP).
+        Send a personalized group invitation (type: INVITE).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send group invite to {mask_email(to_email)}")
-            return True
-
         site_url = settings.FRONTEND_URL.rstrip('/')
         if "highlandeventshub.co.uk" in site_url and "www." not in site_url:
             site_url = site_url.replace("highlandeventshub.co.uk", "www.highlandeventshub.co.uk")
@@ -923,12 +875,8 @@ class ResendEmailService:
         invite_url: str
     ) -> bool:
         """
-        Send venue ownership invitation email (Type: INVITE -> SMTP).
+        Send venue ownership invitation email (type: INVITE).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send venue invite to {mask_email(to_email)}")
-            return True
-
         subject = f"You're invited to manage {venue_name} on Highland Events Hub"
         
         html_content = f"""
@@ -998,12 +946,8 @@ class ResendEmailService:
         username: Optional[str] = None
     ) -> bool:
         """
-        Send notification when a venue claim is approved (Type: MODERATION -> SMTP).
+        Send notification when a venue claim is approved (type: MODERATION).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send venue claim approved email to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
         manage_url = f"{settings.FRONTEND_URL}/venues/{venue_id}/edit"
         
@@ -1238,12 +1182,8 @@ class ResendEmailService:
         invoice_url: Optional[str] = None
     ) -> bool:
         """
-        Send notification when an event becomes featured (Type: MODERATION -> SMTP).
+        Send notification when an event becomes featured (type: MODERATION).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send featured notification to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
         subject = "🚀 Your Event is Now Featured on Highland Events!"
         
@@ -1313,12 +1253,8 @@ class ResendEmailService:
         username: str = None
     ) -> bool:
         """
-        Send notification reminding users to promote their event (Type: WELCOME -> SMTP).
+        Send notification reminding users to promote their event (type: WELCOME).
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send promotion reminder email to {mask_email(to_email)}")
-            return True
-
         name = username or "there"
         promote_url = f"{settings.FRONTEND_URL}/events/{event_id}/promote"
         subject = "Your event is 2 weeks away — boost visibility now"
@@ -1400,10 +1336,6 @@ class ResendEmailService:
         """
         Send ticket booking confirmation and digital ticket link to buyer.
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send ticket confirmation email to {mask_email(to_email)} for {order_ref}")
-            return True
-
         subject = f"Your Tickets: {event_title} ({order_ref}) 🎟️"
         tickets_url = f"{settings.FRONTEND_URL}/orders/{order_ref}"
 
@@ -1534,10 +1466,6 @@ class ResendEmailService:
         """
         Send notification to event organizer when a ticket is purchased for their event.
         """
-        if not self.enabled:
-            logger.info(f"[DRY RUN] Would send organizer ticket sale notification to {mask_email(organizer_email)} for {order_ref}")
-            return True
-
         subject = f"🎟️ Ticket Sold: {event_title} - Order #{order_ref}"
         hub_url = f"{settings.FRONTEND_URL}/organizers/hub"
         dashboard_url = f"{settings.FRONTEND_URL}/organizers/events/{event_id}/ticketing"

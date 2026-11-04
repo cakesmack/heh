@@ -378,13 +378,13 @@ async def forgot_password(
     session.add(reset_token)
     session.commit()
     
-    # Send email using Resend (with raw token in link)
+    # Send transactional email with the raw token in the link
     email_sent = await resend_email_service.send_password_reset(payload.email, raw_token)
     
     if not email_sent:
         # Log the error but still return success for security
         import logging
-        logging.error(f"Failed to send password reset email to {payload.email}")
+        logging.error("Password reset token was stored but email delivery failed")
     
     return MessageResponse(message=success_message)
 

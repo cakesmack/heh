@@ -94,7 +94,16 @@ class Settings(BaseSettings):
     CLOUDFLARE_API_TOKEN: Optional[str] = None
     CLOUDFLARE_ACCOUNT_HASH: Optional[str] = None
 
-    # Email (Hostinger SMTP for transactional)
+    # Transactional email (dedicated Amazon SES SMTP)
+    TRANSACTIONAL_SMTP_HOST: str = "email-smtp.eu-north-1.amazonaws.com"
+    TRANSACTIONAL_SMTP_PORT: int = 587
+    TRANSACTIONAL_SMTP_USER: Optional[str] = None
+    TRANSACTIONAL_SMTP_PASS: Optional[str] = None
+    TRANSACTIONAL_SMTP_STARTTLS: bool = True
+    TRANSACTIONAL_FROM_ADDRESS: Optional[str] = None
+    TRANSACTIONAL_SES_CONFIGURATION_SET: Optional[str] = None
+
+    # Hostinger SMTP fallback for non-security transactional email
     HOSTINGER_SMTP_HOST: str = "smtp.hostinger.com"
     HOSTINGER_SMTP_PORT: int = 465
     HOSTINGER_SMTP_USER: Optional[str] = None
