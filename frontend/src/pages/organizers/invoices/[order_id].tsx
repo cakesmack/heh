@@ -26,7 +26,7 @@ interface InvoiceDetail {
   };
   organizer: {
     name: string;
-    email: string;
+    email: string | null;
   };
   event: {
     id: string;
@@ -219,7 +219,7 @@ export default function SingleInvoicePage() {
                 <p className="text-xs text-gray-600 mb-2">📍 {invoice.event.venue}</p>
               )}
               <div className="border-t border-gray-200 pt-2 mt-2 text-xs text-gray-500">
-                Organizer: <strong>{invoice.organizer.name}</strong> ({invoice.organizer.email})
+                Organizer: <strong>{invoice.organizer.name}</strong>{invoice.organizer.email && <> ({invoice.organizer.email})</>}
               </div>
             </div>
 

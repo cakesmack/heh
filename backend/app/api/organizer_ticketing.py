@@ -522,6 +522,12 @@ def get_single_invoice_detail(
     fee = float(order.platform_fee_amount or 0.0)
     net = max(0.0, gross - fee)
 
+    # Public group contact is distinct from account/login and invoice-viewer emails.
+    organizer_email = (
+        (event.organizer_profile.public_email or "").strip() or None
+        if event.organizer_profile else None
+    )
+
     return {
         "invoice_ref": f"INV-{order.order_ref}",
         "order_ref": order.order_ref,
@@ -531,12 +537,12 @@ def get_single_invoice_detail(
         "platform": {
             "name": "Highland Events Hub Ltd",
             "address": "Highland Events Hub, Inverness, Highlands, IV1 1AA, Scotland",
-            "support_email": "support@highlandeventshub.co.uk",
+            "support_email": "contact@highlandeventshub.co.uk",
             "vat_note": "Platform Service Fee receipt. All ticket sales are processed on behalf of the registered event organizer."
         },
         "organizer": {
-            "name": event.organizer_profile.name if event.organizer_profile else (current_user.username or "Organizer"),
-            "email": current_user.email
+            "name": event.organizer_profile.name if event.organizer_profile else (event.organizer.username if event.organizer and event.organizer.username else "Organizer"),
+            "email": organizer_email
         },
         "event": {
             "id": event.id,
