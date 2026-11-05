@@ -68,12 +68,6 @@ def deduplicate_recurring_events(
         )
         total = session.exec(count_query).one() or 0
 
-        # Step 4: Get deduplicated IDs
-        dedup_ids = list(session.exec(distinct_ids_query).all())
-
-        if not dedup_ids:
-            return [], total
-
         # Step 5: Fetch full Event objects with correct final sorting
         # Join FeaturedBooking again to apply pinning order
         from datetime import date as date_today
@@ -81,7 +75,8 @@ def deduplicate_recurring_events(
         
         events_query = (
             select(Event)
-            .where(Event.id.in_(dedup_ids))
+            # Keep the complete candidate ID set in PostgreSQL, not Python.
+            .where(Event.id.in_(distinct_ids_query))
             .outerjoin(
                 FeaturedBooking,
                 (FeaturedBooking.event_id == Event.id) &

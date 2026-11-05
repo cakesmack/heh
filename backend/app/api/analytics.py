@@ -555,32 +555,26 @@ def get_trending_events(
     current_start = now - timedelta(days=days)
     previous_start = now - timedelta(days=days * 2)
 
-    # 1. Get views for current period
-    current_views = session.exec(
-        select(AnalyticsEvent)
+    # Aggregate in the database: loading every view's ORM object and JSON payload
+    # makes this public endpoint's Python memory scale with total analytics traffic.
+    target_id = func.replace(AnalyticsEvent.event_metadata["target_id"].as_string(), "-", "")
+    counts_query = (
+        select(target_id, func.count(AnalyticsEvent.id))
         .where(AnalyticsEvent.event_type == "event_view")
+        .where(target_id.is_not(None))
+        .group_by(target_id)
+    )
+    current_counts = dict(session.exec(
+        counts_query
         .where(AnalyticsEvent.created_at >= current_start)
-    ).all()
-
-    current_counts = {}
-    for a in current_views:
-        if a.event_metadata and 'target_id' in a.event_metadata:
-            tid = a.event_metadata['target_id'].replace('-', '')
-            current_counts[tid] = current_counts.get(tid, 0) + 1
+    ).all())
 
     # 2. Get views for previous period
-    previous_views = session.exec(
-        select(AnalyticsEvent)
-        .where(AnalyticsEvent.event_type == "event_view")
+    previous_counts = dict(session.exec(
+        counts_query
         .where(AnalyticsEvent.created_at >= previous_start)
         .where(AnalyticsEvent.created_at < current_start)
-    ).all()
-
-    previous_counts = {}
-    for a in previous_views:
-        if a.event_metadata and 'target_id' in a.event_metadata:
-            tid = a.event_metadata['target_id'].replace('-', '')
-            previous_counts[tid] = previous_counts.get(tid, 0) + 1
+    ).all())
 
     # 3. Calculate growth and identify trending
     trending_ids = []
