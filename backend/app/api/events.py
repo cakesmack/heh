@@ -1850,24 +1850,7 @@ async def create_event(
         except Exception as e:
             logger.error(f"Error generating instances for {new_event.id}: {e}")
 
-    # Send appropriate notifications based on approval / moderation status
-    v_name = new_event.location_name
-    if new_event.venue_id:
-        v = session.get(Venue, new_event.venue_id)
-        if v:
-            v_name = v.name
-
-    organizer_display_name = (
-        (new_event.organizer_profile.name if new_event.organizer_profile else None) or
-        getattr(current_user, "display_name", None) or
-        getattr(current_user, "username", None) or
-        getattr(current_user, "email", None) or
-        "Organizer"
-    )
-    date_display_str = new_event.date_start.strftime("%d %b %Y, %H:%M") if new_event.date_start else "TBD"
-    venue_display_str = v_name or "TBD"
-    user_email_str = current_user.email or "N/A"
-
+    # User confirmations remain; admins review submissions in the database-backed queue.
     if new_event.status == "published":
         # 1. User Confirmation Email
         if current_user.email:
@@ -1883,32 +1866,6 @@ async def create_event(
             except Exception as e:
                 logger.error(f"Error sending event approval email: {e}")
         
-        # 2. Admin Alert: New Event Published
-        if background_tasks:
-            background_tasks.add_task(
-                resend_email_service.send_new_event_notification,
-                event_title=new_event.title,
-                event_id=str(new_event.id),
-                organizer_name=organizer_display_name,
-                date_time_str=date_display_str,
-                venue_name=venue_display_str,
-                user_email=user_email_str,
-                is_ticketing_enabled=bool(new_event.is_ticketing_enabled)
-            )
-        else:
-            try:
-                await resend_email_service.send_new_event_notification(
-                    event_title=new_event.title,
-                    event_id=str(new_event.id),
-                    organizer_name=organizer_display_name,
-                    date_time_str=date_display_str,
-                    venue_name=venue_display_str,
-                    user_email=user_email_str,
-                    is_ticketing_enabled=bool(new_event.is_ticketing_enabled)
-                )
-            except Exception as e:
-                logger.error(f"Error sending new event admin notification: {e}")
-
     else:
         # Event is Quarantined for Moderation (status == 'pending_review')
         if current_user.email:
@@ -1916,29 +1873,6 @@ async def create_event(
                 notification_service.notify_event_submission(current_user.email, new_event.title)
             except Exception as e:
                 logger.error(f"Error sending submission pending notification: {e}")
-
-        # Admin Alert: ⚠️ Event Flagged for Moderation
-        quarantine_reason = new_event.moderation_reason or "Flagged by automated moderation filter"
-        if background_tasks:
-            background_tasks.add_task(
-                resend_email_service.send_event_quarantined_alert,
-                event_title=new_event.title,
-                event_id=str(new_event.id),
-                reason=quarantine_reason,
-                organizer_name=organizer_display_name,
-                user_email=user_email_str
-            )
-        else:
-            try:
-                await resend_email_service.send_event_quarantined_alert(
-                    event_title=new_event.title,
-                    event_id=str(new_event.id),
-                    reason=quarantine_reason,
-                    organizer_name=organizer_display_name,
-                    user_email=user_email_str
-                )
-            except Exception as e:
-                logger.error(f"Error sending quarantined event admin notification: {e}")
 
     return build_event_response(new_event, session, current_user=current_user)
 
@@ -2691,14 +2625,6 @@ async def update_event(
 
         logger.info(f"[MODERATION] Event '{event.title}' reset to pending update by user {current_user.id}: {event.moderation_reason}")
         
-        # Trigger Admin Alert (Moderation Required)
-        background_tasks.add_task(
-            resend_email_service.send_moderation_required_notification,
-            event.title,
-            str(event.id),
-            event.moderation_reason
-        )
-
         # Create Moderation Report in database so it appears in Admin Moderation Queue
         report = Report(
             target_type="event",

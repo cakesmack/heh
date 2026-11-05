@@ -82,6 +82,8 @@ class SmartEmailService:
             message["From"] = sender
             message["To"] = to
             message["Subject"] = subject
+            if settings.TRANSACTIONAL_REPLY_TO_ADDRESS:
+                message["Reply-To"] = settings.TRANSACTIONAL_REPLY_TO_ADDRESS
             if configuration_set:
                 message["X-SES-CONFIGURATION-SET"] = configuration_set
             if text_content:

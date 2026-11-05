@@ -49,7 +49,7 @@ def test_first_time_organizer_update_triggers_review_and_report(client: TestClie
     """
     When a first-time organizer (trust_level=0, non-trusted) updates a published event,
     the event reverts to pending with moderation_reason='First-time organizer account creation review',
-    the notification email receives this exact reason, and a Report record is created.
+    a Report record keeps this exact reason without a redundant admin mailbox email.
     """
     user_id = str(uuid4()).replace('-', '')
     user = User(
@@ -111,12 +111,7 @@ def test_first_time_organizer_update_triggers_review_and_report(client: TestClie
     assert updated_event.status == 'pending'
     assert updated_event.moderation_reason == 'First-time organizer account creation review'
 
-    # Check notification call arguments
-    assert mock_mod_notify.called
-    call_args = mock_mod_notify.call_args[0]
-    assert call_args[0] == updated_event.title
-    assert call_args[1] == str(updated_event.id)
-    assert call_args[2] == 'First-time organizer account creation review'
+    mock_mod_notify.assert_not_awaited()
 
     # Check that Report record was created in the database
     reports = test_db.exec(
@@ -187,9 +182,7 @@ def test_untrusted_existing_organizer_update_reason(client: TestClient, test_db:
     assert updated_event.status == 'pending'
     assert updated_event.moderation_reason == 'Edited by organizer after publication'
 
-    assert mock_mod_notify.called
-    call_args = mock_mod_notify.call_args[0]
-    assert call_args[2] == 'Edited by organizer after publication'
+    mock_mod_notify.assert_not_awaited()
 
 
 def test_profanity_event_creates_report_in_queue(client: TestClient, test_db: Session):
@@ -229,6 +222,7 @@ def test_profanity_event_creates_report_in_queue(client: TestClient, test_db: Se
         })
 
     assert res.status_code == 201, res.text
+    mock_send_quarantined.assert_not_awaited()
     data = res.json()
     created_id = data['id'].replace('-', '')
 

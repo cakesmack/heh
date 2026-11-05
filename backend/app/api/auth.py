@@ -114,13 +114,6 @@ async def register(
         new_user.username
     )
     
-    # Notify admin of new user signup
-    background_tasks.add_task(
-        resend_email_service.send_new_user_notification,
-        new_user.email,
-        new_user.username
-    )
-
     # Create access token
     access_token = create_access_token(data={"sub": str(new_user.id)})
 

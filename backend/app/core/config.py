@@ -100,7 +100,8 @@ class Settings(BaseSettings):
     TRANSACTIONAL_SMTP_USER: Optional[str] = None
     TRANSACTIONAL_SMTP_PASS: Optional[str] = None
     TRANSACTIONAL_SMTP_STARTTLS: bool = True
-    TRANSACTIONAL_FROM_ADDRESS: Optional[str] = None
+    TRANSACTIONAL_FROM_ADDRESS: Optional[str] = "Highland Events Hub <noreply@highlandeventshub.co.uk>"
+    TRANSACTIONAL_REPLY_TO_ADDRESS: Optional[str] = None
     TRANSACTIONAL_SES_CONFIGURATION_SET: Optional[str] = None
 
     # Hostinger SMTP fallback for non-security transactional email
