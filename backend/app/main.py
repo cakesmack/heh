@@ -123,6 +123,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Opt-in observation only; never buffers responses or changes request handling.
+from app.core.memory_diagnostics import MemoryDiagnosticsMiddleware
+app.add_middleware(
+    MemoryDiagnosticsMiddleware,
+    enabled=settings.MEMORY_DIAGNOSTICS_ENABLED,
+    interval_seconds=settings.MEMORY_DIAGNOSTICS_INTERVAL_SECONDS,
+    engine=engine,
+    limiter=limiter,
+)
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

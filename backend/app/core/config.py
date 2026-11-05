@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Highland Events API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    # Temporary, sampled Linux RSS diagnostics; disabled unless explicitly enabled.
+    MEMORY_DIAGNOSTICS_ENABLED: bool = False
+    MEMORY_DIAGNOSTICS_INTERVAL_SECONDS: int = 60
 
     # Database - No default! Must be set in environment.
     # Local dev: sqlite:///./highland_events.db
