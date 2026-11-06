@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch, API_BASE_URL } from '@/lib/api';
+import ResendTicketsButton from '@/components/ticketing/ResendTicketsButton';
 
 type TabType = 'events' | 'payouts' | 'invoices' | 'scanner';
 
@@ -1064,6 +1065,7 @@ export default function OrganizerHubPage() {
                               >
                                 View Receipt
                               </Link>
+                              <ResendTicketsButton orderId={inv.order_id} />
                             </td>
                           </tr>
                         ))}

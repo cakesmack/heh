@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import ResendTicketsButton from '@/components/ticketing/ResendTicketsButton';
 import { useRouter } from 'next/router';
 import { useAuth, isApprovedSeller } from '@/hooks/useAuth';
 import { apiFetch, API_BASE_URL } from '@/lib/api';
@@ -389,6 +390,7 @@ export default function OrganizerInvoicesPage() {
                             <span>View / Print</span>
                             <span>→</span>
                           </Link>
+                          <ResendTicketsButton orderId={inv.order_id} />
                         </td>
                       </tr>
                     ))}

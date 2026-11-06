@@ -23,6 +23,21 @@ def verify_admin(user: User):
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
 
+@router.post("/orders/{order_id}/resend-tickets")
+async def resend_order_tickets(
+    order_id: str, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)
+):
+    verify_admin(current_user)
+    order = session.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    event = session.get(Event, order.event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    from app.services.ticket_resend import resend_existing_tickets
+    return await resend_existing_tickets(order, event, current_user, session)
+
+
 @router.get("/orders/search")
 def search_orders(q: str = Query(..., min_length=2), current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     verify_admin(current_user)

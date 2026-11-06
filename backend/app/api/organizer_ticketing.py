@@ -40,6 +40,18 @@ def verify_organizer_access(event_id: str, user: User, session: Session) -> Even
         
     return event
 
+@router.post("/orders/{order_id}/resend-tickets")
+async def resend_order_tickets(
+    order_id: str, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)
+):
+    order = session.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    event = verify_organizer_access(order.event_id, current_user, session)
+    from app.services.ticket_resend import resend_existing_tickets
+    return await resend_existing_tickets(order, event, current_user, session)
+
+
 @router.get("/events/{event_id}/dashboard")
 def get_organizer_dashboard(event_id: str, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     event = verify_organizer_access(event_id, current_user, session)

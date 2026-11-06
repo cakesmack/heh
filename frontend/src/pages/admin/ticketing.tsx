@@ -4,6 +4,7 @@ import Link from 'next/link';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminGuard from '@/components/admin/AdminGuard';
 import { apiFetch } from '@/lib/api';
+import ResendTicketsButton from '@/components/ticketing/ResendTicketsButton';
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -354,6 +355,9 @@ function OrdersTab() {
               )}
             </div>
 
+            {inspectOrder.status === 'completed' && (
+              <ResendTicketsButton key={inspectOrder.order_id} orderId={inspectOrder.order_id} role="admin" />
+            )}
             <h3 className="text-base font-bold text-gray-900 mb-3">Ticket Scan Statuses</h3>
             <ul className="space-y-2 mb-6">
               {inspectOrder.tickets.map((t, idx) => (

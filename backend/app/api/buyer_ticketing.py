@@ -60,7 +60,7 @@ def get_my_orders(current_user: User = Depends(get_current_user), session: Sessi
         else:
             venue_name = event.location_name or ""
             venue_town = getattr(event, "location_town", "") or ""
-            venue_address = event.location_address or ""
+            venue_address = event.address_full or ""
             
         tickets = session.exec(select(Ticket, TicketTier).join(TicketTier, Ticket.tier_id == TicketTier.id).where(Ticket.order_id == order.id)).all()
         ticket_data = []
